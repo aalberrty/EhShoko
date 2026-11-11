@@ -1,0 +1,7 @@
+/* 
+  InfoPlist.strings
+  EhGaro
+*/
+
+"NSFaceIDUsageDescription" = "开启自动锁定后，EhGaro 会使用面容 ID 解锁。";
+"NSPhotoLibraryAddUsageDescription" = "EhGaro 会将你选择的图像存储到照片图库。";

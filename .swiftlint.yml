@@ -1,0 +1,31 @@
+disabled_rules:
+ - large_tuple
+ - opening_brace
+
+file_length:
+ warning: 500
+ error: 800
+
+type_body_length:
+ warning: 350
+ error: 500
+
+function_body_length:
+ warning: 80
+ error: 120
+
+cyclomatic_complexity:
+ warning: 15
+ error: 25
+
+identifier_name:
+ excluded:
+  - x
+  - y
+  - id
+  - no
+
+excluded:
+ - Legacy
+ - App/Generated
+ - Packages/EhKit/.build

@@ -1,0 +1,38 @@
+/* 
+  Constant.strings
+  EhGaro
+*/
+
+// MARK: Website response
+"website.response.hath_client_not_found" = "You must have a H@H client assigned to your account to use this feature.";
+"website.response.hath_client_not_online" = "Your H@H client appears to be offline. Turn it on, then try again.";
+"website.response.invalid_resolution" = "The requested gallery cannot be downloaded with the selected resolution.";
+"website.response.gallery_unavailable" = "This gallery has been removed or is unavailable.";
+
+// MARK: App
+
+// Contact
+"app.contact.link.gitHub" = "https://github.com/aalberrty/EhGaro";
+"app.contact.text.gitHub" = "GitHub";
+
+// Acknowledgement link
+"app.acknowledgement.link.grdb" = "https://github.com/groue/GRDB.swift";
+"app.acknowledgement.link.kanna" = "https://github.com/tid-kijyun/Kanna";
+"app.acknowledgement.link.kingfisher" = "https://github.com/onevcat/Kingfisher";
+"app.acknowledgement.link.sfSafeSymbols" = "https://github.com/SFSafeSymbols/SFSafeSymbols";
+"app.acknowledgement.link.swiftDependencies" = "https://github.com/pointfreeco/swift-dependencies";
+"app.acknowledgement.link.swiftGen" = "https://github.com/SwiftGen/SwiftGen";
+"app.acknowledgement.link.swiftyOpenCC" = "https://github.com/ddddxxx/SwiftyOpenCC";
+
+// Acknowledgement text
+"app.acknowledgement.text.grdb" = "GRDB.swift";
+"app.acknowledgement.text.kanna" = "Kanna";
+"app.acknowledgement.text.kingfisher" = "Kingfisher";
+"app.acknowledgement.text.sfSafeSymbols" = "SFSafeSymbols";
+"app.acknowledgement.text.swiftDependencies" = "swift-dependencies";
+"app.acknowledgement.text.swiftGen" = "SwiftGen";
+"app.acknowledgement.text.swiftyOpenCC" = "SwiftyOpenCC";
+
+// Special thanks
+"app.special_thanks.link.ehTagTranslation" = "https://github.com/EhTagTranslation";
+"app.special_thanks.text.ehTagTranslation" = "EhTagTranslation";

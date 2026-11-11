@@ -1,0 +1,7 @@
+/* 
+  InfoPlist.strings
+  EhGaro
+*/
+
+"NSFaceIDUsageDescription" = "EhGaro uses Face ID to unlock the app when Auto-Lock is on.";
+"NSPhotoLibraryAddUsageDescription" = "EhGaro saves the images you choose to your photo library.";
