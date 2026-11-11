@@ -73,6 +73,13 @@
 "error_view.title.ip_banned" = "短時間に多くのページを読み込んだため、自動ダウンロードとみなされ、この IP アドレスは一時的にブロックされています。ブロックは %@後に解除されます。";
 "error_view.title.copyright_claim" = "%@ による著作権の申し立てを受けて、このギャラリーは削除されました。";
 "error_view.title.gallery_unavailable" = "このギャラリーは削除されたか、表示できません。";
+"error_view.title.exhentai_access_denied" = "ExHentai がログインを受け付けませんでした。ログインの有効期限が切れているか、このアカウントに ExHentai へのアクセス権がない可能性があります。「設定 › アカウント」でもう一度ログインするか、そこで E-Hentai に切り替えてください。";
+"error_view.title.login_required" = "このページを表示するにはログインが必要ですが、ログインしていないか、有効期限が切れています。「設定 › アカウント」でもう一度ログインしてください。";
+"error_view.title.server_error" = "サーバがページの代わりにエラー %@ を返しました。一時的に利用できない可能性があります。";
+"error_view.headline.parse_failed" = "ページを読み取れません";
+"error_view.headline.exhentai_access_denied" = "ExHentai がログインを拒否しました";
+"error_view.headline.login_required" = "ログインが必要です";
+"error_view.headline.server_error" = "サーバエラー";
 
 // MARK: ConfirmationDialog
 "confirmation_dialog.title.drop_database" = "EhGaro に保存されているものがすべて消去されます。\nデータベースを削除しますか？";

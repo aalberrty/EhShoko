@@ -73,6 +73,13 @@
 "error_view.title.ip_banned" = "The site has blocked your IP address for a while because it loaded too many pages too quickly, which looks like automated downloading. The block lifts in %@.";
 "error_view.title.copyright_claim" = "This gallery was taken down after a copyright claim by %@.";
 "error_view.title.gallery_unavailable" = "This gallery was removed or can't be viewed.";
+"error_view.title.exhentai_access_denied" = "ExHentai didn't accept your sign-in. It may have expired, or this account may not have access to ExHentai. Sign in again in Settings › Account, or switch to E-Hentai there.";
+"error_view.title.login_required" = "This page needs you to be signed in, and your sign-in is missing or has expired. Sign in again in Settings › Account.";
+"error_view.title.server_error" = "The server answered with error %@ instead of a page. It may be temporarily unavailable.";
+"error_view.headline.parse_failed" = "Unreadable page";
+"error_view.headline.exhentai_access_denied" = "ExHentai refused the sign-in";
+"error_view.headline.login_required" = "Sign-in required";
+"error_view.headline.server_error" = "Server error";
 
 // MARK: ConfirmationDialog
 "confirmation_dialog.title.drop_database" = "Everything EhGaro has stored will be erased.\nDelete the database?";

@@ -73,6 +73,13 @@
 "error_view.title.ip_banned" = "由于短时间内载入了过多页面，看起来像是在自动下载，网站已暂时封锁你的 IP 地址。封锁将在 %@后解除。";
 "error_view.title.copyright_claim" = "因 %@ 提出版权主张，此画廊已被下架。";
 "error_view.title.gallery_unavailable" = "此画廊已被移除或无法查看。";
+"error_view.title.exhentai_access_denied" = "ExHentai 未接受你的登录。登录可能已过期，或该账户没有 ExHentai 的访问权限。请在“设置 › 账户”中重新登录，或在那里切换到 E-Hentai。";
+"error_view.title.login_required" = "此页面需要登录，但你尚未登录或登录已过期。请在“设置 › 账户”中重新登录。";
+"error_view.title.server_error" = "服务器返回了错误 %@，而不是页面。服务器可能暂时无法访问。";
+"error_view.headline.parse_failed" = "无法读取页面";
+"error_view.headline.exhentai_access_denied" = "ExHentai 拒绝了登录";
+"error_view.headline.login_required" = "需要登录";
+"error_view.headline.server_error" = "服务器错误";
 
 // MARK: ConfirmationDialog
 "confirmation_dialog.title.drop_database" = "EhGaro 存储的所有内容都将被抹掉。\n要删除数据库吗？";
