@@ -18,9 +18,6 @@ extension Data {
 enum QueryKey {
     static let next = "next"
     static let skipServerIdentifier = "nl"
-    static let spriteWidth = "spriteWidth"
-    static let spriteHeight = "spriteHeight"
-    static let spriteOffset = "spriteOffset"
 }
 
 /// Site images the list parser must not mistake for covers (legacy `Defaults.URL`).
