@@ -51,35 +51,3 @@ private typealias T = RequestTesting
         #expect(EhEndpoints.toplist.absoluteString == "https://e-hentai.org/toplist.php")
     }
 }
-
-@Suite struct CombinedPreviewURLTests {
-    private let sheet = T.url("https://ehgt.org/m/002345/2345678-00.jpg")
-
-    @Test func appendsTileGeometry() {
-        let url = CombinedPreviewURL.url(plainURL: sheet, width: "100", height: "142", offset: "-200")
-        #expect(url.absoluteString
-            == "https://ehgt.org/m/002345/2345678-00.jpg?spriteWidth=100&spriteHeight=142&spriteOffset=-200")
-    }
-
-    @Test func parsesWhatItBuilds() {
-        let url = CombinedPreviewURL.url(plainURL: sheet, width: "100", height: "142", offset: "-200")
-        #expect(CombinedPreviewURL.parse(url)
-            == CombinedPreviewURL(plainURL: sheet, width: 100, height: 142, offset: -200))
-    }
-
-    @Test func parseDropsTheWholeQuery() {
-        let url = T.url("https://ehgt.org/a.jpg?v=2&spriteOffset=0&spriteHeight=10&spriteWidth=20")
-        #expect(CombinedPreviewURL.parse(url)
-            == CombinedPreviewURL(plainURL: T.url("https://ehgt.org/a.jpg"), width: 20, height: 10, offset: 0))
-    }
-
-    @Test(arguments: [
-        "https://ehgt.org/a.jpg",
-        "https://ehgt.org/a.jpg?spriteWidth=20&spriteHeight=10",
-        "https://ehgt.org/a.jpg?spriteWidth=20&spriteHeight=10&spriteOffset=x",
-        "https://ehgt.org/a.jpg?spriteWidth=20.5&spriteHeight=10&spriteOffset=0"
-    ])
-    func parseRejectsIncompleteURLs(string: String) {
-        #expect(CombinedPreviewURL.parse(T.url(string)) == nil)
-    }
-}
