@@ -2,11 +2,12 @@ import EhFeatures
 import EhModels
 import SwiftUI
 
-/// Tiles for the lists that have no section of their own (legacy `MiscGridSection`).
+/// Tiles for the lists (legacy `MiscGridSection`, with Front Page and Toplists added since
+/// their Home sections went).
 struct HomeShortcuts: View {
     let open: (GalleryListKind) -> Void
 
-    private static let kinds: [GalleryListKind] = [.popular, .watched, .history]
+    private static let kinds: [GalleryListKind] = [.frontpage, .popular, .toplists, .watched, .history]
 
     var body: some View {
         ScrollView(.horizontal) {

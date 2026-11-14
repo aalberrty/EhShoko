@@ -13,14 +13,14 @@ import Testing
         #expect(!model.canClear)
 
         var task = Task { await model.observe() }
-        await waitUntil { model.galleries.count == 2 }
-        #expect(model.galleries.map(\.gid) == ["2", "1"])
+        await waitUntil { model.entries.galleries.count == 2 }
+        #expect(model.entries.galleries.map(\.gid) == ["2", "1"])
         #expect(model.loadingState == .idle)
         #expect(model.canClear)
 
         try await env.database.recordOpened(.stub("3"), at: Date(timeIntervalSince1970: 30))
-        await waitUntil { model.galleries.count == 3 }
-        #expect(model.galleries.first?.gid == "3")
+        await waitUntil { model.entries.galleries.count == 3 }
+        #expect(model.entries.galleries.first?.gid == "3")
 
         // The view restarts the observation when the query changes.
         let query = model.query
@@ -28,14 +28,14 @@ import Testing
         #expect(model.query != query)
         task.cancel()
         task = Task { await model.observe() }
-        await waitUntil { model.galleries.count == 1 }
-        #expect(model.galleries.map(\.gid) == ["1"])
+        await waitUntil { model.entries.galleries.count == 1 }
+        #expect(model.entries.galleries.map(\.gid) == ["1"])
         #expect(model.canClear)
 
         model.isClearConfirmationPresented = true
         await model.clear()
-        await waitUntil { model.galleries.isEmpty }
-        #expect(model.galleries.isEmpty)
+        await waitUntil { model.entries.galleries.isEmpty }
+        #expect(model.entries.galleries.isEmpty)
         #expect(model.isHistoryEmpty)
         #expect(!model.isClearConfirmationPresented)
         #expect(!model.canClear)
@@ -52,8 +52,8 @@ import Testing
         let model = env.make { HistoryModel() }
 
         await model.refresh()
-        #expect(model.galleries.count == HistoryModel.pageSize)
-        #expect(model.galleries.first?.gid == "\(count - 1)")
+        #expect(model.entries.galleries.count == HistoryModel.pageSize)
+        #expect(model.entries.galleries.first?.gid == "\(count - 1)")
         #expect(model.hasMore)
 
         let query = model.query
@@ -65,7 +65,7 @@ import Testing
         #expect(model.query == pending)
 
         await model.refresh()
-        #expect(model.galleries.count == count)
+        #expect(model.entries.galleries.count == count)
         #expect(!model.hasMore)
         model.loadMore()
         #expect(model.query == pending)
@@ -80,14 +80,14 @@ import Testing
         }
         let model = env.make { HistoryModel() }
         await model.refresh()
-        #expect(!model.galleries.contains { $0.gid == "old" })
+        #expect(!model.entries.galleries.contains { $0.gid == "old" })
         model.loadMore()
 
         model.titleFilter = "needle"
         #expect(model.query.limit == HistoryModel.pageSize)
         await model.refresh()
 
-        #expect(model.galleries.map(\.gid) == ["old"])
+        #expect(model.entries.galleries.map(\.gid) == ["old"])
         #expect(!model.isHistoryEmpty)
     }
 
@@ -98,7 +98,7 @@ import Testing
 
         await model.refresh()
 
-        #expect(model.galleries.map(\.gid) == ["1"])
+        #expect(model.entries.galleries.map(\.gid) == ["1"])
         #expect(model.loadingState == .idle)
     }
 }

@@ -91,6 +91,15 @@ extension Language {
         }
     }
 
+    /// The short code a list row shows ("EN", "ZH", "JA"); `nil` for no language
+    /// (`invalid`, `other`), where a row shows none.
+    public var code: String? {
+        switch self {
+        case .invalid, .other: nil
+        default: abbreviation
+        }
+    }
+
     public var abbreviation: String {
         switch self {
         case .invalid, .other: "N/A"

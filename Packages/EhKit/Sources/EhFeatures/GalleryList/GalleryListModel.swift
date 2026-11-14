@@ -56,16 +56,20 @@ public final class GalleryListModel {
     }
 
     public private(set) var source: GalleryListSource
-    public private(set) var galleries: [Gallery] = [] {
-        didSet { updateVisibleGalleries() }
+    /// The rows loaded so far, built off the main actor as each page arrives.
+    public private(set) var entries: [GalleryEntry] = [] {
+        didSet { updateVisibleEntries() }
     }
-    /// `galleries` whose title contains `titleFilter` (legacy local "Filter" search field).
-    public private(set) var visibleGalleries: [Gallery] = []
+    /// `entries` whose raw title contains `titleFilter` (legacy local "Filter" search field).
+    public private(set) var visibleEntries: [GalleryEntry] = []
     public var titleFilter = "" {
         didSet {
-            if titleFilter != oldValue { updateVisibleGalleries() }
+            if titleFilter != oldValue { updateVisibleEntries() }
         }
     }
+    /// Where each loaded page starts in `entries`, for numbered lists (Toplists): the
+    /// "Page 2" dividers. Empty for every other list.
+    public private(set) var pageStarts: [PageStart] = []
     public private(set) var pageNumber = PageNumber()
     /// State of the first page (and of refreshes).
     public private(set) var loadingState: LoadingState = .idle
@@ -83,7 +87,7 @@ public final class GalleryListModel {
     @ObservationIgnored private var needsLoad = true
     /// Bumped by every load that replaces the list; results of older loads are dropped.
     @ObservationIgnored private var generation = 0
-    @ObservationIgnored private var galleryIDs = Set<String>()
+    @ObservationIgnored private var entryIDs = Set<String>()
     @ObservationIgnored private let tasks = ModelTasks()
     /// The first-page and next-page loads in flight. Each is cleared by its own completion, or
     /// by whatever bumps `generation` and so supersedes it.
@@ -93,6 +97,7 @@ public final class GalleryListModel {
     @ObservationIgnored @Dependency(\.ehClient) private var client
     @ObservationIgnored @Dependency(\.filterStore) private var filterStore
     @ObservationIgnored @Dependency(\.cookieStore) private var cookieStore
+    @ObservationIgnored @Dependency(\.userStore) private var userStore
 
     public init(source: GalleryListSource) {
         self.source = source
@@ -103,7 +108,7 @@ public final class GalleryListModel {
     public var phase: Phase {
         if needsLogin { return .notLoggedIn }
         if let error = loadingState.failed { return .failed(error) }
-        return galleries.isEmpty ? .loading : .content
+        return entries.isEmpty ? .loading : .content
     }
 
     public var footerPhase: FooterPhase {
@@ -184,7 +189,7 @@ public final class GalleryListModel {
             await nextPageLoad.waitUnlessCancelled()
             return
         }
-        guard !Task.isCancelled, !needsLogin, !loadingState.isLoading, !galleries.isEmpty,
+        guard !Task.isCancelled, !needsLogin, !loadingState.isLoading, !entries.isEmpty,
               let request = nextRequest
         else { return }
         let token = generation
@@ -240,9 +245,9 @@ public final class GalleryListModel {
         firstPageLoad = nil
         switch outcome {
         case .success(let result):
-            replace(with: result.page, next: result.next)
+            replace(with: result)
             needsLoad = false
-            if !galleries.isEmpty {
+            if !entries.isEmpty {
                 PerformanceSignposts.contentShown(source.signpostName)
             }
         case .failure(let error):
@@ -257,7 +262,7 @@ public final class GalleryListModel {
         nextPageLoad = nil
         switch outcome {
         case .success(let result):
-            append(result.page, next: result.next)
+            append(result)
             footerState = .idle
         case .failure(let error):
             footerState = .failed(error)
@@ -281,7 +286,9 @@ public final class GalleryListModel {
         return { try await Self.fetchSkippingEmptyPages(from: request, of: source, filter: filter, client: client) }
     }
 
-    /// Legacy: an empty page with a next page asks for the next one straight away.
+    /// Legacy: an empty page with a next page asks for the next one straight away. The page's
+    /// entries are built here, off the main actor, so a row never parses anything.
+    @concurrent
     nonisolated private static func fetchSkippingEmptyPages(
         from request: PageRequest, of source: GalleryListSource, filter: Filter, client: EhClient
     ) async throws -> PageResult {
@@ -289,34 +296,44 @@ public final class GalleryListModel {
         while true {
             let page = try await fetch(request, of: source, filter: filter, client: client)
             let next = GalleryListPaging.nextRequest(after: page, of: source, requested: request)
-            guard page.galleries.isEmpty, let next else { return PageResult(page: page, next: next) }
+            guard page.galleries.isEmpty, let next else {
+                let entries = GalleryEntry.entries(for: page.galleries, marks: page.favoriteMarks)
+                return PageResult(page: page, entries: entries, next: next)
+            }
             request = next
         }
     }
 
-    private func replace(with page: FetchedPage, next: PageRequest?) {
-        let unique = GalleryListPaging.deduplicated(page.galleries, excluding: [])
-        galleryIDs = Set(unique.map(\.gid))
-        galleries = unique
-        apply(page, next: next)
+    private func replace(with result: PageResult) {
+        let unique = GalleryListPaging.deduplicated(result.entries, excluding: [])
+        entryIDs = Set(unique.map(\.id))
+        entries = unique
+        pageStarts = source.paging == .numbered && !unique.isEmpty
+            ? [PageStart(page: result.page.pageNumber.current + 1, index: 0)] : []
+        apply(result)
         footerState = .idle
         loadingState = unique.isEmpty ? .failed(.notFound) : .idle
     }
 
-    private func append(_ page: FetchedPage, next: PageRequest?) {
-        let unique = GalleryListPaging.deduplicated(page.galleries, excluding: galleryIDs)
-        galleryIDs.formUnion(unique.map(\.gid))
+    private func append(_ result: PageResult) {
+        let unique = GalleryListPaging.deduplicated(result.entries, excluding: entryIDs)
+        entryIDs.formUnion(unique.map(\.id))
         if !unique.isEmpty {
-            galleries.append(contentsOf: unique)
+            if source.paging == .numbered {
+                pageStarts.append(PageStart(page: result.page.pageNumber.current + 1, index: entries.count))
+            }
+            entries.append(contentsOf: unique)
         }
-        apply(page, next: next)
+        apply(result)
     }
 
-    private func apply(_ page: FetchedPage, next: PageRequest?) {
+    private func apply(_ result: PageResult) {
+        let page = result.page
         pageNumber = page.pageNumber
-        nextRequest = next
+        nextRequest = result.next
         if case .favorites = source {
             favoritesSortOrder = page.sortOrder
+            userStore.updateFavoriteFolders(page.folders)
         }
         paginationTrigger = PaginationTrigger(
             pagesLoaded: paginationTrigger.pagesLoaded + 1, retries: paginationTrigger.retries
@@ -329,8 +346,9 @@ public final class GalleryListModel {
         tasks.cancel(TaskKey.firstPage)
         firstPageLoad = nil
         cancelNextPage()
-        galleryIDs = []
-        galleries = []
+        entryIDs = []
+        entries = []
+        pageStarts = []
         pageNumber = PageNumber()
         nextRequest = nil
         loadingState = .idle
@@ -348,8 +366,8 @@ public final class GalleryListModel {
         return !needsLogin
     }
 
-    private func updateVisibleGalleries() {
-        visibleGalleries = GalleryListPaging.filtered(galleries, byTitle: titleFilter)
+    private func updateVisibleEntries() {
+        visibleEntries = GalleryListPaging.filtered(entries, byTitle: titleFilter)
     }
 
     private enum TaskKey {
@@ -358,8 +376,9 @@ public final class GalleryListModel {
     }
 }
 
-/// A fetched page and the request for the page after it.
+/// A fetched page, its entries, and the request for the page after it.
 nonisolated struct PageResult: Sendable {
     let page: FetchedPage
+    let entries: [GalleryEntry]
     let next: PageRequest?
 }

@@ -1,6 +1,6 @@
 import Dependencies
 import EhCore
-import EhFeatures
+@testable import EhFeatures
 import EhModels
 import EhNetworking
 import EhTestSupport
@@ -13,250 +13,152 @@ import Testing
 
     // MARK: Loading
 
-    @Test func runLoadsEverySectionConcurrently() async throws {
-        serveFixtures()
+    @Test func loadsPopularAsEntries() async throws {
+        transport.on(.any, reply: .fixture("Parser/List/PopularCompactList.html"))
         let model = makeModel()
-        model.loadIfNeeded()
+        #expect(model.loadingState == .idle)
 
-        try await homeEventually { settled(model, after: 6) }
+        await model.refresh()
 
-        #expect(model.popularState == .idle)
-        #expect(!model.cards.isEmpty && model.cards.count <= HomeSections.maximumCards)
-        #expect(model.frontpageState == .idle)
-        #expect(!model.frontpage.isEmpty && model.frontpage.count <= 25)
-        #expect(!model.coverColumns.isEmpty)
-        for type in ToplistsType.allCases {
-            #expect(model.toplistsStates[type] == .idle)
-            #expect(!model.toplists(for: type).isEmpty)
-        }
-        #expect(transport.requests.count == 6)
+        #expect(model.loadingState == .idle)
+        #expect(model.entries.count == 100)
+        #expect(transport.requests.map { $0.url?.path() } == ["/popular"])
+        // Each entry carries its parsed title.
+        let entry = try #require(model.entries.first { $0.title.isParsed })
+        #expect(entry.title == TitleParser.parse(entry.gallery.title))
     }
 
-    @Test func toplistsAreRequestedOncePerPeriodWithoutAFilter() async throws {
-        serveFixtures()
+    @Test func entriesCarryTheFavouriteMarksOfThePage() async throws {
+        let html = try Fixture.string("Parser/List/FrontPageCompactList.html").replacingOccurrences(
+            of: #"id="posted_2668616""#, with: #"style="border-color:#f00" id="posted_2668616""#
+        )
+        transport.on(.any, reply: .html(html))
         let model = makeModel()
-        model.loadIfNeeded()
 
-        try await homeEventually { settled(model, after: 6) }
+        await model.refresh()
 
-        let toplists = transport.requests.filter { $0.url?.path() == "/toplist.php" }
-        let periods = toplists.compactMap { request in
-            URLComponents(url: request.url!, resolvingAgainstBaseURL: false)?
-                .queryItems?.first { $0.name == "tl" }?.value
-        }
-        #expect(periods.sorted() == ["11", "12", "13", "15"])
-        let queryNames = toplists.map { request in
-            URLComponents(url: request.url!, resolvingAgainstBaseURL: false)?.queryItems?.map(\.name) ?? []
-        }
-        #expect(queryNames.allSatisfy { $0 == ["tl"] })
+        #expect(model.entries.first { $0.id == "2668616" }?.favorite == FavoriteMark(folder: 1))
+        #expect(model.entries.filter { $0.favorite != nil }.count == 1)
     }
 
-    @Test func aFailingSectionDoesNotBlankTheOthers() async throws {
-        serveFixtures()
-        transport.on(.path("/"), reply: .error(URLError(.timedOut)))
-        transport.on(.path("/toplist.php") && .query("tl", "12"), reply: .error(URLError(.notConnectedToInternet)))
-        let model = makeModel()
-        model.loadIfNeeded()
+    @Test func popularUsesTheGlobalFilter() async throws {
+        transport.on(.any, reply: .fixture("Parser/List/PopularCompactList.html"))
+        let filters = FilterStore(defaults: UserDefaults(suiteName: "HomeTests-\(UUID().uuidString)")!)
+        filters.globalFilter.doujinshi = true
+        let model = makeModel(filters: filters)
 
-        try await homeEventually { settled(model, after: 6) }
+        await model.refresh()
 
-        #expect(!model.cards.isEmpty)
-        #expect(model.frontpageState == .failed(.networkingFailed))
-        #expect(model.frontpage.isEmpty)
-        #expect(model.toplistsStates[.pastYear] == .failed(.networkingFailed))
-        #expect(model.toplists(for: .pastYear).isEmpty)
-        for type in [ToplistsType.yesterday, .pastMonth, .allTime] {
-            #expect(!model.toplists(for: type).isEmpty)
-        }
-    }
-
-    @Test func exhentaiRefusingTheSessionFailsItsSectionsWithThatReason() async throws {
-        serveFixtures()
-        // ExHentai's answer to a stale login; toplists always come from e-hentai.org.
-        transport.on(.host("exhentai.org"), reply: .status(200))
-        let model = makeModel(host: .exhentai)
-        model.loadIfNeeded()
-
-        try await homeEventually { settled(model, after: 6) }
-
-        #expect(model.frontpageState == .failed(.exhentaiAccessDenied))
-        #expect(model.popularState == .failed(.exhentaiAccessDenied))
-        #expect(!model.toplists(for: .pastYear).isEmpty)
+        let query = transport.requests.first?.url?.query() ?? ""
+        #expect(query.contains("f_cats"))
     }
 
     @Test func emptyPopularIsNotFound() async throws {
-        serveFixtures()
-        transport.on(.path("/popular"), reply: .html("<html><body></body></html>"))
+        transport.on(.any, reply: .html("<html><body></body></html>"))
         let model = makeModel()
-        model.loadIfNeeded()
 
-        try await homeEventually { settled(model, after: 6) }
+        await model.refresh()
 
-        #expect(model.popularState == .failed(.notFound))
-        #expect(model.cards.isEmpty)
-        #expect(!model.frontpage.isEmpty)
+        #expect(model.loadingState == .failed(.notFound))
+        #expect(model.entries.isEmpty)
+    }
+
+    @Test func exhentaiRefusingTheSessionFailsWithThatReason() async throws {
+        transport.on(.any, reply: .status(200))
+        let model = makeModel(host: .exhentai)
+
+        await model.refresh()
+
+        #expect(model.loadingState == .failed(.exhentaiAccessDenied))
     }
 
     // MARK: Reload
 
-    @Test func reloadAllRequestsEverySectionAgainAndKeepsDataOnFailure() async throws {
-        serveFixtures()
+    @Test func aFailedReloadKeepsWhatIsShown() async throws {
+        transport.on(.any, replies: .fixture("Parser/List/PopularCompactList.html"), .error(URLError(.timedOut)))
         let model = makeModel()
-        model.loadIfNeeded()
-        try await homeEventually { settled(model, after: 6) }
-        let cards = model.cards
+        await model.refresh()
+        let entries = model.entries
 
-        transport.on(.path("/popular"), reply: .error(URLError(.timedOut)))
-        model.reloadAll()
-        try await homeEventually { settled(model, after: 12) }
+        await model.refresh()
 
-        #expect(transport.requests.count == 12)
-        #expect(model.popularState == .failed(.networkingFailed))
-        #expect(model.cards == cards)
+        #expect(transport.requests.count == 2)
+        #expect(model.loadingState == .failed(.networkingFailed))
+        #expect(model.entries == entries)
     }
 
-    @Test func sectionReloadsRequestOnlyTheirSection() async throws {
-        serveFixtures()
+    @Test func reloadingWhileLoadingWaitsForTheSameLoad() async throws {
+        let gate = Gate()
+        transport.on(.any, reply: .handler { request in
+            await gate.wait()
+            return try Fixture.response("Parser/List/PopularCompactList.html", for: request)
+        })
         let model = makeModel()
         model.loadIfNeeded()
-        try await homeEventually { settled(model, after: 6) }
-        transport.reset()
-        serveFixtures()
+        #expect(model.loadingState == .loading)
 
-        model.reloadFrontpage()
-        try await homeEventually { settled(model, after: 1) }
-        #expect(transport.requests.first?.url?.path() == "/")
+        model.reload()
+        model.loadIfNeeded()
+        let refresh = Task { await model.refresh() }
+        gate.open()
+        await refresh.value
 
-        model.reloadToplists()
-        try await homeEventually { settled(model, after: 5) }
-        #expect(transport.requests.dropFirst().allSatisfy { $0.url?.path() == "/toplist.php" })
+        #expect(transport.requests.count == 1)
+        #expect(!model.entries.isEmpty)
     }
 
-    @Test func reloadingASectionThatIsLoadingIsIgnored() async throws {
-        serveFixtures()
-        transport.on(.path("/"), reply: .suspendUntilCancelled)
+    @Test func appearingAgainLoadsOnlyWhenNothingIsShown() async throws {
+        transport.on(.any, replies: .error(URLError(.notConnectedToInternet)), .fixture("Parser/List/PopularCompactList.html"))
         let model = makeModel()
-        model.loadIfNeeded()
-        try await homeEventually { model.frontpageState.isLoading && model.popularState == .idle }
+        await model.refresh()
+        #expect(model.loadingState == .failed(.networkingFailed))
 
-        model.reloadFrontpage()
-        model.reloadFrontpage()
         model.loadIfNeeded()
-        try await Task.sleep(for: .milliseconds(50))
+        await model.refresh()
+        #expect(!model.entries.isEmpty)
+        let count = transport.requests.count
 
-        #expect(transport.requests.filter { $0.url?.path() == "/" }.count == 1)
+        model.loadIfNeeded()
+        #expect(model.loadingState == .idle)
+        #expect(transport.requests.count == count)
     }
 
     // MARK: Leaving the screen
 
-    /// Pushing a gallery while sections load must not abandon them: the screen coming back
-    /// finds them filled in, without requesting anything again.
-    @Test func loadsInFlightOutliveTheScreenAndAreNotRequestedAgain() async throws {
-        serveFixtures()
-        let gate = Gate()
-        transport.on(.path("/toplist.php"), reply: .handler { request in
-            await gate.wait()
-            return try Fixture.response("Parser/List/ToplistsCompactList.html", for: request)
-        })
-        let model = makeModel()
-        model.loadIfNeeded()
-        try await homeEventually { !model.cards.isEmpty && !model.frontpage.isEmpty && model.isLoadingToplists }
-
-        // The screen goes away and comes back while the toplists are still loading.
-        model.loadIfNeeded()
-        gate.open()
-        try await homeEventually { settled(model, after: 6) }
-
-        #expect(transport.requests.count == 6)
-        for type in ToplistsType.allCases {
-            #expect(!model.toplists(for: type).isEmpty)
-        }
-    }
-
-    @Test func releasingTheModelCancelsEveryLoadWithoutFailing() async throws {
-        let cancellations = Counter()
+    @Test func releasingTheModelCancelsTheLoadWithoutFailing() async throws {
+        let cancelled = Mutex(false)
+        let started = Gate()
         transport.on(.any, reply: .handler { _ in
+            started.open()
             do {
                 while true { try await Task.sleep(for: .seconds(3600)) }
             } catch {
-                cancellations.increment()
+                cancelled.withLock { $0 = true }
                 throw URLError(.cancelled)
             }
         })
         var model: HomeModel? = makeModel()
         model?.loadIfNeeded()
-        try await homeEventually { transport.requests.count == 6 }
+        await started.wait()
         weak let released = model
 
         model = nil
 
         #expect(released == nil)
-        try await homeEventually { cancellations.value == 6 }
-    }
-
-    @Test func appearingAgainLoadsOnlyWhatIsMissing() async throws {
-        serveFixtures()
-        transport.on(.path("/"), reply: .error(URLError(.notConnectedToInternet)))
-        let model = makeModel()
-        model.loadIfNeeded()
-        try await homeEventually { settled(model, after: 6) }
-        #expect(model.frontpageState == .failed(.networkingFailed))
-
-        transport.reset()
-        serveFixtures()
-        model.loadIfNeeded()
-        try await homeEventually { settled(model, after: 1) && !model.frontpage.isEmpty }
-
-        #expect(transport.requests.map { $0.url?.path() } == ["/"])
+        while !cancelled.withLock({ $0 }) { try await Task.sleep(for: .milliseconds(5)) }
     }
 
     // MARK: Helpers
 
-    /// Every load sets its state to loading before its request goes out, so once `count`
-    /// requests were sent and nothing is loading, all of them have finished.
-    private func settled(_ model: HomeModel, after count: Int) -> Bool {
-        transport.requests.count >= count && allSettled(model)
-    }
-
-    private func serveFixtures() {
-        transport.on(.path("/"), reply: .fixture("Parser/List/FrontPageCompactList.html"))
-        transport.on(.path("/popular"), reply: .fixture("Parser/List/PopularCompactList.html"))
-        transport.on(.path("/toplist.php"), reply: .fixture("Parser/List/ToplistsCompactList.html"))
-    }
-
-    private func makeModel(host: GalleryHost = .ehentai) -> HomeModel {
+    private func makeModel(host: GalleryHost = .ehentai, filters: FilterStore? = nil) -> HomeModel {
         let client = EhClient(
             transport: transport, cookies: CookieStore(storage: InMemoryCookieStorage()), host: { host }
         )
         return withDependencies {
             $0.ehClient = client
-            $0.withRandomNumberGenerator = WithRandomNumberGenerator(SplitMix64(seed: 3))
+            if let filters { $0.filterStore = filters }
         } operation: {
             HomeModel()
         }
-    }
-}
-
-private func allSettled(_ model: HomeModel) -> Bool {
-    !model.popularState.isLoading && !model.frontpageState.isLoading
-        && model.toplistsStates.count == ToplistsType.allCases.count && !model.isLoadingToplists
-}
-
-private struct TimedOut: Error {}
-
-nonisolated private final class Counter: Sendable {
-    private let count = Mutex(0)
-    var value: Int { count.withLock { $0 } }
-    func increment() { count.withLock { $0 += 1 } }
-}
-
-/// Polls `condition` on the main actor until it holds, yielding between checks.
-private func homeEventually(
-    timeout: Duration = .seconds(60), _ condition: @MainActor () -> Bool
-) async throws {
-    let deadline = ContinuousClock.now + timeout
-    while !condition() {
-        guard ContinuousClock.now < deadline else { throw TimedOut() }
-        try await Task.sleep(for: .milliseconds(5))
     }
 }

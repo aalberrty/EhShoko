@@ -15,6 +15,7 @@ final class ListTestEnvironment {
     let transport = StubTransport()
     let cookies = CookieStore(storage: InMemoryCookieStorage())
     let filterStore = FilterStore(defaults: UserDefaults(suiteName: "ListTests-\(UUID().uuidString)")!)
+    let userStore = UserStore(defaults: UserDefaults(suiteName: "ListTestsUser-\(UUID().uuidString)")!)
     let database: AppDatabase
 
     init(loggedIn: Bool = true) throws {
@@ -33,6 +34,7 @@ final class ListTestEnvironment {
             $0.ehClient = EhClient(transport: transport, cookies: cookies, host: { .ehentai })
             $0.cookieStore = cookies
             $0.filterStore = filterStore
+            $0.userStore = userStore
             $0.database = database
         } operation: {
             build()
@@ -140,4 +142,9 @@ extension Fixture {
         else { throw URLError(.badURL) }
         return HTTPResponse(data: try Fixture.data(path), response: response)
     }
+}
+
+extension Array where Element == GalleryEntry {
+    /// The entries' galleries, for tests about which galleries a list holds.
+    var galleries: [Gallery] { map(\.gallery) }
 }

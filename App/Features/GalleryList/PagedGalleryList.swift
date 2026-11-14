@@ -21,12 +21,13 @@ struct PagedGalleryList: View {
             case .failed(let error):
                 ErrorStateView(error: error, retry: error.isRetryable ? { model.retry() } : nil)
             case .content:
-                GalleryCollection(galleries: model.visibleGalleries) {
+                // v3's rows take galleries; the list designs take the entries themselves.
+                GalleryCollection(galleries: model.visibleEntries.map(\.gallery)) {
                     ListPaginationFooter(model: model)
                 }
                 .refreshable { await model.refresh() }
                 .overlay {
-                    if model.visibleGalleries.isEmpty {
+                    if model.visibleEntries.isEmpty {
                         ContentUnavailableView.search(text: model.titleFilter)
                     }
                 }

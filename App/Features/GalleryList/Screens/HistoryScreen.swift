@@ -42,12 +42,12 @@ struct HistoryScreen: View {
             case .idle where model.isHistoryEmpty:
                 EmptyStateView()
             case .idle:
-                GalleryCollection(galleries: model.galleries) {
+                GalleryCollection(galleries: model.entries.map(\.gallery)) {
                     HistoryFooter(model: model)
                 }
                 .refreshable { await model.refresh() }
                 .overlay {
-                    if model.galleries.isEmpty {
+                    if model.entries.isEmpty {
                         ContentUnavailableView.search(text: model.titleFilter)
                     }
                 }
@@ -63,6 +63,6 @@ private struct HistoryFooter: View {
 
     var body: some View {
         PaginationFooter(phase: model.hasMore ? .loading : .end) {}
-            .task(id: model.galleries.count) { model.loadMore() }
+            .task(id: model.entries.count) { model.loadMore() }
     }
 }

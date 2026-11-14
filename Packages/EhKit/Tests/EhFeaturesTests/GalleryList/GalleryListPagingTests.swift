@@ -99,8 +99,18 @@ import Testing
     }
 
     @Test func titleFilterIgnoresCase() {
-        let galleries = [Gallery.stub("1", title: "Blue Sky"), .stub("2", title: "Red")]
-        #expect(GalleryListPaging.filtered(galleries, byTitle: "sKY").map(\.gid) == ["1"])
-        #expect(GalleryListPaging.filtered(galleries, byTitle: "").count == 2)
+        let entries = [Gallery.stub("1", title: "Blue Sky"), .stub("2", title: "Red")].map { GalleryEntry(gallery: $0) }
+        #expect(GalleryListPaging.filtered(entries, byTitle: "sKY").map(\.id) == ["1"])
+        #expect(GalleryListPaging.filtered(entries, byTitle: "").count == 2)
+    }
+
+    /// The filter reads the raw title: a circle, an event or a language in brackets matches
+    /// although the parsed title shows it apart from the title itself.
+    @Test func titleFilterMatchesTheRawTitle() {
+        let entry = GalleryEntry(gallery: .stub("1", title: "(C102) [Circle (Artist)] Title [English]"))
+        #expect(entry.title.core == "Title")
+        #expect(GalleryListPaging.filtered([entry], byTitle: "circle").map(\.id) == ["1"])
+        #expect(GalleryListPaging.filtered([entry], byTitle: "c102").map(\.id) == ["1"])
+        #expect(GalleryListPaging.filtered([entry], byTitle: "english").map(\.id) == ["1"])
     }
 }

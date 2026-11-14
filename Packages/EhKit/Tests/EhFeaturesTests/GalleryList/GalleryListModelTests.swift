@@ -16,9 +16,9 @@ import Testing
         await model.loadIfNeeded()
 
         #expect(model.phase == .content)
-        #expect(!model.galleries.isEmpty)
-        #expect(model.galleries.last?.gid == ListFixture.frontpageLastID)
-        #expect(model.visibleGalleries == model.galleries)
+        #expect(!model.entries.galleries.isEmpty)
+        #expect(model.entries.galleries.last?.gid == ListFixture.frontpageLastID)
+        #expect(model.visibleEntries.galleries == model.entries.galleries)
         #expect(model.footerPhase == .idle)
         #expect(env.query("next", ofRequest: 0) == nil)
 
@@ -33,14 +33,14 @@ import Testing
         env.transport.on(.query("next", ListFixture.frontpageLastID), reply: .fixture(ListFixture.popular))
         let model = env.make { GalleryListModel(source: .frontpage) }
         await model.loadIfNeeded()
-        let firstCount = model.galleries.count
+        let firstCount = model.entries.galleries.count
         let trigger = model.paginationTrigger
 
         await model.loadMore()
 
         #expect(env.query("next", ofRequest: 1) == ListFixture.frontpageLastID)
-        #expect(model.galleries.count > firstCount)
-        #expect(Set(model.galleries.map(\.gid)).count == model.galleries.count)
+        #expect(model.entries.galleries.count > firstCount)
+        #expect(Set(model.entries.galleries.map(\.gid)).count == model.entries.galleries.count)
         #expect(model.paginationTrigger != trigger)
         // The popular page has no "Next" link.
         #expect(model.footerPhase == .end)
@@ -53,11 +53,11 @@ import Testing
         env.transport.on(.any, reply: .fixture(ListFixture.frontpage))
         let model = env.make { GalleryListModel(source: .frontpage) }
         await model.loadIfNeeded()
-        let galleries = model.galleries
+        let galleries = model.entries.galleries
 
         await model.loadMore()
 
-        #expect(model.galleries == galleries)
+        #expect(model.entries.galleries == galleries)
         // The same page again would repeat the same request forever, so the list ends.
         #expect(!model.hasNextPage)
     }
@@ -82,12 +82,12 @@ import Testing
         env.transport.on(.query("next", "900"), reply: .fixture(ListFixture.popular))
         let model = env.make { GalleryListModel(source: .frontpage) }
         await model.loadIfNeeded()
-        let firstCount = model.galleries.count
+        let firstCount = model.entries.galleries.count
 
         await model.loadMore()
 
         #expect(env.transport.requests.count == 3)
-        #expect(model.galleries.count > firstCount)
+        #expect(model.entries.galleries.count > firstCount)
         #expect(model.footerPhase == .end)
     }
 
@@ -172,7 +172,7 @@ import Testing
         })
         let model = env.make { GalleryListModel(source: .frontpage) }
         await model.loadIfNeeded()
-        let firstCount = model.galleries.count
+        let firstCount = model.entries.galleries.count
 
         let task = Task { await model.loadMore() }
         await waitUntil { model.footerState == .loading }
@@ -186,7 +186,7 @@ import Testing
         await reappeared.value
         await waitUntil { model.footerState == .idle }
 
-        #expect(model.galleries.count > firstCount)
+        #expect(model.entries.galleries.count > firstCount)
         #expect(model.footerPhase == .end)
     }
 
@@ -221,7 +221,7 @@ import Testing
         await task.value
 
         #expect(model.footerState == .idle)
-        #expect(model.galleries.isEmpty)
+        #expect(model.entries.galleries.isEmpty)
         await model.loadIfNeeded()
         #expect(model.phase == .content)
         #expect(model.hasNextPage)
@@ -263,7 +263,7 @@ import Testing
 
         await model.refresh()
 
-        #expect(model.galleries.last?.gid != ListFixture.frontpageLastID)
+        #expect(model.entries.galleries.last?.gid != ListFixture.frontpageLastID)
         #expect(env.query("next", ofRequest: 1) == nil)
     }
 
@@ -278,21 +278,21 @@ import Testing
         env.transport.on(.any, replies: .html(html), .html(html.replacingOccurrences(of: oldTitle, with: newTitle)))
         let model = env.make { GalleryListModel(source: .frontpage) }
         await model.loadIfNeeded()
-        let ids = model.visibleGalleries.map(\.gid)
-        #expect(model.visibleGalleries.contains { $0.title == oldTitle })
+        let ids = model.visibleEntries.galleries.map(\.gid)
+        #expect(model.visibleEntries.galleries.contains { $0.title == oldTitle })
 
         let notified = Mutex(false)
         withObservationTracking {
-            _ = model.visibleGalleries
+            _ = model.visibleEntries.galleries
         } onChange: {
             notified.withLock { $0 = true }
         }
         await model.refresh()
 
         #expect(notified.withLock { $0 })
-        #expect(model.visibleGalleries.map(\.gid) == ids)
-        #expect(model.visibleGalleries.contains { $0.title == newTitle })
-        #expect(!model.visibleGalleries.contains { $0.title == oldTitle })
+        #expect(model.visibleEntries.galleries.map(\.gid) == ids)
+        #expect(model.visibleEntries.galleries.contains { $0.title == newTitle })
+        #expect(!model.visibleEntries.galleries.contains { $0.title == oldTitle })
     }
 
     @Test func requestsUseTheFilterOfTheirRange() async throws {
@@ -334,13 +334,13 @@ import Testing
         env.transport.on(.any, reply: .fixture(ListFixture.frontpage))
         let model = env.make { GalleryListModel(source: .frontpage) }
         await model.loadIfNeeded()
-        let title = try #require(model.galleries.first?.title)
+        let title = try #require(model.entries.galleries.first?.title)
 
         model.titleFilter = title.uppercased()
-        #expect(!model.visibleGalleries.isEmpty)
-        #expect(model.visibleGalleries.count < model.galleries.count)
+        #expect(!model.visibleEntries.galleries.isEmpty)
+        #expect(model.visibleEntries.galleries.count < model.entries.galleries.count)
         model.titleFilter = ""
-        #expect(model.visibleGalleries == model.galleries)
+        #expect(model.visibleEntries.galleries == model.entries.galleries)
     }
 
     @Test func resetSwitchesSourceAndLoadsAgain() async throws {
@@ -352,7 +352,7 @@ import Testing
 
         model.keyword = "language:english"
         model.submitKeyword()
-        #expect(model.list.galleries.isEmpty)
+        #expect(model.list.entries.galleries.isEmpty)
         #expect(model.list.loadRequest != request)
         await model.list.loadIfNeeded()
 

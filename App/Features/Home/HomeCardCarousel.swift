@@ -5,7 +5,10 @@ import SwiftUI
 /// The Popular cards: a paging carousel that opens on the second card, with neighbours peeking
 /// in at both edges (legacy `CardSlideSection` on SwiftUIPager).
 struct HomeCardCarousel: View {
-    let cards: [Gallery]
+    /// Legacy showed at most six cards.
+    static let maximumCards = 6
+
+    let cards: [GalleryEntry]
     /// Whether the page around the carousel is scrolling.
     var pageScrolling = PageScrollState()
     let open: (Gallery) -> Void
@@ -26,11 +29,13 @@ struct HomeCardCarousel: View {
     var body: some View {
         ScrollView(.horizontal) {
             LazyHStack(spacing: Tokens.Spacing.medium) {
-                ForEach(cards) { gallery in
+                ForEach(cards) { entry in
+                    let gallery = entry.gallery
                     Button { open(gallery) } label: {
                         HomeCard(
                             gallery: gallery,
-                            title: HomeSections.cardTitle(of: gallery, isCompact: sizeClass != .regular),
+                            // Narrow layouts show the parsed title, wide ones the whole title.
+                            title: sizeClass == .regular ? gallery.title : entry.title.core,
                             palette: palettes.palettes[gallery.id],
                             isAnimated: animatesCurrentCard && gallery.id == currentID
                         )
@@ -56,7 +61,8 @@ struct HomeCardCarousel: View {
         // Only a new set of cards moves back to the first one; refreshed fields of the same
         // galleries keep the card the user scrolled to.
         .onChange(of: cards.map(\.id), initial: true) { _, ids in
-            currentID = HomeSections.initialCardIndex(count: ids.count).map { ids[$0] }
+            // Legacy opened on the second card when there is one.
+            currentID = ids.isEmpty ? nil : ids[min(1, ids.count - 1)]
         }
     }
 
@@ -110,5 +116,5 @@ private struct HomeCard: View {
 }
 
 #Preview {
-    HomeCardCarousel(cards: [.preview], open: { _ in })
+    HomeCardCarousel(cards: [GalleryEntry(gallery: .preview)], open: { _ in })
 }

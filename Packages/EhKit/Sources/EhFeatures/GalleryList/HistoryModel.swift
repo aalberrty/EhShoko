@@ -22,7 +22,8 @@ public final class HistoryModel {
     }
 
     /// The galleries whose title contains `titleFilter`, newest first, up to the pages loaded.
-    public private(set) var galleries: [Gallery] = []
+    /// The database applies the filter, so these are also the rows shown.
+    public private(set) var entries: [GalleryEntry] = []
     /// Whether more galleries match than are loaded.
     public private(set) var hasMore = false
     /// Whether the history holds no gallery at all, whatever the filter.
@@ -52,7 +53,7 @@ public final class HistoryModel {
         let query = query
         do {
             for try await page in database.observeHistory(limit: query.limit, titleFilter: query.titleFilter) {
-                apply(page)
+                apply(page, entries: await Self.entries(for: page, reusing: entries))
             }
         } catch {
             fail(error)
@@ -65,7 +66,7 @@ public final class HistoryModel {
         let query = query
         do {
             for try await page in database.observeHistory(limit: query.limit, titleFilter: query.titleFilter) {
-                apply(page)
+                apply(page, entries: await Self.entries(for: page, reusing: entries))
                 break
             }
         } catch {
@@ -75,7 +76,7 @@ public final class HistoryModel {
 
     /// Asks for another page once the current one has arrived and more rows match.
     public func loadMore() {
-        guard hasMore, galleries.count >= limit else { return }
+        guard hasMore, entries.count >= limit else { return }
         limit += Self.pageSize
     }
 
@@ -88,8 +89,15 @@ public final class HistoryModel {
         }
     }
 
-    private func apply(_ page: HistoryPage) {
-        galleries = page.galleries
+    /// The database sends every row again on each change; rows it sent before keep their
+    /// entries, so a title is parsed once, off the main actor.
+    @concurrent
+    nonisolated static func entries(for page: HistoryPage, reusing previous: [GalleryEntry]) async -> [GalleryEntry] {
+        GalleryEntry.entries(for: page.galleries, reusing: previous)
+    }
+
+    private func apply(_ page: HistoryPage, entries newEntries: [GalleryEntry]) {
+        if entries != newEntries { entries = newEntries }
         hasMore = page.hasMore
         isHistoryEmpty = page.isHistoryEmpty
         loadingState = .idle

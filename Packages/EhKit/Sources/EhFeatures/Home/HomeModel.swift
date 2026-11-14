@@ -4,151 +4,97 @@ import EhModels
 import EhNetworking
 import Observation
 
-/// The Home tab root: Popular cards, the Frontpage cover strip and the four Toplists columns.
+/// Popular for the first screen (Shelf's "Popular now" shelf): one page, as entries, with the
+/// favourite marks the page carries. The Front Page below it is a `GalleryListModel` of its own.
 ///
-/// Each section loads on its own, concurrently with the others, so one failing never blanks
-/// the rest. The loads run in tasks the model owns: pushing a gallery while they are in flight
-/// does not abandon them, and they are cancelled only when the model goes away. Reload requests
-/// made while a section is already loading are ignored for that section, as in legacy.
+/// The load runs in a task the model owns: pushing a gallery while it is in flight does not
+/// abandon it, and it is cancelled only when the model goes away. A reload asked for while one
+/// is in flight waits for that one, as in legacy.
 @Observable
 public final class HomeModel {
-    public private(set) var cards: [Gallery] = []
-    public private(set) var popularState: LoadingState = .idle
-
-    /// De-duplicated frontpage galleries (at most 25).
-    public private(set) var frontpage: [Gallery] = []
-    public private(set) var frontpageState: LoadingState = .idle
-
-    public private(set) var toplists: [ToplistsType: [Gallery]] = [:]
-    public private(set) var toplistsStates: [ToplistsType: LoadingState] = [:]
+    /// Popular galleries in the site's order.
+    public private(set) var entries: [GalleryEntry] = []
+    public private(set) var loadingState: LoadingState = .idle
 
     @ObservationIgnored @Dependency(\.ehClient) private var client
     @ObservationIgnored @Dependency(\.filterStore) private var filterStore
-    @ObservationIgnored @Dependency(\.withRandomNumberGenerator) private var withRandomNumberGenerator
 
     @ObservationIgnored private let tasks = ModelTasks()
-    /// Sections with a load in flight. One task per section bounds the fan-out to six.
-    @ObservationIgnored private var inFlight: Set<HomeSection> = []
+    @ObservationIgnored private var load: Task<Void, Never>?
 
     public init() {}
 
-    // MARK: Derived state
-
-    public var coverColumns: [CoverColumn] {
-        HomeSections.coverColumns(from: frontpage)
-    }
-
-    public var isLoadingToplists: Bool {
-        toplistsStates.values.contains(.loading)
-    }
-
-    public func toplists(for type: ToplistsType) -> [Gallery] {
-        toplists[type] ?? []
-    }
-
     // MARK: Commands
 
-    /// Loads the sections that have nothing to show and are not loading. Call it each time the
-    /// screen appears.
+    /// Loads Popular unless it is shown or loading. Call it each time the screen appears; a
+    /// failed load is tried again.
     public func loadIfNeeded() {
-        start(sectionsToLoadOnAppear)
+        guard entries.isEmpty else { return }
+        start()
     }
 
-    /// Toolbar reload, Retry and re-selecting the Home tab: every section.
-    public func reloadAll() {
-        start(HomeSection.all)
+    /// Reloads Popular (Retry, re-selecting the first screen), keeping what is shown until the
+    /// new page arrives.
+    public func reload() {
+        start()
     }
 
-    /// Tapping the Frontpage header.
-    public func reloadFrontpage() {
-        start([.frontpage])
-    }
-
-    /// Tapping the Toplists header: all four periods.
-    public func reloadToplists() {
-        start(HomeSection.toplists)
-    }
-
-    /// Legacy loaded everything on appear when Popular was empty. Sections left empty by a
-    /// failed load are loaded again too.
-    private var sectionsToLoadOnAppear: [HomeSection] {
-        if cards.isEmpty { return HomeSection.all }
-        var sections: [HomeSection] = []
-        if frontpage.isEmpty { sections.append(.frontpage) }
-        for type in ToplistsType.allCases where toplists(for: type).isEmpty {
-            sections.append(.toplists(type))
-        }
-        return sections
+    /// Reloads Popular and waits for it (pull to refresh).
+    public func refresh() async {
+        await start().waitUnlessCancelled()
     }
 
     // MARK: Loading
 
-    private func start(_ sections: [HomeSection]) {
-        for section in sections where inFlight.insert(section).inserted {
-            setState(.loading, for: section)
-            let fetch = fetch(section)
-            let signpost = PerformanceSignposts.begin(.listPage, "home \(section.taskKey)")
-            tasks.run(section.taskKey) { [weak self] in
-                let outcome = await Outcome.of { try await fetch() }
-                self?.finish(section, with: outcome)
-                signpost.end(outcome.signpostOutcome { "\($0.count) galleries" })
-            }
+    @discardableResult
+    private func start() -> Task<Void, Never> {
+        if let load { return load }
+        loadingState = .loading
+        let fetch = fetch()
+        let signpost = PerformanceSignposts.begin(.listPage, "home popular")
+        let task = tasks.run(TaskKey.popular) { [weak self] in
+            let outcome = await Outcome.of { try await fetch() }
+            self?.finish(with: outcome)
+            signpost.end(outcome.signpostOutcome { "\($0.count) galleries" })
         }
+        load = task
+        return task
     }
 
-    private func finish(_ section: HomeSection, with outcome: Outcome<[Gallery]>) {
-        inFlight.remove(section)
+    private func finish(with outcome: Outcome<[GalleryEntry]>) {
+        load = nil
         switch outcome {
-        case .success(let galleries) where galleries.isEmpty:
-            setState(.failed(.notFound), for: section)
-        case .success(let galleries):
-            apply(galleries, to: section)
-            setState(.idle, for: section)
-        case .failure(let error):
-            setState(.failed(error), for: section)
-        case .cancelled:
-            setState(.idle, for: section)
-        }
-    }
-
-    /// The request for `section`, holding the client and filter but not the model, so a load
-    /// in flight does not keep a released model alive. Popular and Frontpage use the Global
-    /// filter; Toplists take none.
-    private func fetch(_ section: HomeSection) -> @Sendable () async throws -> [Gallery] {
-        let client = client
-        switch section {
-        case .popular:
-            let filter = filterStore.globalFilter
-            return { try await client.popular(filter: filter) }
-        case .frontpage:
-            let filter = filterStore.globalFilter
-            return { try await client.frontpage(filter: filter).galleries }
-        case .toplists(let type):
-            return { try await client.toplists(type: type).galleries }
-        }
-    }
-
-    private func apply(_ galleries: [Gallery], to section: HomeSection) {
-        switch section {
-        case .popular:
-            cards = withRandomNumberGenerator { HomeSections.cards(from: galleries, using: &$0) }
-            // The page waits for Popular, so its cards are the first screen's content.
+        case .success(let entries) where entries.isEmpty:
+            loadingState = .failed(.notFound)
+        case .success(let entries):
+            if self.entries != entries { self.entries = entries }
+            loadingState = .idle
+            // Popular is the first screen's own content; the Front Page signs for itself.
             PerformanceSignposts.contentShown("home")
-        case .frontpage:
-            frontpage = HomeSections.frontpage(from: galleries)
-        case .toplists(let type):
-            toplists[type] = galleries
+        case .failure(let error):
+            loadingState = .failed(error)
+        case .cancelled:
+            loadingState = .idle
         }
     }
 
-    private func setState(_ state: LoadingState, for section: HomeSection) {
-        switch section {
-        case .popular:
-            popularState = state
-        case .frontpage:
-            frontpageState = state
-        case .toplists(let type):
-            toplistsStates[type] = state
-        }
+    /// The request, holding the client and filter but not the model, so a load in flight does
+    /// not keep a released model alive. Popular uses the Global filter.
+    private func fetch() -> @Sendable () async throws -> [GalleryEntry] {
+        let client = client
+        let filter = filterStore.globalFilter
+        return { try await Self.fetchEntries(client: client, filter: filter) }
+    }
+
+    /// Fetches the page and builds its entries off the main actor.
+    @concurrent
+    nonisolated private static func fetchEntries(client: EhClient, filter: Filter) async throws -> [GalleryEntry] {
+        let page = try await client.popularPage(filter: filter)
+        let unique = GalleryListPaging.deduplicated(page.galleries, excluding: [])
+        return GalleryEntry.entries(for: unique, marks: page.favoriteMarks)
+    }
+
+    private enum TaskKey {
+        static let popular = "popular"
     }
 }
