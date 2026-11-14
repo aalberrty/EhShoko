@@ -2,26 +2,49 @@ import SwiftUI
 
 /// Five stars showing a 0–5 rating in half-star steps (legacy `RatingView`).
 ///
-/// Size and colour come from the environment: `.font(.caption).foregroundStyle(.yellow)`.
-/// VoiceOver reads it as one element, e.g. "Average rating, 3.5/5".
+/// Size comes from the environment's font. The colour is the look's rating colour with
+/// `tint: .look`, which the designs use; v3's screens pass `.inherited` (the default) and set
+/// it with `foregroundStyle`. VoiceOver reads it as one element, e.g. "Average rating, 3.5/5".
 struct RatingStars: View {
+    enum Tint {
+        /// The surrounding foreground style.
+        case inherited
+        /// The look's `rating` colour.
+        case look
+    }
+
     private let rating: Double
     private let label: String
+    private let tint: Tint
+    @Environment(\.look) private var look
 
-    init(rating: Double, accessibilityLabel: String = L10n.Localizable.GalleryInfosView.Title.averageRating) {
+    init(
+        rating: Double, tint: Tint = .inherited,
+        accessibilityLabel: String = L10n.Localizable.GalleryInfosView.Title.averageRating
+    ) {
         self.rating = Self.halfRounded(rating)
+        self.tint = tint
         label = accessibilityLabel
     }
 
     var body: some View {
-        HStack(spacing: 0) {
+        stars
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(label)
+            .accessibilityValue(Self.accessibilityValue(for: rating))
+    }
+
+    @ViewBuilder
+    private var stars: some View {
+        let row = HStack(spacing: 0) {
             ForEach(0..<5, id: \.self) { index in
                 Image(systemName: Self.symbolName(forStar: index, rating: rating))
             }
         }
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel(label)
-        .accessibilityValue(Self.accessibilityValue(for: rating))
+        switch tint {
+        case .inherited: row
+        case .look: row.foregroundStyle(look.rating)
+        }
     }
 
     /// Rounds to the nearest half like legacy `Float.halfRounded` (x.25 rounds up to x.5).
@@ -42,6 +65,30 @@ struct RatingStars: View {
     }
 }
 
+/// A rating as one star and its value, "★ 4.72" (Wall's captions, Ledger's metadata line): the
+/// star in the look's rating colour, the value in the surrounding style and font, with
+/// monospaced digits. One `Text`, so it joins a line of text without a layout of its own.
+struct RatingFigure: View {
+    private let rating: Double
+    private let fractionDigits: Int
+    @Environment(\.look) private var look
+
+    /// `fractionDigits` 2 gives "4.72"; Wall's medium caption shows 1, "4.7".
+    init(rating: Double, fractionDigits: Int = 2) {
+        self.rating = rating
+        self.fractionDigits = fractionDigits
+    }
+
+    var body: some View {
+        let star = Text(Image(systemName: "star.fill")).foregroundStyle(look.rating)
+        let value = rating.formatted(.number.precision(.fractionLength(fractionDigits)))
+        Text("\(star) \(value)")
+            .monospacedDigit()
+            .accessibilityLabel(L10n.Localizable.GalleryInfosView.Title.averageRating)
+            .accessibilityValue(RatingStars.accessibilityValue(for: rating))
+    }
+}
+
 private struct RatingStarsPreview: View {
     var body: some View {
         VStack(alignment: .leading, spacing: Tokens.Spacing.small) {
@@ -52,6 +99,8 @@ private struct RatingStarsPreview: View {
                 }
             }
             RatingStars(rating: 3.74).font(.caption).foregroundStyle(.primary)
+            RatingStars(rating: 4.72, tint: .look).font(.caption)
+            RatingFigure(rating: 4.72).font(.caption)
         }
     }
 }

@@ -1,16 +1,20 @@
 import SwiftUI
 
-/// Full-screen loading indicator (legacy `LoadingView`).
+/// Full-screen loading indicator (legacy `LoadingView`), its title in the look's secondary
+/// colour.
 struct LoadingStateView: View {
     private let title: String
+    @Environment(\.look) private var look
 
     init(title: String = L10n.Localizable.LoadingView.Title.loading) {
         self.title = title
     }
 
     var body: some View {
-        ProgressView(title)
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
+        ProgressView {
+            Text(title).foregroundStyle(look.secondaryLabel)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }
 
@@ -79,25 +83,33 @@ struct NotLoggedInView: View {
 }
 
 /// `ContentUnavailableView` laid out the way legacy `AlertView` read: a large symbol, the message
-/// as the description, and a glass button.
+/// as the description, and a glass button. Colours and the title's face come from the look: the
+/// symbol in its tertiary label colour, the title in its label colour and title face (New York
+/// under Ledger), the message in its secondary colour. The view has no background, so it sits
+/// on whatever ground the screen draws.
 private struct StatusView<Actions: View>: View {
     let title: String?
     let message: String
     let systemImage: String
     @ViewBuilder let actions: Actions
+    @Environment(\.look) private var look
 
     var body: some View {
         ContentUnavailableView {
             Label {
                 if let title {
                     Text(title)
+                        .fontDesign(look.titleDesign)
+                        .foregroundStyle(look.label)
                 }
             } icon: {
                 Image(systemName: systemImage)
                     .symbolRenderingMode(.hierarchical)
+                    .foregroundStyle(look.tertiaryLabel)
             }
         } description: {
             Text(message)
+                .foregroundStyle(look.secondaryLabel)
         } actions: {
             actions
                 .glassButtonStyle()

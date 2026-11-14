@@ -29,6 +29,8 @@ final class ListHarnessModel {
     @ObservationIgnored let scroller = ListHarnessScroller()
     /// New cover URLs on every launch of the harness, so covers are downloaded and decoded.
     @ObservationIgnored private let session = UUID().uuidString.prefix(8).lowercased()
+    /// `CoverDecodeCounter` when the harness started, so a run reports only its own decodes.
+    @ObservationIgnored private var coverDecodesAtStart = 0
     @ObservationIgnored @Dependency(\.imageCacheClient) private var imageCache
 
     private static let settingsSuite = "app.ehgaro.list-harness"
@@ -45,6 +47,7 @@ final class ListHarnessModel {
     func start() async {
         guard phase == .preparing else { return }
         ListHarnessURLProtocol.install()
+        coverDecodesAtStart = CoverDecodeCounter.value
         // A result left by an earlier run must not pass for this one's.
         await ListHarnessResult.removeLast()
         // What the launch sequence does before the first screen, which a harness launched in
@@ -70,7 +73,8 @@ final class ListHarnessModel {
         }
         let result = ListHarnessResult(
             options: options, galleryCount: galleries.count, scroll: measured,
-            footprint: MemoryFootprint.current(), coversServed: ListHarnessURLProtocol.servedCount.withLock { $0 }
+            footprint: MemoryFootprint.current(), coversServed: ListHarnessURLProtocol.servedCount.withLock { $0 },
+            coversDecoded: CoverDecodeCounter.value - coverDecodesAtStart
         )
         phase = .finished(result)
         await result.write()
@@ -116,10 +120,12 @@ nonisolated struct ListHarnessResult: Equatable, Sendable, Codable {
     var footprintMB: Double
     var peakFootprintMB: Double
     var coversServed: Int
+    /// Covers decoded by `CoverImage` during the harness; 0 for slots that do not use it.
+    var coversDecoded: Int
 
     init(
         options: ListHarnessOptions, galleryCount: Int, scroll: ListHarnessScroller.Result,
-        footprint: MemoryFootprint?, coversServed: Int
+        footprint: MemoryFootprint?, coversServed: Int, coversDecoded: Int
     ) {
         slot = options.slot.rawValue
         galleries = galleryCount
@@ -138,6 +144,7 @@ nonisolated struct ListHarnessResult: Equatable, Sendable, Codable {
         footprintMB = footprint.map { Double($0.current) / 1_048_576 } ?? 0
         peakFootprintMB = footprint.map { Double($0.peak) / 1_048_576 } ?? 0
         self.coversServed = coversServed
+        self.coversDecoded = coversDecoded
     }
 
     static var fileURL: URL {
@@ -146,8 +153,9 @@ nonisolated struct ListHarnessResult: Equatable, Sendable, Codable {
 
     var summary: String {
         String(
-            format: "%@: %.1f s, %d frames, hitch ratio %.1f ms/s, worst %.0f ms, %d long after the first screen, footprint %.0f MB (peak %.0f MB)",
-            slot, duration, frames, hitchRatioMsPerS, worstHitchMs, longHitchesAfterFirstScreen, footprintMB, peakFootprintMB
+            format: "%@: %.1f s, %d frames, hitch ratio %.1f ms/s, worst %.0f ms, %d long after the first screen, footprint %.0f MB (peak %.0f MB), covers served %d, decoded by CoverImage %d",
+            slot, duration, frames, hitchRatioMsPerS, worstHitchMs, longHitchesAfterFirstScreen, footprintMB, peakFootprintMB,
+            coversServed, coversDecoded
         )
     }
 
