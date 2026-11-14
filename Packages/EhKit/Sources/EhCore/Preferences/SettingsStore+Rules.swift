@@ -10,6 +10,9 @@ import EhModels
 /// The blur radius legacy switches to when auto-lock is enabled with no blur.
 let autoLockBlurRadius: Double = 10
 
+/// The site's ten favourites folders.
+let favoriteFolders = 0...9
+
 extension SettingsStore {
     /// Turning the tags extension off turns off everything that depends on it.
     /// Legacy: `Setting.enablesTagsExtension.didSet` (`Models/Persistent/Setting.swift`).
@@ -51,6 +54,20 @@ extension SettingsStore {
             maximumScaleFactor = doubleTapScaleFactor
         }
     }
+
+    /// The remembered favourites folder is always one of the site's ten.
+    func enforceFavoriteFolderRule() {
+        let clamped = lastFavoriteFolder.clamped(to: favoriteFolders)
+        if lastFavoriteFolder != clamped {
+            lastFavoriteFolder = clamped
+        }
+    }
+}
+
+private extension Int {
+    func clamped(to range: ClosedRange<Int>) -> Int {
+        Swift.min(Swift.max(self, range.lowerBound), range.upperBound)
+    }
 }
 
 extension Setting {
@@ -72,6 +89,7 @@ extension Setting {
         if setting.doubleTapScaleFactor > setting.maximumScaleFactor {
             setting.doubleTapScaleFactor = setting.maximumScaleFactor
         }
+        setting.lastFavoriteFolder = setting.lastFavoriteFolder.clamped(to: favoriteFolders)
         return setting
     }
 }

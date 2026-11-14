@@ -56,6 +56,22 @@ extension Setting {
         setting.maximumScaleFactor = 6
         setting.doubleTapScaleFactor = 4.5
         setting.bypassesSNIFiltering = true
+        setting.designBar = .command
+        setting.designStart = .wall
+        setting.designList = .ledger
+        setting.designGallery = .wall
+        setting.designReader = .ledger
+        setting.designSearch = .wall
+        setting.designLibrary = .ledger
+        setting.designLook = .wall
+        setting.designCustom = DesignChoices(
+            bar: .tabs, start: .ledger, list: .wall, gallery: .shelf,
+            reader: .shelf, search: .ledger, library: .wall, look: .ledger
+        )
+        setting.wallDensity = .small
+        setting.ledgerShowsCovers = false
+        setting.lastFavoriteFolder = 7
+        setting.experienceOfferShown = true
         return setting
     }()
 }

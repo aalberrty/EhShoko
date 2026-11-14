@@ -31,6 +31,19 @@ extension SettingsStore {
         setting.maximumScaleFactor = maximumScaleFactor
         setting.doubleTapScaleFactor = doubleTapScaleFactor
         setting.bypassesSNIFiltering = bypassesSNIFiltering
+        setting.designBar = designBar
+        setting.designStart = designStart
+        setting.designList = designList
+        setting.designGallery = designGallery
+        setting.designReader = designReader
+        setting.designSearch = designSearch
+        setting.designLibrary = designLibrary
+        setting.designLook = designLook
+        setting.designCustom = designCustom
+        setting.wallDensity = wallDensity
+        setting.ledgerShowsCovers = ledgerShowsCovers
+        setting.lastFavoriteFolder = lastFavoriteFolder
+        setting.experienceOfferShown = experienceOfferShown
         return setting
     }
 
@@ -67,6 +80,19 @@ extension SettingsStore {
         maximumScaleFactor = setting.maximumScaleFactor
         doubleTapScaleFactor = setting.doubleTapScaleFactor
         bypassesSNIFiltering = setting.bypassesSNIFiltering
+        designBar = setting.designBar
+        designStart = setting.designStart
+        designList = setting.designList
+        designGallery = setting.designGallery
+        designReader = setting.designReader
+        designSearch = setting.designSearch
+        designLibrary = setting.designLibrary
+        designLook = setting.designLook
+        designCustom = setting.designCustom
+        wallDensity = setting.wallDensity
+        ledgerShowsCovers = setting.ledgerShowsCovers
+        lastFavoriteFolder = setting.lastFavoriteFolder
+        experienceOfferShown = setting.experienceOfferShown
     }
 
     /// Sets the device-dependent default list display mode (legacy: `.thumbnail` on iPad-width

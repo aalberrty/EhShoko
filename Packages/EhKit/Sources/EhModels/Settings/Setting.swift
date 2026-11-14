@@ -51,6 +51,24 @@ public struct Setting: Codable, Sendable, Equatable {
     // Laboratory
     public var bypassesSNIFiltering = false
 
+    // Experience: one design per part (defaults: the Shelf preset)
+    public var designBar: BarStyle = .tabs
+    public var designStart: DesignStyle = .shelf
+    public var designList: DesignStyle = .shelf
+    public var designGallery: DesignStyle = .shelf
+    public var designReader: DesignStyle = .shelf
+    public var designSearch: DesignStyle = .shelf
+    public var designLibrary: DesignStyle = .shelf
+    public var designLook: DesignStyle = .shelf
+    /// The last mix that was not a preset, so "Custom" can be chosen again.
+    public var designCustom: DesignChoices?
+    public var wallDensity: WallDensity = .medium
+    public var ledgerShowsCovers = true
+    /// The favourites folder a plain tap on Favourite uses (0...9).
+    public var lastFavoriteFolder = 0
+    /// Whether the offer after install was shown.
+    public var experienceOfferShown = false
+
     public init() {}
 }
 
@@ -97,5 +115,19 @@ extension Setting {
         doubleTapScaleFactor = value(.doubleTapScaleFactor, defaults.doubleTapScaleFactor)
         // Laboratory
         bypassesSNIFiltering = value(.bypassesSNIFiltering, defaults.bypassesSNIFiltering)
+        // Experience
+        designBar = value(.designBar, defaults.designBar)
+        designStart = value(.designStart, defaults.designStart)
+        designList = value(.designList, defaults.designList)
+        designGallery = value(.designGallery, defaults.designGallery)
+        designReader = value(.designReader, defaults.designReader)
+        designSearch = value(.designSearch, defaults.designSearch)
+        designLibrary = value(.designLibrary, defaults.designLibrary)
+        designLook = value(.designLook, defaults.designLook)
+        designCustom = value(.designCustom, defaults.designCustom)
+        wallDensity = value(.wallDensity, defaults.wallDensity)
+        ledgerShowsCovers = value(.ledgerShowsCovers, defaults.ledgerShowsCovers)
+        lastFavoriteFolder = value(.lastFavoriteFolder, defaults.lastFavoriteFolder)
+        experienceOfferShown = value(.experienceOfferShown, defaults.experienceOfferShown)
     }
 }

@@ -20,6 +20,10 @@ enum SettingKey: String, CaseIterable, Sendable {
     case contentDividerHeight, maximumScaleFactor, doubleTapScaleFactor
     // Laboratory
     case bypassesSNIFiltering
+    // Experience
+    case designBar, designStart, designList, designGallery, designReader, designSearch
+    case designLibrary, designLook, designCustom
+    case wallDensity, ledgerShowsCovers, lastFavoriteFolder, experienceOfferShown
 
     var name: String {
         self == .galleryHost ? "galleryHost" : "settings.\(rawValue)"
@@ -79,6 +83,39 @@ extension ListDisplayMode: PreferenceValue {}
 extension PreferredColorScheme: PreferenceValue {}
 extension AppIconType: PreferenceValue {}
 extension ReadingDirection: PreferenceValue {}
+extension BarStyle: PreferenceValue {}
+extension DesignStyle: PreferenceValue {}
+extension WallDensity: PreferenceValue {}
+
+extension DesignChoices: PreferenceValue {
+    /// One dictionary of raw strings keyed by part. Any missing or unknown value makes the
+    /// whole value invalid, so a damaged mix is dropped rather than half restored.
+    init?(propertyListValue: Any) {
+        guard let raw = propertyListValue as? [String: String] else { return nil }
+        var choices = DesignChoices(preset: .shelf)
+        for part in DesignPart.allCases {
+            guard let value = raw[part.rawValue] else { return nil }
+            let option: DesignOption? = switch part {
+            case .bar: BarStyle(rawValue: value).map(DesignOption.bar)
+            default: DesignStyle(rawValue: value).map(DesignOption.style)
+            }
+            guard let option else { return nil }
+            choices[part] = option
+        }
+        self = choices
+    }
+
+    var propertyListValue: Any {
+        var raw: [String: String] = [:]
+        for part in DesignPart.allCases {
+            switch self[part] {
+            case .bar(let style): raw[part.rawValue] = style.rawValue
+            case .style(let style): raw[part.rawValue] = style.rawValue
+            }
+        }
+        return raw
+    }
+}
 
 extension RGBColor: PreferenceValue {
     init?(propertyListValue: Any) {
@@ -99,6 +136,20 @@ extension PreferenceStorage {
 
     func set<Value: PreferenceValue>(_ value: Value, for key: SettingKey) {
         defaults.set(value.propertyListValue, forKey: key.name)
+    }
+
+    /// The stored value for an optional setting; `nil` when missing or not a valid value.
+    func optionalValue<Value: PreferenceValue>(_ key: SettingKey, as type: Value.Type) -> Value? {
+        defaults.object(forKey: key.name).flatMap(Value.init(propertyListValue:))
+    }
+
+    /// Stores `value`, or removes the key for `nil`.
+    func set<Value: PreferenceValue>(_ value: Value?, for key: SettingKey) {
+        if let value {
+            set(value, for: key)
+        } else {
+            defaults.removeObject(forKey: key.name)
+        }
     }
 
     func contains(_ key: SettingKey) -> Bool {
