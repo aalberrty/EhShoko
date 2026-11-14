@@ -208,6 +208,23 @@ public final class GalleryListModel {
         await load.waitUnlessCancelled()
     }
 
+    /// Reads the stored reading progress of the loaded galleries again, in one query, and
+    /// updates the rows whose progress changed. Rows read it when their page is mapped and do
+    /// not follow it, so whoever presented a reader over the list calls this when it closes.
+    public func refreshReadingProgress() async {
+        let gids = entries.map(\.id)
+        guard !gids.isEmpty else { return }
+        let token = generation
+        guard let progress = try? await database.readingProgress(gids: gids),
+              token == generation, entries.count >= gids.count
+        else { return }
+        // In the same generation entries are only appended, so the first `gids.count` are the
+        // ones read; pages appended meanwhile were mapped with the progress as it is now.
+        let refreshed = GalleryListPaging.withReadingProgress(Array(entries.prefix(gids.count)), progress)
+        guard refreshed != Array(entries.prefix(gids.count)) else { return }
+        entries = refreshed + entries.dropFirst(gids.count)
+    }
+
     /// Retries the failed next page.
     public func retryLoadMore() {
         paginationTrigger = PaginationTrigger(
