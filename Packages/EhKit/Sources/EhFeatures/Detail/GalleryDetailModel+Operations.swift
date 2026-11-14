@@ -10,13 +10,30 @@ import Foundation
 extension GalleryDetailModel {
     // MARK: Favourites
 
-    /// Adds the gallery to favourites folder `category` (0...9).
+    /// Adds the gallery to favourites folder `category` (0...9), chosen in the folder menu. It
+    /// becomes the folder a one-tap Favourite uses.
     public func favorite(category: Int) {
-        guard isLoggedIn else { return }
+        addFavorite(folder: category, kind: .chosen)
+    }
+
+    /// A one-tap Favourite: into the folder used last.
+    public func quickFavorite() {
+        addFavorite(folder: settings.lastFavoriteFolder, kind: .quick)
+    }
+
+    private func addFavorite(folder: Int, kind: FavoriteReport.Kind) {
+        guard isLoggedIn, FavoriteReport.folders.contains(folder) else { return }
         let client = client
         let gid = gallery.gid
         let token = gallery.token
-        perform("favorite") { try await client.addFavorite(gid: gid, token: token, category: category) }
+        perform("favorite") {
+            try await client.addFavorite(gid: gid, token: token, category: folder)
+        } onSuccess: { model in
+            if kind == .chosen, model.settings.lastFavoriteFolder != folder {
+                model.settings.lastFavoriteFolder = folder
+            }
+            model.favoriteReport = model.reportCounter.next(gid: gid, folder: folder, kind: kind)
+        }
     }
 
     public func unfavorite() {
@@ -158,17 +175,22 @@ extension GalleryDetailModel {
         Int(gallery.gid) != nil && Int(client.cookies.memberID(for: settings.galleryHost)) != nil
     }
 
-    /// Runs one operation: success → success haptic and a fresh page; failure → error haptic.
-    func perform(_ key: String, _ operation: @escaping @Sendable () async throws -> Void) {
-        tasks.run(key) { [weak self] in
+    /// Runs one operation: success → `onSuccess`, success haptic and a fresh page; failure →
+    /// error haptic.
+    func perform(
+        _ key: String, _ operation: @escaping @Sendable () async throws -> Void,
+        onSuccess: ((GalleryDetailModel) -> Void)? = nil
+    ) {
+        lastOperation = tasks.run(key) { [weak self] in
             let outcome = await Outcome.of(operation)
-            self?.finishOperation(outcome)
+            self?.finishOperation(outcome, onSuccess: onSuccess)
         }
     }
 
-    private func finishOperation(_ outcome: Outcome<Void>) {
+    private func finishOperation(_ outcome: Outcome<Void>, onSuccess: ((GalleryDetailModel) -> Void)?) {
         switch outcome {
         case .success:
+            onSuccess?(self)
             feedback = feedbackCounter.next(.success)
             refetch()
         case .failure:
