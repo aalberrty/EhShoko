@@ -25,19 +25,24 @@ extension GalleryTag {
         /// The highlight colour the site gives watched tags. The text colour is derived
         /// from it (see `RGBColor.isLight`), so it is not stored.
         public let backgroundColor: RGBColor?
+        /// A weakly attached tag: the site draws it with a dashed (`gtl`) or dotted (`gtw`)
+        /// border instead of a solid one (`gt`). Only the detail page says.
+        public let isWeak: Bool
 
         public init(
             rawNamespace: String,
             text: String,
             isVotedUp: Bool,
             isVotedDown: Bool,
-            backgroundColor: RGBColor?
+            backgroundColor: RGBColor?,
+            isWeak: Bool = false
         ) {
             self.rawNamespace = rawNamespace
             self.text = text
             self.isVotedUp = isVotedUp
             self.isVotedDown = isVotedDown
             self.backgroundColor = backgroundColor
+            self.isWeak = isWeak
         }
 
         public var firstLetterCapitalizedText: String {
@@ -64,9 +69,10 @@ extension GalleryTag {
 // MARK: Legacy decoding
 
 extension GalleryTag.Content {
-    // `textColor` is still present in legacy JSON; it is ignored when decoding.
+    // `textColor` is still present in legacy JSON; it is ignored when decoding. `isWeak` is
+    // absent from legacy JSON and from what was stored before it existed.
     private enum CodingKeys: String, CodingKey {
-        case rawNamespace, text, isVotedUp, isVotedDown, backgroundColor
+        case rawNamespace, text, isVotedUp, isVotedDown, backgroundColor, isWeak
     }
 
     public init(from decoder: any Decoder) throws {
@@ -78,5 +84,6 @@ extension GalleryTag.Content {
         // The legacy colour encoder could write an empty object; treat that as no colour
         // rather than losing the whole tag list.
         backgroundColor = try? container.decodeIfPresent(RGBColor.self, forKey: .backgroundColor)
+        isWeak = (try? container.decodeIfPresent(Bool.self, forKey: .isWeak)) ?? false
     }
 }
