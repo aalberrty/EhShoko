@@ -13,6 +13,7 @@ import Testing
         withKnownIssue { _ = client.url() }
         withKnownIssue { client.copyText("text") }
         await withKnownIssue { await client.copyImage(Data()) }
+        await withKnownIssue { #expect(await client.hasProbableURL() == false) }
     }
 
     @Test func photoLibraryTestValueReportsIssues() async {
