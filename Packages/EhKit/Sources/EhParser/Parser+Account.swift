@@ -46,3 +46,40 @@ extension Parser {
         return .init(profileValue: profileValue, isProfileNotFound: profileNotFound)
     }
 }
+
+// MARK: Favourites folders
+
+extension Parser {
+    /// The ten folders listed above a favourites page (`div.fp`), with the user's names and
+    /// their counts. Empty when the page lists none (signed out, an error page).
+    public static func parseFavoriteFolders(doc: HTMLDocument) -> [FavoriteFolder] {
+        var folders = [FavoriteFolder]()
+        // `div.fp.fps` is "Show All Favorites", not a folder.
+        for (position, block) in doc.xpath("//div[@class='fp']").enumerated() {
+            let cells = Array(block.xpath("./div"))
+            guard let first = cells.first, let last = cells.last,
+                  let count = parseCount(first.text)
+            else { continue }
+            let index = block["onclick"].flatMap(parseFolderIndex(onclick:)) ?? position
+            let name = (last.text ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+            guard (0...9).contains(index), !folders.contains(where: { $0.index == index }) else { continue }
+            folders.append(FavoriteFolder(
+                index: index, name: name.isEmpty ? "Favorites \(index)" : name, count: count
+            ))
+        }
+        return folders.sorted { $0.index < $1.index }
+    }
+
+    /// "117" or "1,284".
+    private static func parseCount(_ text: String?) -> Int? {
+        guard let text else { return nil }
+        let digits = text.filter(\.isWholeNumber)
+        return digits.isEmpty ? nil : Int(digits)
+    }
+
+    /// `document.location='https://e-hentai.org/favorites.php?favcat=3'`.
+    private static func parseFolderIndex(onclick: String) -> Int? {
+        guard let range = onclick.range(of: "favcat=") else { return nil }
+        return Int(onclick[range.upperBound...].prefix(while: \.isWholeNumber))
+    }
+}

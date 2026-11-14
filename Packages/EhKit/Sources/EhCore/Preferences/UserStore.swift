@@ -21,6 +21,10 @@ public final class UserStore {
     public private(set) var greeting: Greeting?
     /// The user's names for favourite folders 0–9.
     public private(set) var favoriteCategories: [Int: String]?
+    /// How many galleries each favourites folder (0–9) holds, as the last favourites page
+    /// loaded said. Empty until one is loaded this session; kept in memory only, because a
+    /// stored count would go stale while the user favourites elsewhere.
+    public private(set) var favoriteFolderCounts: [Int: Int] = [:]
 
     public nonisolated convenience init(defaults: UserDefaults) {
         self.init(storage: PreferenceStorage(defaults))
@@ -48,6 +52,11 @@ public final class UserStore {
             credits: credits, galleryPoints: galleryPoints,
             greeting: greeting, favoriteCategories: favoriteCategories
         )
+    }
+
+    /// Every folder's count added up, or `nil` while the counts are unknown.
+    public var favoriteTotalCount: Int? {
+        favoriteFolderCounts.isEmpty ? nil : favoriteFolderCounts.values.reduce(0, +)
     }
 
     /// The user's own name for favourite folder `index`, or `nil` for the site's default name.
@@ -86,6 +95,20 @@ public final class UserStore {
         update { $0.favoriteCategories = categories }
     }
 
+    /// Takes in the folders a favourites page listed: their counts, and their names, which
+    /// the page shows as the site has them now. Called whenever a favourites page is loaded;
+    /// a page that listed no folders changes nothing.
+    public func updateFavoriteFolders(_ folders: [FavoriteFolder]) {
+        guard !folders.isEmpty else { return }
+        let counts = Dictionary(folders.map { ($0.index, $0.count) }, uniquingKeysWith: { _, last in last })
+        if counts != favoriteFolderCounts { favoriteFolderCounts = counts }
+        update { user in
+            var names = user.favoriteCategories ?? [:]
+            for folder in folders { names[folder.index] = folder.name }
+            user.favoriteCategories = names
+        }
+    }
+
     public func updateAPIKey(_ apikey: String) {
         update { $0.apikey = apikey }
     }
@@ -97,6 +120,7 @@ public final class UserStore {
 
     /// Forgets the profile on logout. Legacy: `SettingReducer` `.account(.onLogoutConfirmButtonTapped)`.
     public func clear() {
+        if !favoriteFolderCounts.isEmpty { favoriteFolderCounts = [:] }
         update { $0 = User() }
     }
 

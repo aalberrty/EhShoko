@@ -39,30 +39,6 @@ public struct EhClient: Sendable {
 
 // MARK: Result types
 
-/// One page of a gallery list and the paging information to request the next one.
-public struct GalleryListPage: Sendable {
-    public var galleries: [Gallery]
-    public var pageNumber: PageNumber
-
-    public init(galleries: [Gallery], pageNumber: PageNumber) {
-        self.galleries = galleries
-        self.pageNumber = pageNumber
-    }
-}
-
-/// One page of the favorites list. `sortOrder` is the order the server reports on the first page.
-public struct FavoritesPage: Sendable {
-    public var galleries: [Gallery]
-    public var pageNumber: PageNumber
-    public var sortOrder: FavoritesSortOrder?
-
-    public init(galleries: [Gallery], pageNumber: PageNumber, sortOrder: FavoritesSortOrder?) {
-        self.galleries = galleries
-        self.pageNumber = pageNumber
-        self.sortOrder = sortOrder
-    }
-}
-
 /// The download options of a gallery, with the account's funds when the page shows them.
 public struct ArchiveInfo: Sendable {
     public var archive: GalleryArchive

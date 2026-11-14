@@ -13,10 +13,13 @@ extension EhClient {
     }
 
     public func popular(filter: Filter) async throws -> [Gallery] {
+        try await popularPage(filter: filter).galleries
+    }
+
+    /// Popular as a page, with the favourite marks of its galleries. It has no further pages.
+    public func popularPage(filter: Filter) async throws -> GalleryListPage {
         try await perform { builder in
-            let data = try await body(builder.popularGalleries(filter: filter))
-            let document = try Parser.htmlDocument(data: data)
-            return try Parser.parseGalleries(doc: document)
+            try await listPage(builder.popularGalleries(filter: filter))
         }
     }
 
@@ -79,8 +82,11 @@ private extension EhClient {
     func listPage(_ request: URLRequest) async throws -> GalleryListPage {
         let data = try await body(request)
         let document = try Parser.htmlDocument(data: data)
-        let pageNumber = Parser.parsePageNum(doc: document)
-        return GalleryListPage(galleries: try Parser.parseGalleries(doc: document), pageNumber: pageNumber)
+        return GalleryListPage(
+            galleries: try Parser.parseGalleries(doc: document),
+            pageNumber: Parser.parsePageNum(doc: document),
+            favoriteMarks: Parser.parseFavoriteMarks(doc: document)
+        )
     }
 
     func favoritesPage(_ request: URLRequest) async throws -> FavoritesPage {
@@ -89,7 +95,48 @@ private extension EhClient {
         return FavoritesPage(
             galleries: try Parser.parseGalleries(doc: document),
             pageNumber: Parser.parsePageNum(doc: document),
-            sortOrder: Parser.parseFavoritesSortOrder(doc: document)
+            sortOrder: Parser.parseFavoritesSortOrder(doc: document),
+            folders: Parser.parseFavoriteFolders(doc: document),
+            favoriteMarks: Parser.parseFavoriteMarks(doc: document)
         )
+    }
+}
+
+// MARK: Result types
+
+/// One page of a gallery list and the paging information to request the next one.
+public struct GalleryListPage: Sendable {
+    public var galleries: [Gallery]
+    public var pageNumber: PageNumber
+    /// The favourited galleries among `galleries`, keyed by gid.
+    public var favoriteMarks: [String: FavoriteMark]
+
+    public init(galleries: [Gallery], pageNumber: PageNumber, favoriteMarks: [String: FavoriteMark] = [:]) {
+        self.galleries = galleries
+        self.pageNumber = pageNumber
+        self.favoriteMarks = favoriteMarks
+    }
+}
+
+/// One page of the favorites list. `sortOrder` is the order the server reports on the first page.
+public struct FavoritesPage: Sendable {
+    public var galleries: [Gallery]
+    public var pageNumber: PageNumber
+    public var sortOrder: FavoritesSortOrder?
+    /// The ten folders with their names and counts, as listed above the galleries. Every
+    /// favourites page carries them, whichever folder it shows.
+    public var folders: [FavoriteFolder]
+    /// The folder and favourited date of each of `galleries`, keyed by gid.
+    public var favoriteMarks: [String: FavoriteMark]
+
+    public init(
+        galleries: [Gallery], pageNumber: PageNumber, sortOrder: FavoritesSortOrder?,
+        folders: [FavoriteFolder] = [], favoriteMarks: [String: FavoriteMark] = [:]
+    ) {
+        self.galleries = galleries
+        self.pageNumber = pageNumber
+        self.sortOrder = sortOrder
+        self.folders = folders
+        self.favoriteMarks = favoriteMarks
     }
 }
