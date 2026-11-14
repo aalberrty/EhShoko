@@ -7,14 +7,26 @@ import UIKit
 /// Writes one contact sheet per look and appearance, laid out like the generator's reference
 /// sheets (`tools/schematics.py` rendered row by row), so the two can be set side by side.
 enum PreviewHarnessExport {
-    /// Renders the six sheets at 2× and writes them as PNG files; returns a line for the
-    /// harness's status.
-    static func writeContactSheets(store: SettingsStore) -> String {
+    /// `Library/Caches/PreviewHarness`, created when missing.
+    private static var folder: URL? {
         guard let caches = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first else {
-            return "No caches folder"
+            return nil
         }
         let folder = caches.appending(path: "PreviewHarness", directoryHint: .isDirectory)
         try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        return folder
+    }
+
+    /// Writes an empty marker file, for a script waiting on a scripted run.
+    static func mark(_ name: String) {
+        guard let folder else { return }
+        FileManager.default.createFile(atPath: folder.appending(path: name).path, contents: Data())
+    }
+
+    /// Renders the six sheets at 2× and writes them as PNG files; returns a line for the
+    /// harness's status.
+    static func writeContactSheets(store: SettingsStore) -> String {
+        guard let folder else { return "No caches folder" }
         var written = 0
         for look in Look.allCases {
             for scheme in [ColorScheme.light, .dark] {

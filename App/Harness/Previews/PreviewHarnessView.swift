@@ -16,7 +16,7 @@ import SwiftUI
 /// | `-HarnessAccent <hex>` | none | A chosen accent colour in place of the look's own. |
 /// | `-HarnessPage options\|sizes` | `options` | The page the sheet opens on. |
 /// | `-HarnessOpen YES` | `NO` | Opens the sheet at launch. |
-/// | `-HarnessCycle <n>` | `0` | Opens and closes the sheet n times, a second each, for an allocations check. |
+/// | `-HarnessCycle <n>` | `0` | Opens and closes the sheet once, then n times, for an allocations check (`runScripted`). |
 /// | `-HarnessExport YES` | `NO` | Writes a contact sheet of every preview in each look, light and dark, to `Library/Caches/PreviewHarness/`. |
 ///
 /// The sheet holds the only previews; closing it releases them, so opening and closing it is
@@ -101,16 +101,26 @@ struct PreviewHarnessView: View {
     }
 
     /// The scripted runs: the open-and-close cycles, then the export.
+    ///
+    /// The cycles run in two rounds, one cycle and then n, each followed by a marker file
+    /// (`Library/Caches/PreviewHarness/round-<k>`) and a minute's pause, so that the heap can
+    /// be read after the first opening (caches warm) and again after n more: what grows
+    /// between the two is what an opening leaves behind.
     private func runScripted() async {
-        for cycle in 0..<cycles {
-            status = "Cycle \(cycle + 1) of \(cycles)"
-            isPresented = true
-            try? await Task.sleep(for: .seconds(1))
-            isPresented = false
-            try? await Task.sleep(for: .seconds(1))
-        }
         if cycles > 0 {
-            status = "Cycles done"
+            try? await Task.sleep(for: .seconds(3))
+            for (round, count) in [1, cycles].enumerated() {
+                for cycle in 0..<count {
+                    status = "Round \(round + 1), cycle \(cycle + 1) of \(count)"
+                    isPresented = true
+                    try? await Task.sleep(for: .seconds(2))
+                    isPresented = false
+                    try? await Task.sleep(for: .seconds(2))
+                }
+                status = "Round \(round + 1) done"
+                PreviewHarnessExport.mark("round-\(round + 1)")
+                try? await Task.sleep(for: .seconds(60))
+            }
         }
         if exports {
             status = PreviewHarnessExport.writeContactSheets(store: store)
