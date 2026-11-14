@@ -97,6 +97,34 @@ public final class SettingsStore {
         didSet { persist(.bypassesSNIFiltering, bypassesSNIFiltering, oldValue) }
     }
 
+    // MARK: Experience
+    // Read by the shell's switch points and Settings only (see `SettingsStore+Design`).
+    public var designBar: BarStyle { didSet { persist(.designBar, designBar, oldValue) } }
+    public var designStart: DesignStyle { didSet { persist(.designStart, designStart, oldValue) } }
+    public var designList: DesignStyle { didSet { persist(.designList, designList, oldValue) } }
+    public var designGallery: DesignStyle { didSet { persist(.designGallery, designGallery, oldValue) } }
+    public var designReader: DesignStyle { didSet { persist(.designReader, designReader, oldValue) } }
+    public var designSearch: DesignStyle { didSet { persist(.designSearch, designSearch, oldValue) } }
+    public var designLibrary: DesignStyle { didSet { persist(.designLibrary, designLibrary, oldValue) } }
+    public var designLook: DesignStyle { didSet { persist(.designLook, designLook, oldValue) } }
+    public var designCustom: DesignChoices? {
+        didSet {
+            guard designCustom != oldValue else { return }
+            storage.set(designCustom, for: .designCustom)
+        }
+    }
+    public var wallDensity: WallDensity { didSet { persist(.wallDensity, wallDensity, oldValue) } }
+    public var ledgerShowsCovers: Bool { didSet { persist(.ledgerShowsCovers, ledgerShowsCovers, oldValue) } }
+    public var lastFavoriteFolder: Int {
+        didSet {
+            persist(.lastFavoriteFolder, lastFavoriteFolder, oldValue)
+            enforceFavoriteFolderRule()
+        }
+    }
+    public var experienceOfferShown: Bool {
+        didSet { persist(.experienceOfferShown, experienceOfferShown, oldValue) }
+    }
+
     /// Loads every setting from `defaults`; a missing or invalid key falls back to `Setting()`.
     ///
     /// `nonisolated` so a `DependencyKey` can create the store from any context.
@@ -136,6 +164,19 @@ public final class SettingsStore {
         _maximumScaleFactor = setting.maximumScaleFactor
         _doubleTapScaleFactor = setting.doubleTapScaleFactor
         _bypassesSNIFiltering = setting.bypassesSNIFiltering
+        _designBar = setting.designBar
+        _designStart = setting.designStart
+        _designList = setting.designList
+        _designGallery = setting.designGallery
+        _designReader = setting.designReader
+        _designSearch = setting.designSearch
+        _designLibrary = setting.designLibrary
+        _designLook = setting.designLook
+        _designCustom = setting.designCustom
+        _wallDensity = setting.wallDensity
+        _ledgerShowsCovers = setting.ledgerShowsCovers
+        _lastFavoriteFolder = setting.lastFavoriteFolder
+        _experienceOfferShown = setting.experienceOfferShown
     }
 
     /// Reads the selected host off the main actor from the same defaults this store writes.
@@ -187,5 +228,18 @@ extension Setting {
         maximumScaleFactor = storage.value(.maximumScaleFactor, fallback: defaults.maximumScaleFactor)
         doubleTapScaleFactor = storage.value(.doubleTapScaleFactor, fallback: defaults.doubleTapScaleFactor)
         bypassesSNIFiltering = storage.value(.bypassesSNIFiltering, fallback: defaults.bypassesSNIFiltering)
+        designBar = storage.value(.designBar, fallback: defaults.designBar)
+        designStart = storage.value(.designStart, fallback: defaults.designStart)
+        designList = storage.value(.designList, fallback: defaults.designList)
+        designGallery = storage.value(.designGallery, fallback: defaults.designGallery)
+        designReader = storage.value(.designReader, fallback: defaults.designReader)
+        designSearch = storage.value(.designSearch, fallback: defaults.designSearch)
+        designLibrary = storage.value(.designLibrary, fallback: defaults.designLibrary)
+        designLook = storage.value(.designLook, fallback: defaults.designLook)
+        designCustom = storage.optionalValue(.designCustom, as: DesignChoices.self)
+        wallDensity = storage.value(.wallDensity, fallback: defaults.wallDensity)
+        ledgerShowsCovers = storage.value(.ledgerShowsCovers, fallback: defaults.ledgerShowsCovers)
+        lastFavoriteFolder = storage.value(.lastFavoriteFolder, fallback: defaults.lastFavoriteFolder)
+        experienceOfferShown = storage.value(.experienceOfferShown, fallback: defaults.experienceOfferShown)
     }
 }

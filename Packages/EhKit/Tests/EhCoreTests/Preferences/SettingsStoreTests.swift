@@ -65,7 +65,20 @@ import Testing
         .maximumScaleFactor: { $0.maximumScaleFactor = $1.maximumScaleFactor },
         // 2.5 stays under the default maximum, so no rule touches the maximum's key.
         .doubleTapScaleFactor: { store, _ in store.doubleTapScaleFactor = 2.5 },
-        .bypassesSNIFiltering: { $0.bypassesSNIFiltering = $1.bypassesSNIFiltering }
+        .bypassesSNIFiltering: { $0.bypassesSNIFiltering = $1.bypassesSNIFiltering },
+        .designBar: { $0.designBar = $1.designBar },
+        .designStart: { $0.designStart = $1.designStart },
+        .designList: { $0.designList = $1.designList },
+        .designGallery: { $0.designGallery = $1.designGallery },
+        .designReader: { $0.designReader = $1.designReader },
+        .designSearch: { $0.designSearch = $1.designSearch },
+        .designLibrary: { $0.designLibrary = $1.designLibrary },
+        .designLook: { $0.designLook = $1.designLook },
+        .designCustom: { $0.designCustom = $1.designCustom },
+        .wallDensity: { $0.wallDensity = $1.wallDensity },
+        .ledgerShowsCovers: { $0.ledgerShowsCovers = $1.ledgerShowsCovers },
+        .lastFavoriteFolder: { $0.lastFavoriteFolder = $1.lastFavoriteFolder },
+        .experienceOfferShown: { $0.experienceOfferShown = $1.experienceOfferShown }
     ]
 
     @Test func everyKeyHasASetter() {

@@ -65,6 +65,43 @@ import Testing
         #expect(setting.listDisplayMode == .detail)
     }
 
+    @Test func designFieldsDecodeAndFallBack() throws {
+        let json = """
+        { "designBar": "command", "designStart": "wall", "designList": "ledger",
+          "designGallery": "nope", "designLook": 3, "wallDensity": "small",
+          "ledgerShowsCovers": false, "lastFavoriteFolder": 4, "experienceOfferShown": true,
+          "designCustom": { "bar": "tabs", "start": "ledger", "list": "wall", "gallery": "shelf",
+                            "reader": "shelf", "search": "ledger", "library": "wall", "look": "ledger" } }
+        """
+        let setting = try decodeJSON(Setting.self, json)
+        #expect(setting.designBar == .command)
+        #expect(setting.designStart == .wall)
+        #expect(setting.designList == .ledger)
+        #expect(setting.designGallery == .shelf)
+        #expect(setting.designLook == .shelf)
+        #expect(setting.designCustom?.start == .ledger)
+        #expect(setting.wallDensity == .small)
+        #expect(!setting.ledgerShowsCovers)
+        #expect(setting.lastFavoriteFolder == 4)
+        #expect(setting.experienceOfferShown)
+        #expect(try decodeJSON(Setting.self, #"{ "designCustom": { "bar": "tabs" } }"#).designCustom == nil)
+    }
+
+    @Test func designDefaultsAreTheShelfPreset() {
+        let setting = Setting()
+        let choices = DesignChoices(
+            bar: setting.designBar, start: setting.designStart, list: setting.designList,
+            gallery: setting.designGallery, reader: setting.designReader, search: setting.designSearch,
+            library: setting.designLibrary, look: setting.designLook
+        )
+        #expect(choices == DesignChoices(preset: .shelf))
+        #expect(setting.designCustom == nil)
+        #expect(setting.wallDensity == .medium)
+        #expect(setting.ledgerShowsCovers)
+        #expect(setting.lastFavoriteFolder == 0)
+        #expect(!setting.experienceOfferShown)
+    }
+
     @Test func nonObjectDecodesAsDefaults() throws {
         #expect(try decodeJSON(Setting.self, "[]") == Setting())
     }
@@ -77,6 +114,9 @@ import Testing
         setting.accentColor = RGBColor(red: 1, green: 0.5, blue: 0)
         setting.appIconType = .ukiyoe
         setting.autoLockPolicy = .min30
+        setting.designList = .ledger
+        setting.designCustom = DesignChoices(preset: .wall)
+        setting.wallDensity = .large
         #expect(try roundTrip(setting) == setting)
     }
 
