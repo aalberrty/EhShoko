@@ -12,6 +12,9 @@ nonisolated enum ListHarnessSlot: String, CaseIterable, Identifiable, Sendable {
     case v3Rows = "v3-rows"
     /// v3's grid of cards (`GalleryThumbnailCell` in a `LazyVGrid`), the "Thumbnail" display mode.
     case v3Grid = "v3-grid"
+    /// v3's list rows with the cover drawn by `CoverImage` (one decode per cover, at the site's
+    /// size) instead of `RemoteImage` (one decode per display size).
+    case v3RowsCover = "v3-rows-cover"
 
     var id: String { rawValue }
 }
@@ -28,6 +31,9 @@ struct ListHarnessSlotView: View {
         switch slot {
         case .v3Rows, .v3Grid:
             GalleryCollection(galleries: galleries)
+                .environment(settings)
+        case .v3RowsCover:
+            ListHarnessCoverRows(galleries: galleries)
                 .environment(settings)
         }
     }
