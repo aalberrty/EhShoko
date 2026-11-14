@@ -32,7 +32,24 @@ struct GalleryListScreen<Header: View>: View {
         self.header = header()
     }
 
+    #if DEBUG
+    @Environment(\.listFixtures) private var fixtures
+    #endif
+
     var body: some View {
+        #if DEBUG
+        if let fixtures {
+            FixtureListHost(context: context, fixture: fixtures.fixture(for: context), header: header)
+        } else {
+            list
+        }
+        #else
+        list
+        #endif
+    }
+
+    @ViewBuilder
+    private var list: some View {
         // Which models a list has depends on what it lists, not on its design. A host that
         // owns its models gets the list's identity: another list is another screen.
         switch context.kind {
@@ -198,7 +215,7 @@ private struct PlainListHost<Header: View>: View {
         let range = list.source.filterRange
         let summary = range.map { FilterSummary(filterStore[$0]) }
         ListHost(
-            context: context, feed: ListFeed(source: .paged(list), signIn: context.signInKind),
+            context: context, feed: ListFeed(list, signIn: context.signInKind),
             menu: ListMenuControls(
                 filterSummary: summary, quickSearch: context.searchScope != .everywhere,
                 find: context.searchScope == .everywhere, reload: true
@@ -237,7 +254,7 @@ private struct SearchListHost<Header: View>: View {
     var body: some View {
         let summary = FilterSummary(filterStore[.search])
         ListHost(
-            context: context, feed: ListFeed(source: .paged(model.list), signIn: nil),
+            context: context, feed: ListFeed(model.list),
             menu: ListMenuControls(filterSummary: summary, quickSearch: true, reload: true),
             primary: .filter(summary), filterRange: .search, header: header
         )
@@ -270,7 +287,7 @@ private struct RankedListHost<Header: View>: View {
         @Bindable var toplists = toplists
         let current = list
         ListHost(
-            context: context, feed: ListFeed(source: .paged(current), signIn: nil), menu: menu(for: current),
+            context: context, feed: ListFeed(current), menu: menu(for: current),
             filterRange: choice == .popular ? .global : nil, performOwn: perform, header: header
         )
         .alert(L10n.Localizable.JumpPageView.Title.jumpPage, isPresented: $toplists.isJumpPagePresented) {
@@ -348,7 +365,7 @@ private struct FolderListHost<Header: View>: View {
             selection: favorites.sortOrder.flatMap(orders.firstIndex(of:))
         )
         ListHost(
-            context: context, feed: ListFeed(source: .paged(favorites.list), signIn: .favorites),
+            context: context, feed: ListFeed(favorites.list, signIn: .favorites),
             menu: ListMenuControls(sort: sort, quickSearch: true, reload: true), primary: .sort(sort),
             performOwn: { action in
                 if case .sort(let index) = action, orders.indices.contains(index) {
@@ -392,7 +409,7 @@ private struct HistoryListHost<Header: View>: View {
     var body: some View {
         @Bindable var history = history
         ListHost(
-            context: context, feed: ListFeed(source: .history(history), signIn: nil),
+            context: context, feed: ListFeed(history),
             menu: ListMenuControls(find: true, clear: history.canClear),
             performOwn: { action in
                 if action == .clear { history.isClearConfirmationPresented = true }
@@ -409,3 +426,38 @@ private struct HistoryListHost<Header: View>: View {
         }
     }
 }
+
+// MARK: Fixtures
+
+#if DEBUG
+/// A list whose rows are already there: what the part harness shows in place of a list's
+/// models, in whichever state it wants a list design to draw.
+struct ListFixture {
+    let source: any ListFeedSource
+    let menu: ListMenuControls
+    let primary: ListPrimaryControl?
+}
+
+/// The part harness's lists. A reference, so it can travel in the environment.
+protocol ListFixtureProvider: AnyObject, Sendable {
+    func fixture(for context: ListContext) -> ListFixture
+}
+
+extension EnvironmentValues {
+    /// Set by the part harness: every `GalleryListScreen` under it draws a fixture.
+    @Entry var listFixtures: (any ListFixtureProvider)? = nil
+}
+
+private struct FixtureListHost<Header: View>: View {
+    let context: ListContext
+    let fixture: ListFixture
+    let header: Header
+
+    var body: some View {
+        ListHost(
+            context: context, feed: ListFeed(fixture.source, signIn: context.signInKind), menu: fixture.menu,
+            primary: fixture.primary, filterRange: .global, header: header
+        )
+    }
+}
+#endif

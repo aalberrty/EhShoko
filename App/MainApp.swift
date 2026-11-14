@@ -11,7 +11,16 @@ struct MainApp: App {
         // Both run before anything reads a dependency or loads an image; neither touches disk.
         // The image cache, whose creation does, gets its limits in the launch sequence.
         ImageDownloaderConfiguration.configure()
-        prepareDependencies { $0.domainFronting = .appWide }
+        prepareDependencies {
+            $0.domainFronting = .appWide
+            #if DEBUG
+            // The part harness, launched as the whole app, runs on a database and a client
+            // of its own.
+            if HarnessRequest.atLaunch == .part {
+                PartHarnessDependencies.install(in: &$0)
+            }
+            #endif
+        }
     }
 
     var body: some Scene {

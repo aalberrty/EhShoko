@@ -82,11 +82,6 @@ extension ListControls {
 /// a design refreshes with `refresh()` and asks for the next page from its footer
 /// (`loadsNextPage(of:)`).
 struct ListFeed {
-    enum Source {
-        case paged(GalleryListModel)
-        case history(HistoryModel)
-    }
-
     /// What the list area shows.
     enum Phase: Equatable {
         /// The list needs an account and nobody is signed in: the shared sign-in state.
@@ -110,173 +105,146 @@ struct ListFeed {
         case end
     }
 
-    let source: Source
+    let source: any ListFeedSource
     let signIn: ListSignInKind?
 
-    /// The rows to draw: what is loaded, narrowed by `findText`.
-    var entries: [GalleryEntry] {
-        switch source {
-        case .paged(let list): list.visibleEntries
-        case .history(let history): history.entries
-        }
+    init(_ source: any ListFeedSource, signIn: ListSignInKind? = nil) {
+        self.source = source
+        self.signIn = signIn
     }
 
-    var phase: Phase {
-        switch source {
-        case .paged(let list):
-            if list.needsLogin { return .signedOut(signIn ?? .favorites) }
-            if !list.entries.isEmpty { return .content }
-            switch list.loadingState {
-            case .failed(.notFound): return .empty
-            case .failed(let error): return .failed(error)
-            case .idle, .loading: return .loading
-            }
-        case .history(let history):
-            switch history.loadingState {
-            case .loading: return .loading
-            case .failed(let error): return .failed(error)
-            case .idle: return history.isHistoryEmpty ? .empty : .content
-            }
-        }
-    }
+    /// The rows to draw: what is loaded, narrowed by `findText`.
+    var entries: [GalleryEntry] { source.feedEntries }
+
+    var phase: Phase { source.feedPhase(signIn: signIn) }
 
     /// A reload that failed while rows are shown: the offline banner above the rows, which
     /// stay visible. `nil` otherwise.
-    var staleError: AppError? {
-        switch source {
-        case .paged(let list): list.entries.isEmpty ? nil : list.loadingState.failed
-        case .history: nil
-        }
-    }
+    var staleError: AppError? { source.feedStaleError }
 
-    var footer: Footer {
-        switch source {
-        case .paged(let list):
-            switch list.footerPhase {
-            case .idle: .more
-            case .loading: .loading
-            case .failed: .failed
-            case .end: .end
-            }
-        case .history(let history):
-            history.hasMore ? .loading : .end
-        }
-    }
+    var footer: Footer { source.feedFooter }
 
-    /// Where each loaded page starts in the unfiltered rows, for the "Page 2" dividers of a
-    /// numbered list. Empty for every other list, and while `findText` narrows the rows.
-    var pageStarts: [PageStart] {
-        switch source {
-        case .paged(let list): list.titleFilter.isEmpty ? list.pageStarts : []
-        case .history: []
-        }
-    }
+    /// Where each loaded page starts in the rows, for the "Page 2" dividers of a numbered
+    /// list. Empty for every other list, and while `findText` narrows the rows.
+    var pageStarts: [PageStart] { source.feedPageStarts }
 
     /// "Find in this list": narrows the loaded rows by title (History: the whole history).
     var findText: String {
-        get {
-            switch source {
-            case .paged(let list): list.titleFilter
-            case .history(let history): history.titleFilter
-            }
-        }
-        nonmutating set {
-            switch source {
-            case .paged(let list): list.titleFilter = newValue
-            case .history(let history): history.titleFilter = newValue
-            }
-        }
+        get { source.feedFindText }
+        nonmutating set { source.feedFindText = newValue }
     }
 
     /// Pull to refresh.
-    func refresh() async {
-        switch source {
-        case .paged(let list): await list.refresh()
-        case .history(let history): await history.refresh()
-        }
-    }
+    func refresh() async { await source.feedRefresh() }
 
     /// Retry of the failed first page.
-    func retry() {
-        switch source {
-        case .paged(let list): list.retry()
-        case .history: break
-        }
-    }
+    func retry() { source.feedRetry() }
 
     /// Retry of the failed next page.
-    func retryNextPage() {
-        switch source {
-        case .paged(let list): list.retryLoadMore()
-        case .history: break
-        }
-    }
+    func retryNextPage() { source.feedRetryNextPage() }
 
     /// Clears the list and loads it again.
-    func reload() {
-        switch source {
-        case .paged(let list): list.reload()
-        case .history: break
-        }
-    }
-
-    /// The id of the footer's task: it changes when another page should be asked for.
-    fileprivate var nextPageTrigger: NextPageTrigger {
-        switch source {
-        case .paged(let list): .paged(list.paginationTrigger)
-        case .history(let history): .history(history.entries.count)
-        }
-    }
-
-    fileprivate func loadNextPage() async {
-        switch source {
-        case .paged(let list): await list.loadMore()
-        case .history(let history): history.loadMore()
-        }
-    }
-
-    /// The id of the wrapper's load task: it changes when the list should load again, and
-    /// when the screen swaps in another list (a period, a folder).
-    fileprivate var loadTrigger: LoadTrigger {
-        switch source {
-        case .paged(let list): .paged(list.loadTrigger)
-        case .history(let history): .history(history.query)
-        }
-    }
-
-    fileprivate func load() async {
-        switch source {
-        case .paged(let list): await list.loadIfNeeded()
-        case .history(let history): await history.observe()
-        }
-    }
+    func reload() { source.feedReload() }
 }
 
-private enum NextPageTrigger: Hashable {
-    case paged(GalleryListModel.PaginationTrigger)
-    case history(Int)
+/// What backs a `ListFeed`: `GalleryListModel` and `HistoryModel`, and the part harness's
+/// fixture list. A list design never sees it.
+protocol ListFeedSource: AnyObject {
+    var feedEntries: [GalleryEntry] { get }
+    func feedPhase(signIn: ListSignInKind?) -> ListFeed.Phase
+    var feedStaleError: AppError? { get }
+    var feedFooter: ListFeed.Footer { get }
+    var feedPageStarts: [PageStart] { get }
+    var feedFindText: String { get set }
+    /// Changes when the list should load again, and when the screen swaps in another list.
+    var feedLoadTrigger: ListFeedTrigger { get }
+    /// Changes when another page should be asked for.
+    var feedNextPageTrigger: ListFeedTrigger { get }
+    func feedLoad() async
+    func feedLoadNextPage() async
+    func feedRefresh() async
+    func feedRetry()
+    func feedRetryNextPage()
+    func feedReload()
 }
 
-private enum LoadTrigger: Hashable {
-    case paged(GalleryListModel.LoadTrigger)
+enum ListFeedTrigger: Hashable {
+    case load(GalleryListModel.LoadTrigger)
+    case page(GalleryListModel.PaginationTrigger)
     case history(HistoryModel.Query)
+    case count(Int)
 }
 
-extension View {
-    /// On the shared wrapper, outside the design's switch, so that a change of design or of
-    /// phase does not cancel the load it started: performs the first load, and loads again
-    /// when the list asks for it.
-    func loadsList(_ feed: ListFeed) -> some View {
-        modifier(ListLoader(feed: feed))
+extension GalleryListModel: ListFeedSource {
+    var feedEntries: [GalleryEntry] { visibleEntries }
+
+    func feedPhase(signIn: ListSignInKind?) -> ListFeed.Phase {
+        if needsLogin { return .signedOut(signIn ?? .favorites) }
+        if !entries.isEmpty { return .content }
+        switch loadingState {
+        case .failed(.notFound): return .empty
+        case .failed(let error): return .failed(error)
+        case .idle, .loading: return .loading
+        }
     }
+
+    var feedStaleError: AppError? { entries.isEmpty ? nil : loadingState.failed }
+
+    var feedFooter: ListFeed.Footer {
+        switch footerPhase {
+        case .idle: .more
+        case .loading: .loading
+        case .failed: .failed
+        case .end: .end
+        }
+    }
+
+    var feedPageStarts: [PageStart] { titleFilter.isEmpty ? pageStarts : [] }
+
+    var feedFindText: String {
+        get { titleFilter }
+        set { titleFilter = newValue }
+    }
+
+    var feedLoadTrigger: ListFeedTrigger { .load(loadTrigger) }
+    var feedNextPageTrigger: ListFeedTrigger { .page(paginationTrigger) }
+    func feedLoad() async { await loadIfNeeded() }
+    func feedLoadNextPage() async { await loadMore() }
+    func feedRefresh() async { await refresh() }
+    func feedRetry() { retry() }
+    func feedRetryNextPage() { retryLoadMore() }
+    func feedReload() { reload() }
 }
 
-private struct ListLoader: ViewModifier {
-    let feed: ListFeed
+extension HistoryModel: ListFeedSource {
+    var feedEntries: [GalleryEntry] { entries }
 
-    func body(content: Content) -> some View {
-        content.task(id: feed.loadTrigger) { await feed.load() }
+    func feedPhase(signIn: ListSignInKind?) -> ListFeed.Phase {
+        switch loadingState {
+        case .loading: .loading
+        case .failed(let error): .failed(error)
+        case .idle: isHistoryEmpty ? .empty : .content
+        }
     }
+
+    var feedStaleError: AppError? { nil }
+    var feedFooter: ListFeed.Footer { hasMore ? .loading : .end }
+    var feedPageStarts: [PageStart] { [] }
+
+    var feedFindText: String {
+        get { titleFilter }
+        set { titleFilter = newValue }
+    }
+
+    /// Following the rows is the load: a new filter or another page restarts it.
+    var feedLoadTrigger: ListFeedTrigger { .history(query) }
+    var feedNextPageTrigger: ListFeedTrigger { .count(entries.count) }
+    func feedLoad() async { await observe() }
+    func feedLoadNextPage() async { loadMore() }
+    func feedRefresh() async { await refresh() }
+    func feedRetry() {}
+    func feedRetryNextPage() {}
+    func feedReload() {}
 }
 
 extension View {
@@ -285,12 +253,27 @@ extension View {
     func loadsNextPage(of feed: ListFeed) -> some View {
         modifier(NextPageLoader(feed: feed))
     }
+
+    /// On the shared wrapper, outside the design's switch, so that a change of design or of
+    /// phase does not cancel the load it started: performs the first load, and loads again
+    /// when the list asks for it.
+    func loadsList(_ feed: ListFeed) -> some View {
+        modifier(ListLoader(feed: feed))
+    }
 }
 
 private struct NextPageLoader: ViewModifier {
     let feed: ListFeed
 
     func body(content: Content) -> some View {
-        content.task(id: feed.nextPageTrigger) { await feed.loadNextPage() }
+        content.task(id: feed.source.feedNextPageTrigger) { await feed.source.feedLoadNextPage() }
+    }
+}
+
+private struct ListLoader: ViewModifier {
+    let feed: ListFeed
+
+    func body(content: Content) -> some View {
+        content.task(id: feed.source.feedLoadTrigger) { await feed.source.feedLoad() }
     }
 }

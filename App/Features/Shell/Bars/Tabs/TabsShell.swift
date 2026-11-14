@@ -101,7 +101,7 @@ private struct TabsBarStyle: ViewModifier {
 
 /// The accessory and when it is on. Its own modifier, so that a push or a pop in the selected
 /// stack runs this body and not the tab view's.
-private struct TabsBarAccessoryHost: ViewModifier {
+struct TabsBarAccessoryHost: ViewModifier {
     let router: AppRouter
     let hasLeadingColumn: Bool
 

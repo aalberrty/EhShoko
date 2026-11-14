@@ -12,6 +12,10 @@ struct HarnessGate<Content: View>: View {
     var body: some View {
         #if DEBUG
         switch HarnessRequest.atLaunch {
+        case .part:
+            // The part harness: one part of the selectable designs in each of its surroundings
+            // (`-Harness part`; `PartHarnessOptions` lists its arguments).
+            PartHarnessView()
         case .list:
             ListHarnessView(options: .atLaunch)
         case .reader:
@@ -30,6 +34,7 @@ struct HarnessGate<Content: View>: View {
 #if DEBUG
 /// Which harness the launch arguments ask for.
 enum HarnessRequest: String {
+    case part
     case list
     case reader
     case look
