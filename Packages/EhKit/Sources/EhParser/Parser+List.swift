@@ -37,6 +37,29 @@ extension Parser {
     }
 }
 
+// MARK: Favourite marks
+
+extension Parser {
+    /// Which galleries on a list page are in the user's favourites, keyed by gid.
+    ///
+    /// The folder comes from the border colour of the gallery's `posted_<gid>` date, which the
+    /// site draws in the folder's colour on every list page. On favourites pages the date it
+    /// was favourited comes from the `glfav` cell (Minimal, Minimal+, Compact) or the
+    /// "Favorited:" line (Extended); the Thumbnail mode shows none.
+    public static func parseFavoriteMarks(doc: HTMLDocument) -> [String: FavoriteMark] {
+        var marks = [String: FavoriteMark]()
+        for node in doc.xpath("//div[starts-with(@id, 'posted_')]") {
+            guard let id = node["id"], let style = node["style"],
+                  let folder = ListParser.parseFavoriteFolder(style: style)
+            else { continue }
+            let gid = String(id.dropFirst("posted_".count))
+            guard !gid.isEmpty, marks[gid] == nil else { continue }
+            marks[gid] = FavoriteMark(folder: folder, favoritedDate: ListParser.parseFavoritedDate(near: node))
+        }
+        return marks
+    }
+}
+
 // MARK: Display modes
 
 enum ListParser {
@@ -293,5 +316,41 @@ extension ListParser {
         }
         guard let uploader = tmpUploader else { throw AppError.parseFailed }
         return uploader
+    }
+}
+
+// MARK: Favourite mark pieces
+
+extension ListParser {
+    /// The site's colours of folders 0–9, as the `border-color` of a favourited gallery's date.
+    static let favoriteFolderColors = ["000", "f00", "fa0", "dd0", "080", "9f4", "4bf", "00f", "508", "e8e"]
+
+    /// The folder whose colour `style` gives as its border, e.g. `border-color:#fa0;…`.
+    static func parseFavoriteFolder(style: String) -> Int? {
+        guard let range = style.range(of: "border-color:#") else { return nil }
+        var hex = style[range.upperBound...].prefix(while: \.isHexDigit).lowercased()
+        // `#ffaa00` is the same colour as `#fa0`.
+        if hex.count == 6 {
+            let characters = Array(hex)
+            let pairs = stride(from: 0, to: 6, by: 2).map { (characters[$0], characters[$0 + 1]) }
+            guard pairs.allSatisfy({ $0.0 == $0.1 }) else { return nil }
+            hex = String(pairs.map(\.0))
+        }
+        return favoriteFolderColors.firstIndex(of: hex)
+    }
+
+    /// The favourited date in the row of a gallery's `posted_<gid>` node, if the row shows one.
+    static func parseFavoritedDate(near node: Kanna.XMLElement) -> Date? {
+        guard let row = node.at_xpath("ancestor::tr[1]") else { return nil }
+        let text: String?
+        if let cell = row.at_xpath(".//td[contains(concat(' ', @class, ' '), ' glfav ')]") {
+            // Compact splits the date and the time into two paragraphs.
+            let paragraphs = cell.xpath("./p").compactMap(\.text)
+            text = paragraphs.isEmpty ? cell.text : paragraphs.joined(separator: " ")
+        } else {
+            text = row.at_xpath(".//p[normalize-space(.)='Favorited:']/following-sibling::p[1]")?.text
+        }
+        guard let text = text?.trimmingCharacters(in: .whitespacesAndNewlines) else { return nil }
+        return try? Parser.parseDate(time: text, format: DateFormat.publish)
     }
 }

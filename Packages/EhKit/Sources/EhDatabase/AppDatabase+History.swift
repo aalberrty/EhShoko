@@ -61,6 +61,17 @@ extension AppDatabase {
         return observation.values(in: writer, scheduling: .task)
     }
 
+    /// How many galleries the history holds. Emits at once and again whenever the number
+    /// changes (an open of a new gallery, Clear).
+    public func observeHistoryCount() -> some AsyncSequence<Int, any Error> & Sendable {
+        let observation = ValueObservation.tracking { db in
+            try GalleryRecord.fetchCount(db)
+        }
+        // Reopening a gallery rewrites its row without changing the count.
+        .removeDuplicates()
+        return observation.values(in: writer, scheduling: .task)
+    }
+
     /// Deletes every gallery, detail, state and page row.
     ///
     /// This is a privacy feature, so the content must not stay recoverable on disk:
