@@ -7,6 +7,7 @@ import Observation
 /// One gallery in progress, as Continue shows it.
 public nonisolated struct ContinueItem: Identifiable, Equatable, Sendable {
     public let gallery: Gallery
+    public let title: ParsedTitle
     /// The 1-based page last read, between 1 and `pageCount - 1`.
     public let page: Int
     public let pageCount: Int
@@ -18,8 +19,10 @@ public nonisolated struct ContinueItem: Identifiable, Equatable, Sendable {
         pageCount > 0 ? Double(page) / Double(pageCount) : 0
     }
 
-    public init(gallery: Gallery, page: Int, pageCount: Int) {
+    /// Parses the title when none is given. Call it off the main actor.
+    public init(gallery: Gallery, title: ParsedTitle? = nil, page: Int, pageCount: Int) {
         self.gallery = gallery
+        self.title = title ?? TitleParser.parse(gallery.title)
         self.page = page
         self.pageCount = pageCount
     }
@@ -55,7 +58,7 @@ public final class ContinueModel {
     public func observe() async {
         do {
             for try await rows in database.observeReadingList(limit: limit) {
-                apply(await Self.items(from: rows))
+                apply(await Self.items(from: rows, reusing: items))
             }
         } catch {
             guard !(error is CancellationError), !Task.isCancelled else { return }
@@ -63,11 +66,17 @@ public final class ContinueModel {
         }
     }
 
-    /// Builds the items off the main actor; what each item derives from its gallery is
-    /// computed here, once per change.
+    /// Builds the items off the main actor. Every page turn sends the list again, so a title
+    /// already parsed for the same version of its gallery is reused.
     @concurrent
-    nonisolated static func items(from rows: [ReadingListItem]) async -> [ContinueItem] {
-        rows.map { ContinueItem(gallery: $0.gallery, page: $0.page, pageCount: $0.pageCount) }
+    nonisolated static func items(
+        from rows: [ReadingListItem], reusing previous: [ContinueItem] = []
+    ) async -> [ContinueItem] {
+        let titles = Dictionary(previous.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+        return rows.map { row in
+            let known = titles[row.gallery.gid].flatMap { $0.gallery.title == row.gallery.title ? $0.title : nil }
+            return ContinueItem(gallery: row.gallery, title: known, page: row.page, pageCount: row.pageCount)
+        }
     }
 
     private func apply(_ newItems: [ContinueItem]) {

@@ -103,9 +103,30 @@ import Testing
         #expect(!firstChanged.value)
         task.cancel()
     }
+
+    @Test func itemsCarryTheParsedTitle() async {
+        let raw = "(C102) [Circle (Artist)] Title (Parody) [English]"
+        let row = ReadingListItem(gallery: gallery("1").retitled(raw), page: 3, pageCount: 48)
+
+        let items = await ContinueModel.items(from: [row])
+        #expect(items.first?.title.core == "Title")
+        #expect(items.first?.title.artists == ["Artist"])
+
+        // A page turn sends the row again: the title is reused, and a renamed gallery parsed again.
+        let turned = ReadingListItem(gallery: row.gallery, page: 4, pageCount: 48)
+        #expect(await ContinueModel.items(from: [turned], reusing: items).first?.title == items.first?.title)
+        let renamed = ReadingListItem(gallery: gallery("1").retitled("[Other] Name"), page: 4, pageCount: 48)
+        #expect(await ContinueModel.items(from: [renamed], reusing: items).first?.title.core == "Name")
+    }
 }
 
 private extension Gallery {
+    func retitled(_ title: String) -> Gallery {
+        var gallery = self
+        gallery.title = title
+        return gallery
+    }
+
     func withOpenDate(_ seconds: Double) -> Gallery {
         Gallery(
             gid: gid, token: token, title: title, rating: rating, tags: tags, category: category,

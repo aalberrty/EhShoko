@@ -74,11 +74,11 @@ import Testing
         let current = try #require(model.sortOrder)
 
         model.setSortOrder(current)
-        #expect(!model.list.galleries.isEmpty)
+        #expect(!model.list.entries.galleries.isEmpty)
 
         let other: FavoritesSortOrder = current == .favoritedTime ? .lastUpdateTime : .favoritedTime
         model.setSortOrder(other)
-        #expect(model.list.galleries.isEmpty)
+        #expect(model.list.entries.galleries.isEmpty)
         await model.list.loadIfNeeded()
         #expect(env.query("inline_set", ofRequest: 2) != nil)
 
@@ -86,7 +86,7 @@ import Testing
         var screen = ListScreenTask()
         await screen.render(model.list)
         model.select(category: 2)
-        #expect(model.list.galleries.isEmpty)
+        #expect(model.list.entries.galleries.isEmpty)
         await screen.render(model.list)
         #expect(env.transport.requests.count == previousCount + 1)
         #expect(env.query("inline_set", ofRequest: previousCount) == nil)

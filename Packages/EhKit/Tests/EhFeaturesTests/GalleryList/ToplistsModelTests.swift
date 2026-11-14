@@ -36,12 +36,12 @@ import Testing
             #expect(!model.confirmJumpPage())
         }
         #expect(model.isJumpPagePresented)
-        #expect(!model.list.galleries.isEmpty)
+        #expect(!model.list.entries.galleries.isEmpty)
 
         model.jumpPageText = "2"
         #expect(model.confirmJumpPage())
         #expect(!model.isJumpPagePresented)
-        #expect(model.list.galleries.isEmpty)
+        #expect(model.list.entries.galleries.isEmpty)
         await model.list.loadIfNeeded()
         #expect(env.query("p", ofRequest: 1) == "1")
         #expect(model.list.phase == .content)

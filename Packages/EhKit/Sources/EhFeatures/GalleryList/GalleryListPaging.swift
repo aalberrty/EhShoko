@@ -20,6 +20,10 @@ nonisolated struct FetchedPage: Sendable {
     var galleries: [Gallery]
     var pageNumber: PageNumber
     var sortOrder: FavoritesSortOrder?
+    /// The favourited galleries among `galleries`, keyed by gid.
+    var favoriteMarks: [String: FavoriteMark] = [:]
+    /// The favourites folders with their counts (favourites pages only).
+    var folders: [FavoriteFolder] = []
 }
 
 /// The paging rules of legacy's list reducers, as pure functions.
@@ -64,15 +68,16 @@ nonisolated enum GalleryListPaging {
         return .after(lastID: lastID, timestamp: nil)
     }
 
-    /// `galleries` without those whose id is in `existing` or repeats an earlier one.
-    static func deduplicated(_ galleries: [Gallery], excluding existing: Set<String>) -> [Gallery] {
+    /// `items` without those whose id is in `existing` or repeats an earlier one.
+    static func deduplicated<Item: Identifiable>(_ items: [Item], excluding existing: Set<Item.ID>) -> [Item] {
         var seen = existing
-        return galleries.filter { seen.insert($0.gid).inserted }
+        return items.filter { seen.insert($0.id).inserted }
     }
 
-    /// Galleries whose title contains `keyword`, ignoring case (legacy local "Filter" search).
-    static func filtered(_ galleries: [Gallery], byTitle keyword: String) -> [Gallery] {
-        guard !keyword.isEmpty else { return galleries }
-        return galleries.filter { $0.title.range(of: keyword, options: .caseInsensitive) != nil }
+    /// Entries whose raw title contains `keyword`, ignoring case (legacy local "Filter" search).
+    /// The raw title, not the parsed one, so a circle or a language in brackets still matches.
+    static func filtered(_ entries: [GalleryEntry], byTitle keyword: String) -> [GalleryEntry] {
+        guard !keyword.isEmpty else { return entries }
+        return entries.filter { $0.gallery.title.range(of: keyword, options: .caseInsensitive) != nil }
     }
 }

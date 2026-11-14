@@ -11,7 +11,7 @@ extension GalleryListModel {
         case .frontpage:
             return FetchedPage(try await client.frontpage(filter: filter, after: lastID))
         case .popular:
-            return FetchedPage(galleries: try await client.popular(filter: filter), pageNumber: PageNumber())
+            return FetchedPage(try await client.popularPage(filter: filter))
         case .watched(let keyword):
             return FetchedPage(try await client.watched(filter: filter, keyword: keyword, after: lastID))
         case .search(let keyword):
@@ -30,12 +30,30 @@ extension GalleryListModel {
     }
 }
 
+/// Where one page of a numbered list starts among its entries.
+public nonisolated struct PageStart: Hashable, Sendable, Identifiable {
+    /// The page, 1-based.
+    public let page: Int
+    /// The index in `entries` of its first row.
+    public let index: Int
+
+    public var id: Int { page }
+
+    public init(page: Int, index: Int) {
+        self.page = page
+        self.index = index
+    }
+}
+
 nonisolated extension FetchedPage {
     init(_ page: GalleryListPage) {
-        self.init(galleries: page.galleries, pageNumber: page.pageNumber)
+        self.init(galleries: page.galleries, pageNumber: page.pageNumber, favoriteMarks: page.favoriteMarks)
     }
 
     init(_ page: FavoritesPage) {
-        self.init(galleries: page.galleries, pageNumber: page.pageNumber, sortOrder: page.sortOrder)
+        self.init(
+            galleries: page.galleries, pageNumber: page.pageNumber, sortOrder: page.sortOrder,
+            favoriteMarks: page.favoriteMarks, folders: page.folders
+        )
     }
 }
