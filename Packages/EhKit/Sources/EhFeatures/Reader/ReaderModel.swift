@@ -83,14 +83,26 @@ public final class ReaderModel {
     public var notice: Notice?
     /// Slider thumbnails by page, as stored (a sprite-sheet tile carries its crop in the URL).
     public internal(set) var previewURLs: [Int: URL] = [:]
-    /// How many thumbnails the preview strip shows; the view sets it for its size.
+    /// How many thumbnails the preview strip shows: a parameter of the controls design, which
+    /// sets it for its strip (9 or 11) and its size.
     public var previewStripLength = 3
     /// How long the first page took to appear after the reader opened.
     public private(set) var timeToFirstPage: Duration?
+    /// Whether the closing page after the last page is current. It is not a page:
+    /// `currentPage` stays the last page meanwhile. The engine reports it
+    /// (`trailerVisibilityDidChange(_:)`); without a closing page it stays `false`.
+    public internal(set) var isAtEnd = false
+    /// The gallery's detail page, for its titles: the opener's, else what is stored. A list's
+    /// gallery carries neither the detail's title nor its Japanese title.
+    private var detail: GalleryDetail?
 
     // MARK: Engine
 
     @ObservationIgnored public var engine: ReaderEngineCommands?
+    /// Whether the engine shows a closing page after the last page. The screen sets it when it
+    /// connects such an engine; auto-play then makes its last advance onto the closing page
+    /// instead of stopping on the last page.
+    @ObservationIgnored public var hasTrailer = false
 
     // MARK: Internals
 
@@ -126,13 +138,17 @@ public final class ReaderModel {
     @ObservationIgnored @Dependency(\.continuousClock) var clock
     @ObservationIgnored @Dependency(\.appLogger) private var logger
 
-    /// - Parameter initialPage: 1-based; `nil` opens at the stored reading progress.
-    public init(gallery: Gallery, initialPage: Int? = nil) {
+    /// - Parameters:
+    ///   - initialPage: 1-based; `nil` opens at the stored reading progress.
+    ///   - detail: The gallery's detail page when the opener has it (the gallery page does);
+    ///     otherwise `start()` reads the stored one.
+    public init(gallery: Gallery, initialPage: Int? = nil, detail: GalleryDetail? = nil) {
         @Dependency(\.ehClient) var client
         @Dependency(\.database) var database
         @Dependency(\.continuousClock) var clock
         @Dependency(\.appLogger) var logger
         self.gallery = gallery
+        self.detail = detail
         pageCount = max(gallery.pageCount, 0)
         requestedPage = initialPage
         let previews = ReaderPreviewLoader(galleryURL: gallery.galleryURL, client: client)
@@ -168,6 +184,16 @@ public final class ReaderModel {
         guard !isClosed, !isReady else { return }
         restore(pages: pages, state: state)
         isReady = true
+        // Only the title needs it, so it is read once the engine can show the first page.
+        if detail == nil, let stored = try? await database.detail(gid: gid), !isClosed {
+            detail = stored
+        }
+    }
+
+    /// The title the gallery page shows: the Japanese title when preferred and present, else
+    /// the detail's title; the list's title until a detail is known.
+    public func title(prefersJapanese: Bool) -> String {
+        detail?.title(prefersJapanese: prefersJapanese) ?? gallery.title
     }
 
     /// Stops all work and saves what is left to save. Call it when the reader goes away.
@@ -256,8 +282,9 @@ public final class ReaderModel {
         }
         resolver.setFocus(page)
         writer.setProgress(page)
-        // Legacy kept turning at the end; there is nowhere to go from the last page.
-        if autoPlay != .off, page >= pageCount {
+        // Legacy kept turning at the end; there is nowhere to go from the last page. With a
+        // closing page, auto-play stops there instead (`trailerVisibilityDidChange`).
+        if autoPlay != .off, page >= pageCount, !hasTrailer {
             setAutoPlay(.off)
         }
     }
