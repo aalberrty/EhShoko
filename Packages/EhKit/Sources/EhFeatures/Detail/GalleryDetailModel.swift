@@ -48,11 +48,23 @@ public final class GalleryDetailModel {
     public internal(set) var feedback: OperationFeedback?
     /// A New Dawn greeting the shell should announce; cleared with `greetingAnnounced()`.
     public private(set) var greetingToAnnounce: Greeting?
+    /// The last favourite made here, for the HUD that names its folder and for the tip about
+    /// the folder menu.
+    public internal(set) var favoriteReport: FavoriteReport?
+
+    // MARK: Reading
+
+    /// The stored reading progress (the 1-based page last read, 0 for none); `nil` until it has
+    /// been read. Followed while the screen exists, so it is current when the reader closes.
+    public internal(set) var readingProgress: Int?
 
     // MARK: Plumbing
 
     @ObservationIgnored var tags: [GalleryTag] = []
     @ObservationIgnored var feedbackCounter = FeedbackCounter()
+    @ObservationIgnored var reportCounter = FavoriteReport.Counter()
+    /// The last server operation, kept so tests can wait for it.
+    @ObservationIgnored var lastOperation: Task<Void, Never>?
     @ObservationIgnored let tasks = ModelTasks()
     /// What the opener asked for; run once, after the first load.
     @ObservationIgnored private var pendingIntent: DetailIntent?
@@ -84,8 +96,7 @@ public final class GalleryDetailModel {
     /// The Japanese title when preferred and present, else the title. Before the page has
     /// loaded, the list's title.
     public func title(prefersJapanese: Bool) -> String {
-        guard let detail else { return gallery.title }
-        return prefersJapanese ? detail.jpnTitle ?? detail.title : detail.title
+        detail?.title(prefersJapanese: prefersJapanese) ?? gallery.title
     }
 
     public var uploader: String? {
@@ -107,6 +118,20 @@ public final class GalleryDetailModel {
 
     public var torrentCount: Int {
         detail?.torrentCount ?? 0
+    }
+
+    public var isFavorited: Bool {
+        detail?.isFavorited == true
+    }
+
+    /// Legacy offered "Show all" previews only past the 20 the detail page carries.
+    public var showsAllPreviews: Bool {
+        pageCount > 20
+    }
+
+    /// The search "Similar gallery" opens, once the page has loaded.
+    public var similarGalleryKeyword: String? {
+        detail.map(DetailSearchKeyword.similar(to:))
     }
 
     /// The translation of a tag, by synchronous lookup in the translation service. Reading it
@@ -133,6 +158,7 @@ public final class GalleryDetailModel {
                 let tagTranslations = tagTranslations
                 Task { await tagTranslations.load() }
             }
+            followReadingProgress()
             initialLoad = tasks.run("load") { [weak self, database, gallery] in
                 async let recorded: Void = GalleryDetailModel.recordOpened(gallery, in: database)
                 let fetch = self?.fetch()
@@ -204,6 +230,10 @@ public final class GalleryDetailModel {
     /// Shows what the database holds until the page arrives. If the page got here first, what
     /// is stored is older and is not applied.
     private func applyStored(_ stored: StoredDetail) async {
+        // The observation may have answered first; its value is as new or newer.
+        if readingProgress == nil {
+            readingProgress = stored.state?.readingProgress ?? 0
+        }
         guard appliedFetches == 0 else { return }
         if let detail = stored.detail {
             setDetail(detail)

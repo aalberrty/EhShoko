@@ -13,17 +13,22 @@ public struct ClipboardClient: Sendable {
     public var copyText: @MainActor @Sendable (String) -> Void
     /// Copies encoded image bytes. The format is read from the bytes, so GIF data stays animated.
     public var copyImage: @Sendable (Data) async -> Void
+    /// Whether the pasteboard probably holds a web link, by the system's pattern detection,
+    /// which reads nothing and so shows no paste prompt. Read ``url`` only when the user asks.
+    public var hasProbableURL: @Sendable () async -> Bool
 
     public init(
         changeCount: @escaping @MainActor @Sendable () -> Int,
         url: @escaping @MainActor @Sendable () -> URL?,
         copyText: @escaping @MainActor @Sendable (String) -> Void,
-        copyImage: @escaping @Sendable (Data) async -> Void
+        copyImage: @escaping @Sendable (Data) async -> Void,
+        hasProbableURL: @escaping @Sendable () async -> Bool = { false }
     ) {
         self.changeCount = changeCount
         self.url = url
         self.copyText = copyText
         self.copyImage = copyImage
+        self.hasProbableURL = hasProbableURL
     }
 }
 
@@ -32,7 +37,8 @@ extension ClipboardClient: TestDependencyKey {
         changeCount: unimplemented("ClipboardClient.changeCount", placeholder: 0),
         url: unimplemented("ClipboardClient.url", placeholder: nil),
         copyText: unimplemented("ClipboardClient.copyText"),
-        copyImage: unimplemented("ClipboardClient.copyImage")
+        copyImage: unimplemented("ClipboardClient.copyImage"),
+        hasProbableURL: unimplemented("ClipboardClient.hasProbableURL", placeholder: false)
     )
 
     public static let previewValue = ClipboardClient(

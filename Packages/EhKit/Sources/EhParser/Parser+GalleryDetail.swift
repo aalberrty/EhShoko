@@ -203,7 +203,8 @@ enum DetailParser {
                         rawNamespace: namespace, text: text,
                         isVotedUp: aClass == "tup",
                         isVotedDown: aClass == "tdn",
-                        backgroundColor: nil
+                        backgroundColor: nil,
+                        isWeak: isWeakTag(divClass: divLink.className)
                     )
                 )
             }
@@ -212,6 +213,12 @@ enum DetailParser {
         }
 
         return tags
+    }
+
+    /// The site's tag border: `gt` solid (a strong tag), `gtl` dashed and `gtw` dotted (weak).
+    static func isWeakTag(divClass: String?) -> Bool {
+        guard let divClass else { return false }
+        return divClass.split(separator: " ").contains { $0 == "gtl" || $0 == "gtw" }
     }
 
     static func parseArcAndTor(node: Kanna.XMLElement?) throws -> (URL?, Int) {

@@ -1,5 +1,6 @@
 import Dependencies
 import EhCore
+import EhDatabase
 import EhModels
 import EhNetworking
 import Observation
@@ -98,6 +99,7 @@ public final class GalleryListModel {
     @ObservationIgnored @Dependency(\.filterStore) private var filterStore
     @ObservationIgnored @Dependency(\.cookieStore) private var cookieStore
     @ObservationIgnored @Dependency(\.userStore) private var userStore
+    @ObservationIgnored @Dependency(\.database) private var database
 
     public init(source: GalleryListSource) {
         self.source = source
@@ -283,21 +285,27 @@ public final class GalleryListModel {
         let source = source
         let filter = source.filterRange.map { filterStore[$0] } ?? Filter()
         let client = client
-        return { try await Self.fetchSkippingEmptyPages(from: request, of: source, filter: filter, client: client) }
+        let database = database
+        return {
+            try await Self.fetchSkippingEmptyPages(
+                from: request, of: source, filter: filter, client: client, database: database
+            )
+        }
     }
 
     /// Legacy: an empty page with a next page asks for the next one straight away. The page's
     /// entries are built here, off the main actor, so a row never parses anything.
     @concurrent
     nonisolated private static func fetchSkippingEmptyPages(
-        from request: PageRequest, of source: GalleryListSource, filter: Filter, client: EhClient
+        from request: PageRequest, of source: GalleryListSource, filter: Filter, client: EhClient,
+        database: AppDatabase
     ) async throws -> PageResult {
         var request = request
         while true {
             let page = try await fetch(request, of: source, filter: filter, client: client)
             let next = GalleryListPaging.nextRequest(after: page, of: source, requested: request)
             guard page.galleries.isEmpty, let next else {
-                let entries = GalleryEntry.entries(for: page.galleries, marks: page.favoriteMarks)
+                let entries = await Self.entries(for: page, database: database)
                 return PageResult(page: page, entries: entries, next: next)
             }
             request = next

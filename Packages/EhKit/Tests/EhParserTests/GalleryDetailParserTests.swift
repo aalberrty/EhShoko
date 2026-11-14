@@ -1,5 +1,6 @@
 import EhModels
 import Foundation
+import Kanna
 import Testing
 @testable import EhParser
 
@@ -175,5 +176,40 @@ struct GalleryDetailFailureTests {
         #expect(try DetailParser.parseVisibility(value: "Yes") == .yes)
         #expect(try DetailParser.parseVisibility(value: "No (Expunged)") == .no(reason: "Expunged"))
         #expect(throws: AppError.parseFailed) { try DetailParser.parseVisibility(value: "No") }
+    }
+}
+
+/// Ledger draws weak tags with a dashed underline: the site marks them with the `gtl` (dashed)
+/// and `gtw` (dotted) border classes; `gt` is a strong tag.
+struct TagWeaknessParserTests {
+    @Test func theDetailFixtureHasOnlyStrongTags() throws {
+        let (_, state) = try Parser.parseGalleryDetail(doc: parserFixture("Gallery/GalleryDetail.html"), gid: "2725078")
+        #expect(!state.tags.isEmpty)
+        #expect(state.tags.flatMap(\.contents).allSatisfy { !$0.isWeak })
+    }
+
+    @Test func dashedAndDottedTagsAreWeak() throws {
+        let html = """
+        <html><body><div id="taglist"><table>\
+        <tr><td class="tc">female:</td><td>\
+        <div id="td_female:glasses" class="gt" style="opacity:1.0"><a id="ta_female:glasses" class="">glasses</a></div>\
+        <div id="td_female:twintails" class="gtl" style="opacity:1.0"><a id="ta_female:twintails" class="">twintails</a></div>\
+        <div id="td_female:maid" class="gtw" style="opacity:1.0"><a id="ta_female:maid" class="tup">maid</a></div>\
+        </td></tr></table></div></body></html>
+        """
+        let doc = try #require(try? Kanna.HTML(html: html, encoding: .utf8))
+        let node = try #require(doc.at_xpath("//div [@id='taglist']"))
+        let contents = try DetailParser.parseGalleryTags(node: node).flatMap(\.contents)
+        #expect(contents.map(\.text) == ["glasses", "twintails", "maid"])
+        #expect(contents.map(\.isWeak) == [false, true, true])
+        #expect(contents[2].isVotedUp)
+    }
+
+    @Test func theClassIsMatchedWhole() {
+        #expect(DetailParser.isWeakTag(divClass: "gtl"))
+        #expect(DetailParser.isWeakTag(divClass: "gtw extra"))
+        #expect(!DetailParser.isWeakTag(divClass: "gt"))
+        #expect(!DetailParser.isWeakTag(divClass: "gtlx"))
+        #expect(!DetailParser.isWeakTag(divClass: nil))
     }
 }

@@ -53,7 +53,7 @@ public final class HistoryModel {
         let query = query
         do {
             for try await page in database.observeHistory(limit: query.limit, titleFilter: query.titleFilter) {
-                apply(page, entries: await Self.entries(for: page, reusing: entries))
+                apply(page, entries: await Self.entries(for: page, reusing: entries, database: database))
             }
         } catch {
             fail(error)
@@ -66,7 +66,7 @@ public final class HistoryModel {
         let query = query
         do {
             for try await page in database.observeHistory(limit: query.limit, titleFilter: query.titleFilter) {
-                apply(page, entries: await Self.entries(for: page, reusing: entries))
+                apply(page, entries: await Self.entries(for: page, reusing: entries, database: database))
                 break
             }
         } catch {
@@ -90,10 +90,17 @@ public final class HistoryModel {
     }
 
     /// The database sends every row again on each change; rows it sent before keep their
-    /// entries, so a title is parsed once, off the main actor.
+    /// entries, so a title is parsed once, off the main actor. The rows' reading progress is
+    /// read in one query per page sent. The observation follows the `gallery` table only, so
+    /// a page turn in the reader, which writes the progress, does not rebuild the entries.
     @concurrent
-    nonisolated static func entries(for page: HistoryPage, reusing previous: [GalleryEntry]) async -> [GalleryEntry] {
-        GalleryEntry.entries(for: page.galleries, reusing: previous)
+    nonisolated static func entries(
+        for page: HistoryPage, reusing previous: [GalleryEntry], database: AppDatabase
+    ) async -> [GalleryEntry] {
+        let entries = GalleryEntry.entries(for: page.galleries, reusing: previous)
+        guard !entries.isEmpty else { return entries }
+        let progress = (try? await database.readingProgress(gids: entries.map(\.id))) ?? [:]
+        return GalleryListPaging.withReadingProgress(entries, progress)
     }
 
     private func apply(_ page: HistoryPage, entries newEntries: [GalleryEntry]) {

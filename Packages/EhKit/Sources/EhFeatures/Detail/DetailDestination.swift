@@ -47,7 +47,9 @@ nonisolated extension DetailDestination: Identifiable {
 /// at that comment. It travels in `Route.detail` into `GalleryDetailModel.init`.
 nonisolated public enum DetailIntent: Hashable, Sendable {
     case read(page: Int)
-    case comments(scrollTo: String)
+    /// Opens the comments, scrolled to a comment when one is given (the reader's closing page
+    /// opens them at the top).
+    case comments(scrollTo: String?)
 
     /// What a link that opened a gallery pointed at inside it.
     public init(_ target: GalleryLinkTarget) {

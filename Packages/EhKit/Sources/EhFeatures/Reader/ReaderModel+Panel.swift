@@ -46,7 +46,8 @@ extension ReaderModel {
     }
 
     private func jump(to page: Int) {
-        guard page != currentPage else { return }
+        // On the closing page `currentPage` is still the last page, which is then a place to go.
+        guard page != currentPage || isAtEnd else { return }
         engine?.scrollToPage(page)
     }
 

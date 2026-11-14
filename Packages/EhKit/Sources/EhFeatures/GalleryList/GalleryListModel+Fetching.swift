@@ -1,3 +1,4 @@
+import EhDatabase
 import EhModels
 import EhNetworking
 
@@ -27,6 +28,18 @@ extension GalleryListModel {
             }
             return FetchedPage(try await client.favorites(category: category, keyword: keyword, sortOrder: sortOrder))
         }
+    }
+}
+
+extension GalleryListModel {
+    /// The entries of a fetched page, with the stored reading progress of its galleries read in
+    /// one query. Read once, when the page is mapped: a page turn in the reader does not rebuild
+    /// the list's entries. A failed read leaves the rows without progress, which is decoration.
+    nonisolated static func entries(for page: FetchedPage, database: AppDatabase) async -> [GalleryEntry] {
+        let entries = GalleryEntry.entries(for: page.galleries, marks: page.favoriteMarks)
+        guard !entries.isEmpty else { return entries }
+        let progress = (try? await database.readingProgress(gids: entries.map(\.id))) ?? [:]
+        return GalleryListPaging.withReadingProgress(entries, progress)
     }
 }
 

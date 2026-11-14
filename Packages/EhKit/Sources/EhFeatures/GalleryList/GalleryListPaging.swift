@@ -74,6 +74,19 @@ nonisolated enum GalleryListPaging {
         return items.filter { seen.insert($0.id).inserted }
     }
 
+    /// `entries` with the stored reading progress of their galleries. An entry whose progress
+    /// is unchanged is kept as it is; the others are copied without parsing their title again.
+    static func withReadingProgress(_ entries: [GalleryEntry], _ progress: [String: Int]) -> [GalleryEntry] {
+        entries.map { entry in
+            let value = progress[entry.id]
+            guard entry.readingProgress != value else { return entry }
+            return GalleryEntry(
+                gallery: entry.gallery, title: entry.title, languageCode: entry.languageCode,
+                favorite: entry.favorite, readingProgress: value
+            )
+        }
+    }
+
     /// Entries whose raw title contains `keyword`, ignoring case (legacy local "Filter" search).
     /// The raw title, not the parsed one, so a circle or a language in brackets still matches.
     static func filtered(_ entries: [GalleryEntry], byTitle keyword: String) -> [GalleryEntry] {

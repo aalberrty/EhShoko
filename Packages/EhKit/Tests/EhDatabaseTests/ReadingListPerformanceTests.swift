@@ -116,6 +116,40 @@ import Testing
         #expect(try await observe(database.observeHistoryCount(), changes: []) == [Self.historySize])
     }
 
+    /// The reading progress of a list page (60 rows) and of a long History (600 rows), each in
+    /// one read, against 10,000 stored galleries.
+    @Test func readingProgressOfAPageOver10000Galleries() async throws {
+        let database = try await makeDatabase(startedEvery: 10)
+        let page = (0..<60).map { "\(Self.historySize - 1 - $0)" }
+        let (progress, best) = try await bestTime("reading progress, 60 gids", of: database) { db in
+            try AppDatabase.readingProgress(gids: page, in: db)
+        }
+        // Every 10th is started and every 3rd of the rest finished: index % 10 == 0 or % 3 == 0.
+        let expected = page.filter { Int($0)!.isMultiple(of: 10) || Int($0)!.isMultiple(of: 3) }
+        #expect(Set(progress.keys) == Set(expected))
+        #expect(best < .milliseconds(100), "\(best)")
+
+        let history = (0..<600).map { "\($0 * 7)" }
+        let (long, longBest) = try await bestTime("reading progress, 600 gids", of: database) { db in
+            try AppDatabase.readingProgress(gids: history, in: db)
+        }
+        #expect(!long.isEmpty)
+        #expect(longBest < .milliseconds(500), "\(longBest)")
+    }
+
+    /// Each gid is a primary-key lookup: no scan of the state table.
+    @Test func readingProgressLooksUpByKey() async throws {
+        let database = try await makeDatabase(startedEvery: 10)
+        let plan = try await database.writer.read { db in
+            try Row.fetchAll(
+                db, sql: "EXPLAIN QUERY PLAN " + AppDatabase.readingProgressSQL(count: 3), arguments: ["1", "2", "3"]
+            ).map { $0["detail"] as String }
+        }
+        print("ReadingListPerformance progress plan: \(plan)")
+        #expect(plan.contains { $0.contains("SEARCH") }, "\(plan)")
+        #expect(!plan.contains { $0.hasPrefix("SCAN") }, "\(plan)")
+    }
+
     /// The order comes from the `lastOpenDate` index and the other tables are read by key:
     /// no sort of the whole history, no scan of another table.
     @Test func readingListUsesTheOpenDateIndex() async throws {

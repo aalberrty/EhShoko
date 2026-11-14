@@ -115,3 +115,25 @@ import Testing
         #expect(translations["femaleglasses"]?.description == nil)
     }
 }
+
+@Suite struct TagWeaknessDecodingTests {
+    @Test func storedTagsWithoutTheFieldAreStrong() throws {
+        let json = #"{"rawNamespace":"female","text":"glasses","isVotedUp":true,"isVotedDown":false}"#
+        let content = try decodeJSON(GalleryTag.Content.self, json)
+        #expect(!content.isWeak)
+        #expect(content.isVotedUp)
+    }
+
+    @Test func aMalformedValueIsStrongRatherThanLosingTheTag() throws {
+        let json = #"{"rawNamespace":"female","text":"glasses","isWeak":"yes"}"#
+        #expect(try !decodeJSON(GalleryTag.Content.self, json).isWeak)
+    }
+
+    @Test func weaknessRoundTrips() throws {
+        let content = GalleryTag.Content(
+            rawNamespace: "female", text: "maid", isVotedUp: false, isVotedDown: false, backgroundColor: nil, isWeak: true
+        )
+        #expect(try roundTrip(content) == content)
+        #expect(try roundTrip(content).isWeak)
+    }
+}
