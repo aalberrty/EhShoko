@@ -9,6 +9,7 @@ import Foundation
 /// | `-HarnessSlot <name>` | `v3-rows` | The list view under test (`ListHarnessSlot`). |
 /// | `-HarnessCount <n>` | 500 | Synthetic galleries. |
 /// | `-HarnessTags YES` | NO | Rows show their tags (the slots that have a tag line). |
+/// | `-HarnessDock YES` | NO | A gallery dock (`ActionDock`) floats over the list, as the shell places it. |
 /// | `-HarnessSpeed <pt/s>` | 2000 | Speed of the scripted scroll. |
 /// | `-HarnessCoverLatency <s>` | 0.08 | How long each cover takes to arrive. |
 /// | `-HarnessAutoRun YES` | NO | Start the scripted scroll once the first screen has settled. |
@@ -17,6 +18,7 @@ nonisolated struct ListHarnessOptions: Equatable, Sendable {
     var slot = ListHarnessSlot.v3Rows
     var galleryCount = 500
     var showsTags = false
+    var showsDock = false
     var speed: Double = 2_000
     var coverLatency: Double = 0.08
     var runsAutomatically = false
@@ -42,6 +44,7 @@ nonisolated struct ListHarnessOptions: Equatable, Sendable {
             options.galleryCount = min(count, 5_000)
         }
         options.showsTags = defaults.bool(forKey: "HarnessTags")
+        options.showsDock = defaults.bool(forKey: "HarnessDock")
         let speed = defaults.double(forKey: "HarnessSpeed")
         if speed > 0 {
             options.speed = speed

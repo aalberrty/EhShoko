@@ -106,6 +106,7 @@ nonisolated struct ListHarnessResult: Equatable, Sendable, Codable {
     var slot: String
     var galleries: Int
     var tags: Bool
+    var dock: Bool
     var speed: Double
     var duration: Double
     var frames: Int
@@ -130,6 +131,7 @@ nonisolated struct ListHarnessResult: Equatable, Sendable, Codable {
         slot = options.slot.rawValue
         galleries = galleryCount
         tags = options.showsTags
+        dock = options.showsDock
         speed = options.speed
         duration = scroll.duration
         frames = scroll.frames
@@ -153,8 +155,8 @@ nonisolated struct ListHarnessResult: Equatable, Sendable, Codable {
 
     var summary: String {
         String(
-            format: "%@: %.1f s, %d frames, hitch ratio %.1f ms/s, worst %.0f ms, %d long after the first screen, footprint %.0f MB (peak %.0f MB), covers served %d, decoded by CoverImage %d",
-            slot, duration, frames, hitchRatioMsPerS, worstHitchMs, longHitchesAfterFirstScreen, footprintMB, peakFootprintMB,
+            format: "%@%@: %.1f s, %d frames, hitch ratio %.1f ms/s, worst %.0f ms, %d long after the first screen, footprint %.0f MB (peak %.0f MB), covers served %d, decoded by CoverImage %d",
+            slot, dock ? " + dock" : "", duration, frames, hitchRatioMsPerS, worstHitchMs, longHitchesAfterFirstScreen, footprintMB, peakFootprintMB,
             coversServed, coversDecoded
         )
     }
