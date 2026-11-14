@@ -1,5 +1,15 @@
 name: Test
-on: [push, workflow_dispatch]
+on:
+  push:
+    # Plan and document changes do not need a build.
+    paths-ignore:
+      - 'Design/**'
+      - '**.md'
+  workflow_dispatch:
+# Only the newest push of a branch is worth testing.
+concurrency:
+  group: test-${{ github.ref }}
+  cancel-in-progress: true
 env:
    SCHEME_NAME: 'EhGaro'
    DEVELOPER_DIR: /Applications/Xcode_26.6.app
