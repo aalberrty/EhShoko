@@ -45,6 +45,8 @@ final class ListHarnessModel {
     func start() async {
         guard phase == .preparing else { return }
         ListHarnessURLProtocol.install()
+        // A result left by an earlier run must not pass for this one's.
+        await ListHarnessResult.removeLast()
         // What the launch sequence does before the first screen, which a harness launched in
         // place of the app skips; doing it again changes nothing.
         await imageCache.configure(.standard(physicalMemory: ProcessInfo.processInfo.physicalMemory))
@@ -147,6 +149,11 @@ nonisolated struct ListHarnessResult: Equatable, Sendable, Codable {
             format: "%@: %.1f s, %d frames, hitch ratio %.1f ms/s, worst %.0f ms, %d long after the first screen, footprint %.0f MB (peak %.0f MB)",
             slot, duration, frames, hitchRatioMsPerS, worstHitchMs, longHitchesAfterFirstScreen, footprintMB, peakFootprintMB
         )
+    }
+
+    @concurrent
+    static func removeLast() async {
+        try? FileManager.default.removeItem(at: fileURL)
     }
 
     /// Writes the result off the main actor and prints it once, for `simctl launch --console`.

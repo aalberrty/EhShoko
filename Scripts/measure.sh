@@ -158,7 +158,8 @@ case "$run" in
               # this platform"), so the run is the harness alone and its frame timing is reported.
               terminate
               echo "Scrolling, run $index (the harness's own frame timing)" >&2
-              xcrun simctl launch --console-pty "$device" "$bundle_id" "${harness_args[@]}" >/dev/null 2>&1 || true
+              xcrun simctl launch --console-pty "$device" "$bundle_id" "${harness_args[@]}" > "$out/console-$index.txt" 2>&1 \
+                || echo "measure.sh: the launch failed (see console-$index.txt)" >&2
             else
               record "Animation Hitches" "$out/hitches-$index.trace" 240s os_signpost -- "${harness_args[@]}"
             fi

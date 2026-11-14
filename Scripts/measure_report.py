@@ -144,6 +144,9 @@ def report_instruments_hitches(trace):
         print("    Instruments: no hitches table (Animation Hitches recorded nothing here)")
 
 
+APP_BINARIES = ("EhGaro", "EhGaro.debug.dylib")
+
+
 def report_time_profile(trace):
     """The main thread's busy time during the scroll, the leaf functions it spent it in, and
     the app's own functions nearest the leaf (where list and cell code shows up)."""
