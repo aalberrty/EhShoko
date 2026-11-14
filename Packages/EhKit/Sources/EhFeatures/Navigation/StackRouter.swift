@@ -62,4 +62,16 @@ public final class StackRouter {
         sideIntent = nil
         sideStorage?.popToRoot()
     }
+
+    /// Moves the side pane's gallery and its child screens onto this stack, in order, and
+    /// closes the pane. For a pane that lost its place: below 900 pt of width, or under a
+    /// gallery design that pushes (`Design/designs/spikes/S5.md` section 2).
+    public func moveSidePaneOntoStack() {
+        guard let gallery = sideGallery else { return }
+        let children = sideStorage?.path ?? []
+        let intent = sideIntent
+        closeSidePane()
+        path.append(.detail(gallery, intent: intent))
+        path.append(contentsOf: children)
+    }
 }

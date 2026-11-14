@@ -13,6 +13,7 @@ import UIKit
 /// `autoBlur(radius:)`, and swallows every touch while it is up.
 struct SceneWindowBridge: UIViewRepresentable {
     let colorScheme: PreferredColorScheme
+    let look: Look
     let accentColor: RGBColor
     let lock: AppLockModel
     let isPrivacyOverlayVisible: Bool
@@ -34,7 +35,9 @@ struct SceneWindowBridge: UIViewRepresentable {
     func updateUIView(_ view: AnchorView, context: Context) {
         context.coordinator.update(
             style: colorScheme.userInterfaceStyle,
-            tint: UIColor(accentColor.color),
+            // The look's tint, not the stored colour: a user who never chose an accent gets
+            // the look's own, in UIKit's alerts and menus too.
+            tint: look.tint(for: accentColor).uiTint,
             showsPrivacyOverlay: isPrivacyOverlayVisible
         )
     }

@@ -38,8 +38,10 @@ public final class AppRouter {
     /// Tab roots observe their counter and reload when it changes.
     public private(set) var rootReselections: [AppTab: Int] = [:]
 
-    /// The command bar's place when the `home` stack does not say otherwise (see `place`).
-    private var rootPlace: Place = .start
+    /// The place of the `home` stack's root: `.start`, or under Wall's first screen, whose root
+    /// is itself a list, the list the place menu chose. It is the command bar's place when
+    /// the `home` stack does not say otherwise (see `place`).
+    public private(set) var rootPlace: Place = .start
 
     public init() {}
 
