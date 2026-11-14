@@ -1,0 +1,182 @@
+#if DEBUG
+import Dependencies
+import EhCore
+import EhModels
+import Foundation
+import Observation
+
+/// The list harness: synthetic galleries for the list under test, the scripted scroll, and
+/// the result of the last run, shown on screen and written to
+/// `Library/Caches/ListHarness/result.json` for `measure.sh`.
+@Observable
+final class ListHarnessModel {
+    enum Phase: Equatable {
+        case preparing
+        case ready
+        case running
+        case finished(ListHarnessResult)
+        case failed(String)
+    }
+
+    var options: ListHarnessOptions {
+        didSet { applyOptions(from: oldValue) }
+    }
+    private(set) var galleries: [Gallery] = []
+    private(set) var phase = Phase.preparing
+
+    /// The settings v3's cells read, kept apart from the user's.
+    @ObservationIgnored let settings: SettingsStore
+    @ObservationIgnored let scroller = ListHarnessScroller()
+    /// New cover URLs on every launch of the harness, so covers are downloaded and decoded.
+    @ObservationIgnored private let session = UUID().uuidString.prefix(8).lowercased()
+    @ObservationIgnored @Dependency(\.imageCacheClient) private var imageCache
+
+    private static let settingsSuite = "app.ehgaro.list-harness"
+
+    init(options: ListHarnessOptions) {
+        self.options = options
+        let defaults = UserDefaults(suiteName: Self.settingsSuite) ?? .standard
+        defaults.removePersistentDomain(forName: Self.settingsSuite)
+        settings = SettingsStore(defaults: defaults)
+    }
+
+    /// Builds the galleries and gets the cover server and the image cache ready. Call from the
+    /// view's `.task`; with `runsAutomatically` it then waits for the first screen to settle and runs.
+    func start() async {
+        guard phase == .preparing else { return }
+        ListHarnessURLProtocol.install()
+        // What the launch sequence does before the first screen, which a harness launched in
+        // place of the app skips; doing it again changes nothing.
+        await imageCache.configure(.standard(physicalMemory: ProcessInfo.processInfo.physicalMemory))
+        applySettings()
+        galleries = await ListHarnessGalleries.make(
+            count: options.galleryCount, session: session, coverLatency: options.coverLatency
+        )
+        phase = .ready
+        guard options.runsAutomatically else { return }
+        try? await Task.sleep(for: .seconds(ListHarnessOptions.settleDelay))
+        guard !Task.isCancelled else { return }
+        await run()
+    }
+
+    func run() async {
+        guard phase != .running, phase != .preparing else { return }
+        phase = .running
+        guard let measured = await scroller.run(speed: options.speed) else {
+            phase = .failed("No scroll view with room to scroll was found in the slot.")
+            return
+        }
+        let result = ListHarnessResult(
+            options: options, galleryCount: galleries.count, scroll: measured,
+            footprint: MemoryFootprint.current(), coversServed: ListHarnessURLProtocol.servedCount.withLock { $0 }
+        )
+        phase = .finished(result)
+        await result.write()
+        if options.exitsWhenDone {
+            // Lets the last signposts reach the recording before the process goes away.
+            try? await Task.sleep(for: .milliseconds(500))
+            exit(0)
+        }
+    }
+
+    func stop() {
+        scroller.cancel()
+    }
+
+    private func applyOptions(from old: ListHarnessOptions) {
+        if options.showsTags != old.showsTags || options.slot != old.slot {
+            applySettings()
+        }
+    }
+
+    private func applySettings() {
+        settings.listDisplayMode = options.slot == .v3Grid ? .thumbnail : .detail
+        settings.showsTagsInList = options.showsTags
+    }
+}
+
+/// What one run measured. The JSON keys are what `measure.sh` reads.
+nonisolated struct ListHarnessResult: Equatable, Sendable, Codable {
+    var slot: String
+    var galleries: Int
+    var tags: Bool
+    var speed: Double
+    var duration: Double
+    var frames: Int
+    var distance: Double
+    var reachedEnd: Bool
+    var frameDurationMs: Double
+    var hitches: Int
+    var hitchTimeMs: Double
+    var hitchRatioMsPerS: Double
+    var worstHitchMs: Double
+    var longHitchesAfterFirstScreen: Int
+    var footprintMB: Double
+    var peakFootprintMB: Double
+    var coversServed: Int
+
+    init(
+        options: ListHarnessOptions, galleryCount: Int, scroll: ListHarnessScroller.Result,
+        footprint: MemoryFootprint?, coversServed: Int
+    ) {
+        slot = options.slot.rawValue
+        galleries = galleryCount
+        tags = options.showsTags
+        speed = options.speed
+        duration = scroll.duration
+        frames = scroll.frames
+        distance = scroll.distance
+        reachedEnd = scroll.reachedEnd
+        frameDurationMs = scroll.frameDuration * 1_000
+        hitches = scroll.hitches
+        hitchTimeMs = scroll.hitchTime * 1_000
+        hitchRatioMsPerS = scroll.hitchRatio
+        worstHitchMs = scroll.worstHitch * 1_000
+        longHitchesAfterFirstScreen = scroll.longHitches
+        footprintMB = footprint.map { Double($0.current) / 1_048_576 } ?? 0
+        peakFootprintMB = footprint.map { Double($0.peak) / 1_048_576 } ?? 0
+        self.coversServed = coversServed
+    }
+
+    static var fileURL: URL {
+        URL.cachesDirectory.appending(path: "ListHarness/result.json")
+    }
+
+    var summary: String {
+        String(
+            format: "%@: %.1f s, %d frames, hitch ratio %.1f ms/s, worst %.0f ms, %d long after the first screen, footprint %.0f MB (peak %.0f MB)",
+            slot, duration, frames, hitchRatioMsPerS, worstHitchMs, longHitchesAfterFirstScreen, footprintMB, peakFootprintMB
+        )
+    }
+
+    /// Writes the result off the main actor and prints it once, for `simctl launch --console`.
+    @concurrent
+    func write() async {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        guard let data = try? encoder.encode(self) else { return }
+        let url = Self.fileURL
+        try? FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try? data.write(to: url, options: .atomic)
+        print("ListHarness result: \(summary)")
+    }
+}
+
+/// The process's memory footprint as the system counts it (what Xcode's gauge and jetsam use).
+nonisolated struct MemoryFootprint: Equatable, Sendable {
+    var current: UInt64
+    var peak: UInt64
+
+    static func current() -> MemoryFootprint? {
+        var info = task_vm_info_data_t()
+        var count = mach_msg_type_number_t(MemoryLayout<task_vm_info_data_t>.size / MemoryLayout<natural_t>.size)
+        let status = withUnsafeMutablePointer(to: &info) { pointer in
+            pointer.withMemoryRebound(to: integer_t.self, capacity: Int(count)) {
+                task_info(mach_task_self_, task_flavor_t(TASK_VM_INFO), $0, &count)
+            }
+        }
+        guard status == KERN_SUCCESS else { return nil }
+        return MemoryFootprint(current: info.phys_footprint, peak: UInt64(max(info.ledger_phys_footprint_peak, 0)))
+    }
+}
+#endif

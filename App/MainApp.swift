@@ -7,6 +7,7 @@ struct MainApp: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
 
     init() {
+        PerformanceSignposts.appStarted()
         // Both run before anything reads a dependency or loads an image; neither touches disk.
         // The image cache, whose creation does, gets its limits in the launch sequence.
         ImageDownloaderConfiguration.configure()
@@ -15,7 +16,7 @@ struct MainApp: App {
 
     var body: some Scene {
         WindowGroup {
-            AppShellView()
+            HarnessGate { AppShellView() }
         }
     }
 }

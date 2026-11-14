@@ -107,6 +107,8 @@ public final class ReaderModel {
     /// Pages whose image failed to download or decode, as the engine reported.
     @ObservationIgnored var failedImagePages: Set<Int> = []
     @ObservationIgnored private var openedAt: ContinuousClock.Instant?
+    /// `ReaderOpen`, from `start()` until the first page is shown.
+    @ObservationIgnored private var openSignpost: PerformanceInterval?
     @ObservationIgnored private var isClosed = false
     @ObservationIgnored var autoPlayTask: Task<Void, Never>?
     @ObservationIgnored var previewDebounce: Task<Void, Never>?
@@ -151,6 +153,7 @@ public final class ReaderModel {
     public func start() async {
         guard !isReady, !isClosed else { return }
         openedAt = .now
+        openSignpost = PerformanceSignposts.begin(.readerOpen)
         if settings.enablesLandscape {
             application.setOrientationLock(.unlocked)
         }
@@ -171,6 +174,7 @@ public final class ReaderModel {
     public func close() {
         guard !isClosed else { return }
         isClosed = true
+        openSignpost?.end("closed")
         setAutoPlay(.off)
         previewDebounce?.cancel()
         resolver.stop()
@@ -331,6 +335,7 @@ public final class ReaderModel {
         guard timeToFirstPage == nil, let openedAt else { return }
         let elapsed = ContinuousClock.now - openedAt
         timeToFirstPage = elapsed
+        openSignpost?.end()
         let milliseconds = Int(elapsed / .milliseconds(1))
         // The timing only. The log files are in Documents, which the Files app shows: a line
         // that named the gallery would be a dated list of everything read.

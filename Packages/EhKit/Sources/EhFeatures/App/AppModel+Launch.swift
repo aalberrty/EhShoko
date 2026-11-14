@@ -57,6 +57,7 @@ extension AppModel {
         lock.lockAtLaunch()
         links.isAcceptingLinks = true
         launchState = .ready
+        PerformanceSignposts.launchReady()
         // Scene changes were ignored until now; catch up with the current phase, which also
         // starts the authentication or the unlock follow-ups when the scene is active.
         if let scenePhase {
