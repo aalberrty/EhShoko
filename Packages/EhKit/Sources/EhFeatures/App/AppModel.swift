@@ -143,18 +143,17 @@ public final class AppModel {
 
     // MARK: Tabs
 
-    /// Selects a tab through the router and gives the legacy soft haptic on re-selection: always
-    /// for Home and Search; for Favorites when it pops or (logged in) reloads; for Settings when
-    /// it pops.
+    /// Selects a tab through the router and gives the legacy soft haptic on re-selection when
+    /// it acts: always for Home, Top and Search, which pop or reload; for Watched and Library
+    /// when they pop or, signed in, reload (signed out their root only explains itself).
     public func selectTab(_ tab: AppTab) {
         let isReselection = tab == router.selectedTab
         let wasAtRoot = router.stack(for: tab).isAtRoot
         router.select(tab)
         guard isReselection else { return }
         let givesFeedback = switch tab {
-        case .home, .search: true
-        case .favorites: !wasAtRoot || cookies.didLogin
-        case .settings: !wasAtRoot
+        case .home, .top, .search: true
+        case .watched, .library: !wasAtRoot || cookies.didLogin
         }
         if givesFeedback {
             tabReselectionFeedback += 1

@@ -1,32 +1,20 @@
 import EhCore
 import EhModels
 
-/// The four tabs of the app.
-nonisolated public enum AppTab: Hashable, Sendable, CaseIterable {
-    case home
-    case favorites
-    case search
-    case settings
-}
-
-/// The gallery lists that can be pushed as their own screen.
-nonisolated public enum GalleryListKind: Hashable, Sendable {
-    case frontpage
-    case popular
-    case watched
-    case toplists
-    case history
-}
-
-/// Screens of the Settings tab.
+/// Screens of the Settings sheet's stack.
 nonisolated public enum SettingsRoute: Hashable, Sendable {
     case account
     case login
     case ehSetting
     case general
-    case appearance
-    /// Appearance › App icon.
+    /// General › App icon.
     case appIcon
+    /// Experience: the presets and one row per page.
+    case design
+    /// Experience › one page's options.
+    case designPart(DesignPart)
+    /// Experience › the setup wizard.
+    case designSetup
     case reading
     case laboratory
     case logs
@@ -42,7 +30,13 @@ nonisolated public enum SettingsRoute: Hashable, Sendable {
 /// screens pushed with `navigationDestination(item:)`, so mixing the two drops screens from the
 /// stack. Sheets and full-screen covers stay local to the feature that presents them.
 nonisolated public enum Route: Hashable, Sendable {
+    /// One place's list; `.favorites` shows the library.
     case galleryList(GalleryListKind)
+    /// Search results within favourites or Watched, submitted from the search surface.
+    /// Everywhere is `typedSearch`.
+    case listSearch(SearchScope, keyword: String)
+    /// One favourites folder's list (0...9), pushed from Ledger's Index and Wall's piles.
+    case favoritesFolder(Int)
     /// Search results for a keyword built from a tag, an uploader or a title ("detail
     /// search"). Unlike `typedSearch`, it is not added to the search history.
     case search(keyword: String)
@@ -53,6 +47,22 @@ nonisolated public enum Route: Hashable, Sendable {
     /// A child screen of a gallery's detail screen (comments, previews, gallery infos).
     case detailChild(DetailChildRoute)
     case settings(SettingsRoute)
+}
+
+extension Route {
+    /// Whether the browse bar (the tab bar and its accessory, or the command bar) is hidden
+    /// while this route is the top screen of its stack.
+    ///
+    /// A gallery takes the bar's place with its dock, and the screens pushed from it (comments,
+    /// previews, gallery infos) keep the dock, so the bar does not come and go between them.
+    /// Every other screen shows the bar, including a search opened from a gallery's tag,
+    /// uploader or similar galleries.
+    public var hidesBrowseChrome: Bool {
+        switch self {
+        case .detail, .detailChild: true
+        case .galleryList, .listSearch, .favoritesFolder, .search, .typedSearch, .settings: false
+        }
+    }
 }
 
 /// A screen pushed from a gallery's detail screen. It needs the detail's model, which stays

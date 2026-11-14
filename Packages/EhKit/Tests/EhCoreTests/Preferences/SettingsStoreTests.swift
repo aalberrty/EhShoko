@@ -78,6 +78,7 @@ import Testing
         .wallDensity: { $0.wallDensity = $1.wallDensity },
         .ledgerShowsCovers: { $0.ledgerShowsCovers = $1.ledgerShowsCovers },
         .lastFavoriteFolder: { $0.lastFavoriteFolder = $1.lastFavoriteFolder },
+        .lastPlace: { $0.lastPlace = $1.lastPlace },
         .experienceOfferShown: { $0.experienceOfferShown = $1.experienceOfferShown }
     ]
 

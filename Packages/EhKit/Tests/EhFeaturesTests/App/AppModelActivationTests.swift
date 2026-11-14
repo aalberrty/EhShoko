@@ -107,44 +107,44 @@ import Testing
         #expect(model.tabReselectionFeedback == 2)
     }
 
-    @Test func reselectingFavoritesGivesFeedbackWhenItActs() {
+    @Test func reselectingTopAlwaysGivesFeedback() {
         let harness = LaunchHarness()
         let model = harness.model!
-        model.selectTab(.favorites)
+        model.selectTab(.top)
 
-        // At the root and logged out: nothing reloads.
-        model.selectTab(.favorites)
-        #expect(model.tabReselectionFeedback == 0)
+        model.selectTab(.top)
 
-        model.router.favorites.push(.galleryList(.popular))
-        model.selectTab(.favorites)
         #expect(model.tabReselectionFeedback == 1)
-        #expect(model.router.favorites.isAtRoot)
+        #expect(model.router.rootReselectionCount(for: .top) == 1)
     }
 
-    @Test func reselectingFavoritesWhileLoggedInGivesFeedback() {
+    @Test(arguments: [AppTab.watched, .library])
+    func reselectingASignedInTabGivesFeedbackWhenItActs(tab: AppTab) {
+        let harness = LaunchHarness()
+        let model = harness.model!
+        model.selectTab(tab)
+
+        // At the root and logged out: nothing reloads.
+        model.selectTab(tab)
+        #expect(model.tabReselectionFeedback == 0)
+
+        model.router.stack(for: tab).push(.galleryList(.popular))
+        model.selectTab(tab)
+        #expect(model.tabReselectionFeedback == 1)
+        #expect(model.router.stack(for: tab).isAtRoot)
+    }
+
+    @Test(arguments: [AppTab.watched, .library])
+    func reselectingASignedInTabWhileLoggedInGivesFeedback(tab: AppTab) {
         let model = withDependencies {
             $0.cookieStore = AppFixture.loggedInCookies()
         } operation: {
             AppModel()
         }
-        model.selectTab(.favorites)
+        model.selectTab(tab)
 
-        model.selectTab(.favorites)
+        model.selectTab(tab)
 
-        #expect(model.tabReselectionFeedback == 1)
-    }
-
-    @Test func reselectingSettingsGivesFeedbackOnlyWhenItPops() {
-        let harness = LaunchHarness()
-        let model = harness.model!
-        model.selectTab(.settings)
-
-        model.selectTab(.settings)
-        #expect(model.tabReselectionFeedback == 0)
-
-        model.router.settings.push(.settings(.general))
-        model.selectTab(.settings)
         #expect(model.tabReselectionFeedback == 1)
     }
 }

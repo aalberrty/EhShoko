@@ -71,6 +71,7 @@ extension Setting {
         setting.wallDensity = .small
         setting.ledgerShowsCovers = false
         setting.lastFavoriteFolder = 7
+        setting.lastPlace = .watched
         setting.experienceOfferShown = true
         return setting
     }()

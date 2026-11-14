@@ -121,6 +121,12 @@ public final class SettingsStore {
             enforceFavoriteFolderRule()
         }
     }
+    public var lastPlace: GalleryListKind? {
+        didSet {
+            guard lastPlace != oldValue else { return }
+            storage.set(lastPlace, for: .lastPlace)
+        }
+    }
     public var experienceOfferShown: Bool {
         didSet { persist(.experienceOfferShown, experienceOfferShown, oldValue) }
     }
@@ -176,6 +182,7 @@ public final class SettingsStore {
         _wallDensity = setting.wallDensity
         _ledgerShowsCovers = setting.ledgerShowsCovers
         _lastFavoriteFolder = setting.lastFavoriteFolder
+        _lastPlace = setting.lastPlace
         _experienceOfferShown = setting.experienceOfferShown
     }
 
@@ -240,6 +247,7 @@ extension Setting {
         wallDensity = storage.value(.wallDensity, fallback: defaults.wallDensity)
         ledgerShowsCovers = storage.value(.ledgerShowsCovers, fallback: defaults.ledgerShowsCovers)
         lastFavoriteFolder = storage.value(.lastFavoriteFolder, fallback: defaults.lastFavoriteFolder)
+        lastPlace = storage.optionalValue(.lastPlace, as: GalleryListKind.self)
         experienceOfferShown = storage.value(.experienceOfferShown, fallback: defaults.experienceOfferShown)
     }
 }

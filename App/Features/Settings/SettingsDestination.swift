@@ -20,7 +20,9 @@ struct SettingsDestination: View {
         case .login: LoginScreen()
         case .ehSetting: EhSettingScreen()
         case .general: GeneralSettingsScreen()
-        case .appearance: AppearanceSettingsScreen()
+        // Until the Experience screen exists, its row opens v3's Appearance screen.
+        case .design: AppearanceSettingsScreen()
+        case .designPart, .designSetup: EmptyView()
         case .appIcon: AppIconScreen()
         case .reading: ReadingSettingsScreen()
         case .laboratory: LaboratorySettingsScreen()

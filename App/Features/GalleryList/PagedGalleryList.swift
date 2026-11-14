@@ -65,8 +65,7 @@ struct LoginRequiredView: View {
     var body: some View {
         NotLoggedInView {
             loginRequests += 1
-            appRouter.select(.settings)
-            appRouter.settings.path = [.settings(.account), .settings(.login)]
+            appRouter.presentSettings([.settings(.account), .settings(.login)])
         }
         .sensoryFeedback(.impact(flexibility: .soft), trigger: loginRequests)
     }

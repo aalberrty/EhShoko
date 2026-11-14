@@ -13,6 +13,12 @@ struct RouteDestination: View {
             SearchResultsDestination(keyword: keyword, recordsHistory: false)
         case .typedSearch(let keyword):
             SearchResultsDestination(keyword: keyword, recordsHistory: true)
+        // Nothing pushes these two yet; until the search and library parts draw them they open
+        // v3's closest screens.
+        case .listSearch(_, let keyword):
+            SearchResultsDestination(keyword: keyword, recordsHistory: true)
+        case .favoritesFolder:
+            FavoritesScreen()
         case .detail(let gallery, let intent):
             GalleryDetailDestination(gallery: gallery, intent: intent)
         case .detailChild(let route):

@@ -66,6 +66,8 @@ public struct Setting: Codable, Sendable, Equatable {
     public var ledgerShowsCovers = true
     /// The favourites folder a plain tap on Favourite uses (0...9).
     public var lastFavoriteFolder = 0
+    /// The list Ledger's first screen reopens at launch; `nil` for its Index.
+    public var lastPlace: GalleryListKind?
     /// Whether the offer after install was shown.
     public var experienceOfferShown = false
 
@@ -128,6 +130,7 @@ extension Setting {
         wallDensity = value(.wallDensity, defaults.wallDensity)
         ledgerShowsCovers = value(.ledgerShowsCovers, defaults.ledgerShowsCovers)
         lastFavoriteFolder = value(.lastFavoriteFolder, defaults.lastFavoriteFolder)
+        lastPlace = value(.lastPlace, defaults.lastPlace)
         experienceOfferShown = value(.experienceOfferShown, defaults.experienceOfferShown)
     }
 }
