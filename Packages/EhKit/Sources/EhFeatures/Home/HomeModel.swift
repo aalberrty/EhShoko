@@ -87,9 +87,11 @@ public final class HomeModel {
         for section in sections where inFlight.insert(section).inserted {
             setState(.loading, for: section)
             let fetch = fetch(section)
+            let signpost = PerformanceSignposts.begin(.listPage, "home \(section.taskKey)")
             tasks.run(section.taskKey) { [weak self] in
                 let outcome = await Outcome.of { try await fetch() }
                 self?.finish(section, with: outcome)
+                signpost.end(outcome.signpostOutcome { "\($0.count) galleries" })
             }
         }
     }
@@ -130,6 +132,8 @@ public final class HomeModel {
         switch section {
         case .popular:
             cards = withRandomNumberGenerator { HomeSections.cards(from: galleries, using: &$0) }
+            // The page waits for Popular, so its cards are the first screen's content.
+            PerformanceSignposts.contentShown("home")
         case .frontpage:
             frontpage = HomeSections.frontpage(from: galleries)
         case .toplists(let type):

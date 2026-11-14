@@ -191,9 +191,11 @@ public final class GalleryListModel {
         let previous = footerState
         footerState = .loading
         let fetch = pageFetch(from: request)
+        let signpost = PerformanceSignposts.begin(.listPage, "\(source.signpostName) next")
         let load = tasks.run(TaskKey.nextPage) { [weak self] in
             let outcome = await Outcome.of { try await fetch() }
             self?.finishNextPage(outcome, token: token, previous: previous)
+            signpost.end(outcome.signpostOutcome { "\($0.page.galleries.count) galleries" })
         }
         nextPageLoad = load
         await load.waitUnlessCancelled()
@@ -223,9 +225,11 @@ public final class GalleryListModel {
         // A next page still in flight belongs to the list being replaced.
         cancelNextPage()
         let fetch = pageFetch(from: request)
+        let signpost = PerformanceSignposts.begin(.listPage, "\(source.signpostName) first")
         let load = tasks.run(TaskKey.firstPage) { [weak self] in
             let outcome = await Outcome.of { try await fetch() }
             self?.finishFirstPage(outcome, token: token, previous: previous)
+            signpost.end(outcome.signpostOutcome { "\($0.page.galleries.count) galleries" })
         }
         firstPageLoad = load
         await load.waitUnlessCancelled()
@@ -238,6 +242,9 @@ public final class GalleryListModel {
         case .success(let result):
             replace(with: result.page, next: result.next)
             needsLoad = false
+            if !galleries.isEmpty {
+                PerformanceSignposts.contentShown(source.signpostName)
+            }
         case .failure(let error):
             loadingState = .failed(error)
         case .cancelled:

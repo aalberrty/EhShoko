@@ -61,6 +61,8 @@ public final class GalleryDetailModel {
     /// page (or for what is stored, which is older than any page) is dropped when a newer
     /// page has been applied meanwhile.
     @ObservationIgnored private var appliedFetches = 0
+    /// `GalleryOpen`, from the first `load()` until the first fetched page is applied.
+    @ObservationIgnored private var openSignpost: PerformanceInterval?
 
     @ObservationIgnored @Dependency(\.ehClient) var client
     @ObservationIgnored @Dependency(\.database) var database
@@ -125,6 +127,7 @@ public final class GalleryDetailModel {
     public func load() async {
         isLoggedIn = client.cookies.didLogin
         if initialLoad == nil {
+            openSignpost = PerformanceSignposts.begin(.galleryOpen)
             if settings.translatesTags {
                 // Reads the stored dictionary once per launch; later calls return at once.
                 let tagTranslations = tagTranslations
@@ -169,8 +172,10 @@ public final class GalleryDetailModel {
         switch outcome {
         case .cancelled:
             loadingState = .idle
+            openSignpost?.end("cancelled")
         case .failure(let error):
             loadingState = .failed(error)
+            openSignpost?.end("failed")
         case .success(let response):
             appliedFetches += 1
             let fetch = appliedFetches
@@ -180,6 +185,7 @@ public final class GalleryDetailModel {
             previewConfig = response.state.previewConfig ?? previewConfig
             setPreviewURLs(response.previewPage.previewURLs)
             loadingState = .idle
+            openSignpost?.end()
             let saved = persist(response)
             handleGreeting(response.greeting)
             let comments = await CommentItem.make(from: response.state.comments)
@@ -201,6 +207,7 @@ public final class GalleryDetailModel {
         guard appliedFetches == 0 else { return }
         if let detail = stored.detail {
             setDetail(detail)
+            openSignpost?.event("Stored")
         }
         setPreviewURLs(stored.previewURLs)
         guard let state = stored.state else { return }

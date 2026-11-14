@@ -24,9 +24,11 @@ struct LaboratorySettingsScreen: View {
                 .tint(.purple)
             }
             #if DEBUG
-            // Development aid: drives the reader engine with synthetic pages.
+            // Development aids: the reader engine with synthetic pages, and a list of synthetic
+            // galleries with a scripted scroll for measuring list views.
             Section("Debug") {
                 ReaderHarnessLauncher()
+                ListHarnessLauncher()
             }
             #endif
         }
