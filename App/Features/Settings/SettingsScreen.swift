@@ -11,7 +11,7 @@ struct SettingsScreen: View {
             }
             Section {
                 SettingsRow(route: .general)
-                SettingsRow(route: .appearance)
+                SettingsRow(route: .design)
                 SettingsRow(route: .reading)
                 SettingsRow(route: .laboratory)
             }
@@ -60,11 +60,11 @@ private extension SettingsRoute {
         switch self {
         case .account: L10n.Localizable.Enum.SettingStateRoute.Value.account
         case .general: L10n.Localizable.Enum.SettingStateRoute.Value.general
-        case .appearance: L10n.Localizable.Enum.SettingStateRoute.Value.appearance
+        case .design: L10n.Localizable.Enum.SettingStateRoute.Value.appearance
         case .reading: L10n.Localizable.Enum.SettingStateRoute.Value.reading
         case .laboratory: L10n.Localizable.Enum.SettingStateRoute.Value.laboratory
         case .about: L10n.Localizable.Enum.SettingStateRoute.Value.about
-        case .login, .ehSetting, .appIcon, .logs, .log: ""
+        case .login, .ehSetting, .appIcon, .designPart, .designSetup, .logs, .log: ""
         }
     }
 
@@ -73,11 +73,11 @@ private extension SettingsRoute {
         switch self {
         case .account: "person.fill"
         case .general: "switch.2"
-        case .appearance: "circle.righthalf.filled"
+        case .design: "circle.righthalf.filled"
         case .reading: "newspaper.fill"
         case .laboratory: "testtube.2"
         case .about: "p.circle.fill"
-        case .login, .ehSetting, .appIcon, .logs, .log: "gearshape"
+        case .login, .ehSetting, .appIcon, .designPart, .designSetup, .logs, .log: "gearshape"
         }
     }
 
@@ -85,11 +85,11 @@ private extension SettingsRoute {
         switch self {
         case .account: .blue
         case .general: .gray
-        case .appearance: .indigo
+        case .design: .indigo
         case .reading: .orange
         case .laboratory: .purple
         case .about: .teal
-        case .login, .ehSetting, .appIcon, .logs, .log: .gray
+        case .login, .ehSetting, .appIcon, .designPart, .designSetup, .logs, .log: .gray
         }
     }
 }

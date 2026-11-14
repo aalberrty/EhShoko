@@ -1,4 +1,5 @@
 import EhFeatures
+import EhModels
 import SwiftUI
 
 /// Tiles for the lists that have no section of their own (legacy `MiscGridSection`).
@@ -61,6 +62,7 @@ private extension GalleryListKind {
         case .history: L10n.Localizable.Enum.HomeMiscGridType.Title.history
         case .frontpage: L10n.Localizable.HomeView.Section.Title.frontpage
         case .toplists: L10n.Localizable.HomeView.Section.Title.toplists
+        case .favorites: L10n.Localizable.TabItem.Title.favorites
         }
     }
 
@@ -71,6 +73,7 @@ private extension GalleryListKind {
         case .history: "clock.arrow.circlepath"
         case .frontpage: "newspaper"
         case .toplists: "list.number"
+        case .favorites: "heart"
         }
     }
 }

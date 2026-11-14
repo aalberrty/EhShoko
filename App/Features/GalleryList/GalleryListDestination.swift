@@ -20,6 +20,8 @@ struct GalleryListDestination: View {
             ToplistsScreen()
         case .history:
             HistoryScreen()
+        case .favorites:
+            FavoritesScreen()
         }
     }
 }

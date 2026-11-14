@@ -15,6 +15,7 @@ import Testing
         #expect(store.designPreset == .shelf)
         #expect(store.designCustom == nil)
         #expect(store.look == .shelf)
+        #expect(store.lastPlace == nil)
         #expect(!store.experienceOfferShown)
     }
 
@@ -107,6 +108,7 @@ import Testing
         #expect(defaults.string(forKey: "settings.designLook") == "wall")
         #expect(defaults.string(forKey: "settings.wallDensity") == "small")
         #expect(defaults.object(forKey: "settings.lastFavoriteFolder") as? Int == 7)
+        #expect(defaults.string(forKey: "settings.lastPlace") == "watched")
         #expect(defaults.object(forKey: "settings.experienceOfferShown") as? Bool == true)
         let custom = defaults.dictionary(forKey: "settings.designCustom") as? [String: String]
         #expect(custom?["bar"] == "tabs")
@@ -123,6 +125,18 @@ import Testing
         #expect(!storage.contains(.designCustom))
     }
 
+    @Test(arguments: GalleryListKind.allCases)
+    func theLastPlacePersistsAndClears(kind: GalleryListKind) {
+        let storage = PreferenceStorage.ephemeral()
+        let store = SettingsStore(storage: storage)
+        store.lastPlace = kind
+        #expect(SettingsStore(storage: storage).lastPlace == kind)
+        #expect(SettingsStore(storage: storage).setting.lastPlace == kind)
+        store.lastPlace = nil
+        #expect(!storage.contains(.lastPlace))
+        #expect(SettingsStore(storage: storage).lastPlace == nil)
+    }
+
     @Test func unknownRawValuesFallBack() {
         let storage = PreferenceStorage.ephemeral()
         for key in Self.designKeys {
@@ -131,7 +145,9 @@ import Testing
         storage.defaults.set("huge", forKey: "settings.wallDensity")
         storage.defaults.set(["bar": "tabs", "start": "wall"], forKey: "settings.designCustom")
         storage.defaults.set(12, forKey: "settings.lastFavoriteFolder")
+        storage.defaults.set("index", forKey: "settings.lastPlace")
         let store = SettingsStore(storage: storage)
+        #expect(store.lastPlace == nil)
         #expect(store.designChoices == DesignChoices(preset: .shelf))
         #expect(store.wallDensity == .medium)
         #expect(store.designCustom == nil)
@@ -161,7 +177,8 @@ import Testing
         #expect(settings.designCustom == nil)
         #expect(!settings.experienceOfferShown)
         #expect(settings.wallDensity == .medium && settings.ledgerShowsCovers && settings.lastFavoriteFolder == 0)
+        #expect(settings.lastPlace == nil)
         let stored = storage.storedSettingKeys
-        #expect(stored.isDisjoint(with: Self.designKeys + [.designCustom, .experienceOfferShown]))
+        #expect(stored.isDisjoint(with: Self.designKeys + [.designCustom, .lastPlace, .experienceOfferShown]))
     }
 }

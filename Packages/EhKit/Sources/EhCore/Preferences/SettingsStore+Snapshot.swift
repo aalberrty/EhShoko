@@ -43,6 +43,7 @@ extension SettingsStore {
         setting.wallDensity = wallDensity
         setting.ledgerShowsCovers = ledgerShowsCovers
         setting.lastFavoriteFolder = lastFavoriteFolder
+        setting.lastPlace = lastPlace
         setting.experienceOfferShown = experienceOfferShown
         return setting
     }
@@ -92,6 +93,7 @@ extension SettingsStore {
         wallDensity = setting.wallDensity
         ledgerShowsCovers = setting.ledgerShowsCovers
         lastFavoriteFolder = setting.lastFavoriteFolder
+        lastPlace = setting.lastPlace
         experienceOfferShown = setting.experienceOfferShown
     }
 

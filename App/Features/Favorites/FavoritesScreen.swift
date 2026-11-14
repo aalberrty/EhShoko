@@ -40,7 +40,7 @@ struct FavoritesScreen: View {
             }
             .sensoryFeedback(.impact(weight: .light), trigger: model.isQuickSearchPresented) { _, isShown in isShown }
             // `AppModel.selectTab` plays the re-selection haptic.
-            .onChange(of: appRouter.rootReselectionCount(for: .favorites)) {
+            .onChange(of: appRouter.rootReselectionCount(for: .library)) {
                 model.reloadForTabReselection()
             }
     }

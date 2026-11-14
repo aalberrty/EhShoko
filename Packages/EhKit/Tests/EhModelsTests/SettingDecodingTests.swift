@@ -70,6 +70,7 @@ import Testing
         { "designBar": "command", "designStart": "wall", "designList": "ledger",
           "designGallery": "nope", "designLook": 3, "wallDensity": "small",
           "ledgerShowsCovers": false, "lastFavoriteFolder": 4, "experienceOfferShown": true,
+          "lastPlace": "toplists",
           "designCustom": { "bar": "tabs", "start": "ledger", "list": "wall", "gallery": "shelf",
                             "reader": "shelf", "search": "ledger", "library": "wall", "look": "ledger" } }
         """
@@ -83,8 +84,11 @@ import Testing
         #expect(setting.wallDensity == .small)
         #expect(!setting.ledgerShowsCovers)
         #expect(setting.lastFavoriteFolder == 4)
+        #expect(setting.lastPlace == .toplists)
         #expect(setting.experienceOfferShown)
         #expect(try decodeJSON(Setting.self, #"{ "designCustom": { "bar": "tabs" } }"#).designCustom == nil)
+        #expect(try decodeJSON(Setting.self, #"{ "lastPlace": "index" }"#).lastPlace == nil)
+        #expect(try decodeJSON(Setting.self, #"{ "lastPlace": null }"#).lastPlace == nil)
     }
 
     @Test func designDefaultsAreTheShelfPreset() {
@@ -99,6 +103,7 @@ import Testing
         #expect(setting.wallDensity == .medium)
         #expect(setting.ledgerShowsCovers)
         #expect(setting.lastFavoriteFolder == 0)
+        #expect(setting.lastPlace == nil)
         #expect(!setting.experienceOfferShown)
     }
 
@@ -117,6 +122,7 @@ import Testing
         setting.designList = .ledger
         setting.designCustom = DesignChoices(preset: .wall)
         setting.wallDensity = .large
+        setting.lastPlace = .favorites
         #expect(try roundTrip(setting) == setting)
     }
 
