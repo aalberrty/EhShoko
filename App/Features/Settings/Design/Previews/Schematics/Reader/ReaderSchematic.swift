@@ -71,7 +71,7 @@ nonisolated enum ReaderSchematic {
         canvas.box(x + width * 0.45, y, width * 0.55, 1.8, canvas.palette.accent, 0.9)
         let thumb = CGRect(x: x + width * 0.45 - 4, y: y - 2.3, width: 8.5, height: 6.4)
         canvas.drop(thumb.minX, thumb.minY, thumb.width, thumb.height, 3.2, dy: 0.6, strength: 1.4)
-        canvas.box(thumb.minX, thumb.minY, thumb.width, thumb.height, .white, 3.2)
+        canvas.box(thumb.minX, thumb.minY, thumb.width, thumb.height, SchematicPalette.white, 3.2)
     }
 
     private static func inked(_ canvas: SchematicCanvas, _ rect: CGRect, _ color: Color) {
@@ -80,7 +80,7 @@ nonisolated enum ReaderSchematic {
     }
 
     private static func balloon(_ canvas: SchematicCanvas, _ x: CGFloat, _ y: CGFloat, _ diameter: CGFloat) {
-        canvas.circle(x, y, diameter, .white)
+        canvas.circle(x, y, diameter, SchematicPalette.white)
         canvas.ring(x, y, diameter, SchematicPalette.ink, 0.7)
     }
 }

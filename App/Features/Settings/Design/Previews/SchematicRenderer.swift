@@ -10,14 +10,12 @@ nonisolated enum SchematicRenderer {
     /// The preview's corner radius, in grid units.
     static let cornerRadius: CGFloat = 9
 
-    /// Fills `size` with `subject` in `look`: the ground, the schematic, and a hairline at the
+    /// Fills `size` with `subject` in `palette`: the ground, the schematic, and a hairline at the
     /// rounded edge it is clipped to.
     static func render(
-        _ subject: DesignPreview.Subject, look: Look, accent: Color, onAccent: Color,
-        into context: GraphicsContext, size: CGSize
+        _ subject: DesignPreview.Subject, palette: SchematicPalette, into context: GraphicsContext, size: CGSize
     ) {
         guard size.width > 0, size.height > 0 else { return }
-        let palette = SchematicPalette(look: look, accent: accent, onAccent: onAccent, environment: context.environment)
         let canvas = canvas(in: context, size: size, palette: palette)
         let frame = CGRect(x: 0, y: 0, width: gridWidth, height: canvas.height)
         var clipped = canvas

@@ -30,6 +30,8 @@ struct DesignPreview: View {
     var look: DesignStyle?
 
     @Environment(\.look) private var appLook
+    @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.colorSchemeContrast) private var contrast
     @Environment(SettingsStore.self) private var settings
 
     init(_ subject: Subject, look: DesignStyle? = nil) {
@@ -40,7 +42,10 @@ struct DesignPreview: View {
     var body: some View {
         let drawnLook = subject.look(given: look, app: appLook)
         let tint = drawnLook.tint(for: settings.accentColor)
-        SchematicView(subject: subject, look: drawnLook, accent: tint.tint, onAccent: tint.onTint)
+        let palette = SchematicPalette(
+            look: drawnLook, accent: tint.tint, onAccent: tint.onTint, colorScheme: colorScheme, contrast: contrast
+        )
+        SchematicView(subject: subject, palette: palette)
             .equatable()
             .aspectRatio(5 / 8, contentMode: .fit)
             .accessibilityElement()
@@ -64,9 +69,7 @@ nonisolated extension DesignPreview.Subject {
 /// inputs does not draw it again.
 private struct SchematicView: View, Equatable {
     let subject: DesignPreview.Subject
-    let look: Look
-    let accent: Color
-    let onAccent: Color
+    let palette: SchematicPalette
 
     private static let signposter = OSSignposter(
         subsystem: PerformanceSignposts.subsystem, category: PerformanceSignposts.category
@@ -75,9 +78,7 @@ private struct SchematicView: View, Equatable {
     var body: some View {
         Canvas { context, size in
             let interval = Self.signposter.beginInterval("SchematicDraw")
-            SchematicRenderer.render(
-                subject, look: look, accent: accent, onAccent: onAccent, into: context, size: size
-            )
+            SchematicRenderer.render(subject, palette: palette, into: context, size: size)
             Self.signposter.endInterval("SchematicDraw", interval)
         }
     }

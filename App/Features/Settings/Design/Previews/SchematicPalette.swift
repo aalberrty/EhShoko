@@ -1,12 +1,14 @@
 import SwiftUI
+import UIKit
 
-/// The colours a schematic is drawn with: the look's tokens resolved once per drawing for the
-/// appearance and contrast the preview is shown in, the tint, and the stand-ins every look
-/// shares (`Design/designs/tools/schematics.py`: `LOOKS`, `COV`, `CAT`, `FOLD`, `NS`, `PAPER`).
+/// The colours a schematic is drawn with: the look's tokens resolved for the appearance and
+/// contrast the preview is shown in, the tint, and the stand-ins every look shares
+/// (`Design/designs/tools/schematics.py`: `LOOKS`, `COV`, `CAT`, `FOLD`, `NS`, `PAPER`).
 ///
-/// Resolving up front makes every fill a plain colour, so a drawing of a hundred fills calls
-/// no dynamic colour provider.
-nonisolated struct SchematicPalette {
+/// Every colour is a plain sRGB value, so a drawing of a hundred fills calls no dynamic
+/// colour provider, and the palette is a value the canvas can compare and any thread can draw
+/// with.
+nonisolated struct SchematicPalette: Equatable, Sendable {
     // The look's tokens.
     let background: Color
     let surface: Color
@@ -28,9 +30,22 @@ nonisolated struct SchematicPalette {
     /// The face of "Aa" in the Colours and type previews.
     let titleDesign: Font.Design
 
-    init(look: Look, accent: Color, onAccent: Color, environment: EnvironmentValues) {
-        func resolved(_ color: Color) -> Color { Color(color.resolve(in: environment)) }
-        let isDark = environment.colorScheme == .dark
+    /// The tokens are dynamic UIKit colours. `Color.resolve(in:)` builds a trait collection
+    /// for each colour, which was most of a preview's drawing time; here one trait collection
+    /// serves the whole palette. Building traits is main-actor work in UIKit, so the palette is
+    /// made where the view's body runs and handed to the canvas.
+    @MainActor
+    init(look: Look, accent: Color, onAccent: Color, colorScheme: ColorScheme, contrast: ColorSchemeContrast) {
+        let isDark = colorScheme == .dark
+        let traits = UITraitCollection { traits in
+            traits.userInterfaceStyle = isDark ? .dark : .light
+            traits.accessibilityContrast = contrast == .increased ? .high : .normal
+        }
+        func resolved(_ color: Color) -> Color {
+            var red: CGFloat = 0, green: CGFloat = 0, blue: CGFloat = 0, alpha: CGFloat = 0
+            _ = UIColor(color).resolvedColor(with: traits).getRed(&red, green: &green, blue: &blue, alpha: &alpha)
+            return Color(.sRGB, red: red, green: green, blue: blue, opacity: alpha)
+        }
         background = resolved(look.background)
         surface = resolved(look.surface)
         raised = resolved(look.raised)
@@ -41,7 +56,7 @@ nonisolated struct SchematicPalette {
         separator = resolved(look.separator)
         self.accent = resolved(accent)
         self.onAccent = resolved(onAccent)
-        reader = isDark ? .black : Self.readerLight(look)
+        reader = isDark ? Color(hex: 0x000000) : Self.readerLight(look)
         chrome = Self.chrome(look, isDark: isDark)
         drop = Color(.sRGB, white: 0, opacity: isDark ? 0.5 : 0.16)
         self.isDark = isDark
@@ -78,6 +93,7 @@ nonisolated struct SchematicPalette {
     /// Tag namespace hues.
     static let namespaces: [Color] = [0xD9538F, 0x4F7FD6, 0xD9812F, 0x2FA79A].map(Color.init(hex:))
     static let star = Color(hex: 0xF0A000)
+    static let white = Color(hex: 0xFFFFFF)
     /// A reader page, and the page thumbnails of strips.
     static let paper = Color(hex: 0xF4F1EA)
     /// The panels of a stand-in comic page, and their ink.
