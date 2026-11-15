@@ -56,7 +56,7 @@ extension ReaderHarnessSession {
         _ mode: ReaderHarnessMode, hasTrailer: Bool, tag: String
     ) async -> (lines: [String], notes: [String]) {
         let run = await open(mode.setup.with { $0.hasTrailer = hasTrailer })
-        await run.runRoute(animated: mode.isAnimated)
+        await run.runRoute(animated: mode.isAnimated, opensOnLastPage: mode.opensOnLastPage)
         ReaderHarnessFiles.write(run.recorder.lines, to: "calls-\(mode.name)-\(tag).txt")
         return (run.recorder.lines, run.notes)
     }
@@ -240,6 +240,23 @@ extension ReaderHarnessSession {
         await strip.settle()
         let again = strip.engine?.snapshot?.trailerFrame?.height ?? 0
         report.expect("and shrank back", abs(again - least) < 1, "\(tall) -> \(again)")
+
+        status = "walk: late sizes"
+        report.section("vertical: opened on the last page before any size is known")
+        let late = await open(ReaderHarnessSetup.scripted("walk-late-sizes", direction: .vertical).with {
+            $0.startPage = 60
+            $0.knowsAspectRatios = false
+        })
+        await late.settle()
+        // Its pages changed height under it; the slot must not have come up with them.
+        report.expect("the last page rests on the bottom edge", late, page: 60, isAtEnd: false, slot: .none)
+        let slotIsAway = { late.slotOnScreen.height < 1 && !late.model.isAtEnd }
+        await turn(toLandscape: true)
+        await late.settle()
+        report.expect("landscape: the slot is not brought in", slotIsAway(), late.state)
+        await turn(toLandscape: false)
+        await late.settle()
+        report.expect("portrait again: nor here", slotIsAway(), late.state)
 
         status = "walk: two pages"
         report.section("two pages in one spread: the gallery counts as read on the slot")

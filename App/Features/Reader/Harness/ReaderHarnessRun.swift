@@ -34,11 +34,34 @@ final class ReaderHarnessRun {
     /// turns on to the last page; **mark `last`**; a turn on (with the slot it reaches it,
     /// without it there is nowhere to go); a turn on; a turn back; a turn back; two turns on;
     /// jump to 1. Animated turns are what taps and auto-play make, the others what the slider
-    /// makes. Short galleries skip what they have no pages for.
-    func runRoute(animated: Bool) async {
-        let count = model.galleryPageCount
+    /// makes. Short galleries skip what they have no pages for, and a reader that opened on
+    /// the last page goes straight to the mark.
+    func runRoute(animated: Bool, opensOnLastPage: Bool = false) async {
         await settle()
         mark("open")
+        if !opensOnLastPage {
+            await runTurns(animated: animated)
+        }
+        mark("last")
+
+        // From here the two runs may differ.
+        let reached = await step(1, animated: animated)
+        mark("end reached=\(reached)")
+        let further = await step(1, animated: animated)
+        mark("past end moved=\(further)")
+        await step(-1, animated: animated)
+        mark("back")
+        await step(-1, animated: animated)
+        await step(1, animated: animated)
+        await step(1, animated: animated)
+        mark("end again")
+        await jump(to: 1)
+        mark("done")
+    }
+
+    /// The route from the first page to the last.
+    private func runTurns(animated: Bool) async {
+        let count = model.galleryPageCount
         for _ in 0..<min(6, count - 1) {
             await step(1, animated: animated)
         }
@@ -59,21 +82,6 @@ final class ReaderHarnessRun {
         for _ in 0..<6 where model.currentPage < count {
             guard await step(1, animated: animated) else { break }
         }
-        mark("last")
-
-        // From here the two runs may differ.
-        let reached = await step(1, animated: animated)
-        mark("end reached=\(reached)")
-        let further = await step(1, animated: animated)
-        mark("past end moved=\(further)")
-        await step(-1, animated: animated)
-        mark("back")
-        await step(-1, animated: animated)
-        await step(1, animated: animated)
-        await step(1, animated: animated)
-        mark("end again")
-        await jump(to: 1)
-        mark("done")
     }
 
     /// A mark in the record, and beside it where the reader is and what the app holds.

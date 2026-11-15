@@ -102,6 +102,9 @@ struct ReaderHarnessMode {
     var isAnimated = true
     /// Also runs it a second time with the slot off: how much two runs of the same engine differ.
     var measuresNoise = false
+    /// The reader opens on the last page, where the slot's place is tiled from the first
+    /// layout on: the run has no turns before the mark `last`, only the opening.
+    var opensOnLastPage = false
 
     var name: String { setup.name }
 
@@ -133,6 +136,20 @@ struct ReaderHarnessMode {
             setup: .scripted(
                 "dual-beside-rtl", direction: .rightToLeft, isDualPage: true, exceptCover: true, isLandscape: true
             )
+        ),
+        ReaderHarnessMode(
+            setup: ReaderHarnessSetup.scripted("ltr-opened-on-last", direction: .leftToRight).with {
+                $0.startPage = 60
+            },
+            opensOnLastPage: true
+        ),
+        // No size is known when the strip opens, so its last pages change height under it.
+        ReaderHarnessMode(
+            setup: ReaderHarnessSetup.scripted("vertical-opened-on-last-unknown-ratios", direction: .vertical).with {
+                $0.startPage = 60
+                $0.knowsAspectRatios = false
+            },
+            isAnimated: false, opensOnLastPage: true
         ),
         ReaderHarnessMode(setup: .scripted("one-page", direction: .leftToRight, pageCount: 1)),
         ReaderHarnessMode(

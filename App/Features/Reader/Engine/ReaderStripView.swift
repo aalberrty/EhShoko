@@ -188,10 +188,14 @@ final class ReaderStripView: UIScrollView, UIScrollViewDelegate, ReaderContentVi
             trailer.frame = frame
         }
         var top = anchor.map(layout.y(for:)) ?? layout.offset(forPage: reportedPage, viewportHeight: size.height)
+        // A page keeps to the range of the pages, as it does without a trailer: a new size
+        // does not bring the trailer in under it.
+        var limit = layout.maximumPageOffset(viewportHeight: size.height)
         if staysOnTrailer, let offset = layout.trailerOffset(viewportHeight: size.height) {
             top = offset
+            limit = layout.maximumOffset(viewportHeight: size.height)
         }
-        contentOffset = CGPoint(x: 0, y: min(max(top, 0), layout.maximumOffset(viewportHeight: size.height)))
+        contentOffset = CGPoint(x: 0, y: min(max(top, 0), limit))
         isAdjusting = false
         setNeedsLayout()
     }
@@ -345,7 +349,12 @@ final class ReaderStripView: UIScrollView, UIScrollViewDelegate, ReaderContentVi
     func clampOffsetIfIdle() {
         guard !isDragging, !isDecelerating, !isZooming, !isZoomBouncing, !isAnimatingScroll else { return }
         let maximumX = max(contentSize.width - bounds.width, 0)
-        let maximumY = max(contentSize.height - bounds.height, 0)
+        var maximumY = max(contentSize.height - bounds.height, 0)
+        if requestedPage != nil {
+            // Where the strip was told to show a page, pages that got shorter pull it back to
+            // the end of the pages, as without a trailer, instead of uncovering the trailer.
+            maximumY = min(maximumY, layout.maximumPageOffset(viewportHeight: viewportHeight) * zoomScale)
+        }
         let clamped = CGPoint(
             x: min(max(contentOffset.x, 0), maximumX),
             y: min(max(contentOffset.y, 0), maximumY)
