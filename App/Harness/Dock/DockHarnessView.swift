@@ -1,4 +1,4 @@
-#if DEBUG
+#if DEBUG || HARNESS
 import Dependencies
 import EhCore
 import EhFeatures

@@ -32,12 +32,12 @@ struct GalleryListScreen<Header: View>: View {
         self.header = header()
     }
 
-    #if DEBUG
+    #if DEBUG || HARNESS
     @Environment(\.listFixtures) private var fixtures
     #endif
 
     var body: some View {
-        #if DEBUG
+        #if DEBUG || HARNESS
         if let fixtures {
             FixtureListHost(context: context, fixture: fixtures.fixture(for: context), header: header)
         } else {
@@ -221,7 +221,7 @@ struct ListHost<Header: View>: View {
 
 // MARK: Fixtures
 
-#if DEBUG
+#if DEBUG || HARNESS
 /// A list whose rows are already there: what the part harness shows in place of a list's
 /// models, in whichever state it wants a list design to draw.
 struct ListFixture {
