@@ -227,7 +227,7 @@ private struct WallGalleryFacts: View {
             facts.append(language.localizedName)
         }
         if let detail, detail.sizeCount > 0 {
-            facts.append(detail.sizeCount.formatted() + " " + detail.sizeType)
+            facts.append(detail.sizeCount.formatted(.number.precision(.fractionLength(0...2))) + " " + detail.sizeType)
         }
         return facts
     }

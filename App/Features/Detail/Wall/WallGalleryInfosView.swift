@@ -56,7 +56,7 @@ struct WallGalleryInfosView: View {
                 WallInfo(Title.visibility, detail.visibility.localizedName),
                 WallInfo(Title.language, detail.language.localizedName),
                 WallInfo(Title.pageCount, String(detail.pageCount)),
-                WallInfo(Title.fileSize, detail.sizeCount.formatted() + " " + detail.sizeType),
+                WallInfo(Title.fileSize, detail.sizeCount.formatted(.number.precision(.fractionLength(0...2))) + " " + detail.sizeType),
             ],
             [
                 WallInfo(Title.favoritedTimes, String(detail.favoritedCount)),
