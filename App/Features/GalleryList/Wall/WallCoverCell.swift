@@ -195,6 +195,10 @@ private struct WallCellLargeCaption: View {
 
     var body: some View {
         let texts = style.texts
+        // The site lists the language tags first, and the line above already names the
+        // language: the few chips that fit go to the tags after them.
+        let tags = style.tagLimit > 0
+            ? entry.tags.drop { $0.namespace == .language }.prefix(style.tagLimit) : []
         VStack(alignment: .leading, spacing: 0) {
             Text(entry.title.core)
                 .font(texts.largeTitleFont)
@@ -210,8 +214,8 @@ private struct WallCellLargeCaption: View {
             WallCellFacts(entry: entry, category: category, style: style)
                 .font(WallCellFonts.largeFacts)
                 .padding(.top, WallCellMetrics.factsSpacing)
-            if style.tagLimit > 0, !entry.tags.isEmpty {
-                WallCellTagLine(tags: entry.tags.prefix(style.tagLimit), texts: texts)
+            if !tags.isEmpty {
+                WallCellTagLine(tags: tags, texts: texts)
                     .padding(.top, WallCellMetrics.tagSpacing)
             }
         }

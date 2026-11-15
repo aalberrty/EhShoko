@@ -109,7 +109,9 @@ struct WallListGrid<Header: View>: View {
                             rankedCells(pages.first)
                         } else {
                             cells(entries[...])
-                            if isLoadingMore { placeholders(layout.columns) }
+                            if isLoadingMore {
+                                placeholders(Self.nextPageTiles(after: entries.count, columns: layout.columns))
+                            }
                         }
                     case .signedOut, .empty, .failed:
                         EmptyView()
@@ -180,6 +182,11 @@ struct WallListGrid<Header: View>: View {
         case .medium: 4
         case .small: 7
         }
+    }
+
+    /// The tiles that stand for a page on its way: what the last row lacks, and a row more.
+    private static func nextPageTiles(after count: Int, columns: Int) -> Int {
+        (columns - count % columns) % columns + columns
     }
 
     private func placeholders(_ count: Int) -> some View {
