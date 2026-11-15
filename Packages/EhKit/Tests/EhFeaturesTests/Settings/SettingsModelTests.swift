@@ -8,60 +8,73 @@ import Foundation
 import Testing
 
 @Suite struct AppIconModelTests {
-    @Test func selectingAnIconSetsTheAlternateIconAndRecordsWhatTheSystemReports() async {
-        let iconName = SettingsTestLock<String?>(nil)
-        let settings = SettingsStore.ephemeral()
-        let model = withDependencies {
+    /// The calls to `setAlternateIconName`, and the icon the system then reports.
+    private nonisolated final class SystemIcon: Sendable {
+        let shown: SettingsTestLock<String?>
+        let requests = SettingsTestLock<[String?]>([])
+        init(_ shown: String?) { self.shown = SettingsTestLock(shown) }
+    }
+
+    private func makeModel(_ system: SystemIcon, settings: SettingsStore, accepts: Bool = true) -> AppIconModel {
+        withDependencies {
             $0.settings = settings
+            $0.applicationClient.alternateIconName = { system.shown.withLock { $0 } }
             $0.applicationClient.setAlternateIconName = { name in
-                iconName.withLock { $0 = name }
-                return true
+                system.requests.withLock { $0.append(name) }
+                if accepts { system.shown.withLock { $0 = name } }
+                return accepts
             }
-            $0.applicationClient.alternateIconName = { iconName.withLock { $0 } }
         } operation: { AppIconModel() }
+    }
 
-        await model.select(.ukiyoe)
+    @Test func withOneIconSettingsOffersNoChoice() {
+        #expect(AppIconType.allCases.count == 1)
+        #expect(!AppIconModel.offersChoice)
+    }
 
-        #expect(iconName.withLock { $0 } == "AppIcon_Ukiyoe")
-        #expect(settings.appIconType == .ukiyoe)
+    @Test func choosingTheIconShownAsksTheSystemNothing() async {
+        let system = SystemIcon(nil)
+        let settings = SettingsStore.ephemeral()
+        let model = makeModel(system, settings: settings)
 
         await model.select(.default)
 
-        #expect(iconName.withLock { $0 } == "AppIcon_Default")
+        #expect(system.requests.withLock { $0 }.isEmpty)
         #expect(settings.appIconType == .default)
     }
 
-    @Test func aRefusedChangeKeepsTheIconTheSystemShows() async {
+    @Test func choosingTheDefaultRestoresThePrimaryIcon() async {
+        // The system still shows an alternate that is no longer in the app.
+        let system = SystemIcon("AppIcon_Ukiyoe")
         let settings = SettingsStore.ephemeral()
-        let model = withDependencies {
-            $0.settings = settings
-            $0.applicationClient.setAlternateIconName = { _ in false }
-            $0.applicationClient.alternateIconName = { "AppIcon_Developer" }
-        } operation: { AppIconModel() }
+        let model = makeModel(system, settings: settings)
 
-        await model.select(.notMyPresidnet)
+        await model.select(.default)
 
-        #expect(settings.appIconType == .developer)
+        #expect(system.requests.withLock { $0 } == [nil])
+        #expect(system.shown.withLock { $0 } == nil)
+        #expect(settings.appIconType == .default)
     }
 
-    @Test func syncMapsThePrimaryAndUnknownIconsToDefault() {
+    @Test func aRefusedChangeRecordsTheIconTheSystemShows() async {
+        let system = SystemIcon("AppIcon_Ukiyoe")
         let settings = SettingsStore.ephemeral()
-        let reported = SettingsTestLock<String?>("AppIcon_StandWithUkraine2022")
-        let model = withDependencies {
-            $0.settings = settings
-            $0.applicationClient.alternateIconName = { reported.withLock { $0 } }
-        } operation: { AppIconModel() }
+        let model = makeModel(system, settings: settings, accepts: false)
 
-        model.syncWithSystem()
-        #expect(settings.appIconType == .standWithUkraine2022)
+        await model.select(.default)
 
-        reported.withLock { $0 = nil }
-        model.syncWithSystem()
+        #expect(system.requests.withLock { $0 } == [nil])
+        #expect(system.shown.withLock { $0 } == "AppIcon_Ukiyoe")
         #expect(settings.appIconType == .default)
+    }
 
-        settings.appIconType = .ukiyoe
-        reported.withLock { $0 = "SomethingElse" }
+    @Test(arguments: [nil, "AppIcon_Ukiyoe"] as [String?])
+    func syncReadsThePrimaryAndRemovedIconsAsTheDefault(name: String?) {
+        let settings = SettingsStore.ephemeral()
+        let model = makeModel(SystemIcon(name), settings: settings)
+
         model.syncWithSystem()
+
         #expect(settings.appIconType == .default)
     }
 }

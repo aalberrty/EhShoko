@@ -36,8 +36,8 @@ private struct AppIconRow: View {
 
     var body: some View {
         HStack(spacing: Tokens.Spacing.xLarge) {
-            // The icon files are loose PNGs in the bundle (also used by `CFBundleAlternateIcons`).
-            if let image = UIImage(named: icon.filename) {
+            // An icon set compiled into the asset catalog loads by name like an image.
+            if let image = UIImage(named: icon.iconSetName) {
                 Image(uiImage: image)
                     .resizable()
                     .scaledToFit()

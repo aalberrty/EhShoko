@@ -24,15 +24,17 @@ struct AppearanceSettingsScreen: View {
                     selection: accentColor,
                     supportsOpacity: false
                 )
-                Button {
-                    stack.push(.settings(.appIcon))
-                } label: {
-                    LabeledContent {
-                        Text(settings.appIconType.localizedName)
+                if AppIconModel.offersChoice {
+                    Button {
+                        stack.push(.settings(.appIcon))
                     } label: {
-                        Text(L10n.Localizable.AppearanceSettingView.Button.appIcon).foregroundStyle(Color.primary)
+                        LabeledContent {
+                            Text(settings.appIconType.localizedName)
+                        } label: {
+                            Text(L10n.Localizable.AppearanceSettingView.Button.appIcon).foregroundStyle(Color.primary)
+                        }
+                        .disclosureIndicator()
                     }
-                    .disclosureIndicator()
                 }
             }
             ListSection()

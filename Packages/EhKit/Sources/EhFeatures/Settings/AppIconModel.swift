@@ -10,25 +10,25 @@ public final class AppIconModel {
     @ObservationIgnored @Dependency(\.settings) private var settings
     @ObservationIgnored @Dependency(\.applicationClient) private var application
 
+    /// Whether Settings offers the icon picker. With one icon there is nothing to choose, so
+    /// the row that opens it is hidden.
+    public static var offersChoice: Bool { AppIconType.allCases.count > 1 }
+
     public init() {}
 
     /// Asks the system to switch icons (it shows its own alert), then records what it reports,
-    /// so a refused change does not leave the wrong icon checked.
+    /// so a refused change does not leave the wrong icon checked. The icon already shown is not
+    /// asked for again, which would only bring up the alert.
     public func select(_ icon: AppIconType) async {
         settings.appIconType = icon
-        // Legacy also set the default icon as an alternate (`AppIcon_Default` is declared in
-        // `CFBundleAlternateIcons`), so every choice goes through the same path.
-        _ = await application.setAlternateIconName(icon.filename)
+        if application.alternateIconName() != icon.alternateIconName {
+            _ = await application.setAlternateIconName(icon.alternateIconName)
+        }
         syncWithSystem()
     }
 
     /// Sets `appIconType` to the icon the system reports; the primary icon is `.default`.
     public func syncWithSystem() {
-        settings.appIconType = Self.iconType(forAlternateIconName: application.alternateIconName())
-    }
-
-    nonisolated static func iconType(forAlternateIconName name: String?) -> AppIconType {
-        guard let name else { return .default }
-        return AppIconType.allCases.first { $0.filename == name } ?? .default
+        settings.appIconType = AppIconType(alternateIconName: application.alternateIconName())
     }
 }

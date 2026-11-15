@@ -159,10 +159,10 @@ extension AppModel {
     }
 
     /// The stored choice can disagree with the icon the system actually shows (an imported
-    /// setting, a switch that failed); the system wins. Legacy: `SettingReducer.syncAppIconType`.
+    /// setting, a switch that failed); the system wins. Legacy: `SettingReducer.syncAppIconType`,
+    /// which ignored the primary icon because its default was an alternate; here it is `.default`.
     func syncAppIcon() {
-        guard let name = application.alternateIconName() else { return }
-        let icon = AppIconType.allCases.first { name.contains($0.filename) } ?? .default
+        let icon = AppIconType(alternateIconName: application.alternateIconName())
         if settings.appIconType != icon {
             settings.appIconType = icon
         }

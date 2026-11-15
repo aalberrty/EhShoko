@@ -285,21 +285,14 @@ final class LaunchHarness {
         #expect(harness.model.launchState == .ready)
     }
 
-    @Test func syncsTheAppIconFromTheSystem() async {
-        let harness = LaunchHarness(alternateIconName: "AppIcon_Ukiyoe")
+    /// The primary icon, and an alternate that is no longer in the app, are the default.
+    @Test(arguments: [nil, "AppIcon_Ukiyoe"] as [String?])
+    func syncsTheAppIconFromTheSystem(shown: String?) async {
+        let harness = LaunchHarness(alternateIconName: shown)
 
         await harness.launch()
 
-        #expect(harness.settings.appIconType == .ukiyoe)
-    }
-
-    @Test func keepsTheStoredIconWhenThePrimaryIconIsShown() async {
-        let harness = LaunchHarness(alternateIconName: nil)
-        harness.settings.appIconType = .developer
-
-        await harness.launch()
-
-        #expect(harness.settings.appIconType == .developer)
+        #expect(harness.settings.appIconType == .default)
     }
 
     @Test func locksAtLaunchWhenAutoLockIsOn() async {
