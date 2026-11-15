@@ -202,6 +202,8 @@ final class ReaderPageView: UIView, UIContextMenuInteractionDelegate {
             // Not from inside `configure`: the report can change the layout around this view.
             Task { [weak self] in self?.reportLoaded(load) }
         } else {
+            // A new image: its download is shown from its first report.
+            progressGate = ImageLoadProgressGate()
             showStatus(.loading)
             startLoad(load)
         }
