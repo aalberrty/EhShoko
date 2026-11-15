@@ -14,7 +14,7 @@ struct ShelfListRows<Header: View>: View {
     let header: Header
     let style: ShelfRowStyle
     let headerLine: ListPrimaryControl?
-    let prefetcher: ShelfListPrefetcher
+    let prefetcher: ListCoverPrefetcher
 
     @Environment(\.openGallery) private var openGallery
     @Environment(\.look) private var look
@@ -50,7 +50,7 @@ struct ShelfListRows<Header: View>: View {
                         .listRowBackground(Color.clear)
                 }
                 if style.isRanked {
-                    rankedRows(ShelfRankedPages(entries: entries, pageStarts: feed.pageStarts, findText: feed.findText))
+                    rankedRows(RankedPages(entries: entries, pageStarts: feed.pageStarts, findText: feed.findText))
                 } else {
                     rows(entries[...])
                 }
@@ -70,7 +70,7 @@ struct ShelfListRows<Header: View>: View {
         .scrollContentBackground(.hidden)
         .background(look.background)
         .refreshable { await feed.refresh() }
-        .onChange(of: ShelfListPrefetchKey(entries), initial: true) { prefetcher.update(entries) }
+        .onChange(of: ListEntriesKey(entries), initial: true) { prefetcher.update(entries) }
     }
 
     private func rows(_ entries: ArraySlice<GalleryEntry>) -> some View {
@@ -93,7 +93,7 @@ struct ShelfListRows<Header: View>: View {
     }
 
     @ViewBuilder
-    private func rankedRows(_ pages: ShelfRankedPages) -> some View {
+    private func rankedRows(_ pages: RankedPages) -> some View {
         rankedRows(pages.first)
         ForEach(pages.later) { page in
             ShelfListPageDivider(page: page.number)
@@ -104,7 +104,7 @@ struct ShelfListRows<Header: View>: View {
         }
     }
 
-    private func rankedRows(_ rows: ArraySlice<ShelfRankedEntry>) -> some View {
+    private func rankedRows(_ rows: ArraySlice<RankedEntry>) -> some View {
         let textInset = ShelfGalleryRow.textInset(isRanked: true)
         return ForEach(rows) { row in
             Button {
@@ -120,69 +120,5 @@ struct ShelfListRows<Header: View>: View {
             .galleryContextMenu(row.entry, actions: input.actions)
             .onAppear { prefetcher.appeared(row.entry.id) }
         }
-    }
-}
-
-/// What tells the prefetcher that the rows changed: another first row (another list, or the
-/// rows narrowed by Find), or more rows.
-struct ShelfListPrefetchKey: Equatable {
-    let first: String?
-    let count: Int
-
-    init(_ entries: [GalleryEntry]) {
-        first = entries.first?.id
-        count = entries.count
-    }
-}
-
-/// A Toplists row with its rank.
-struct ShelfRankedEntry: Identifiable {
-    let entry: GalleryEntry
-    /// 1-based; `nil` while Find narrows the rows, when a row's rank is not known.
-    let rank: Int?
-
-    var id: String { entry.id }
-}
-
-/// Toplists' rows by the page they came from: the first page's rows, then each later page
-/// with its number for the "Page 2" divider. Ranks count from the page's number, so a list
-/// opened at page 5 starts at 201.
-struct ShelfRankedPages {
-    struct Page: Identifiable {
-        let number: Int
-        let rows: ArraySlice<ShelfRankedEntry>
-
-        var id: Int { number }
-    }
-
-    let first: ArraySlice<ShelfRankedEntry>
-    let later: [Page]
-
-    init(entries: [GalleryEntry], pageStarts: [PageStart], findText: String) {
-        guard let start = pageStarts.first else {
-            // Popular (one page), or Find narrowing the rows: no pages to tell apart.
-            let ranks = findText.isEmpty
-            first = entries.enumerated().map { ShelfRankedEntry(entry: $1, rank: ranks ? $0 + 1 : nil) }[...]
-            later = []
-            return
-        }
-        let pageSize = pageStarts.count > 1
-            ? pageStarts[1].index - start.index : ShelfListLayout.rankedPageSize
-        var rows: [ShelfRankedEntry] = []
-        rows.reserveCapacity(entries.count)
-        // Where each page's rows are in `rows`.
-        var bounds: [(number: Int, range: Range<Int>)] = []
-        for (offset, page) in pageStarts.enumerated() {
-            let end = offset + 1 < pageStarts.count ? pageStarts[offset + 1].index : entries.count
-            let lower = min(page.index, entries.count)
-            let base = (page.page - 1) * pageSize + 1
-            let rowsStart = rows.count
-            for index in lower..<max(min(end, entries.count), lower) {
-                rows.append(ShelfRankedEntry(entry: entries[index], rank: base + index - lower))
-            }
-            bounds.append((page.page, rowsStart..<rows.count))
-        }
-        first = rows[bounds.first?.range ?? 0..<0]
-        later = bounds.dropFirst().map { Page(number: $0.number, rows: rows[$0.range]) }
     }
 }

@@ -74,12 +74,12 @@ struct WallListGrid<Header: View>: View {
     let header: Header
     let style: WallCellStyle
     let layout: WallGridLayout
-    let pages: WallListPages?
+    let pages: RankedPages?
     let primary: ListPrimaryControl?
     let cue: WallDensityCue
     /// The gallery open in the side pane, whose cover is outlined.
     let selectedID: String?
-    let prefetcher: WallListPrefetcher
+    let prefetcher: ListCoverPrefetcher
     let tracker: WallListTracker
     @Binding var position: ScrollPosition
     /// A pinch: `+1` for larger covers, `-1` for smaller.
@@ -144,9 +144,9 @@ struct WallListGrid<Header: View>: View {
             .coordinateSpace(.named(WallListSpace.name))
             // Entries that change inside someone else's animation (the find field closing) take
             // their places at once: what a lazy grid lays out must not be animated.
-            .transaction(value: WallListEntriesKey(entries)) { $0.animation = nil }
+            .transaction(value: ListEntriesKey(entries)) { $0.animation = nil }
             .padding(.horizontal, WallGridLayout.margin)
-            .background { WallListPinch(onStep: step) }
+            .background { ScrollViewPinch(onStep: step) }
         }
         .scrollPosition($position)
         // Only the scale and the fade move, and only here: no animation may reach what the
@@ -162,7 +162,7 @@ struct WallListGrid<Header: View>: View {
         }
         .background(look.background)
         .refreshable { await feed.refresh() }
-        .onChange(of: WallListEntriesKey(entries), initial: true) {
+        .onChange(of: ListEntriesKey(entries), initial: true) {
             prefetcher.update(entries)
             tracker.forget()
         }
@@ -209,7 +209,7 @@ struct WallListGrid<Header: View>: View {
         }
     }
 
-    private func rankedCells(_ rows: ArraySlice<WallRankedEntry>) -> some View {
+    private func rankedCells(_ rows: ArraySlice<RankedEntry>) -> some View {
         ForEach(rows) { row in
             WallCoverCell(entry: row.entry, rank: row.rank, isSelected: row.id == selectedID, style: style).equatable()
                 .contentShape(.rect)
@@ -242,63 +242,4 @@ struct WallListGrid<Header: View>: View {
 /// The grid's coordinate space, in which the top of the covers is measured.
 nonisolated private enum WallListSpace {
     static let name = "WallListGrid"
-}
-
-/// A Toplists cover with its rank.
-struct WallRankedEntry: Identifiable {
-    let entry: GalleryEntry
-    /// 1-based; `nil` while Find narrows the list, when a cover's rank is not known.
-    let rank: Int?
-
-    var id: String { entry.id }
-}
-
-/// Toplists' covers by the page they came from: the first page's, then each later page with
-/// its number for the "Page 2" divider. Ranks count from the page's number, so a list opened
-/// at page 5 starts at 201.
-struct WallListPages {
-    struct Page: Identifiable {
-        let number: Int
-        let rows: ArraySlice<WallRankedEntry>
-
-        var id: Int { number }
-    }
-
-    let first: ArraySlice<WallRankedEntry>
-    let later: [Page]
-
-    /// Toplists' pages, when fewer than two are loaded to measure one by.
-    private static let pageSize = 50
-
-    /// How many covers each section of the grid holds, in order.
-    var sections: [Int] {
-        [first.count] + later.map(\.rows.count)
-    }
-
-    init(entries: [GalleryEntry], pageStarts: [PageStart], findText: String) {
-        guard let start = pageStarts.first else {
-            // Popular (one page), or Find narrowing the list: no pages to tell apart.
-            let ranks = findText.isEmpty
-            first = entries.enumerated().map { WallRankedEntry(entry: $1, rank: ranks ? $0 + 1 : nil) }[...]
-            later = []
-            return
-        }
-        let pageSize = pageStarts.count > 1 ? pageStarts[1].index - start.index : Self.pageSize
-        var rows: [WallRankedEntry] = []
-        rows.reserveCapacity(entries.count)
-        // Where each page's covers are in `rows`.
-        var bounds: [(number: Int, range: Range<Int>)] = []
-        for (offset, page) in pageStarts.enumerated() {
-            let end = offset + 1 < pageStarts.count ? pageStarts[offset + 1].index : entries.count
-            let lower = min(page.index, entries.count)
-            let base = (page.page - 1) * pageSize + 1
-            let rowsStart = rows.count
-            for index in lower..<max(min(end, entries.count), lower) {
-                rows.append(WallRankedEntry(entry: entries[index], rank: base + index - lower))
-            }
-            bounds.append((page.page, rowsStart..<rows.count))
-        }
-        first = rows[bounds.first?.range ?? 0..<0]
-        later = bounds.dropFirst().map { Page(number: $0.number, rows: rows[$0.range]) }
-    }
 }

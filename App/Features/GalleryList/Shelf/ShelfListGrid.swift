@@ -15,7 +15,7 @@ struct ShelfListGrid<Header: View>: View {
     let style: ShelfRowStyle
     let columns: Int
     let headerLine: ListPrimaryControl?
-    let prefetcher: ShelfListPrefetcher
+    let prefetcher: ListCoverPrefetcher
 
     @Environment(\.openGallery) private var openGallery
     @Environment(\.look) private var look
@@ -24,8 +24,8 @@ struct ShelfListGrid<Header: View>: View {
         let feed = input.feed
         let entries = feed.entries
         let phase = feed.phase
-        let pages: ShelfRankedPages? = style.isRanked && phase == .content
-            ? ShelfRankedPages(entries: entries, pageStarts: feed.pageStarts, findText: feed.findText) : nil
+        let pages: RankedPages? = style.isRanked && phase == .content
+            ? RankedPages(entries: entries, pageStarts: feed.pageStarts, findText: feed.findText) : nil
         ScrollView {
             LazyVGrid(columns: gridColumns, alignment: .leading, spacing: 0) {
                 Section {} header: { header }
@@ -75,7 +75,7 @@ struct ShelfListGrid<Header: View>: View {
         }
         .background(look.background)
         .refreshable { await feed.refresh() }
-        .onChange(of: ShelfListPrefetchKey(entries), initial: true) { prefetcher.update(entries) }
+        .onChange(of: ListEntriesKey(entries), initial: true) { prefetcher.update(entries) }
     }
 
     private var gridColumns: [GridItem] {
@@ -115,7 +115,7 @@ struct ShelfListGrid<Header: View>: View {
         }
     }
 
-    private func rankedCells(_ rows: ArraySlice<ShelfRankedEntry>) -> some View {
+    private func rankedCells(_ rows: ArraySlice<RankedEntry>) -> some View {
         ForEach(rows) { row in
             Button {
                 openGallery(row.entry.gallery)

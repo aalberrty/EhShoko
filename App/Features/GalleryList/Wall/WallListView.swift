@@ -21,7 +21,7 @@ struct WallListView<Header: View>: View {
     @ViewBuilder var header: Header
 
     @State private var texts = WallCellTexts()
-    @State private var prefetcher = WallListPrefetcher()
+    @State private var prefetcher = ListCoverPrefetcher()
     @State private var tracker = WallListTracker()
     @State private var position = ScrollPosition()
     /// The density this wall is laid out in; `nil` until it changes one, when it is the
@@ -108,10 +108,10 @@ struct WallListView<Header: View>: View {
     private var isRanked: Bool { input.context.kind == .place(.toplists) }
 
     /// Toplists' entries by page; `nil` for every other list.
-    private var pages: WallListPages? {
+    private var pages: RankedPages? {
         let feed = input.feed
         guard isRanked, feed.phase == .content else { return nil }
-        return WallListPages(entries: feed.entries, pageStarts: feed.pageStarts, findText: feed.findText)
+        return RankedPages(entries: feed.entries, pageStarts: feed.pageStarts, findText: feed.findText)
     }
 
     /// The filter pill or the sort menu, where the bar does not hold them and no first screen

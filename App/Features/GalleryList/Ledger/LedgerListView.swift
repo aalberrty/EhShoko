@@ -14,14 +14,14 @@ import SwiftUI
 /// open; this view draws the rows, the states and the controls' places.
 ///
 /// What only Ledger needs lives here as `@State` and goes with the view: the words of the
-/// rows, the headings' layout and the covers' prefetcher.
+/// rows and the headings' layout, with the list's own cover prefetcher.
 struct LedgerListView<Header: View>: View {
     let input: ListDesignInput
     @ViewBuilder var header: Header
 
     @State private var words = LedgerListWords()
     @State private var layout = LedgerListLayout()
-    @State private var prefetcher = LedgerCoverPrefetcher()
+    @State private var prefetcher = ListCoverPrefetcher()
     @State private var visits = LedgerListVisits()
     @Environment(SettingsStore.self) private var settings
     @Environment(FilterStore.self) private var filterStore
@@ -105,7 +105,7 @@ private struct LedgerListContent<Header: View>: View {
     let style: LedgerRowStyle
     let words: LedgerListWords
     let layout: LedgerListLayout
-    let prefetcher: LedgerCoverPrefetcher
+    let prefetcher: ListCoverPrefetcher
 
     /// What a row's More or Move swipe action opened.
     @State private var dialog: LedgerRowDialog?
@@ -123,10 +123,9 @@ private struct LedgerListContent<Header: View>: View {
         let feed = input.feed
         let entries = feed.entries
         let kind = LedgerListKind(input.context)
-        if layout.update(entries, grouping: kind.grouping, pageStarts: feed.pageStarts, words: words) {
-            prefetcher.stop()
-        }
+        layout.update(entries, grouping: kind.grouping, pageStarts: feed.pageStarts, words: words)
         prefetcher.isEnabled = style.showsCover
+        prefetcher.update(entries)
         let rows = LedgerRows(
             kind: kind, textInset: LedgerGalleryRow.textInset(showsCover: style.showsCover),
             selectedID: stack.sideGallery?.gid
@@ -209,11 +208,7 @@ private struct LedgerListContent<Header: View>: View {
             LedgerSwipeActions(entry: entry, actions: actions, form: rows.kind.swipe) { dialog = $0 }
         }
         .galleryContextMenu(entry, actions: actions, offersMove: rows.kind.offersMove)
-        .onAppear {
-            if let index = layout.index(of: entry.id) {
-                prefetcher.rowAppeared(at: index, of: layout.coverURLs)
-            }
-        }
+        .onAppear { prefetcher.appeared(entry.id) }
     }
 
     private func rank(of entry: GalleryEntry, in section: LedgerSection) -> Int? {

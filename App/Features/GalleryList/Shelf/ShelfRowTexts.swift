@@ -5,9 +5,9 @@ import SwiftUI
 import UIKit
 
 /// The words, colours and images Shelf's rows look up, so that a row's body formats nothing
-/// (`spikes/S1.md`, rule 3): one string per age and kind, per page count and per tag, made the
-/// first time a row asks; the category names and colours, the folder names and the star strips,
-/// made once.
+/// (`spikes/S1.md`, rule 3): the words every list makes from numbers (`ListRowWords`: one
+/// string per age, per page count and per tag, made the first time a row asks); the category
+/// colours, the folder names and the star strips, made once.
 ///
 /// Owned by `ShelfListView` as `@State` and handed to rows in their style, so it goes away
 /// with the list. Nothing observes it: when what it was made from changes, the list view calls
@@ -43,30 +43,14 @@ final class ShelfRowTexts {
     private(set) var inputs: Inputs?
     private(set) var metrics = ShelfRowMetrics(typeSize: .large)
 
-    private var posted: [GalleryEntry.Age: String] = [:]
-    private var opened: [GalleryEntry.Age: String] = [:]
-    private var added: [GalleryEntry.Age: String] = [:]
-    private var pageCounts: [Int: String] = [:]
-    private var tagTexts: [String: String] = [:]
+    private let words = ListRowWords()
     private var starStrips: [Image] = []
     private lazy var categories: [EhModels.Category: CategoryText] = Dictionary(
-        uniqueKeysWithValues: EhModels.Category.allCases.map { category in
+        uniqueKeysWithValues: EhModels.Category.allCases.map { [words] category in
             let color = category.markColor
-            return (category, CategoryText(name: category.localizedName, color: color, tint: color.opacity(0.17)))
+            return (category, CategoryText(name: words.categoryName(category), color: color, tint: color.opacity(0.17)))
         }
     )
-    private lazy var shortAge: DateComponentsFormatter = {
-        let formatter = DateComponentsFormatter()
-        formatter.unitsStyle = .abbreviated
-        formatter.maximumUnitCount = 1
-        return formatter
-    }()
-    private lazy var relativeAge: RelativeDateTimeFormatter = {
-        let formatter = RelativeDateTimeFormatter()
-        formatter.unitsStyle = .abbreviated
-        formatter.dateTimeStyle = .numeric
-        return formatter
-    }()
 
     var look: Look { inputs?.look ?? .shelf }
     /// The title in the look's face: New York under Ledger.
@@ -87,9 +71,7 @@ final class ShelfRowTexts {
             metrics = ShelfRowMetrics(typeSize: next.typeSize)
             starStrips = []
         }
-        if old?.translations !== next.translations || old?.translationCount != next.translationCount {
-            tagTexts = [:]
-        }
+        words.useTranslations(next.translations, count: next.translationCount)
     }
 
     // MARK: Lookups
@@ -100,17 +82,17 @@ final class ShelfRowTexts {
 
     /// "48 pages".
     func pages(_ count: Int) -> String {
-        memo(&pageCounts, count) { L10n.Localizable.List.pages(count) }
+        words.pages(count)
     }
 
     /// "2h": how long ago the gallery was posted.
     func posted(_ age: GalleryEntry.Age) -> String {
-        memo(&posted, age) { shortAge.string(from: age.dateComponents) ?? "" }
+        words.shortAge(age)
     }
 
     /// "opened 2h ago".
     func opened(_ age: GalleryEntry.Age) -> String {
-        memo(&opened, age) { L10n.Localizable.List.opened(ago(age)) }
+        words.opened(age)
     }
 
     /// "Top Shelf · added 2d ago", or the folder's name alone when the date is not known.
@@ -118,20 +100,13 @@ final class ShelfRowTexts {
         let names = inputs?.folderNames ?? []
         let name = names.indices.contains(favorite.folder) ? names[favorite.folder] : ""
         guard let age else { return name }
-        let addedText = memo(&added, age) { L10n.Localizable.List.added(ago(age)) }
+        let addedText = words.added(age)
         return name.isEmpty ? addedText : name + " · " + addedText
     }
 
     /// The tag's text, translated when the setting is on and the table has it, without emoji.
     func tagText(_ tag: GalleryEntry.Tag) -> String {
-        guard let translations = inputs?.translations else { return tag.text }
-        return memo(&tagTexts, tag.id) {
-            // What `GalleryTag.Content.chipText(translation:showsImages:)` gives without images.
-            guard let value = translations.display(forKey: tag.id)?.displayValue, !value.isEmpty else {
-                return tag.text
-            }
-            return value.removingEmojiPresentation
-        }
+        words.tagText(tag)
     }
 
     /// Five stars for a rating of `halfStars` (0...10) as one template image, drawn once per
@@ -141,25 +116,6 @@ final class ShelfRowTexts {
             starStrips = ShelfRowStars.strips(pointSize: metrics.starPointSize)
         }
         return starStrips[min(max(halfStars, 0), starStrips.count - 1)]
-    }
-
-    private func ago(_ age: GalleryEntry.Age) -> String {
-        var components = age.dateComponents
-        // Back in time: the formatter says "2h ago" for a negative interval.
-        components.minute = components.minute.map { -$0 }
-        components.hour = components.hour.map { -$0 }
-        components.day = components.day.map { -$0 }
-        components.weekOfMonth = components.weekOfMonth.map { -$0 }
-        components.month = components.month.map { -$0 }
-        components.year = components.year.map { -$0 }
-        return relativeAge.localizedString(from: components)
-    }
-
-    private func memo<Key: Hashable>(_ table: inout [Key: String], _ key: Key, make: () -> String) -> String {
-        if let text = table[key] { return text }
-        let text = make()
-        table[key] = text
-        return text
     }
 }
 

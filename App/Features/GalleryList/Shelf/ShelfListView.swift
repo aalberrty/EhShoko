@@ -17,7 +17,7 @@ struct ShelfListView<Header: View>: View {
     @ViewBuilder var header: Header
 
     @State private var texts = ShelfRowTexts()
-    @State private var prefetcher = ShelfListPrefetcher()
+    @State private var prefetcher = ListCoverPrefetcher()
     /// The container's width, for the columns and the tags that fit; 0 until it is known.
     @State private var width: CGFloat = 0
     @State private var hasAppeared = false
@@ -143,8 +143,6 @@ enum ShelfListLayout {
     /// A state under a header takes at least this much of the list.
     static let stateHeight: CGFloat = 360
     static let gridSpacing: CGFloat = 12
-    /// Toplists' pages, when fewer than two are loaded to measure one by.
-    static let rankedPageSize = 50
 
     static func insets(isRanked: Bool) -> EdgeInsets {
         isRanked ? rankedInsets : rowInsets
