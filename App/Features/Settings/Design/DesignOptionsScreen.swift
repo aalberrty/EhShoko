@@ -53,17 +53,25 @@ struct DesignOptionsScreen: View {
 /// group is dimmed while Lists is Ledger.
 private struct DesignListSettings: View {
     @Environment(SettingsStore.self) private var settings
+    @Environment(\.look) private var look
 
     var body: some View {
         @Bindable var settings = settings
+        let isDimmed = settings.designList == .ledger
         Section {
-            Toggle(L10n.Localizable.AppearanceSettingView.Title.showsTagsInList, isOn: $settings.showsTagsInList)
-            Picker(L10n.Localizable.AppearanceSettingView.Title.maximumNumberOfTags, selection: $settings.listTagsNumberMaximum) {
+            Toggle(isOn: $settings.showsTagsInList) {
+                Text(L10n.Localizable.AppearanceSettingView.Title.showsTagsInList)
+                    .foregroundStyle(isDimmed ? look.tertiaryLabel : look.label)
+            }
+            Picker(selection: $settings.listTagsNumberMaximum) {
                 // 0 means no limit.
                 Text(L10n.Localizable.AppearanceSettingView.Menu.Title.infite).tag(0)
                 ForEach(Array(stride(from: 5, through: 20, by: 5)), id: \.self) { number in
                     Text(number, format: .number).tag(number)
                 }
+            } label: {
+                Text(L10n.Localizable.AppearanceSettingView.Title.maximumNumberOfTags)
+                    .foregroundStyle(isDimmed || !settings.showsTagsInList ? look.tertiaryLabel : look.label)
             }
             .pickerStyle(.menu)
             .disabled(!settings.showsTagsInList)
@@ -73,7 +81,7 @@ private struct DesignListSettings: View {
             Text(L10n.Localizable.Settings.Design.Lists.tagsNote).settingsFootnote()
         }
         .settingsRow()
-        .disabled(settings.designList == .ledger)
+        .disabled(isDimmed)
     }
 }
 
