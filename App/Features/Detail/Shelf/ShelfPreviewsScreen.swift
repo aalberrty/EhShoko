@@ -64,6 +64,7 @@ struct ShelfPreviewsScreen: View {
         .sensoryFeedback(.impact(weight: .light), trigger: model.readerDestination) { _, destination in
             destination != nil
         }
+        .previewsZoomScope()
     }
 
     /// The page last read when the grid opened.

@@ -3,7 +3,8 @@ import EhModels
 import SwiftUI
 
 /// "PREVIEWS" with "All 48" (`ledger.md` section 4): a strip of the thumbnails the page
-/// carried, 70 wide, opened at the page last read. A tap opens the reader at that page.
+/// carried, 70 wide, opened at the page last read. A tap opens the reader at that page, which
+/// zooms out of the tapped preview.
 struct LedgerGalleryPreviews: View {
     let model: GalleryDetailModel
 
@@ -47,6 +48,7 @@ private struct LedgerPreviewStrip: View, Equatable {
                 ForEach(previews) { preview in
                     Button { open(preview.index) } label: {
                         LedgerPreviewThumbnail(thumbnail: preview, width: Self.width)
+                            .readerSource(.preview(gid: gid, page: preview.index))
                     }
                     .buttonStyle(.plain)
                     .accessibilityLabel(L10n.Localizable.Reader.Page.label(preview.index))

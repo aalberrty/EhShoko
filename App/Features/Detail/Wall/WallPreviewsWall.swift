@@ -107,6 +107,7 @@ struct WallPreviewsWall: View {
             destination != nil
         }
         .sensoryFeedback(.selection, trigger: stepCount)
+        .previewsZoomScope()
     }
 
     // MARK: Opening

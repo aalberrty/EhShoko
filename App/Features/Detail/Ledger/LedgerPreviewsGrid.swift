@@ -65,6 +65,7 @@ struct LedgerPreviewsGrid: View {
         .sensoryFeedback(.impact(weight: .light), trigger: model.readerDestination) { _, destination in
             destination != nil
         }
+        .previewsZoomScope()
     }
 
     /// The reader the grid asked for, as the cover presents it.

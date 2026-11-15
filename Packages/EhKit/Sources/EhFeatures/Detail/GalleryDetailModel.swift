@@ -47,6 +47,9 @@ public final class GalleryDetailModel {
     /// Counts submitted ratings, for the view's haptic.
     public internal(set) var ratingCommitCount = 0
     public var destination: DetailDestination?
+    /// What opened the reader last, so that it grows out of that control. Set with every
+    /// `.reader` destination.
+    public internal(set) var readerOrigin: ReaderOrigin = .readButton
     /// The last operation's result, for the view's haptic.
     public internal(set) var feedback: OperationFeedback?
     /// A New Dawn greeting the shell should announce; cleared with `greetingAnnounced()`.
@@ -349,7 +352,8 @@ public final class GalleryDetailModel {
             guard !Task.isCancelled, let self else { return }
             switch intent {
             case .read(let page):
-                self.openReader(page: page)
+                // A link names a page, but the dock's pill is what is on screen.
+                self.openReader(page: page, from: .readButton)
             case .comments(let commentID):
                 self.destination = .comments(scrollTo: commentID)
             }
