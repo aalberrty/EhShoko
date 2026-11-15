@@ -209,12 +209,13 @@ nonisolated extension GalleryEntry {
     /// The first `rowTagLimit` tags across `tags`' namespaces, without repeats.
     static func rowTags(of tags: [GalleryTag]) -> [Tag] {
         var result: [Tag] = []
+        result.reserveCapacity(min(tags.reduce(0) { $0 + $1.contents.count }, rowTagLimit))
         for group in tags {
             let namespace = group.namespace
-            for content in group.contents where !result.contains(where: { $0.id == content.id }) {
-                result.append(Tag(
-                    id: content.id, text: content.text, namespace: namespace, watchedColor: content.backgroundColor
-                ))
+            for content in group.contents {
+                let id = content.id
+                guard !result.contains(where: { $0.id == id }) else { continue }
+                result.append(Tag(id: id, text: content.text, namespace: namespace, watchedColor: content.backgroundColor))
                 if result.count == rowTagLimit { return result }
             }
         }
