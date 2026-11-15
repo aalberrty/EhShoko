@@ -59,7 +59,6 @@ private struct WallPreviewStrip: View, Equatable {
                                 .accessibilityAddTraits(preview.index == current ? .isSelected : [])
                         }
                         .buttonStyle(.plain)
-                        .id(preview.index)
                     }
                 }
             }
