@@ -28,8 +28,8 @@ struct LedgerReaderSheet: View {
 
     var body: some View {
         let heights = LedgerSheetHeights(hasPages: model.pageCount > 1, open: sheet.openHeight)
-        // The rows scroll where the sheet cannot be as tall as they are: at the largest text
-        // sizes, and in landscape.
+        // The rows scroll where the sheet cannot be as tall as they are: in landscape, where
+        // the screen is short and the two-page rows join them.
         ScrollView {
             LedgerSheetRows(model: model, sheet: sheet, watch: watch, stage: stage, hasOpenRows: hasOpenRows)
                 .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { height in
