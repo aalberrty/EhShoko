@@ -24,6 +24,7 @@ struct LedgerListView<Header: View>: View {
     @State private var prefetcher = LedgerCoverPrefetcher()
     @State private var visits = LedgerListVisits()
     @Environment(SettingsStore.self) private var settings
+    @Environment(FilterStore.self) private var filterStore
     @Environment(\.look) private var look
 
     var body: some View {
@@ -72,8 +73,6 @@ struct LedgerListView<Header: View>: View {
         }
     }
 
-    @Environment(FilterStore.self) private var filterStore
-
     /// The Search filter, which only a search's empty state reads.
     private var filterForLoosening: Filter {
         filterStore[.search]
@@ -89,7 +88,7 @@ private final class LedgerListVisits {
     var hasLeft = false
 }
 
-extension ListDesignInput {
+fileprivate extension ListDesignInput {
     /// Opens Filters when the list's filter narrows something; `nil` for the default filter
     /// and for a list without one.
     var filtersAction: (() -> Void)? {
