@@ -11,12 +11,14 @@ import SwiftUI
 /// the last page, in the engine's trailing slot.
 ///
 /// Launched with `-ReaderHarnessScript <name>` it runs the scripted, recorded runs of
-/// `ReaderHarnessRun` instead, and with `-ReaderHarnessPose <name>` it shows a reader on the
-/// closing page's stand-in.
+/// `ReaderHarnessRun` instead (`-ReaderHarnessScript rotation` rotates at the end), and with
+/// `-ReaderHarnessPose <name>` it shows a reader on the closing page's stand-in.
 struct ReaderHarnessView: View {
     var body: some View {
         if let pose = ReaderHarnessRun.poseAtLaunch {
             ReaderHarnessScriptView(pairs: [], pose: pose)
+        } else if UserDefaults.standard.string(forKey: "ReaderHarnessScript") == "rotation" {
+            ReaderHarnessScriptView(pairs: [], checksRotation: true)
         } else if let pairs = ReaderHarnessRun.requestedAtLaunch {
             ReaderHarnessScriptView(pairs: pairs)
         } else {

@@ -10,22 +10,26 @@ import UIKit
 /// gallery and a new engine, and compares the two records of each pair.
 @Observable
 final class ReaderHarnessScript {
+    // Set here and by the checks in `ReaderHarnessScript+Checks.swift`; read by the view.
+
     /// The run in progress; the view makes its engine.
-    private(set) var model: ReaderHarnessModel?
-    private(set) var status = "starting"
+    var model: ReaderHarnessModel?
+    var status = "starting"
     /// Whether the screen is wider than tall, as the view last saw it.
     var isLandscape = false
 
     @ObservationIgnored private let pairs: [ReaderHarnessPair]
     @ObservationIgnored private let pose: ReaderHarnessRun?
-    @ObservationIgnored private var run = ReaderHarnessRun(name: "", hasClosingPage: false)
+    @ObservationIgnored private let checksRotation: Bool
+    @ObservationIgnored var run = ReaderHarnessRun(name: "", hasClosingPage: false)
     @ObservationIgnored private let meter = ReaderHarnessFrameMeter()
     @ObservationIgnored private var summary: [String] = []
     @ObservationIgnored private var hasStarted = false
 
-    init(pairs: [ReaderHarnessPair], pose: ReaderHarnessRun? = nil) {
+    init(pairs: [ReaderHarnessPair], pose: ReaderHarnessRun? = nil, checksRotation: Bool = false) {
         self.pairs = pairs
         self.pose = pose
+        self.checksRotation = checksRotation
     }
 
     func start() async {
@@ -34,6 +38,10 @@ final class ReaderHarnessScript {
         ReaderHarnessLog.removeAll()
         if let pose {
             await show(pose)
+            return
+        }
+        if checksRotation {
+            await checkRotation()
             return
         }
         ReaderHarnessLog.line("matrix: begin, \(pairs.count) pairs, iOS \(UIDevice.current.systemVersion)")
@@ -58,26 +66,6 @@ final class ReaderHarnessScript {
         ReaderHarnessLog.write(summary.joined(separator: "\n") + "\n", to: "summary.txt")
         status = "done"
         ReaderHarnessLog.line("matrix: done")
-    }
-
-    /// Opens the pose's reader, steps onto the closing page and leaves it there.
-    private func show(_ run: ReaderHarnessRun) async {
-        self.run = run
-        await rotate(toLandscape: run.isLandscape)
-        let recorder = ReaderHarnessRecorder()
-        let model = ReaderHarnessModel(run: run, recorder: recorder)
-        model.isPanelVisible = true
-        self.model = model
-        for _ in 0..<200 where engine(of: model)?.harnessContent == nil {
-            try? await Task.sleep(for: .milliseconds(50))
-        }
-        await settle(model, recorder)
-        if !model.isAtEnd {
-            _ = engine(of: model)?.harnessStep(by: 1, animated: true)
-            await settle(model, recorder)
-        }
-        status = run.name
-        ReaderHarnessLog.line("pose \(run.name): on the closing page=\(model.isAtEnd), page \(model.currentPage)")
     }
 
     // MARK: One run
@@ -192,7 +180,7 @@ final class ReaderHarnessScript {
 
     // MARK: Rest
 
-    private func engine(of model: ReaderHarnessModel) -> ReaderEngineViewController? {
+    func engine(of model: ReaderHarnessModel) -> ReaderEngineViewController? {
         model.proxy.harnessEngine
     }
 
@@ -200,7 +188,7 @@ final class ReaderHarnessScript {
     /// its failure, and over nine polls in a row the scroll position did not move and nothing
     /// was recorded. A poll that arrives late does not count: this Mac stalls the app for
     /// seconds at a time, and a stall is not rest.
-    private func settle(_ model: ReaderHarnessModel, _ recorder: ReaderHarnessRecorder, limit: Double = 90) async {
+    func settle(_ model: ReaderHarnessModel, _ recorder: ReaderHarnessRecorder, limit: Double = 90) async {
         let started = CACurrentMediaTime()
         var lastOffset = engine(of: model)?.harnessContent?.contentOffset
         var lastCount = recorder.lines.count
@@ -233,7 +221,7 @@ final class ReaderHarnessScript {
 
     // MARK: Orientation
 
-    private func rotate(toLandscape landscape: Bool) async {
+    func rotate(toLandscape landscape: Bool) async {
         guard isLandscape != landscape else { return }
         AppDelegate.setOrientationLock(.unlocked)
         let mask: UIInterfaceOrientationMask = landscape ? .landscapeRight : .portrait
@@ -253,104 +241,6 @@ final class ReaderHarnessScript {
     private static func footprint() -> String {
         guard let footprint = MemoryFootprint.current() else { return "?" }
         return String(format: "%.1f", Double(footprint.current) / 1_048_576)
-    }
-}
-
-/// The scripted run's screen: the engine of the run in progress, and what it is doing.
-struct ReaderHarnessScriptView: View {
-    @State private var script: ReaderHarnessScript
-
-    init(pairs: [ReaderHarnessPair], pose: ReaderHarnessRun? = nil) {
-        _script = State(initialValue: ReaderHarnessScript(pairs: pairs, pose: pose))
-    }
-
-    var body: some View {
-        ZStack {
-            Color(uiColor: .readerBackground)
-                .onGeometryChange(for: Bool.self) { $0.size.width > $0.size.height } action: { script.isLandscape = $0 }
-                .ignoresSafeArea()
-            if let model = script.model {
-                ReaderHarnessScriptEngine(model: model)
-            }
-        }
-        .overlay(alignment: .top) { ReaderHarnessScriptLabel(script: script) }
-        .statusBarHidden()
-        .task { await script.start() }
-    }
-}
-
-/// The run's engine, in a view of its own so that nothing the label shows re-renders it.
-private struct ReaderHarnessScriptEngine: View {
-    let model: ReaderHarnessModel
-    /// Read once: the engine takes its first page when it is made.
-    @State private var initialPage: Int
-
-    init(model: ReaderHarnessModel) {
-        self.model = model
-        _initialPage = State(initialValue: model.currentPage)
-    }
-
-    var body: some View {
-        ReaderEngineView(
-            configuration: model.configuration, initialPage: initialPage,
-            proxy: model.proxy, dataSource: model, delegate: model
-        )
-        .ignoresSafeArea()
-    }
-}
-
-/// What the run is doing, and "End" on the closing page.
-private struct ReaderHarnessScriptLabel: View {
-    let script: ReaderHarnessScript
-
-    var body: some View {
-        Text(verbatim: label)
-            .font(.footnote.weight(.semibold).monospacedDigit())
-            .padding(.horizontal, 12)
-            .padding(.vertical, 6)
-            .background(.regularMaterial, in: .capsule)
-            .padding(.top, 6)
-            .allowsHitTesting(false)
-    }
-
-    private var label: String {
-        guard let model = script.model else { return script.status }
-        let page = model.isAtEnd ? "End" : "\(model.currentPage) / \(model.galleryPageCount)"
-        return "\(script.status) · \(page)"
-    }
-}
-
-/// Counts the frames the main thread delivered late while a step ran (from spike S4). It sees
-/// main-thread stalls, not the render server.
-final class ReaderHarnessFrameMeter: NSObject {
-    private var link: CADisplayLink?
-    private var previous: CFTimeInterval = 0
-    private var nominal: CFTimeInterval = 1.0 / 60
-    private var intervals: [CFTimeInterval] = []
-
-    func start() {
-        link?.invalidate()
-        intervals = []
-        previous = 0
-        let link = CADisplayLink(target: self, selector: #selector(tick(_:)))
-        link.add(to: .main, forMode: .common)
-        self.link = link
-    }
-
-    func stop() -> String {
-        link?.invalidate()
-        link = nil
-        guard !intervals.isEmpty, nominal > 0 else { return "no frames" }
-        let late = intervals.filter { $0 > nominal * 1.5 }
-        return String(format: "%d frames, %d late, worst %.0f ms", intervals.count, late.count, (intervals.max() ?? 0) * 1_000)
-    }
-
-    @objc private func tick(_ link: CADisplayLink) {
-        nominal = link.duration
-        if previous > 0 {
-            intervals.append(link.timestamp - previous)
-        }
-        previous = link.timestamp
     }
 }
 #endif
