@@ -35,6 +35,8 @@ struct LedgerGalleryRow: View, Equatable {
     static let squareSize: CGFloat = 10
     static let squareLeading: CGFloat = 20
     static let squareSpacing: CGFloat = 11
+    /// The list's inset after the row's text.
+    nonisolated static let trailingInset: CGFloat = 16
 
     static let creditFont = Font.caption2.weight(.semibold)
     static let titleFont = Font.callout.weight(.semibold)

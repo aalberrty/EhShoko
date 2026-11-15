@@ -28,13 +28,14 @@ struct LedgerListChrome: ViewModifier {
                     Button { showsCovers.toggle() } label: {
                         Label(coversTitle, systemImage: "eye.slash")
                     }
-                    // In the tint while covers are off.
-                    .foregroundStyle(showsCovers ? look.label : tint)
+                    // In the label's colour, as drawn; the toggle in the tint while covers are off.
+                    .tint(showsCovers ? look.label : tint)
                     ListMoreMenu(controls: input.controls.menu, perform: input.perform) {
                         Button(coversTitle, systemImage: showsCovers ? "eye.slash" : "eye") {
                             showsCovers.toggle()
                         }
                     }
+                    .tint(look.label)
                 }
             }
             .listFindBar(isPresented: isFinding, text: findText)

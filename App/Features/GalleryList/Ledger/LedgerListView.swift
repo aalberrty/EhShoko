@@ -108,11 +108,15 @@ private struct LedgerListContent<Header: View>: View {
     let layout: LedgerListLayout
     let prefetcher: LedgerCoverPrefetcher
 
+    /// What a row's More or Move swipe action opened.
+    @State private var dialog: LedgerRowDialog?
     @Environment(\.openGallery) private var openGallery
     @Environment(StackRouter.self) private var stack
     @Environment(\.lookTint) private var tint
 
-    private static var rowInsets: EdgeInsets { EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 16) }
+    private static var rowInsets: EdgeInsets {
+        EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: LedgerGalleryRow.trailingInset)
+    }
     private static var headingInsets: EdgeInsets { EdgeInsets(top: 0, leading: 20, bottom: 0, trailing: 16) }
     private static var placeholders: Int { 8 }
 
@@ -182,6 +186,7 @@ private struct LedgerListContent<Header: View>: View {
         // Headings and the row after the last gallery are shorter than a standard row.
         .environment(\.defaultMinListRowHeight, 1)
         .refreshable { await feed.refresh() }
+        .ledgerRowDialogs($dialog, actions: input.actions)
         .onDisappear { prefetcher.stop() }
     }
 
@@ -200,9 +205,11 @@ private struct LedgerListContent<Header: View>: View {
         }
         .listRowInsets(Self.rowInsets)
         .alignmentGuide(.listRowSeparatorLeading) { _ in rows.textInset }
+        // To the trailing edge, past the row's trailing inset, as drawn.
+        .alignmentGuide(.listRowSeparatorTrailing) { $0[.trailing] + LedgerGalleryRow.trailingInset }
         .listRowBackground(entry.id == rows.selectedID ? tint.opacity(0.11) : style.look.background)
         .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-            LedgerSwipeActions(entry: entry, actions: actions, form: rows.kind.swipe)
+            LedgerSwipeActions(entry: entry, actions: actions, form: rows.kind.swipe) { dialog = $0 }
         }
         .galleryContextMenu(entry, actions: actions, offersMove: rows.kind.offersMove)
         .onAppear {
