@@ -64,14 +64,22 @@ nonisolated struct ReaderHarnessPair: Sendable {
         return ReaderHarnessPair(name: name, first: off, second: on)
     }
 
+    /// The closing page on, then off: in a series that alternates the order, so that what
+    /// grows during a launch does not count for one of the two.
+    static func reversed(_ name: String, _ run: ReaderHarnessRun) -> ReaderHarnessPair {
+        let pair = slot(name, run)
+        return ReaderHarnessPair(name: name, first: pair.second, second: pair.first)
+    }
+
     /// The closing page off twice: what two runs of today's engine differ by.
     static func noise(_ name: String, _ run: ReaderHarnessRun) -> ReaderHarnessPair {
         var off = run
-        off.name = name
+        // Its own name, so that its records do not replace those of the pair it repeats.
+        off.name = name + "-noise"
         off.hasClosingPage = false
         var again = off
         again.repeatNumber = 2
-        return ReaderHarnessPair(name: name + "-noise", first: off, second: again)
+        return ReaderHarnessPair(name: off.name, first: off, second: again)
     }
 }
 
@@ -135,12 +143,28 @@ extension ReaderHarnessRun {
         }
     }
 
-    /// The pairs the launch arguments ask for, or `nil` when they ask for no scripted run.
+    /// For the footprint: a 20-page gallery, the closing page off and on in alternating order.
+    static let memorySeries: [ReaderHarnessPair] = (1...4).map { index in
+        let run = with { $0.pageCount = 20 }
+        return index.isMultiple(of: 2) ? .reversed("memory-\(index)", run) : .slot("memory-\(index)", run)
+    }
+
+    /// The first run of a launch is slower and smaller than the rest (caches, the first
+    /// layouts of everything); it runs once first and is not compared.
+    static let warmUp = with { $0.name = "warm-up"; $0.pageCount = 10 }
+
+    /// The pairs the launch arguments ask for, or `nil` when they ask for no scripted run:
+    /// `matrix`, `memory`, or the pairs of the matrix whose name starts with the argument.
     static var requestedAtLaunch: [ReaderHarnessPair]? {
         guard let name = UserDefaults.standard.string(forKey: "ReaderHarnessScript"), !name.isEmpty else {
             return nil
         }
-        return name == "matrix" ? matrix : matrix.filter { $0.name.hasPrefix(name) }
+        switch name {
+        case "matrix": return matrix
+        case "memory": return memorySeries
+        case "all": return matrix + memorySeries
+        default: return matrix.filter { $0.name.hasPrefix(name) }
+        }
     }
 }
 #endif

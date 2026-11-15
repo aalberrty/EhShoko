@@ -37,6 +37,7 @@ final class ReaderHarnessScript {
             return
         }
         ReaderHarnessLog.line("matrix: begin, \(pairs.count) pairs, iOS \(UIDevice.current.systemVersion)")
+        _ = await perform(ReaderHarnessRun.warmUp)
         for (index, pair) in pairs.enumerated() {
             status = "\(index + 1)/\(pairs.count) \(pair.name)"
             let first = await perform(pair.first)
@@ -45,7 +46,8 @@ final class ReaderHarnessScript {
                 first: first.lines, second: second.lines, pageCount: pair.first.pageCount
             )
             ReaderHarnessLog.write(comparison.report.joined(separator: "\n") + "\n", to: "compare-\(pair.name).txt")
-            let line = "\(pair.name): \(comparison.verdict.rawValue) | first page \(first.firstPage) / \(second.firstPage) ms"
+            let line = "\(pair.name): \(comparison.verdict.rawValue) | \(pair.first.tag) / \(pair.second.tag):"
+                + " first page \(first.firstPage) / \(second.firstPage) ms"
                 + " | footprint MB at open \(first.footprintAtOpen) / \(second.footprintAtOpen),"
                 + " on the last page \(first.footprintAtLast) / \(second.footprintAtLast)"
                 + (second.trailerNote.isEmpty ? "" : " | \(second.trailerNote)")
