@@ -135,7 +135,7 @@ final class WallReaderMoreMenuItems {
     }
 
     /// The reading settings, the reading direction and Auto-play, each of the last two a menu
-    /// of its choices that names the current one.
+    /// of its choices with the current one marked.
     private func reading() -> UIMenu {
         let model = model
         let settings = UIAction(title: Strings.Button.readingSetting, image: UIImage(systemName: "gearshape")) { [weak model] _ in
@@ -155,12 +155,12 @@ final class WallReaderMoreMenuItems {
                 settings.readingDirection = direction
             }
         }
-        let menu = UIMenu(
+        // No subtitle naming the current one: with two-line rows the system sized the menu a
+        // row short and cut the entry nearest the button.
+        return UIMenu(
             title: L10n.Localizable.ReadingSettingView.Title.direction,
             image: UIImage(systemName: current.wallSymbol), options: .singleSelection, children: choices
         )
-        menu.subtitle = current.localizedName
-        return menu
     }
 
     private func autoPlay() -> UIMenu {
@@ -171,12 +171,10 @@ final class WallReaderMoreMenuItems {
                 model?.setAutoPlay(policy)
             }
         }
-        let menu = UIMenu(
+        return UIMenu(
             title: L10n.Localizable.Reader.autoplay, image: UIImage(systemName: "timer"),
             options: .singleSelection, children: choices
         )
-        menu.subtitle = current.localizedName
-        return menu
     }
 }
 

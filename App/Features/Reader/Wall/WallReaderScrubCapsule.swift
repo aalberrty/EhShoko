@@ -36,10 +36,7 @@ struct WallReaderScrubCapsule: View {
         .frame(maxWidth: .infinity)
         .frame(height: WallReaderMetrics.clusterHeight)
         .contentShape(.capsule)
-        .gesture(WallReaderScrubGesture(isEnabled: scale.canScrub) { touch in
-            handle(touch, scale: scale)
-        })
-        .glassSurface(in: .capsule, isInteractive: true)
+        // One adjustable element, "Page 23 of 48": VoiceOver's swipes turn the page.
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(position.long)
         .accessibilityAdjustableAction { direction in
@@ -50,6 +47,10 @@ struct WallReaderScrubCapsule: View {
             @unknown default: break
             }
         }
+        .gesture(WallReaderScrubGesture(isEnabled: scale.canScrub) { touch in
+            handle(touch, scale: scale)
+        })
+        .glassSurface(in: .capsule, isInteractive: true)
     }
 
     /// On the closing page the capsule reads "End", until a scrub names a page again.
