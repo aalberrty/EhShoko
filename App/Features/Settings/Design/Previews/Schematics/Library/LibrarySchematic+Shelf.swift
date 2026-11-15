@@ -1,8 +1,8 @@
 import SwiftUI
 
 nonisolated extension LibrarySchematic {
-    /// Shelf's library: a title, a segmented bar, a filled "All" chip and two folder chips, a
-    /// sort line, and Shelf's rows with their folder under each.
+    /// Shelf's library: a title, a segmented bar, a filled "All" chip and two folder chips, each
+    /// with its count, a sort line, and Shelf's rows with their folder under each.
     static func shelf(_ canvas: SchematicCanvas) {
         let palette = canvas.palette
         canvas.box(6, 12, 34, 7, palette.label, 1.5)
@@ -12,12 +12,14 @@ nonisolated extension LibrarySchematic {
         canvas.box(19, 28.7, 18, 2.2, palette.label)
         canvas.box(63, 28.7, 14, 2.2, palette.secondary)
         canvas.box(6, 39.5, 22, 9, palette.accent, 4.5)
-        canvas.box(10, 43, 14, 2.2, palette.onAccent)
+        canvas.box(9.5, 43, 7, 2.2, palette.onAccent)
+        canvas.box(18.5, 43, 6, 2.2, palette.onAccent.opacity(0.7))
         var x: CGFloat = 30.5
         for (chip, width) in [CGFloat(30), 34].enumerated() {
             canvas.box(x, 39.5, width, 9, palette.surface, 4.5)
             canvas.circle(x + 3, 42.7, 2.6, SchematicPalette.folder(chip + 1))
-            canvas.box(x + 8, 43, width - 13, 2.2, palette.label)
+            canvas.box(x + 8, 43, width - 18, 2.2, palette.label)
+            canvas.box(x + width - 8.5, 43, 5, 2.2, palette.secondary)
             x += width + 2.5
         }
         canvas.box(6, 54, 40, 2.2, palette.tertiary)
