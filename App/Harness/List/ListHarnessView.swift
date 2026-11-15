@@ -43,6 +43,11 @@ struct ListHarnessView: View {
         } else {
             ListHarnessSlotView(slot: model.options.slot, galleries: model.galleries, settings: model.settings)
                 .background { ListHarnessAnchor(scroller: model.scroller) }
+                .overlay(alignment: .bottom) {
+                    if model.options.showsDock {
+                        ListHarnessDock()
+                    }
+                }
         }
     }
 
@@ -63,6 +68,7 @@ struct ListHarnessView: View {
                     Text(verbatim: "List")
                 }
                 Toggle(isOn: $model.options.showsTags) { Text(verbatim: "Tags in rows") }
+                Toggle(isOn: $model.options.showsDock) { Text(verbatim: "Dock over the list") }
                 Picker(selection: $model.options.speed) {
                     ForEach([1_000.0, 2_000, 4_000], id: \.self) { speed in
                         Text(verbatim: "\(Int(speed)) pt/s").tag(speed)
@@ -102,7 +108,7 @@ private struct ListHarnessStatus: View {
     }
 
     private var text: String {
-        let setup = "\(options.slot.rawValue) · \(options.galleryCount) galleries · \(Int(options.speed)) pt/s"
+        let setup = "\(options.slot.rawValue)\(options.showsDock ? " + dock" : "") · \(options.galleryCount) galleries · \(Int(options.speed)) pt/s"
         switch phase {
         case .preparing: return "Preparing \(setup)"
         case .ready: return "\(setup) · Run scrolls to the end"
@@ -111,6 +117,31 @@ private struct ListHarnessStatus: View {
         case .failed(let message): return message
         }
     }
+}
+
+/// A gallery page's dock over the list, in its glass container, as the shell's bottom chrome
+/// places it (an overlay; the list keeps its full height, so rows pass under the glass).
+private struct ListHarnessDock: View {
+    var body: some View {
+        GlassGroup(spacing: ActionDock.spacing) {
+            ActionDock(content: Self.content) { _ in }
+                .frame(maxWidth: 560)
+        }
+        .padding(.horizontal, Tokens.Spacing.medium)
+        .padding(.bottom, Tokens.Spacing.small)
+    }
+
+    private static let content = DockContent(
+        leading: DockItem(title: L10n.Localizable.List.Action.favorite, systemImage: "heart", action: .favorite),
+        primary: DockItem(
+            title: L10n.Localizable.Gallery.continue, detail: L10n.Localizable.Gallery.Continue.page(23, 48),
+            action: .read
+        ),
+        trailing: .button(DockItem(
+            title: L10n.Localizable.CommentsView.Title.comments, systemImage: "bubble.left.and.bubble.right",
+            action: .comments
+        ))
+    )
 }
 
 /// Opens the list harness from Settings › Laboratory.

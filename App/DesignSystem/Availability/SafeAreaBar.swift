@@ -17,8 +17,13 @@ extension View {
     /// control, the Library's switch, search scopes): `safeAreaBar(edge: .top)` on iOS 26, where
     /// the system's scroll edge effect carries the bar's glass down behind it;
     /// `safeAreaInset(edge: .top)` on the bar material with a hairline on iOS 18.
-    func topBar(spacing: CGFloat? = nil, @ViewBuilder content: () -> some View) -> some View {
-        modifier(TopBar(spacing: spacing, bar: content()))
+    ///
+    /// A bar that comes and goes (the list's find bar) stays attached and passes
+    /// `isPresented`, so the screen under it keeps its identity and state; while it is `false`
+    /// nothing is drawn, not even the iOS 18 material, which would otherwise reach up under the
+    /// navigation bar.
+    func topBar(isPresented: Bool = true, spacing: CGFloat? = nil, @ViewBuilder content: () -> some View) -> some View {
+        modifier(TopBar(isPresented: isPresented, spacing: spacing, bar: content()))
     }
 }
 
@@ -51,18 +56,23 @@ private struct BottomBar<Bar: View>: ViewModifier {
 }
 
 private struct TopBar<Bar: View>: ViewModifier {
+    let isPresented: Bool
     let spacing: CGFloat?
     let bar: Bar
 
     func body(content: Content) -> some View {
         if #available(iOS 26, *) {
-            content.safeAreaBar(edge: .top, spacing: spacing) { bar }
+            content.safeAreaBar(edge: .top, spacing: spacing) {
+                if isPresented { bar }
+            }
         } else {
             content.safeAreaInset(edge: .top, spacing: spacing) {
-                bar
-                    .frame(maxWidth: .infinity)
-                    .background(.bar)
-                    .overlay(alignment: .bottom) { Divider() }
+                if isPresented {
+                    bar
+                        .frame(maxWidth: .infinity)
+                        .background(.bar)
+                        .overlay(alignment: .bottom) { Divider() }
+                }
             }
         }
     }
