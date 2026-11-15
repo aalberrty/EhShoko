@@ -273,7 +273,7 @@ private struct WallPreviewCell: View, Equatable {
     var body: some View {
         let shape = RoundedRectangle(cornerRadius: 6, style: .continuous)
         VStack(spacing: WallPreviewsLayout.numberSpacing) {
-            PreviewThumbnailView(thumbnail: thumbnail, width: WallPreviewMetrics.decodeWidth, failed: failed)
+            PreviewThumbnailView(thumbnail: thumbnail, failed: failed)
                 .clipShape(shape)
                 .overlay {
                     if isCurrent {
@@ -292,13 +292,6 @@ private struct WallPreviewCell: View, Equatable {
         .accessibilityAddTraits(isCurrent ? [.isButton, .isSelected] : .isButton)
         .accessibilityHint(failed ? L10n.Localizable.ErrorView.Button.retry : "")
     }
-}
-
-enum WallPreviewMetrics {
-    /// The width Wall decodes a standalone page preview for, on the gallery page's strip and
-    /// on the wall alike, so a page is decoded once whichever shows it. The site's previews are
-    /// 100 or 200 px wide, which this covers at every screen scale.
-    static let decodeWidth: CGFloat = 100
 }
 
 /// Adds a pinch to the scroll view it is placed in: a `UIPinchGestureRecognizer` on the

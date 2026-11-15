@@ -56,7 +56,7 @@ private struct WallPreviewStrip: View, Equatable {
                         Button {
                             open(preview.index)
                         } label: {
-                            PreviewThumbnailView(thumbnail: preview, width: WallPreviewMetrics.decodeWidth)
+                            PreviewThumbnailView(thumbnail: preview)
                                 .frame(width: Self.width, height: Self.width / Tokens.Aspect.preview)
                                 .clipShape(.rect(cornerRadius: 6, style: .continuous))
                                 .readerSource(.preview(gid: gid, page: preview.index))

@@ -74,10 +74,11 @@ private struct LedgerPreviewStrip: View, Equatable {
 }
 
 /// One page's preview in Ledger's style: corner 4 and a hairline. A tile of a sprite sheet or
-/// a standalone image, each decoded once at the size the site sends; a placeholder until then.
+/// a standalone image, each decoded once at the size the site sends, whatever size it is
+/// drawn at; a placeholder until then.
 struct LedgerPreviewThumbnail: View, Equatable {
     let thumbnail: PreviewThumbnail?
-    /// The width it is drawn at; with `fillsWidth`, the widest it can be, for decoding.
+    /// The width it is drawn at, unless `fillsWidth`.
     let width: CGFloat
     /// Takes the proposed width (a grid's column) instead of `width`.
     var fillsWidth = false
@@ -108,7 +109,7 @@ struct LedgerPreviewThumbnail: View, Equatable {
                 sheetURL: sheetURL, cropRect: CGRect(x: x, y: 0, width: tileWidth, height: height), cornerRadius: 0
             )
         case .image(let url):
-            RemoteImage(url: url, width: width, aspectRatio: Tokens.Aspect.preview, cornerRadius: 0)
+            StandalonePreview(url: url, cornerRadius: 0)
         case nil:
             Rectangle()
                 .fill(look.fill3)

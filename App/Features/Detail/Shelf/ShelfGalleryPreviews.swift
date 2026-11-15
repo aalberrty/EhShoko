@@ -79,7 +79,7 @@ private struct ShelfPreviewCell: View {
 
     var body: some View {
         let shape = RoundedRectangle(cornerRadius: 6, style: .continuous)
-        PreviewThumbnailView(thumbnail: preview, width: ShelfPreviewStrip.width)
+        PreviewThumbnailView(thumbnail: preview)
             .frame(width: ShelfPreviewStrip.width, height: ShelfPreviewStrip.width / Tokens.Aspect.preview)
             .clipShape(shape)
             .overlay(alignment: .bottomLeading) {

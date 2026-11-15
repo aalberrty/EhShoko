@@ -27,8 +27,7 @@ struct PreviewsGridScreen: View {
                     } label: {
                         PreviewGridCell(
                             index: index, thumbnail: model.preview(at: index),
-                            failed: model.hasFailed(at: index), width: widths.upperBound,
-                            isRegular: sizeClass == .regular
+                            failed: model.hasFailed(at: index), isRegular: sizeClass == .regular
                         )
                     }
                     .buttonStyle(.plain)
@@ -56,12 +55,11 @@ private struct PreviewGridCell: View, Equatable {
     let index: Int
     let thumbnail: PreviewThumbnail?
     let failed: Bool
-    let width: CGFloat
     let isRegular: Bool
 
     var body: some View {
         VStack(spacing: Tokens.Spacing.xSmall) {
-            PreviewThumbnailView(thumbnail: thumbnail, width: width, failed: failed)
+            PreviewThumbnailView(thumbnail: thumbnail, failed: failed)
             Text(index, format: .number)
                 .font(isRegular ? .callout : .caption)
                 .foregroundStyle(.secondary)
