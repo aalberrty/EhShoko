@@ -16,8 +16,7 @@ struct SettingsDestination: View {
         case .appIcon: AppIconScreen()
         case .design: DesignScreen()
         case .designPart(let part): DesignOptionsScreen(part: part)
-        // The setup wizard's screen goes here when it exists (`DesignSetupEntry`).
-        case .designSetup: EmptyView()
+        case .designSetup: DesignSetupScreen()
         case .reading: ReadingSettingsScreen()
         case .laboratory: LaboratorySettingsScreen()
         case .logs: LogsScreen()
