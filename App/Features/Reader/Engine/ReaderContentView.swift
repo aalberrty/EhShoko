@@ -20,6 +20,19 @@ protocol ReaderContentHost: AnyObject {
 
     /// The pages on screen, or the pages that have a view, changed.
     func contentDidChangeVisiblePages()
+
+    /// The view for the trailer's place; `nil` when the host has none, or when its content
+    /// does not exist yet and this is not the moment to make it. Making it takes longer than a
+    /// frame, so it waits until the scroll view is at rest and the reader's first image is up,
+    /// unless its place is already on screen. A scroll view that got `nil` asks again when it
+    /// comes to rest and when `placeTrailerIfNeeded()` is called.
+    func trailerView(isOnScreen: Bool, isMoving: Bool) -> ReaderTrailerView?
+
+    /// The height the trailer's content asks for at a width, in the vertical strip; 0 before
+    /// the content exists.
+    func trailerFittingHeight(forWidth width: CGFloat) -> CGFloat
+
+    func contentDidChangeTrailer(_ state: ReaderTrailerState)
 }
 
 /// One reading mode: the vertical strip or the horizontal pager. The engine owns exactly one
@@ -29,6 +42,9 @@ protocol ReaderContentView: UIScrollView {
 
     /// The page to report as current.
     var currentPage: Int { get }
+
+    /// Where the trailer is relative to what the reader is on.
+    var trailerState: ReaderTrailerState { get }
 
     /// Pages that are at least partly on screen.
     var visiblePages: ClosedRange<Int>? { get }
@@ -48,6 +64,9 @@ protocol ReaderContentView: UIScrollView {
     func pageView(forPage page: Int) -> ReaderPageView?
 
     func forEachPageView(_ body: (ReaderPageView) -> Void)
+
+    /// The trailer's content may be made now: place it if its place is tiled.
+    func placeTrailerIfNeeded()
 
     /// The engine learned (or changed) a page's aspect ratio.
     func aspectRatioDidChange(forPage page: Int)

@@ -10,12 +10,65 @@ nonisolated public struct ReaderSpreadLayout: Sendable, Equatable {
     public let isDualPage: Bool
     /// Page 1 on its own; only meaningful with dual pages.
     public let exceptCover: Bool
+    /// Whether something that is not a page follows the last page (the closing page). It has
+    /// no page number: every function below that maps pages and spreads ignores it. An empty
+    /// gallery has none.
+    public let hasTrailer: Bool
 
-    public init(pageCount: Int, isDualPage: Bool, exceptCover: Bool) {
+    /// Where the trailer goes among the spreads.
+    nonisolated public enum TrailerPlacement: Sendable, Equatable {
+        case none
+        /// In the empty half of the last spread, which holds one page.
+        case besideLastPage(spread: Int)
+        /// In a slot of its own after the last spread.
+        case ownSlot
+    }
+
+    public init(pageCount: Int, isDualPage: Bool, exceptCover: Bool, hasTrailer: Bool = false) {
         self.pageCount = max(pageCount, 0)
         self.isDualPage = isDualPage
         self.exceptCover = isDualPage && exceptCover
+        self.hasTrailer = hasTrailer && pageCount > 0
     }
+
+    // MARK: The trailer
+
+    public var trailerPlacement: TrailerPlacement {
+        guard hasTrailer, spreadCount > 0 else { return .none }
+        let last = spreadCount - 1
+        // A cover that is alone by choice stays alone: the trailer does not join it.
+        let isCoverAlone = exceptCover && last == 0
+        if isDualPage, !isCoverAlone, pages(inSpread: last).count == 1 {
+            return .besideLastPage(spread: last)
+        }
+        return .ownSlot
+    }
+
+    /// The places the pager swipes through: the spreads, and one more for a trailer that has a
+    /// slot of its own. Slot `spreadCount` is then the trailer.
+    public var slotCount: Int {
+        trailerPlacement == .ownSlot ? spreadCount + 1 : spreadCount
+    }
+
+    /// The slot that shows the trailer, or `nil` without one.
+    public var trailerSlot: Int? {
+        switch trailerPlacement {
+        case .none: nil
+        case .besideLastPage(let spread): spread
+        case .ownSlot: spreadCount
+        }
+    }
+
+    /// The page number reported as "current" while a slot is showing: a spread's
+    /// (`reportedPage(forSpread:)`), and the last page on the trailer's own slot. Whoever is
+    /// there has read every page, also where the last spread reports its first page (a
+    /// gallery of two pages laid out as one spread).
+    public func reportedPage(forSlot index: Int) -> Int {
+        if trailerPlacement == .ownSlot, index >= spreadCount { return pageCount }
+        return reportedPage(forSpread: index)
+    }
+
+    // MARK: Pages and spreads
 
     public var spreadCount: Int {
         guard pageCount > 0 else { return 0 }
