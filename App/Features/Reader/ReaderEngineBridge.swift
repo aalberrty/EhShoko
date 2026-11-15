@@ -12,9 +12,13 @@ final class ReaderEngineBridge: ReaderEngineDataSource, ReaderEngineDelegate {
     /// the engine reads it with every reload.
     let hasTrailer = true
     private let model: ReaderModel
+    /// The space the engine draws in, which the closing page reads to know whether a control
+    /// sheet already keeps it clear of the controls.
+    private let viewport: ReaderViewport
 
-    init(model: ReaderModel) {
+    init(model: ReaderModel, viewport: ReaderViewport) {
         self.model = model
+        self.viewport = viewport
         // Auto-play then makes its last advance onto the closing page.
         model.hasTrailer = hasTrailer
         let proxy = proxy
@@ -48,7 +52,7 @@ final class ReaderEngineBridge: ReaderEngineDataSource, ReaderEngineDelegate {
     /// only then is the closing page made, and with it, for a reader that no gallery page
     /// presented, its detail model and request.
     func makeTrailerViewController() -> UIViewController? {
-        ReaderClosingPage.makeController(gallery: model.gallery, pageCount: model.pageCount)
+        ReaderClosingPage.makeController(gallery: model.gallery, pageCount: model.pageCount, viewport: viewport)
     }
 
     // MARK: ReaderEngineDelegate

@@ -51,7 +51,7 @@ private final class ReaderSession {
     private let detail: GalleryDetail?
 
     private(set) lazy var model = ReaderModel(gallery: gallery, initialPage: initialPage, detail: detail)
-    private(set) lazy var bridge = ReaderEngineBridge(model: model)
+    private(set) lazy var bridge = ReaderEngineBridge(model: model, viewport: viewport)
     let viewport = ReaderViewport()
 
     init(gallery: Gallery, initialPage: Int?, detail: GalleryDetail?) {
