@@ -16,17 +16,12 @@ struct ShelfGalleryHeader: View {
 
     @Environment(SettingsStore.self) private var settings
     @Environment(\.dynamicTypeSize) private var typeSize
-    @State private var titles: ShelfGalleryTitles?
 
     static let coverSize = CGSize(width: 132, height: 189)
 
     var body: some View {
-        let source = ShelfGalleryTitles.Source(
-            title: model.detail?.title ?? model.gallery.title, japaneseTitle: model.detail?.jpnTitle,
-            prefersJapanese: settings.displaysJapaneseTitle
-        )
-        // Made in the first frame, before it is drawn, and again only when a title changes.
-        let shown = titles ?? ShelfGalleryTitles(source)
+        // Parsed by the model, the list's title before the first frame.
+        let shown = ShelfGalleryTitles(model.titles.shown(prefersJapanese: settings.displaysJapaneseTitle))
         // At the accessibility text sizes the text goes under the cover, where it has the width.
         let layout = typeSize.isAccessibilitySize
             ? AnyLayout(VStackLayout(alignment: .leading, spacing: 14))
@@ -42,9 +37,6 @@ struct ShelfGalleryHeader: View {
                 ShelfGalleryOtherTitle(text: other, copied: copied)
                     .padding(.top, 12)
             }
-        }
-        .onChange(of: source, initial: true) { _, source in
-            titles = ShelfGalleryTitles(source)
         }
     }
 }

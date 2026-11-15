@@ -19,6 +19,9 @@ public final class GalleryDetailModel {
     // MARK: Content
 
     public private(set) var detail: GalleryDetail?
+    /// The titles the page shows, parsed: the list's title until the page brings its own, which
+    /// are parsed off the main actor and applied with the page.
+    public private(set) var titles: GalleryTitles
     public private(set) var tagRows: [DetailTagRow] = []
     /// The previews the detail page carried (or what is stored), by page.
     public private(set) var previews: [PreviewThumbnail] = []
@@ -84,10 +87,13 @@ public final class GalleryDetailModel {
     @ObservationIgnored @Dependency(\.tagTranslationService) private var tagTranslations
     @ObservationIgnored @Dependency(\.appLogger) private var logger
 
-    /// Cheap: nothing is read or fetched until `load()`.
+    /// Cheap: nothing is read or fetched until `load()`. The list's title is parsed here, so
+    /// the page's first frame shows it parsed; one title takes a few microseconds, and the
+    /// titles of the page are parsed off the main actor.
     /// - Parameter intent: What to do once the screen has opened, e.g. open the reader at a page.
     public init(gallery: Gallery, intent: DetailIntent? = nil) {
         self.gallery = gallery
+        titles = GalleryTitles(title: gallery.title)
         pendingIntent = intent
     }
 
@@ -190,11 +196,16 @@ public final class GalleryDetailModel {
         let gid = gallery.gid
         return tasks.run("fetch") { [weak self] in
             let outcome = await Outcome.of { try await client.galleryDetail(gid: gid, galleryURL: galleryURL) }
-            await self?.finishFetch(outcome)
+            var titles: GalleryTitles?
+            if case .success(let response) = outcome {
+                titles = await GalleryTitles.make(for: response.detail)
+            }
+            await self?.finishFetch(outcome, titles: titles)
         }
     }
 
-    private func finishFetch(_ outcome: Outcome<GalleryDetailResponse>) async {
+    /// - Parameter titles: the fetched page's titles, parsed; `nil` unless it succeeded.
+    private func finishFetch(_ outcome: Outcome<GalleryDetailResponse>, titles: GalleryTitles?) async {
         switch outcome {
         case .cancelled:
             loadingState = .idle
@@ -207,7 +218,7 @@ public final class GalleryDetailModel {
             let fetch = appliedFetches
             apiKey = response.apiKey
             userStore.updateAPIKey(response.apiKey)
-            setDetail(response.detail)
+            setDetail(response.detail, titles: titles ?? self.titles)
             previewConfig = response.state.previewConfig ?? previewConfig
             setPreviewURLs(response.previewPage.previewURLs)
             loadingState = .idle
@@ -235,8 +246,8 @@ public final class GalleryDetailModel {
             readingProgress = stored.state?.readingProgress ?? 0
         }
         guard appliedFetches == 0 else { return }
-        if let detail = stored.detail {
-            setDetail(detail)
+        if let detail = stored.detail, let titles = stored.titles {
+            setDetail(detail, titles: titles)
             openSignpost?.event("Stored")
         }
         setPreviewURLs(stored.previewURLs)
@@ -250,9 +261,12 @@ public final class GalleryDetailModel {
 
     // MARK: Assignments
 
-    private func setDetail(_ newValue: GalleryDetail) {
+    private func setDetail(_ newValue: GalleryDetail, titles newTitles: GalleryTitles) {
         if detail != newValue {
             detail = newValue
+        }
+        if titles != newTitles {
+            titles = newTitles
         }
         let rating = Int((newValue.userRating * 2).rounded())
         if userRating != rating {
@@ -346,6 +360,8 @@ public final class GalleryDetailModel {
 /// What the database holds for one gallery.
 nonisolated struct StoredDetail: Sendable {
     var detail: GalleryDetail?
+    /// The stored detail's titles, parsed.
+    var titles: GalleryTitles?
     var state: GalleryState?
     var previewURLs: [Int: URL]
 
@@ -357,8 +373,13 @@ nonisolated struct StoredDetail: Sendable {
         for page in (try? await pages) ?? [] {
             previewURLs[page.index] = page.previewURL
         }
+        let stored = (try? await detail) ?? nil
+        var titles: GalleryTitles?
+        if let stored {
+            titles = await GalleryTitles.make(for: stored)
+        }
         return StoredDetail(
-            detail: (try? await detail) ?? nil, state: (try? await state) ?? nil, previewURLs: previewURLs
+            detail: stored, titles: titles, state: (try? await state) ?? nil, previewURLs: previewURLs
         )
     }
 }

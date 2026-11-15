@@ -16,15 +16,10 @@ struct WallGalleryPanel: View {
 
     @Environment(SettingsStore.self) private var settings
     @Environment(\.look) private var look
-    @State private var titleCache = WallGalleryTitleCache()
 
     var body: some View {
-        let source = WallGalleryTitles.Source(
-            title: model.detail?.title ?? model.gallery.title, japaneseTitle: model.detail?.jpnTitle,
-            prefersJapanese: settings.displaysJapaneseTitle
-        )
-        // Made in the first frame, before it is drawn, and again only when a title changes.
-        let titles = titleCache.titles(for: source)
+        // Parsed by the model, the list's title before the first frame.
+        let titles = WallGalleryTitles(model.titles.shown(prefersJapanese: settings.displaysJapaneseTitle))
         VStack(alignment: .leading, spacing: 0) {
             if metrics.showsGrabber {
                 Capsule()

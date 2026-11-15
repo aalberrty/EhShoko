@@ -2,67 +2,47 @@ import EhFeatures
 import EhModels
 import Foundation
 
-/// What the header writes about a gallery's titles, worked out off the main actor from the
-/// titles the page has (`ledger.md` section 4, header).
+/// What the header writes about a gallery's titles (`ledger.md` section 4, header), from the
+/// model's parsed titles (`GalleryDetailModel.titles`), so the page's first frame shows the
+/// title parsed.
 ///
 /// The title shown large is the parsed core of the preferred title; the line above it names
 /// the event and the release notes the title carries; the credit (`ParsedTitle.credit`) is its
 /// circle and artists; the other title is the other language's full string, or the preferred
 /// title in full when there is no other and parsing shortened it.
 nonisolated struct LedgerGalleryTitles: Equatable, Sendable {
-    /// The titles it is made from: the preferred one first.
-    struct Source: Hashable, Sendable {
-        let preferred: String
-        let other: String?
-    }
-
-    let source: Source
-    let parsed: ParsedTitle
+    let shown: ShownGalleryTitle
     /// "C103 · Digital": the event and the flags, in title order.
     let notes: [String]
-    /// What a tap on the credit searches: the circle and up to three artists.
+    /// What a tap on the credit searches: the circle and up to three artists. Empty until they
+    /// have been matched against the tags (`creditSearches(for:gallery:)`).
     let creditSearches: [GalleryCreditSearch]
-    let otherTitle: String?
 
-    /// Before the title has been parsed: the title as it is, with nothing taken out of it.
-    static func unparsed(_ source: Source) -> LedgerGalleryTitles {
-        LedgerGalleryTitles(
-            source: source, parsed: ParsedTitle(raw: source.preferred), notes: [], creditSearches: [],
-            otherTitle: source.other
-        )
+    init(_ shown: ShownGalleryTitle, creditSearches: [GalleryCreditSearch] = []) {
+        self.shown = shown
+        var notes = shown.parsed.event.map { [$0] } ?? []
+        notes.append(contentsOf: shown.parsed.flags)
+        self.notes = notes
+        self.creditSearches = creditSearches
     }
 
-    /// Parses `source` away from the main actor. `gallery` gives the tags a credit search
-    /// matches its names against.
+    var parsed: ParsedTitle { shown.parsed }
+    var otherTitle: String? { shown.other }
+
+    /// The credit's searches for the title `shown`, matched against `gallery`'s tags, away
+    /// from the main actor.
     @concurrent
-    static func make(_ source: Source, gallery: Gallery) async -> LedgerGalleryTitles {
-        // The credit's searches name what the header shows, so they come from the preferred
-        // title, which may be the Japanese one rather than the list's.
+    static func creditSearches(for shown: String, gallery: Gallery) async -> [GalleryCreditSearch] {
+        // The searches name what the header shows, which may be the Japanese title rather than
+        // the list's.
         var titled = gallery
-        titled.title = source.preferred
-        let entry = GalleryEntry(gallery: titled)
-        let parsed = entry.title
-        var notes = parsed.event.map { [$0] } ?? []
-        notes.append(contentsOf: parsed.flags)
-        let shortened = parsed.isParsed && parsed.core != source.preferred
-        return LedgerGalleryTitles(
-            source: source, parsed: parsed, notes: notes,
-            creditSearches: GalleryCreditSearch.targets(for: entry),
-            otherTitle: source.other ?? (shortened ? source.preferred : nil)
-        )
+        titled.title = shown
+        return GalleryCreditSearch.targets(for: GalleryEntry(gallery: titled))
     }
+}
 
-    /// The titles of `model`'s gallery in the order `prefersJapanese` asks for. Before the page
-    /// has loaded, the list's title alone.
-    @MainActor
-    static func source(of model: GalleryDetailModel, prefersJapanese: Bool) -> Source {
-        guard let detail = model.detail else {
-            return Source(preferred: model.gallery.title, other: nil)
-        }
-        let japanese = detail.jpnTitle.flatMap { $0.isEmpty ? nil : $0 }
-        if prefersJapanese, let japanese {
-            return Source(preferred: japanese, other: detail.title)
-        }
-        return Source(preferred: detail.title, other: japanese)
-    }
+/// The credit's searches, with the title they were made for.
+nonisolated struct LedgerCreditSearches: Equatable, Sendable {
+    let title: String
+    let searches: [GalleryCreditSearch]
 }
