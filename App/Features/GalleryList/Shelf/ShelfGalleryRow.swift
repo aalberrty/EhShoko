@@ -76,7 +76,7 @@ struct ShelfGalleryRow: View, Equatable {
             ShelfRowCover(entry: entry, size: style.cover, zoom: style.zoom)
             VStack(alignment: .leading, spacing: 0) {
                 Text(entry.title.core)
-                    .font(ShelfRowFonts.title)
+                    .font(texts.titleFont)
                     .foregroundStyle(texts.look.label)
                     .lineLimit(2)
                 if let credit = entry.credit {
@@ -103,9 +103,12 @@ struct ShelfGalleryRow: View, Equatable {
     }
 }
 
-/// The type of a row. Fixed text styles, so a row creates no font.
+/// The type of a row. Fixed text styles, so a row creates no font; the title's face is the
+/// look's (`ShelfRowTexts.titleFont`).
 nonisolated enum ShelfRowFonts {
-    static let title = Font.callout.weight(.semibold)
+    static func title(_ design: Font.Design) -> Font {
+        .system(.callout, design: design, weight: .semibold)
+    }
     static let credit = Font.footnote
     static let capsule = Font.caption.weight(.semibold)
     static let tag = Font.caption2

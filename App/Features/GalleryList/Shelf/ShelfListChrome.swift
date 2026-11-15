@@ -59,7 +59,9 @@ struct ShelfListChrome: ViewModifier {
 }
 
 /// The list's own title, unless it is embedded in a first screen or the library, which draw
-/// theirs.
+/// theirs. Large and leading in the bar's own row, as the Library tab's: a large title below
+/// the bar would sit under the period control's or the find field's scroll edge effect on
+/// iOS 26 and be blurred by it.
 private struct ShelfListTitle: ViewModifier {
     let context: ListContext
 
@@ -67,13 +69,16 @@ private struct ShelfListTitle: ViewModifier {
         if context.embedsInStart {
             content
         } else {
-            content.navigationTitle(context.title)
+            content
+                .navigationTitle(context.title)
+                .toolbarTitleDisplayMode(.inlineLarge)
         }
     }
 }
 
 /// Toplists' period: Popular and the four periods as a segmented control, or a scrolling row
-/// of chips where the segments do not fit.
+/// of chips where the segments do not fit their names (at accessibility sizes, under about
+/// 380 pt, and in languages with long period names).
 struct ShelfListPeriodBar: View {
     let period: ListMenuPicker
     let usesChips: Bool
@@ -87,19 +92,28 @@ struct ShelfListPeriodBar: View {
             if usesChips {
                 chips
             } else {
-                Picker(period.title, selection: selection) {
-                    ForEach(period.options) { option in
-                        Text(option.title).tag(option.id)
-                    }
+                // The segments' ideal width is what their names need: when that does not fit,
+                // the chips.
+                ViewThatFits(in: .horizontal) {
+                    segments
+                        .frame(maxWidth: 560)
+                        .padding(.horizontal, 16)
+                    chips
                 }
-                .pickerStyle(.segmented)
-                .labelsHidden()
-                .frame(maxWidth: 560)
-                .padding(.horizontal, 16)
-                .frame(maxWidth: .infinity)
             }
         }
+        .frame(maxWidth: .infinity)
         .padding(.vertical, 6)
+    }
+
+    private var segments: some View {
+        Picker(period.title, selection: selection) {
+            ForEach(period.options) { option in
+                Text(option.title).tag(option.id)
+            }
+        }
+        .pickerStyle(.segmented)
+        .labelsHidden()
     }
 
     private var selection: Binding<Int> {

@@ -69,6 +69,8 @@ final class ShelfRowTexts {
     }()
 
     var look: Look { inputs?.look ?? .shelf }
+    /// The title in the look's face: New York under Ledger.
+    private(set) var titleFont = ShelfRowFonts.title(.default)
     var tint: Color { inputs?.tint ?? .accentColor }
 
     /// Takes the current inputs; when they differ from the last ones, forgets what depended on
@@ -78,6 +80,9 @@ final class ShelfRowTexts {
         let old = inputs
         inputs = next
         revision += 1
+        if old?.look != next.look {
+            titleFont = ShelfRowFonts.title(next.look.titleDesign)
+        }
         if old?.typeSize != next.typeSize {
             metrics = ShelfRowMetrics(typeSize: next.typeSize)
             starStrips = []
