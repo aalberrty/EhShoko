@@ -6,10 +6,11 @@ import UIKit
 /// section 5.6): a `UISearchTextField`, so accepted tags are tokens before the text
 /// (`spikes/S6.md`).
 ///
-/// It leads and the model follows: each edit the user makes is reported to `model`, and the
-/// field is never written back on a keystroke. New content comes in through the controller in
-/// the environment (`\.searchFieldController`), which is also how a design focuses the field,
-/// inserts a key at the caret, takes a suggestion or submits.
+/// It leads and the model follows: each edit the user makes is reported to `model`
+/// (`fieldDidEdit`), and the field is never written back on a keystroke. It shows the model's
+/// content again only when the model replaced it (`revision`). New content comes in through
+/// the controller in the environment (`\.searchFieldController`), which is also how a design
+/// focuses the field, inserts a key at the caret, takes a suggestion or submits.
 ///
 /// Nothing that draws the field reads the model's text: a keystroke redraws only the views
 /// that read it themselves. The field is one line; with three tokens or more the earlier
@@ -49,7 +50,7 @@ struct TagSearchField<Accessory: View>: UIViewRepresentable {
         coordinator.field = field
         // What the model already holds: a design switched while the surface was open, or the
         // surface came back to the screen.
-        coordinator.apply(tokens: model.tokens, text: model.text)
+        coordinator.apply(model)
         if let accessory {
             field.inputAccessoryView = TagSearchAccessoryView(content: accessoryContent(accessory))
         }
@@ -62,6 +63,11 @@ struct TagSearchField<Accessory: View>: UIViewRepresentable {
         coordinator.model = model
         coordinator.controller = controller
         controller.register(coordinator)
+        // Content the model replaced since the field last showed it: a keyword handed in from
+        // somewhere other than the controller, which applies its own at once.
+        if coordinator.appliedRevision != model.revision {
+            coordinator.apply(model)
+        }
         if field.placeholder != prompt {
             field.placeholder = prompt
             field.accessibilityLabel = prompt

@@ -44,8 +44,7 @@ struct LedgerSearchTypedGroups: View {
         let typed = model.text.trimmingCharacters(in: .whitespaces)
         let saved = model.matchingQuickSearches.map { LedgerSearchWord(saved: $0, typed: typed) }
         // Ten, or twenty on regular width, as the old app showed.
-        let recent = model.root.historyKeywords
-            .filter { typed.isEmpty || $0.localizedCaseInsensitiveContains(typed) }
+        let recent = model.matchingRecentSearches
             .prefix(sizeClass == .regular ? 20 : 10)
             .map { LedgerSearchWord(recent: $0, typed: typed) }
         LedgerSavedSearches(words: saved)
