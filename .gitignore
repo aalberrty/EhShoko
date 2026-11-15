@@ -4,3 +4,15 @@ xcuserdata/
 .build/
 .swiftpm/
 DerivedData/
+
+# Assistant and agent files stay on the development machine
+CLAUDE.md
+CLAUDE.local.md
+AGENTS.md
+.claude/
+.t3/
+.cursor/
+.cursorrules
+.aider*
+.codex/
+.github/copilot-instructions.md
