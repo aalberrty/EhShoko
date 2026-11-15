@@ -34,7 +34,7 @@ struct FiltersNarrowingSection: View {
                 } label: {
                     FiltersAdvancedLabel(changed: FilterSummary(model.filter).advancedOptionCount)
                 }
-                .filtersRow()
+                .filtersRow(dimsWhenDisabled: false)
             }
             .disabled(!model.filter.advanced)
         }

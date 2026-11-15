@@ -12,9 +12,10 @@ extension View {
     }
 
     /// One row of a card: the look's raised colour and separator, the label in the look's label
-    /// colour, or its tertiary colour while the row is disabled.
-    func filtersRow() -> some View {
-        modifier(FiltersRowStyle())
+    /// colour, or its tertiary colour while the row is disabled. A navigation link is dimmed by
+    /// the system when disabled, so it passes `dimsWhenDisabled: false` to be dimmed once.
+    func filtersRow(dimsWhenDisabled: Bool = true) -> some View {
+        modifier(FiltersRowStyle(dimsWhenDisabled: dimsWhenDisabled))
     }
 
     /// A section's heading: small, semibold, uppercase, in the look's secondary colour.
@@ -30,16 +31,20 @@ private struct FiltersFormStyle: ViewModifier {
         content
             .scrollContentBackground(.hidden)
             .background(look.surface)
+            // The drawing's gaps between the set, the tiles and the card.
+            .listSectionSpacing(.compact)
     }
 }
 
 private struct FiltersRowStyle: ViewModifier {
+    let dimsWhenDisabled: Bool
+
     @Environment(\.look) private var look
     @Environment(\.isEnabled) private var isEnabled
 
     func body(content: Content) -> some View {
         content
-            .foregroundStyle(isEnabled ? look.label : look.tertiaryLabel)
+            .foregroundStyle(isEnabled || !dimsWhenDisabled ? look.label : look.tertiaryLabel)
             .listRowBackground(look.raised)
             .listRowSeparatorTint(look.separator)
     }

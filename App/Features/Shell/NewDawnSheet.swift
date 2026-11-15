@@ -66,8 +66,10 @@ private struct Sun: View {
                 .fill(color)
                 .frame(width: width, height: width)
             if showsRays {
+                // Turned half a step from legacy's, so that with the sun centred on the sheet's
+                // corner no ray lies along an edge, half cut off.
                 ForEach(0..<8, id: \.self) { index in
-                    ray(at: Double(index) * 45)
+                    ray(at: Double(index) * 45 + 22.5)
                 }
             }
         }
