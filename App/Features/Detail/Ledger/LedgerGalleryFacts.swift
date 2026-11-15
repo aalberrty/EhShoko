@@ -118,7 +118,7 @@ struct LedgerGalleryFacts: View, Equatable {
                 detail: values.pagesRead > 0 ? "· " + Figure.Pages.read(values.pagesRead) : nil
             )
         case .size:
-            value(detail.sizeCount.formatted() + " " + detail.sizeType)
+            value(LedgerGalleryFacts.size(of: detail))
         case .language:
             value(detail.language.localizedName, detail: values.isTranslated ? "· " + Figure.translated : nil)
         case .posted:
@@ -189,6 +189,14 @@ private struct LedgerRatingPopover: View {
         .padding(.horizontal, 20)
         .padding(.vertical, 14)
         .presentationCompactAdaptation(.popover)
+    }
+}
+
+extension LedgerGalleryFacts {
+    /// "86.4 MB": the site's figure to at most two places, which a `Float` would print as
+    /// "86.400002".
+    static func size(of detail: GalleryDetail) -> String {
+        Double(detail.sizeCount).formatted(.number.precision(.fractionLength(0...2))) + " " + detail.sizeType
     }
 }
 

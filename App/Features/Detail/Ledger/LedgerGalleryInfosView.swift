@@ -69,7 +69,7 @@ struct LedgerGalleryInfosView: View {
             InfoRow(Title.visibility, detail.visibility.localizedName),
             InfoRow(Title.language, detail.language.localizedName),
             InfoRow(Title.pageCount, String(detail.pageCount)),
-            InfoRow(Title.fileSize, detail.sizeCount.formatted() + " " + detail.sizeType),
+            InfoRow(Title.fileSize, LedgerGalleryFacts.size(of: detail)),
             InfoRow(Title.favoritedTimes, String(detail.favoritedCount)),
             InfoRow(Title.favorited, detail.isFavorited ? yes : no),
             InfoRow(Title.ratingCount, String(detail.ratingCount)),
