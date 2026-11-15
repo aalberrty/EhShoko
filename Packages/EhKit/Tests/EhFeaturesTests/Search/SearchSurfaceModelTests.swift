@@ -105,6 +105,12 @@ import Testing
         #expect(SearchScope.allCases.allSatisfy(model.isAvailable))
     }
 
+    @Test func eachScopeOpensItsOwnFilters() {
+        #expect(SearchScope.everywhere.filterRange == .search)
+        #expect(SearchScope.watched.filterRange == .watched)
+        #expect(SearchScope.favorites.filterRange == nil)
+    }
+
     // MARK: The field and the model
 
     @Test func aKeywordHandedInFillsTokensAndTextAndBumpsTheRevision() {

@@ -9,10 +9,6 @@ struct SearchSurfaceSheets: ViewModifier {
     let scope: SearchScope
     let controller: TagSearchFieldController
 
-    /// A quick search chosen in the editor, searched once the sheet has gone so the push
-    /// does not race the dismissal.
-    @State private var pending: String?
-
     func body(content: Content) -> some View {
         content
             .sheet(item: $root.sheet, onDismiss: searchPending) { sheet in
@@ -21,18 +17,16 @@ struct SearchSurfaceSheets: ViewModifier {
                     // Favourites have no filters; their Filters button is not offered.
                     FiltersSheet(range: scope.filterRange ?? .search)
                 case .quickSearch:
-                    QuickSearchSheet { keyword in
-                        pending = keyword
-                        root.sheet = nil
-                    }
+                    QuickSearchSheet(onSelect: root.selectQuickSearchWord)
                 }
             }
             .sensoryFeedback(.impact(weight: .light), trigger: root.sheet) { _, new in new != nil }
     }
 
+    /// A quick search chosen in the editor is searched in the field's scope once the sheet
+    /// has gone, so the push does not race the dismissal.
     private func searchPending() {
-        guard let keyword = pending else { return }
-        pending = nil
+        guard let keyword = root.takePendingSearch() else { return }
         controller.search(keyword)
     }
 }
