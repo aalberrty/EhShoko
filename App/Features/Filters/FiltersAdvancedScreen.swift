@@ -26,17 +26,17 @@ struct FiltersAdvancedScreen: View {
                 toggle(L10n.Localizable.FiltersView.Title.disableTagsFilter, \.disableTags)
             } header: {
                 Text(L10n.Localizable.FiltersView.Section.Title.defaultFilter)
-                    .filtersSectionHeader()
+                    .lookFormHeader()
             }
         }
         .disabled(!model.filter.advanced)
-        .filtersFormStyle()
+        .lookFormStyle(sectionSpacing: .compact)
         .navigationTitle(L10n.Localizable.FiltersView.Section.Title.advanced)
         .toolbarTitleDisplayMode(.inline)
     }
 
     private func toggle(_ title: String, _ keyPath: WritableKeyPath<Filter, Bool>) -> some View {
         Toggle(title, isOn: $model.filter[dynamicMember: keyPath])
-            .filtersRow()
+            .lookFormRow()
     }
 }
