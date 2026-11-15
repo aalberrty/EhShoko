@@ -62,6 +62,7 @@ private struct DesignPartRow: View {
             HStack(spacing: Tokens.Spacing.medium) {
                 DesignPreview(.option(part, option))
                     .frame(width: Self.thumbnail.width, height: Self.thumbnail.height)
+                    .accessibilityHidden(true)
                 VStack(alignment: .leading, spacing: Tokens.Spacing.xxSmall) {
                     Text(part.localizedName)
                         .foregroundStyle(look.label)
@@ -79,7 +80,6 @@ private struct DesignPartRow: View {
                     choiceName(option)
                 }
             }
-            .padding(.vertical, Tokens.Spacing.xSmall)
             .accessibilityElement(children: .ignore)
             .accessibilityLabel(Text(DesignPreview.Subject.option(part, option).accessibilityLabel))
         }
@@ -87,6 +87,7 @@ private struct DesignPartRow: View {
 
     private func choiceName(_ option: DesignOption) -> some View {
         Text(option.localizedName)
+            .font(.callout)
             .foregroundStyle(choices.differsFromNearestPreset(part) ? AnyShapeStyle(.tint) : AnyShapeStyle(look.secondaryLabel))
     }
 }

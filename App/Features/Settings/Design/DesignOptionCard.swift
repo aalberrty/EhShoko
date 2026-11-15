@@ -31,6 +31,7 @@ struct DesignOptionCard: View {
             HStack(spacing: Tokens.Spacing.large) {
                 DesignPreview(.option(part, option), look: look)
                     .frame(width: previewWidth, height: previewWidth * 1.6)
+                    .accessibilityHidden(true)
                 VStack(alignment: .leading, spacing: Tokens.Spacing.xSmall) {
                     Text(option.localizedName)
                         .font(.title3.weight(.semibold))

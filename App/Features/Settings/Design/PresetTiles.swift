@@ -74,6 +74,7 @@ private struct PresetTile: View {
             VStack(spacing: Tokens.Spacing.small) {
                 preview
                     .frame(width: size.width, height: size.height)
+                    .accessibilityHidden(true)
                     .overlay { SelectionRing(isSelected: isSelected, width: size.width) }
                 Text(name)
                     .font(.footnote.weight(isSelected ? .semibold : .regular))

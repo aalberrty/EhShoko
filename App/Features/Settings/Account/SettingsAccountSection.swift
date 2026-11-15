@@ -10,8 +10,11 @@ struct SettingsAccountSection: View {
 
     var body: some View {
         Section {
+            // The card's head: no rule between the account and its site.
             SettingsAccountHeader(isSignedIn: model.isLoggedIn)
+                .listRowSeparator(.hidden, edges: .bottom)
             HostPicker(selection: $model.galleryHost)
+                .listRowSeparator(.hidden, edges: .top)
             if model.isLoggedIn {
                 NavigationLink(value: Route.settings(.ehSetting)) {
                     SettingsRowLabel(symbol: "person.crop.circle", title: L10n.Localizable.Settings.Account.site)
