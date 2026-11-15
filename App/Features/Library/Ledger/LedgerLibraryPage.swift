@@ -34,20 +34,38 @@ struct LedgerLibraryPage: View {
 }
 
 /// Every folder at once: "All Favourites", and "1,284 in all" once the counts are known. A
-/// 44 pt row of the Index's kind, its mark the neutral square of every folder.
+/// 44 pt row of the Index's kind, its mark the neutral square of every folder. At
+/// accessibility sizes the total moves under the name, as the Index's heading moves its
+/// total: beside it, it would take the whole line.
 private struct LedgerLibraryAllRow: View {
     let action: () -> Void
 
+    @ScaledMetric(relativeTo: .title3) private var markWidth = LedgerIndexLine.markWidth
     @Environment(UserStore.self) private var userStore
+    @Environment(\.dynamicTypeSize) private var typeSize
+    @Environment(\.look) private var look
 
     var body: some View {
+        let total = userStore.favoriteTotalCount.map { L10n.Localizable.Start.Ledger.favoritesTotal($0.formatted()) }
+        let isStacked = typeSize.isAccessibilitySize
         Button(action: action) {
-            LedgerIndexLine(
-                mark: .allFolders, title: L10n.Localizable.Library.All.title,
-                value: userStore.favoriteTotalCount.map { L10n.Localizable.Start.Ledger.favoritesTotal($0.formatted()) }
-            )
+            VStack(alignment: .leading, spacing: 2) {
+                LedgerIndexLine(
+                    mark: .allFolders, title: L10n.Localizable.Library.All.title, value: isStacked ? nil : total
+                )
+                if isStacked, let total {
+                    Text(total)
+                        .font(.subheadline)
+                        .monospacedDigit()
+                        .foregroundStyle(look.secondaryLabel)
+                        // Under the name: past the mark's column and its spacing.
+                        .padding(.leading, LedgerIndexLine.markColumn(markWidth) + LedgerIndexLine.markSpacing)
+                }
+            }
+            .accessibilityElement(children: .combine)
             .padding(.leading, 20)
             .padding(.trailing, 16)
+            .padding(.vertical, isStacked ? 8 : 0)
             .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
         }
         .buttonStyle(LedgerIndexRowButtonStyle())
