@@ -76,8 +76,10 @@ struct WallPreviewsWall: View {
             .background { WallPreviewsPinch { step(dense: $0 < 0) } }
         }
         .scrollPosition($position)
-        .onScrollGeometryChange(for: CGFloat.self) { $0.contentOffset.y + $0.contentInsets.top } action: { _, offset in
-            scroll.offset = offset
+        .onScrollGeometryChange(for: WallPreviewsScroll.Mark.self) { geometry in
+            WallPreviewsScroll.Mark(offset: geometry.contentOffset.y, inset: geometry.contentInsets.top)
+        } action: { _, mark in
+            scroll.mark = mark
         }
         .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { width = $0 }
         .scaleEffect(cue.scale)
@@ -129,9 +131,10 @@ struct WallPreviewsWall: View {
         // The row nearest the top edge, and the row its first page is in afterwards. Every row
         // of a layout is one height, so the offset is worked out, not looked up: scrolling to
         // the page by its identity landed a row early once the grid had been laid out anew.
-        let row = Int((max(scroll.offset, 0) / old.pitch).rounded())
+        let row = Int((max(scroll.mark.offset + scroll.mark.inset, 0) / old.pitch).rounded())
         let anchor = min(row * old.columns, max(model.pageCount - 1, 0))
-        let offset = CGFloat(anchor / new.columns) * new.pitch
+        // An offset counts from the scroll view's own top edge, which is under the top bar.
+        let offset = CGFloat(anchor / new.columns) * new.pitch - scroll.mark.inset
         var transaction = Transaction(animation: nil)
         transaction.disablesAnimations = true
         withTransaction(transaction) {
@@ -198,7 +201,13 @@ nonisolated struct WallPreviewsLayout: Equatable {
 }
 
 private final class WallPreviewsScroll {
-    var offset: CGFloat = 0
+    /// Where the scroll view is: its content offset, and the inset its top bar gives it.
+    nonisolated struct Mark: Equatable {
+        var offset: CGFloat = 0
+        var inset: CGFloat = 0
+    }
+
+    var mark = Mark()
 }
 
 /// The wall as a whole for a moment after its thumbnails changed width.
