@@ -1,4 +1,4 @@
-#if DEBUG
+#if DEBUG || HARNESS
 import EhFeatures
 import SwiftUI
 
@@ -7,20 +7,54 @@ import SwiftUI
 /// What to expect from the gallery: page 4 is a very long strip, page 5 an animated GIF, page 8
 /// a wide panorama, every 9th page a large original (zooming in should sharpen it), every 6th a
 /// landscape page. Every 7th page fails to resolve once and every 11th fails to load once, so
-/// both retry paths can be tried.
+/// both retry paths can be tried. After the last page comes the slot of the closing page, with
+/// a stand-in in it.
+///
+/// Launched with a check (`ReaderHarnessOptions`), it drives readers by itself and writes down
+/// what it finds.
 struct ReaderHarnessView: View {
     @Environment(\.dismiss) private var dismiss
-    @State private var model = ReaderHarnessModel()
+    @State private var session = ReaderHarnessSession()
+
+    var body: some View {
+        ZStack {
+            Color(uiColor: .readerBackground).ignoresSafeArea()
+            if let model = session.model {
+                ReaderHarnessReader(model: model) { dismiss() }
+                    .id(session.readerID)
+            }
+        }
+        .overlay(alignment: .bottomLeading) {
+            if let status = session.status {
+                Text(verbatim: status)
+                    .font(.caption2)
+                    .padding(6)
+                    .background(.regularMaterial, in: .rect(cornerRadius: 8))
+                    .padding(8)
+                    .allowsHitTesting(false)
+            }
+        }
+        .onGeometryChange(for: CGSize.self) { $0.size } action: { session.viewSize = $0 }
+        .task { await session.start() }
+        .onDisappear { session.stop() }
+    }
+}
+
+/// One reader: the engine, what it reports, and the panel that drives it by hand.
+private struct ReaderHarnessReader: View {
+    let model: ReaderHarnessModel
+    let close: () -> Void
 
     var body: some View {
         ReaderEngineView(
-            configuration: model.configuration, proxy: model.proxy, dataSource: model, delegate: model
+            configuration: model.configuration, initialPage: model.setup.startPage, proxy: model.proxy,
+            dataSource: model, delegate: model, probe: model.recorder.map { recorder in { recorder.add($0) } }
         )
         .ignoresSafeArea()
         .overlay(alignment: .top) { status }
         .overlay(alignment: .bottom) {
             if model.isPanelVisible {
-                ReaderHarnessPanel(model: model) { dismiss() }
+                ReaderHarnessPanel(model: model, close: close)
                     .transition(.move(edge: .bottom).combined(with: .opacity))
             }
         }
@@ -31,7 +65,8 @@ struct ReaderHarnessView: View {
 
     private var status: some View {
         VStack(spacing: 2) {
-            Text(verbatim: "\(model.currentPage) / \(model.pageCount)")
+            // The closing page is not a page: on it the label says so instead of a number.
+            Text(verbatim: model.isAtEnd ? "End" : "\(model.currentPage) / \(model.galleryPageCount)")
                 .font(.headline.monospacedDigit())
             if model.isPanelVisible {
                 ForEach(Array(model.events.enumerated()), id: \.offset) { _, event in
@@ -86,7 +121,7 @@ private struct ReaderHarnessPanel: View {
         VStack(alignment: .leading, spacing: 6) {
             HStack {
                 Text(verbatim: "Go to \(Int(sliderPage))")
-                Slider(value: $sliderPage, in: 1...Double(max(model.pageCount, 2)), step: 1) { editing in
+                Slider(value: $sliderPage, in: 1...Double(max(model.galleryPageCount, 2)), step: 1) { editing in
                     isDraggingSlider = editing
                     if !editing {
                         model.proxy.scrollToPage(Int(sliderPage))
@@ -97,7 +132,7 @@ private struct ReaderHarnessPanel: View {
                 Button("First") { model.proxy.scrollToPage(1) }
                 Button("Back (animated)") { model.proxy.scrollToPage(model.currentPage - 1, animated: true) }
                 Button("Next (animated)") { model.proxy.advance() }
-                Button("Last") { model.proxy.scrollToPage(model.pageCount) }
+                Button("Last") { model.proxy.scrollToPage(model.galleryPageCount) }
             }
             .buttonStyle(.bordered)
             Picker("Auto-advance", selection: $model.autoAdvanceInterval) {
@@ -123,12 +158,13 @@ private struct ReaderHarnessPanel: View {
             Stepper(value: $model.configuration.pageGap, in: 0...20, step: 5) {
                 Text(verbatim: "Gap \(Int(model.configuration.pageGap)) pt (vertical)")
             }
-            Picker("Pages", selection: Binding(get: { model.pageCount }, set: { model.setPageCount($0) })) {
+            Picker("Pages", selection: Binding(get: { model.galleryPageCount }, set: { model.setPageCount($0) })) {
                 ForEach([1, 2, 3, 60, 1_000], id: \.self) { count in
                     Text(verbatim: "\(count)").tag(count)
                 }
             }
             .pickerStyle(.segmented)
+            Toggle("Closing page slot", isOn: $model.showsClosingSlot)
         }
     }
 

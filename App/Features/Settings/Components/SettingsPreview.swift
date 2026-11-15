@@ -7,6 +7,7 @@ import SwiftUI
 /// screens read from the environment (preview values: empty, in-memory defaults).
 struct SettingsPreview<Content: View>: View {
     @Dependency(\.settings) private var settings
+    @Dependency(\.userStore) private var userStore
     @State private var router = StackRouter()
     @ViewBuilder var content: Content
 
@@ -15,6 +16,7 @@ struct SettingsPreview<Content: View>: View {
             content
         }
         .environment(settings)
+        .environment(userStore)
         .environment(router)
     }
 }

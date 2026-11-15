@@ -26,7 +26,11 @@ nonisolated public struct ReaderStripLayout: Sendable, Equatable {
     public private(set) var gap: CGFloat
     /// Heights are rounded to whole pixels of this scale so that images are not resampled.
     public let displayScale: CGFloat
-    public private(set) var contentHeight: CGFloat = 0
+    /// Height of the pages and the gaps between them, without a trailer.
+    public private(set) var pagesHeight: CGFloat = 0
+    /// Height of what follows the last page and is not a page (the closing page); 0 for none.
+    /// Nothing that takes or returns a page number sees it.
+    public private(set) var trailerHeight: CGFloat = 0
 
     private var aspectRatios: [CGFloat?]
     private var heights: [CGFloat]
@@ -47,6 +51,17 @@ nonisolated public struct ReaderStripLayout: Sendable, Equatable {
     }
 
     public var pageCount: Int { heights.count }
+
+    /// Everything that scrolls: the pages and, after one more gap, the trailer.
+    public var contentHeight: CGFloat {
+        trailerFrame.map(\.maxY) ?? pagesHeight
+    }
+
+    /// Where the trailer is, or `nil` without one. An empty strip has none.
+    public var trailerFrame: CGRect? {
+        guard trailerHeight > 0, !heights.isEmpty else { return nil }
+        return CGRect(x: 0, y: pagesHeight + gap, width: width, height: trailerHeight)
+    }
 
     // MARK: Queries
 
@@ -82,18 +97,46 @@ nonisolated public struct ReaderStripLayout: Sendable, Equatable {
         return first...max(first, last)
     }
 
+    /// The end of the scrollable range, which a trailer extends.
     public func maximumOffset(viewportHeight: CGFloat) -> CGFloat {
         max(contentHeight - viewportHeight, 0)
     }
 
+    /// The scroll position at which the last page rests against the bottom of the viewport:
+    /// the end of the strip without a trailer. Pages are shown and reported against this
+    /// one, so a trailer changes neither.
+    public func maximumPageOffset(viewportHeight: CGFloat) -> CGFloat {
+        max(pagesHeight - viewportHeight, 0)
+    }
+
     /// Where to scroll to show `page`: centred when it fits in the viewport (as legacy does),
-    /// top-aligned when it is taller. Clamped to the scrollable range.
+    /// top-aligned when it is taller. Clamped to the range of the pages, so going to the last
+    /// page does not bring the trailer in under it.
     public func offset(forPage page: Int, viewportHeight: CGFloat) -> CGFloat {
         guard !heights.isEmpty else { return 0 }
         let frame = frame(ofPage: min(max(page, 1), pageCount))
         let proposed = frame.height <= viewportHeight ? frame.midY - viewportHeight / 2 : frame.minY
         let aligned = (proposed * displayScale).rounded() / displayScale
+        return min(max(aligned, 0), maximumPageOffset(viewportHeight: viewportHeight))
+    }
+
+    /// Where to scroll to show the trailer: centred when it fits, top-aligned when it is taller.
+    public func trailerOffset(viewportHeight: CGFloat) -> CGFloat? {
+        guard let frame = trailerFrame else { return nil }
+        let proposed = frame.height <= viewportHeight ? frame.midY - viewportHeight / 2 : frame.minY
+        let aligned = (proposed * displayScale).rounded() / displayScale
         return min(max(aligned, 0), maximumOffset(viewportHeight: viewportHeight))
+    }
+
+    /// Whether the trailer is what the reader is on: it is under the middle of the viewport,
+    /// the rule pages follow, or the strip rests against its end with the trailer on screen.
+    public func isTrailerCurrent(viewportMinY: CGFloat, viewportHeight: CGFloat) -> Bool {
+        guard let frame = trailerFrame else { return false }
+        if viewportMinY + viewportHeight / 2 >= frame.minY { return true }
+        let maximum = maximumOffset(viewportHeight: viewportHeight)
+        // A strip that fits on screen cannot leave its end: a bounce at its top is not a way back.
+        let isAtEnd = maximum <= 0 || viewportMinY >= maximum - 0.5
+        return isAtEnd && viewportMinY + viewportHeight > frame.minY
     }
 
     /// The page reported as "current": the one under the middle of the viewport, as legacy
@@ -101,7 +144,9 @@ nonisolated public struct ReaderStripLayout: Sendable, Equatable {
     /// short pages at either end can still become current.
     public func currentPage(viewportMinY: CGFloat, viewportHeight: CGFloat) -> Int? {
         guard !heights.isEmpty else { return nil }
-        let maximum = maximumOffset(viewportHeight: viewportHeight)
+        // The end of the pages, not of the strip: a short last page is still reported where
+        // the pages end, and everything below that is the last page too.
+        let maximum = maximumPageOffset(viewportHeight: viewportHeight)
         if maximum > 0 {
             if viewportMinY <= 0 { return 1 }
             if viewportMinY >= maximum - 0.5 { return pageCount }
@@ -162,6 +207,11 @@ nonisolated public struct ReaderStripLayout: Sendable, Equatable {
         restack(from: 0, recomputingHeights: false)
     }
 
+    /// Sets the trailer's height; 0 removes it. No page moves.
+    public mutating func setTrailerHeight(_ height: CGFloat) {
+        trailerHeight = height.isFinite ? max(height, 0) : 0
+    }
+
     // MARK: Private
 
     private func contains(_ page: Int) -> Bool {
@@ -179,7 +229,7 @@ nonisolated public struct ReaderStripLayout: Sendable, Equatable {
 
     private mutating func restack(from index: Int, recomputingHeights: Bool) {
         guard !heights.isEmpty else {
-            contentHeight = 0
+            pagesHeight = 0
             return
         }
         var y = index > 0 ? minYs[index - 1] + heights[index - 1] + gap : 0
@@ -190,6 +240,6 @@ nonisolated public struct ReaderStripLayout: Sendable, Equatable {
             minYs[current] = y
             y += heights[current] + gap
         }
-        contentHeight = y - gap
+        pagesHeight = y - gap
     }
 }

@@ -16,6 +16,12 @@ public nonisolated struct CommentItem: Identifiable, Equatable, Sendable {
 
     public var id: String { comment.commentID }
 
+    /// Whether this is the uploader's comment, which the site gives the id "0" and lists
+    /// first. Designs set it apart ("UPLOADER") and it cannot be voted on.
+    public var isUploaderComment: Bool { comment.commentID == Self.uploaderCommentID }
+
+    static let uploaderCommentID = "0"
+
     public init(comment: GalleryComment, detector: NSDataDetector?) {
         self.comment = comment
         author = comment.author.trimmingCharacters(in: .whitespacesAndNewlines)

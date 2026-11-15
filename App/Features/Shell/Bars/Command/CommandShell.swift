@@ -2,12 +2,12 @@ import EhFeatures
 import EhModels
 import SwiftUI
 
-/// The `command` bar (`Design/designs/README.md` section 5.1, `wall.md` section 1): one
-/// stack whose root is the first screen, with the command bar at its bottom, across pushes.
-/// On a gallery page the bar's three shapes become the page's dock.
+/// The `command` bar's shell (`wall.md` section 1): one stack whose root is the first
+/// screen, with the command bar at its bottom, across pushes. On a gallery page the bar's
+/// three shapes become the page's dock.
 ///
-/// A first working form: task A2 builds the bar itself in this folder. What is the shell's
-/// stays: the one `HomeStackHost`, and the bar being given the top screen's control.
+/// The stack, its bottom chrome and the first screen's column are the shell's
+/// (`HomeStackHost`), which hands the bar the top screen's control; this folder draws the bar.
 struct CommandShell: View {
     let model: AppModel
 

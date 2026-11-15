@@ -55,10 +55,10 @@ private struct GalleryPageHost: ViewModifier {
             .sheet(item: $model.sheetDestination) { destination in
                 GalleryChildScreen(sheet: destination, model: model)
             }
-            // The reader zooms out of the dock's pill, where the dock marked it.
+            // The reader zooms out of what opened it: the dock's pill, or a preview on the
+            // page's strip. Each marks itself with `readerSource`.
             .readerCover(
-                destination: $model.fullScreenDestination, of: model,
-                source: .dock(gid: model.gallery.gid), onExit: leaveReader
+                destination: $model.fullScreenDestination, of: model, source: readerSource, onExit: leaveReader
             )
             .sensoryFeedback(trigger: model.feedback) { _, feedback in
                 feedback.map { $0.isSuccess ? .success : .error }
@@ -71,6 +71,14 @@ private struct GalleryPageHost: ViewModifier {
                 appRouter.presentedGreeting = greeting
                 model.greetingAnnounced()
             }
+    }
+
+    private var readerSource: ReaderSourceID {
+        let gid = model.gallery.gid
+        return switch model.readerOrigin {
+        case .readButton: .dock(gid: gid)
+        case .preview(let page): .preview(gid: gid, page: page)
+        }
     }
 
     /// Where the reader's closing page leads, once the reader has closed over this page.

@@ -11,7 +11,7 @@ struct HarnessGate<Content: View>: View {
     @ViewBuilder let content: () -> Content
 
     var body: some View {
-        #if DEBUG
+        #if DEBUG || HARNESS
         switch HarnessRequest.atLaunch {
         case .part:
             // The part harness: one part of the selectable designs in each of its surroundings
@@ -20,7 +20,9 @@ struct HarnessGate<Content: View>: View {
         case .list:
             ListHarnessView(options: .atLaunch)
         case .reader:
+            // Only `-HarnessExitAfter` means anything here: it ends a memory recording.
             ReaderHarnessView()
+                .harnessLaunchActions { _ in }
         case .look:
             LookHarnessView()
         case .dock:
@@ -36,7 +38,7 @@ struct HarnessGate<Content: View>: View {
     }
 }
 
-#if DEBUG
+#if DEBUG || HARNESS
 /// Which harness the launch arguments ask for.
 enum HarnessRequest: String {
     case part

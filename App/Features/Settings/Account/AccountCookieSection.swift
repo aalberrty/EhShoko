@@ -26,8 +26,9 @@ struct CookieSection: View {
             }
             .font(.subheadline)
         } header: {
-            Text(verbatim: host.rawValue)
+            Text(verbatim: host.rawValue).settingsSectionHeader()
         }
+        .settingsRow()
     }
 }
 

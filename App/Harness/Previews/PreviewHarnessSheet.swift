@@ -1,4 +1,4 @@
-#if DEBUG
+#if DEBUG || HARNESS
 import EhCore
 import EhModels
 import os
@@ -27,6 +27,7 @@ struct PreviewHarnessSheet: View {
                     switch page {
                     case .options: PreviewHarnessGallery()
                     case .sizes: PreviewHarnessSizes()
+                    case .stage: PreviewHarnessStage()
                     }
                     Color.clear.frame(height: 0).id(ScrollMark.bottom)
                 }

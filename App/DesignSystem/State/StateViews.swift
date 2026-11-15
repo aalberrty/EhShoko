@@ -82,17 +82,40 @@ struct NotLoggedInView: View {
     }
 }
 
+/// How the status views draw their button.
+enum StatusActionForm {
+    /// Glass: the view stands alone on its screen, above no other glass.
+    case glass
+    /// A pill filled with the tint: the view is inside scrolling content or on a glass sheet,
+    /// where glass would be in the content or on glass (`Design/designs/README.md` section 13).
+    case filled
+}
+
+extension EnvironmentValues {
+    @Entry var statusActionForm: StatusActionForm = .glass
+}
+
+extension View {
+    /// Draws the buttons of the status views inside as `form`: `.filled` for one placed in
+    /// scrolling content or on a sheet below full height.
+    func statusActionForm(_ form: StatusActionForm) -> some View {
+        environment(\.statusActionForm, form)
+    }
+}
+
 /// `ContentUnavailableView` laid out the way legacy `AlertView` read: a large symbol, the message
-/// as the description, and a glass button. Colours and the title's face come from the look: the
-/// symbol in its tertiary label colour, the title in its label colour and title face (New York
-/// under Ledger), the message in its secondary colour. The view has no background, so it sits
-/// on whatever ground the screen draws.
+/// as the description, and a glass button (a filled one where `statusActionForm` asks). Colours
+/// and the title's face come from the look: the symbol in its tertiary label colour, the title
+/// in its label colour and title face (New York under Ledger), the message in its secondary
+/// colour. The view has no background, so it sits on whatever ground the screen draws.
 private struct StatusView<Actions: View>: View {
     let title: String?
     let message: String
     let systemImage: String
     @ViewBuilder let actions: Actions
     @Environment(\.look) private var look
+    @Environment(\.statusActionForm) private var actionForm
+    @Environment(\.onTint) private var onTint
 
     var body: some View {
         ContentUnavailableView {
@@ -111,9 +134,18 @@ private struct StatusView<Actions: View>: View {
             Text(message)
                 .foregroundStyle(look.secondaryLabel)
         } actions: {
-            actions
-                .glassButtonStyle()
-                .buttonBorderShape(.capsule)
+            switch actionForm {
+            case .glass:
+                actions
+                    .glassButtonStyle()
+                    .buttonBorderShape(.capsule)
+            case .filled:
+                actions
+                    .buttonStyle(.borderedProminent)
+                    .buttonBorderShape(.capsule)
+                    // The style draws its label white, which vanishes on a light tint.
+                    .foregroundStyle(onTint)
+            }
         }
     }
 }

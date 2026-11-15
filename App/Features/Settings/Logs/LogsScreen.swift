@@ -3,13 +3,16 @@ import EhFeatures
 import EhModels
 import SwiftUI
 
-/// Settings › General › Logs (legacy `LogsView`).
+/// Settings › General › Logs (legacy `LogsView`), on the look's colours.
 struct LogsScreen: View {
     @State private var model = LogsModel()
     @Environment(StackRouter.self) private var stack
+    @Environment(\.look) private var look
 
     var body: some View {
         content
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(look.surface)
             .navigationTitle(L10n.Localizable.LogsView.Title.logs)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
@@ -39,7 +42,8 @@ struct LogsScreen: View {
                     } label: {
                         LogRow(log: log, isLatest: log.file == model.latestLog)
                     }
-                    .foregroundStyle(.primary)
+                    .foregroundStyle(look.label)
+                    .settingsRow()
                     .contextMenu {
                         ShareLink(item: log.file.url)
                     }
@@ -52,6 +56,7 @@ struct LogsScreen: View {
                     }
                 }
             }
+            .settingsFormStyle()
         }
     }
 }
@@ -59,6 +64,7 @@ struct LogsScreen: View {
 private struct LogRow: View {
     let log: LogSummary
     let isLatest: Bool
+    @Environment(\.look) private var look
 
     var body: some View {
         VStack(alignment: .leading, spacing: Tokens.Spacing.xSmall) {
@@ -68,7 +74,7 @@ private struct LogRow: View {
                 if isLatest {
                     Label(L10n.Localizable.LogsView.Title.latest, systemImage: "checkmark.circle")
                         .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(look.secondaryLabel)
                         .symbolRenderingMode(.multicolor)
                 }
             }
@@ -78,7 +84,7 @@ private struct LogRow: View {
                 Text(L10n.Localizable.Common.Value.records("\(log.recordCount)"))
             }
             .font(.caption2)
-            .foregroundStyle(.secondary)
+            .foregroundStyle(look.secondaryLabel)
             .lineLimit(1)
         }
         .padding(.vertical, Tokens.Spacing.xSmall)

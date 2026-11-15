@@ -1,9 +1,12 @@
 import Foundation
 import SwiftUI
 
-/// Settings › About: the project link, the version, thanks and acknowledgements.
+/// Settings › About: the project link, the version, thanks and the libraries in use, on the
+/// look's colours.
 /// Links open outside the app.
 struct AboutScreen: View {
+    @Environment(\.look) private var look
+
     var body: some View {
         Form {
             Section {
@@ -14,13 +17,21 @@ struct AboutScreen: View {
                     credits.textCase(nil)
                 }
             }
-            Section(L10n.Localizable.AboutView.Section.Title.specialThanks) {
+            .settingsRow()
+            Section {
                 AboutLinkRows(links: AboutLink.specialThanks)
+            } header: {
+                Text(L10n.Localizable.AboutView.Section.Title.specialThanks).settingsSectionHeader()
             }
-            Section(L10n.Localizable.AboutView.Section.Title.acknowledgements) {
+            .settingsRow()
+            Section {
                 AboutLinkRows(links: AboutLink.acknowledgements)
+            } header: {
+                Text(L10n.Localizable.AboutView.Section.Title.acknowledgements).settingsSectionHeader()
             }
+            .settingsRow()
         }
+        .settingsFormStyle()
         .navigationTitle(L10n.Localizable.AboutView.Title.ehShoko)
         .toolbar {
             if #available(iOS 26, *) {
@@ -38,7 +49,7 @@ struct AboutScreen: View {
             Text(Self.version)
         }
         .font(.caption2.bold())
-        .foregroundStyle(.secondary)
+        .foregroundStyle(look.secondaryLabel)
         .accessibilityElement(children: .combine)
     }
 
@@ -53,6 +64,7 @@ struct AboutScreen: View {
 
 private struct AboutLinkRows: View {
     let links: [AboutLink]
+    @Environment(\.look) private var look
 
     var body: some View {
         ForEach(links) { link in
@@ -63,15 +75,15 @@ private struct AboutLinkRows: View {
                         Spacer()
                         Image(systemName: "arrow.up.forward")
                             .font(.footnote.weight(.semibold))
-                            .foregroundStyle(.tertiary)
+                            .foregroundStyle(look.tertiaryLabel)
                             .accessibilityHidden(true)
                     }
                     .contentShape(.rect)
                 }
-                .foregroundStyle(.primary)
+                .foregroundStyle(look.label)
             } else {
                 // Credits without a profile link are listed as plain text, as in legacy.
-                Text(link.text).fontWeight(.medium)
+                Text(link.text).fontWeight(.medium).foregroundStyle(look.label)
             }
         }
     }
