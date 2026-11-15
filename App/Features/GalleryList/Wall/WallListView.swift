@@ -50,8 +50,9 @@ struct WallListView<Header: View>: View {
     var body: some View {
         let density = density ?? settings.wallDensity
         content(density)
-            .modifier(WallListChrome(input: input, density: density) { setDensity($0, from: density) })
+            // Inside the chrome, so that it lies under the find field and not on its glass.
             .overlay(alignment: .top) { WallDensityHintView(hint: hint) }
+            .modifier(WallListChrome(input: input, density: density) { setDensity($0, from: density) })
             .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { width = $0 }
             // Another wall changed the setting (a tab's, or the list under a pushed one).
             .onChange(of: settings.wallDensity) { old, new in

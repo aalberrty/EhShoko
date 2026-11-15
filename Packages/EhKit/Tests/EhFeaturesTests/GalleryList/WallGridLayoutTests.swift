@@ -76,8 +76,10 @@ import Testing
         #expect(layout.rowSpacing == 8)
         #expect(layout.cellWidth == 136)
         // 136 × 10 / 7 = 194.2857… → 582.86 px → 583 px.
-        #expect(layout.coverHeight == 583.0 / 3)
-        #expect(layout.pitch == 583.0 / 3 + 34 + 8)
+        let cover: CGFloat = 583 / 3
+        let pitch: CGFloat = cover + 34 + 8
+        #expect(layout.coverHeight == cover)
+        #expect(layout.pitch == pitch)
     }
 
     @Test func largeHasWiderGapsAndSmallNoCaption() {
@@ -86,8 +88,10 @@ import Testing
         #expect(large.rowSpacing == 12)
         #expect(large.cellWidth == 206)
         let small = WallGridLayout(width: 430, density: .small, captionHeight: 0, displayScale: 3)
-        #expect(small.cellWidth == (430.0 - 12 - 20) / 5)
-        #expect(small.pitch == small.coverHeight + 8)
+        let width: CGFloat = (430 - 12 - 20) / 5
+        let pitch: CGFloat = small.coverHeight + 8
+        #expect(small.cellWidth == width)
+        #expect(small.pitch == pitch)
     }
 
     @Test func coverHeightsAreWholePixels() {
@@ -96,9 +100,12 @@ import Testing
                 for scale in [1, 2, 3] as [CGFloat] {
                     let layout = WallGridLayout(width: width, density: density, captionHeight: 0, displayScale: scale)
                     let pixels = layout.coverHeight * scale
-                    #expect(abs(pixels - pixels.rounded()) < 0.000_1)
+                    let offPixel: CGFloat = abs(pixels - pixels.rounded())
+                    #expect(offPixel < 0.000_1)
                     // Within a pixel of 7:10.
-                    #expect(abs(layout.coverHeight - layout.cellWidth * 10 / 7) <= 1 / scale)
+                    let exact: CGFloat = layout.cellWidth * 10 / 7
+                    let pixel: CGFloat = 1 / scale
+                    #expect(abs(layout.coverHeight - exact) <= pixel)
                 }
             }
         }
@@ -108,9 +115,10 @@ import Testing
         for width in [320, 393, 430, 652, 1_024, 1_366] as [CGFloat] {
             for density in WallDensity.allCases {
                 let layout = WallGridLayout(width: width, density: density, captionHeight: 0)
-                let used = layout.cellWidth * CGFloat(layout.columns)
+                let used: CGFloat = layout.cellWidth * CGFloat(layout.columns)
                     + layout.columnSpacing * CGFloat(layout.columns - 1) + WallGridLayout.margin * 2
-                #expect(abs(used - width) < 0.000_1)
+                let difference: CGFloat = abs(used - width)
+                #expect(difference < 0.000_1)
             }
         }
     }
@@ -189,7 +197,9 @@ import Testing
         #expect(change.anchor == 30)
         // Entry 30 is in Small's eighth row, at 1,090: the same 10 pt below the top edge.
         #expect(change.offset == 1_080)
-        #expect(small.rowTop(ofEntry: 30) - change.offset == medium.rowTop(ofEntry: 30) - 2_030)
+        let before: CGFloat = medium.rowTop(ofEntry: 30) - 2_030
+        let after: CGFloat = small.rowTop(ofEntry: 30) - change.offset
+        #expect(after == before)
     }
 
     @Test func aKeptAnchorDoesNotDriftOverSeveralChanges() {
@@ -269,9 +279,11 @@ import Testing
         // 40, a page of 17 rows, the divider, four rows; and with 25 rows a page, six rows.
         #expect(medium.rowTop(ofEntry: 62) == 4_270)
         #expect(large.rowTop(ofEntry: 62) == 9_370)
-        let change = medium.offset(from: medium.rowTop(ofEntry: 62) - 12, in: large)
+        let offset: CGFloat = medium.rowTop(ofEntry: 62) - 12
+        let change = medium.offset(from: offset, in: large)
         #expect(change.anchor == 62)
-        #expect(large.rowTop(ofEntry: 62) - change.offset == 12)
+        let below: CGFloat = large.rowTop(ofEntry: 62) - change.offset
+        #expect(below == 12)
     }
 
     @Test func anEmptySectionTakesNoRows() {
