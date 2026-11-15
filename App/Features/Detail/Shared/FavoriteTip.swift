@@ -2,6 +2,7 @@ import EhCore
 import EhFeatures
 import SwiftUI
 import TipKit
+import UIKit
 
 /// The tip that teaches Favourite's folder menu (`Design/designs/README.md` section 5.4):
 /// "Touch and hold to choose a folder", pointing at the dock's Favourite button.
@@ -67,8 +68,14 @@ extension FavoriteTip {
     @concurrent
     private static func donateQuickFavorite() async {
         // Once the tip is settled the event can change nothing: stop writing it to the store.
-        if case .invalidated = FavoriteTip().status { return }
+        if await isSettled() { return }
         await quickFavorite.donate()
+    }
+
+    /// Whether the tip can never show again: read off the main actor, from TipKit's store.
+    @concurrent
+    static func isSettled() async -> Bool {
+        if case .invalidated = FavoriteTip().status { true } else { false }
     }
 
     @concurrent
@@ -96,21 +103,138 @@ private struct FavoriteTipAnchor: ViewModifier {
 
     func body(content: Content) -> some View {
         if isAnchor {
-            content.modifier(FavoriteTipPopover())
+            content.modifier(FavoriteTipSource())
         } else {
             content
         }
     }
 }
 
-private struct FavoriteTipPopover: ViewModifier {
+private struct FavoriteTipSource: ViewModifier {
     @Environment(SettingsStore.self) private var settings
     @Environment(UserStore.self) private var userStore
 
     func body(content: Content) -> some View {
-        content.popoverTip(
-            FavoriteTip(folderName: userStore.favoriteFolderName(settings.lastFavoriteFolder)),
-            arrowEdge: .bottom
-        )
+        content.background {
+            FavoriteTipPresenter(tip: FavoriteTip(folderName: userStore.favoriteFolderName(settings.lastFavoriteFolder)))
+        }
+    }
+}
+
+// MARK: The popover
+
+/// TipKit's popover, presented from UIKit (`TipUIPopoverViewController`) rather than with
+/// `popoverTip`. SwiftUI's `popoverTip` is modal: while it showed, a tap on the Favourite
+/// button only closed the tip, and the button did nothing. Here the button's frame is the
+/// popover's passthrough view: a tap or a long press on it reaches the button, as without
+/// the tip, and closes the tip; a tap anywhere else closes it as it closes any popover.
+/// Everything else is TipKit's: the look, the close button, the counting of its one showing.
+private struct FavoriteTipPresenter: UIViewRepresentable {
+    let tip: FavoriteTip
+
+    func makeUIView(context: Context) -> FavoriteTipSourceView {
+        FavoriteTipSourceView(tip: tip)
+    }
+
+    func updateUIView(_ view: FavoriteTipSourceView, context: Context) {
+        view.tip = tip
+    }
+
+    static func dismantleUIView(_ view: FavoriteTipSourceView, coordinator: ()) {
+        view.stop()
+    }
+}
+
+/// A clear view behind the Favourite button, the popover's source and passthrough view.
+///
+/// While it is in a window it follows TipKit's verdict on the tip, unless the tip is settled,
+/// which after its one showing it always is: then it waits for nothing at all.
+private final class FavoriteTipSourceView: UIView {
+    var tip: FavoriteTip
+    private var observation: Task<Void, Never>?
+    private weak var popover: TipUIPopoverViewController?
+    private var isForwardingTouch = false
+
+    init(tip: FavoriteTip) {
+        self.tip = tip
+        super.init(frame: .zero)
+        backgroundColor = .clear
+    }
+
+    @available(*, unavailable)
+    required init?(coder: NSCoder) {
+        nil
+    }
+
+    override func didMoveToWindow() {
+        super.didMoveToWindow()
+        if window == nil {
+            stop()
+        } else if observation == nil {
+            observation = Task { [weak self] in await self?.follow() }
+        }
+    }
+
+    /// Asked by the popover's dimming view for a touch while the tip shows. UIKit gives the
+    /// touch to whatever this returns, so a touch on the button gets the view the screen
+    /// itself would have given it (the button, as without the tip) and closes the tip.
+    /// Otherwise this view takes no touch.
+    override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        guard !isForwardingTouch, isShowingPopover, self.point(inside: point, with: event),
+              let screen = nearestViewController?.view else { return nil }
+        // The screen's own hit test may come back here; it must not find this view then.
+        isForwardingTouch = true
+        defer { isForwardingTouch = false }
+        // After this touch has been delivered, not while UIKit is still looking for its view.
+        Task { [weak self] in self?.closePopover(animated: true) }
+        return screen.hitTest(convert(point, to: screen), with: event)
+    }
+
+    func stop() {
+        observation?.cancel()
+        observation = nil
+        closePopover(animated: false)
+    }
+
+    private func follow() async {
+        if await FavoriteTip.isSettled() { return }
+        for await shouldDisplay in tip.shouldDisplayUpdates {
+            if Task.isCancelled { return }
+            if shouldDisplay {
+                present()
+            } else {
+                closePopover(animated: true)
+            }
+        }
+    }
+
+    private var isShowingPopover: Bool {
+        popover?.presentingViewController != nil
+    }
+
+    private func present() {
+        // Not over another presentation: the dock is not what the user is looking at then.
+        guard !isShowingPopover, let presenter = nearestViewController, presenter.presentedViewController == nil else {
+            return
+        }
+        let popover = TipUIPopoverViewController(tip, sourceItem: self)
+        popover.popoverPresentationController?.permittedArrowDirections = .down
+        popover.popoverPresentationController?.passthroughViews = [self]
+        presenter.present(popover, animated: true)
+        self.popover = popover
+    }
+
+    private func closePopover(animated: Bool) {
+        guard let popover, isShowingPopover, !popover.isBeingDismissed else { return }
+        popover.dismiss(animated: animated)
+    }
+
+    private var nearestViewController: UIViewController? {
+        var responder: UIResponder? = next
+        while let current = responder {
+            if let controller = current as? UIViewController { return controller }
+            responder = current.next
+        }
+        return nil
     }
 }
