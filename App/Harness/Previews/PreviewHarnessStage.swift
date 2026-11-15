@@ -13,12 +13,17 @@ import UIKit
 /// | `-HarnessStageScroll YES` | Four seconds after the page opens, scrolls it from the top to the end at `-HarnessSpeed` points a second (default 400), counting late frames, and writes the result to `Library/Caches/PreviewHarness/stage-scroll`. |
 /// | `-HarnessStageExport YES` | Writes the twelve held frames (one per beat, the storyboards' stills) light and dark to `Library/Caches/PreviewHarness/stage-light.png` and `stage-dark.png`. |
 /// | `-HarnessStageSelect shelf\|wall\|ledger` | Selects that preset after two seconds, as a tap on its tile does. |
+/// | `-HarnessStageCovered YES` | Starts with the stage covered, so it holds: the control for the time and scroll measurements. |
+/// | `-HarnessStageProbe YES` | Six seconds after the page opens, writes the process's memory (`stage-open`, beside the harness's round marks). |
+/// | `-HarnessStageHeap YES` | Six seconds after the page opens, writes the in-process heap check of per-design types (`Documents/stage-heap.txt`). It demangles every class name, so leave it out of a time profile. |
+///
+/// Every opening of the page writes `stage-shown` with the time, for a script to wait on.
 ///
 /// With `-HarnessCycle n` and `-HarnessPage stage` the sheet opens and closes on this page:
 /// the memory marks then tell what the stage leaves behind.
 struct PreviewHarnessStage: View {
     @State private var selection: DesignStyle?
-    @State private var isCovered = false
+    @State private var isCovered = UserDefaults.standard.bool(forKey: "HarnessStageCovered")
     @State private var scroller = ListHarnessScroller()
     @State private var status = ""
     @Environment(\.look) private var look
@@ -41,19 +46,39 @@ struct PreviewHarnessStage: View {
             Text(verbatim: "Selected: \(selection?.localizedName ?? "none")\(status.isEmpty ? "" : " · \(status)")")
                 .font(.caption.monospaced())
                 .foregroundStyle(look.secondaryLabel)
+            // Rows above and below, so a scripted scroll carries the stage up through the
+            // screen and away.
+            ForEach(0..<3, id: \.self, content: row)
             PresetStage(selection: $selection, isCovered: isCovered)
-            ForEach(0..<40, id: \.self) { row in
-                RoundedRectangle(cornerRadius: 10)
-                    .fill(look.surface)
-                    .frame(height: 56)
-                    .overlay(alignment: .leading) {
-                        Text(verbatim: "Row \(row + 1)").foregroundStyle(look.secondaryLabel).padding(.leading, 14)
-                    }
-            }
+            ForEach(3..<40, id: \.self, content: row)
         }
         .padding(16)
         .background(ListHarnessAnchor(scroller: scroller))
         .task { await runScripted() }
+        .task { await probe() }
+    }
+
+    private func row(_ row: Int) -> some View {
+        RoundedRectangle(cornerRadius: 10)
+            .fill(look.surface)
+            .frame(height: 56)
+            .overlay(alignment: .leading) {
+                Text(verbatim: "Row \(row + 1)").foregroundStyle(look.secondaryLabel).padding(.leading, 14)
+            }
+    }
+
+    private func probe() async {
+        PreviewHarnessStageExport.writeLine("shown=\(Date.now.timeIntervalSince1970)", to: "stage-shown")
+        let defaults = UserDefaults.standard
+        guard defaults.bool(forKey: "HarnessStageProbe") || defaults.bool(forKey: "HarnessStageHeap") else { return }
+        try? await Task.sleep(for: .seconds(6))
+        guard !Task.isCancelled else { return }
+        if defaults.bool(forKey: "HarnessStageProbe") {
+            PreviewHarnessExport.mark("stage-open")
+        }
+        if defaults.bool(forKey: "HarnessStageHeap") {
+            PartHarnessHeap.writeReport(named: "stage-heap.txt")
+        }
     }
 
     private func runScripted() async {

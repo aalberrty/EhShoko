@@ -25,7 +25,7 @@ import SwiftUI
 /// app's look.
 struct PresetStage: View {
     static let size = CGSize(width: 150, height: 240)
-    /// The stage's row: the stage centred, the pause button beside it.
+    /// The stage's row: the stage centred, the pause button 11 pt beside it.
     static let rowWidth: CGFloat = 260
 
     @Binding private var selection: DesignStyle?
@@ -76,9 +76,17 @@ struct PresetStage: View {
         TimelineView(StageBeatSchedule(anchor: playback.isRunning ? playback.anchor : nil)) { timeline in
             let now = beat(at: timeline.date)
             VStack(spacing: 0) {
-                stage(now, palettes: palettes)
-                    // Room for the pause button beside the stage.
-                    .frame(width: Self.rowWidth)
+                // The stage centred in its row, the pause button beside it at the row's
+                // bottom trailing corner.
+                ZStack(alignment: .bottomTrailing) {
+                    stage(now, palettes: palettes)
+                        .frame(maxWidth: .infinity)
+                    if !isStill {
+                        pauseButton
+                            .padding([.trailing, .bottom], 6)
+                    }
+                }
+                .frame(width: Self.rowWidth)
                 labels(now)
                     .padding(.top, 8)
                 marks(now)
@@ -111,8 +119,7 @@ struct PresetStage: View {
             if isStill {
                 StageStill(position: page, playback: playback, palettes: palettes)
             } else {
-                StageCanvas(playback: playback, palettes: palettes)
-                    .equatable()
+                StageHost(playback: playback, palettes: palettes)
             }
         }
         .frame(width: Self.size.width, height: Self.size.height)
@@ -125,14 +132,6 @@ struct PresetStage: View {
         .accessibilityValue(Text(now.style.stageSummary))
         .accessibilityAddTraits(.isImage)
         .accessibilityAdjustableAction(adjust)
-        .overlay(alignment: .bottomTrailing) {
-            if !isStill {
-                // Beside the stage, 11 pt from its edge, 6 pt above its bottom.
-                pauseButton
-                    .padding(.bottom, 6)
-                    .alignmentGuide(.trailing) { $0[.leading] - 11 }
-            }
-        }
     }
 
     private var pauseButton: some View {
@@ -159,8 +158,8 @@ struct PresetStage: View {
                 .foregroundStyle(look.secondaryLabel)
         }
         .multilineTextAlignment(.center)
-        .contentTransition(.opacity)
-        .animation(.easeInOut(duration: 0.25), value: now)
+        // Not animated: a content transition on the labels redrew their text with every frame
+        // of the canvas, on the main thread, the whole time the stage played.
         // The stage reads the preset's name; captions are not announced as they change.
         .accessibilityHidden(true)
     }
