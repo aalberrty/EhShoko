@@ -8,7 +8,8 @@ import PackageDescription
 // Dependency direction (each target may only import the ones above it):
 //
 //   EhModels  →  EhParser  →  EhNetworking ┐
-//            └→  EhDatabase ───────────────┴→  EhCore  →  EhFeatures
+//            ├→  EhDatabase ───────────────┼→  EhCore  →  EhFeatures
+//            └→  EhPageTranslation ────────┘
 // Lets `unimplemented` dependency endpoints report issues to Swift Testing.
 let issueReportingTestSupport: Target.Dependency = .product(
     name: "IssueReportingTestSupport", package: "xctest-dynamic-overlay"
@@ -52,6 +53,11 @@ let package = Package(
             dependencies: ["EhModels", .product(name: "GRDB", package: "GRDB.swift")]
         ),
         .testTarget(name: "EhDatabaseTests", dependencies: ["EhDatabase", "EhTestSupport"]),
+
+        // Page translation: models in, patches out (Core ML, Core Graphics, Core Text, ImageIO).
+        // Needs no database, network or dependencies, so it builds and tests alone.
+        .target(name: "EhPageTranslation", dependencies: ["EhModels"]),
+        .testTarget(name: "EhPageTranslationTests", dependencies: ["EhPageTranslation"]),
 
         // Dependency keys, settings and UI-independent services built on the layers above.
         .target(
