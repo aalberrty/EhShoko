@@ -354,13 +354,6 @@ public final class ReaderModel {
         refreshFailedPageCount()
     }
 
-    /// Why a page could not be resolved, for the line under "This page didn't load": what the
-    /// site's request for it ended with. `nil` for a page that has not failed that way. Why an
-    /// image did not load is the engine's to know: it loads the images.
-    public func failureReason(at page: Int) -> AppError? {
-        resolver.failure(of: page)
-    }
-
     public func togglePanel() {
         showsPanel.toggle()
     }

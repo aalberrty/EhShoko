@@ -1,3 +1,4 @@
+import EhModels
 import Foundation
 
 /// What the controls show of the page states, as last published.
@@ -19,6 +20,13 @@ nonisolated public struct ReaderPageSummary: Equatable, Sendable {
 // representable to every observable property read then: an observed read would update the
 // engine whenever a page failed.
 extension ReaderModel {
+    /// Why a page could not be resolved, for the line under "This page didn't load": what the
+    /// site's request for it ended with. `nil` for a page that has not failed that way. Why an
+    /// image did not load is the engine's to know: it loads the images.
+    public func failureReason(at page: Int) -> AppError? {
+        resolver.failure(of: page)
+    }
+
     /// Counts the failed pages again: those that could not be resolved and those whose image
     /// did not load, a page that failed both ways once. A pass over the pages the resolver
     /// knows, a few microseconds for a long gallery, after a failure, a recovery or a command.
