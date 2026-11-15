@@ -7,15 +7,10 @@ import UIKit
 /// The engine holds its data source and delegate weakly; the screen keeps this object alive.
 final class ReaderEngineBridge: ReaderEngineDataSource, ReaderEngineDelegate {
     let proxy = ReaderEngineProxy()
-    /// Every gallery, one of a single page too, ends with the closing page. Stored, because
-    /// the engine reads it with every reload.
-    let hasTrailer = true
     private let model: ReaderModel
 
     init(model: ReaderModel) {
         self.model = model
-        // Auto-play then makes its last advance onto the closing page.
-        model.hasTrailer = hasTrailer
         let proxy = proxy
         model.engine = ReaderEngineCommands(
             reloadPage: { proxy.reloadPage($0) },
@@ -35,12 +30,6 @@ final class ReaderEngineBridge: ReaderEngineDataSource, ReaderEngineDelegate {
 
     func aspectRatio(at page: Int) -> CGFloat? {
         model.aspectRatio(at: page)
-    }
-
-    /// Asked once, when the closing page is about to be shown: only then is it made, and with
-    /// it, for a reader that no gallery page presented, its detail model and request.
-    func makeTrailerViewController() -> UIViewController? {
-        ReaderClosingPage.makeController(gallery: model.gallery, pageCount: model.pageCount)
     }
 
     // MARK: ReaderEngineDelegate
@@ -71,10 +60,6 @@ final class ReaderEngineBridge: ReaderEngineDataSource, ReaderEngineDelegate {
 
     func readerDidTapToTogglePanel() {
         model.togglePanel()
-    }
-
-    func readerDidChangeTrailerVisibility(_ isCurrent: Bool) {
-        model.trailerVisibilityDidChange(isCurrent)
     }
 
     func readerContextMenu(for page: Int) -> UIMenu? {
