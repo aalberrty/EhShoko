@@ -14,7 +14,7 @@ import SwiftUI
 /// | `-HarnessLook shelf\|wall\|ledger` | `shelf` | The app's look. |
 /// | `-HarnessScheme light\|dark` | the system's | The appearance. |
 /// | `-HarnessAccent <hex>` | none | A chosen accent colour in place of the look's own. |
-/// | `-HarnessPage options\|sizes` | `options` | The page the sheet opens on. |
+/// | `-HarnessPage options\|sizes\|stage` | `options` | The page the sheet opens on; `stage` is the moving preview (`PreviewHarnessStage`). |
 /// | `-HarnessOpen YES` | `NO` | Opens the sheet at launch. |
 /// | `-HarnessCycle <n>` | `0` | Opens and closes the sheet once, then n times in each further round, writing the memory after each round (`runScripted`). |
 /// | `-HarnessRounds <k>` | `2` | The rounds of n after the first. |
@@ -142,7 +142,7 @@ struct PreviewHarnessView: View {
 }
 
 enum PreviewHarnessPage: String, CaseIterable, Identifiable {
-    case options, sizes
+    case options, sizes, stage
     var id: String { rawValue }
 }
 
