@@ -79,14 +79,17 @@ private struct LedgerIndexPageLists: View {
 }
 
 /// The folders as a two-column grid with the total trailing the heading, or, signed out,
-/// one row that leads to signing in.
+/// one row that leads to signing in. At accessibility text sizes the grid is one column, so
+/// the names stay readable.
 private struct LedgerIndexPageFavorites: View {
     let navigation: LedgerIndexNavigation
 
     @Environment(UserStore.self) private var userStore
     @Environment(AccountSession.self) private var accountSession
+    @Environment(\.dynamicTypeSize) private var typeSize
 
-    private static let columns = [GridItem(.flexible(), spacing: 6), GridItem(.flexible(), spacing: 6)]
+    private static let twoColumns = [GridItem(.flexible(), spacing: 6), GridItem(.flexible(), spacing: 6)]
+    private static let oneColumn = [GridItem(.flexible())]
 
     var body: some View {
         if accountSession.isLoggedIn {
@@ -95,7 +98,7 @@ private struct LedgerIndexPageFavorites: View {
                     .buttonStyle(.borderless)
             }
             .ledgerIndexPageHeader()
-            LazyVGrid(columns: Self.columns, spacing: 6) {
+            LazyVGrid(columns: typeSize.isAccessibilitySize ? Self.oneColumn : Self.twoColumns, spacing: 6) {
                 ForEach(userStore.ledgerIndexFolders) { folder in
                     LedgerIndexFolderCell(folder: folder) { navigation.openFolder(folder.index) }
                 }
