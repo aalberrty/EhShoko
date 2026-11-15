@@ -3,9 +3,9 @@ import EhModels
 import SwiftUI
 
 /// What Wall's list puts around its covers (`wall.md` section 3, `Design/designs/README.md`
-/// section 5.3): the place's name as a title that scrolls away with the covers, unless a first
-/// screen draws it; the More menu with every list control and the three densities, always, as
-/// the top bar's trailing item; and the find field when "Find in this list" is on.
+/// section 5.3): the place's name as a small title in the top bar, unless a first screen draws
+/// it; the More menu with every list control and the three densities, always, as the top bar's
+/// trailing item; and the find field when "Find in this list" is on.
 ///
 /// The bar and its items are the system's (`README.md` section 13). Toplists' period and page
 /// menus and the filter pill are not here: they scroll with the covers (`WallListTop`). The
@@ -25,7 +25,7 @@ struct WallListChrome: ViewModifier {
                     }
                 }
             }
-            .modifier(WallListTitle(context: input.context, isFinding: input.controls.isFinding))
+            .modifier(WallListTitle(context: input.context))
     }
 
     private var isFinding: Binding<Bool> {
@@ -44,12 +44,11 @@ struct WallListChrome: ViewModifier {
 }
 
 /// The list's own title, unless it is embedded in a first screen or the library, which draw
-/// theirs. Large, so that it scrolls away with the covers and leaves them the screen; small in
-/// the bar while the find field is pinned under it, where a large title would lie under the
-/// field's scroll edge effect on iOS 26 and be blurred by it.
+/// theirs. Small, in the bar's own row, so the covers start right under the bar. A large title
+/// was tried: when the command bar's place menu swaps the list in place, the bar shows it
+/// collapsed until the list is scrolled, so the same list had two looks.
 private struct WallListTitle: ViewModifier {
     let context: ListContext
-    let isFinding: Bool
 
     func body(content: Content) -> some View {
         if context.embedsInStart {
@@ -57,7 +56,7 @@ private struct WallListTitle: ViewModifier {
         } else {
             content
                 .navigationTitle(context.title)
-                .toolbarTitleDisplayMode(isFinding ? .inline : .large)
+                .toolbarTitleDisplayMode(.inline)
         }
     }
 }

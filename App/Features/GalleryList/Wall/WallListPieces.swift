@@ -82,7 +82,6 @@ struct WallListTop: View {
                     }
                 }
                 .padding(.horizontal, 6)
-                .padding(.top, 2)
                 .padding(.bottom, 10)
             }
             if isOffline {
@@ -91,6 +90,9 @@ struct WallListTop: View {
                     .padding(.bottom, 10)
             }
         }
+        // Under the list's own top bar the covers keep the wall's margin from it; under a
+        // first screen's header they follow it directly.
+        .padding(.top, input.context.embedsInStart ? 0 : WallGridLayout.margin)
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
