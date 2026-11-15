@@ -78,17 +78,34 @@ struct LedgerIndexLine: View {
     var isSyntax = false
     var showsChevron = true
 
+    @ScaledMetric(relativeTo: .title3) private var markWidth = LedgerIndexLine.markWidth
     @Environment(\.look) private var look
+    @Environment(\.dynamicTypeSize) private var typeSize
+
+    /// The mark's column at the default text size; the column grows with the text up to the
+    /// first accessibility size, where the marks stop growing so that names keep their room.
+    static let markWidth: CGFloat = 24
+    /// The space between the mark's column and the name.
+    static let markSpacing: CGFloat = 13
+    /// The largest text size the marks follow.
+    static let largestMarkSize = DynamicTypeSize.accessibility1
+
+    /// The mark's column for a scaled `markWidth`, held at the first accessibility size.
+    static func markColumn(_ scaledWidth: CGFloat) -> CGFloat {
+        min(scaledWidth, markWidth * 1.6)
+    }
 
     var body: some View {
-        HStack(spacing: 13) {
+        HStack(spacing: Self.markSpacing) {
             markView
-                .frame(width: 24)
+                .dynamicTypeSize(...Self.largestMarkSize)
+                .frame(width: Self.markColumn(markWidth))
             Text(title)
                 .font(isSyntax ? .footnote : .body)
                 .fontDesign(isSyntax ? look.syntaxDesign : nil)
                 .foregroundStyle(look.label)
-                .lineLimit(1)
+                // At accessibility sizes a name wraps rather than being cut.
+                .lineLimit(typeSize.isAccessibilitySize ? 2 : 1)
                 // A name before its value; a saved search's own name before its syntax,
                 // which can run long.
                 .layoutPriority(isSyntax ? 0 : 1)
@@ -142,20 +159,38 @@ struct LedgerIndexFolderSwatch: View {
     }
 }
 
-/// A section's heading with an optional control trailing ("1,284 in all", Edit).
+/// A section's heading with an optional control trailing ("1,284 in all", Edit), or under it
+/// at accessibility text sizes, where the two would not fit on one line.
 struct LedgerIndexSectionHeader<Trailing: View>: View {
     let title: String
     @ViewBuilder var trailing: Trailing
 
+    @Environment(\.dynamicTypeSize) private var typeSize
+
     var body: some View {
-        HStack(alignment: .firstTextBaseline) {
-            Text(title)
-                .lookSectionHeader()
-                .lineLimit(1)
-            Spacer(minLength: 8)
-            trailing
-                .font(.subheadline.weight(.medium))
+        if typeSize.isAccessibilitySize {
+            VStack(alignment: .leading, spacing: 4) {
+                heading
+                control
+            }
+        } else {
+            HStack(alignment: .firstTextBaseline) {
+                heading
+                Spacer(minLength: 8)
+                control
+            }
         }
+    }
+
+    private var heading: some View {
+        Text(title)
+            .lookSectionHeader()
+            .lineLimit(1)
+    }
+
+    private var control: some View {
+        trailing
+            .font(.subheadline.weight(.medium))
     }
 }
 
@@ -216,6 +251,7 @@ struct LedgerIndexContinueCard: View {
     @Environment(\.look) private var look
     @Environment(\.onTint) private var onTint
     @Environment(\.chrome) private var chrome
+    @Environment(\.dynamicTypeSize) private var typeSize
 
     private var cornerRadius: CGFloat { isCompact ? 14 : 18 }
 
@@ -259,9 +295,11 @@ struct LedgerIndexContinueCard: View {
                     .monospacedDigit()
                     .foregroundStyle(look.secondaryLabel)
             }
-            .lineLimit(1)
+            // At accessibility sizes the lines wrap rather than cut, and the play circle, which
+            // only marks the card as the way to read on, makes room for them.
+            .lineLimit(typeSize.isAccessibilitySize ? 3 : 1)
             Spacer(minLength: 0)
-            if !isCompact {
+            if !isCompact, !typeSize.isAccessibilitySize {
                 Image(systemName: "play.fill")
                     .font(.body)
                     .foregroundStyle(onTint)
@@ -324,6 +362,7 @@ struct LedgerIndexFolderCell: View {
     let open: () -> Void
 
     @Environment(\.look) private var look
+    @Environment(\.dynamicTypeSize) private var typeSize
 
     var body: some View {
         let shape = RoundedRectangle(cornerRadius: 11, style: .continuous)
@@ -333,7 +372,8 @@ struct LedgerIndexFolderCell: View {
                 Text(folder.name)
                     .font(.subheadline.weight(.medium))
                     .foregroundStyle(look.label)
-                    .lineLimit(1)
+                    // One column at accessibility sizes, and there the name may wrap.
+                    .lineLimit(typeSize.isAccessibilitySize ? 2 : 1)
                 Spacer(minLength: 4)
                 if let count = folder.count {
                     Text(count.formatted())

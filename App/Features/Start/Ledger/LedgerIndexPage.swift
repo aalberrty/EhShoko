@@ -158,6 +158,8 @@ private struct LedgerIndexPageRow<Label: View>: View {
     let action: () -> Void
     @ViewBuilder var label: Label
 
+    @ScaledMetric(relativeTo: .title3) private var markWidth = LedgerIndexLine.markWidth
+
     @Environment(\.look) private var look
 
     var body: some View {
@@ -173,8 +175,9 @@ private struct LedgerIndexPageRow<Label: View>: View {
                 Rectangle()
                     .fill(look.separator)
                     .frame(height: 0.5)
-                    // The symbol's column and its spacing: the rule starts under the text.
-                    .padding(.leading, 57)
+                    // The row's inset, the mark's column and its spacing: the rule starts
+                    // under the text.
+                    .padding(.leading, 20 + LedgerIndexLine.markColumn(markWidth) + LedgerIndexLine.markSpacing)
             }
         }
     }
