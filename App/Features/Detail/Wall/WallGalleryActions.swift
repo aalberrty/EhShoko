@@ -80,8 +80,8 @@ private struct WallRoundAction: View {
     let action: () -> Void
 
     @Environment(\.look) private var look
-
-    static let diameter: CGFloat = 50
+    /// 50 pt at the default text size; it grows with the symbol it holds.
+    @ScaledMetric(relativeTo: .title3) private var diameter: CGFloat = 50
 
     var body: some View {
         let isFaint = isDimmed || !isEnabled
@@ -91,7 +91,7 @@ private struct WallRoundAction: View {
                     .font(.title3)
                     .foregroundStyle(isFaint ? look.tertiaryLabel : look.label)
                     .contentTransition(.symbolEffect(.replace))
-                    .frame(width: Self.diameter, height: Self.diameter)
+                    .frame(width: diameter, height: diameter)
                     .background(metrics.fill(look), in: .circle)
                 Text(title)
                     .font(.caption2)

@@ -177,6 +177,7 @@ private struct WallGalleryFacts: View, Equatable {
     let facts: Values
 
     @Environment(\.look) private var look
+    @ScaledMetric(relativeTo: .footnote) private var dot: CGFloat = 7
 
     static func == (lhs: Self, rhs: Self) -> Bool {
         lhs.facts == rhs.facts
@@ -185,9 +186,9 @@ private struct WallGalleryFacts: View, Equatable {
     var body: some View {
         FlowLayout(spacing: 7, lineSpacing: 3) {
             HStack(spacing: 5) {
-                RoundedRectangle(cornerRadius: 2.5, style: .continuous)
+                RoundedRectangle(cornerRadius: dot * 0.36, style: .continuous)
                     .fill(facts.category.markColor)
-                    .frame(width: 7, height: 7)
+                    .frame(width: dot, height: dot)
                 Text(facts.category.localizedName)
                     .fontWeight(.semibold)
                     .foregroundStyle(facts.category.markColor)

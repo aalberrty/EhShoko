@@ -172,13 +172,14 @@ private struct WallTagChip: View {
     let fill: Color
 
     @Environment(\.look) private var look
+    @ScaledMetric(relativeTo: .footnote) private var dot: CGFloat = 7
 
     var body: some View {
         let content = tag.chip.content
         HStack(spacing: 6) {
             Circle()
                 .fill((tag.namespace ?? .other).markColor)
-                .frame(width: 7, height: 7)
+                .frame(width: dot, height: dot)
             if content.isVotedUp || content.isVotedDown {
                 Image(systemName: content.isVotedUp ? "hand.thumbsup.fill" : "hand.thumbsdown.fill")
                     .imageScale(.small)
