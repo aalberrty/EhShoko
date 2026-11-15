@@ -11,21 +11,16 @@ final class ReaderPagedView: UIScrollView, UIScrollViewDelegate, ReaderContentVi
     weak var host: ReaderContentHost?
 
     private var configuration: ReaderConfiguration
-    // Read by the geometry in `ReaderPagedView+Geometry.swift`.
-    private(set) var spreads = ReaderSpreadLayout(pageCount: 0, isDualPage: false, exceptCover: false)
-    private(set) var rightToLeft = false
-    private(set) var viewportSize = CGSize.zero
+    private var spreads = ReaderSpreadLayout(pageCount: 0, isDualPage: false, exceptCover: false)
+    private var rightToLeft = false
+    private var viewportSize = CGSize.zero
 
     private var tiled: [Int: ReaderSpreadView] = [:]
     private var tiledSlots: ClosedRange<Int>?
     private var visibleSlots: ClosedRange<Int>?
     private var spreadPool: [ReaderSpreadView] = []
     private var pagePool: [ReaderPageView] = []
-    /// The trailer's view while its place is tiled.
-    private var trailer: ReaderTrailerView?
 
-    /// The place the reader is on, in reading order: a spread, or `spreads.spreadCount` for a
-    /// trailer that has a slot of its own.
     private var currentSpread = 0
     /// Where an animated scroll is heading, so that quick taps add up instead of restarting
     /// from wherever the animation happens to be.
@@ -52,16 +47,7 @@ final class ReaderPagedView: UIScrollView, UIScrollViewDelegate, ReaderContentVi
 
     // MARK: ReaderContentView
 
-    /// On a trailer of its own this is the last page.
-    var currentPage: Int { spreads.reportedPage(forSlot: currentSpread) }
-
-    var trailerState: ReaderTrailerState {
-        switch spreads.trailerPlacement {
-        case .none: .away
-        case .besideLastPage(let spread): currentSpread == spread ? .besideLastPage : .away
-        case .ownSlot: currentSpread == spreads.spreadCount ? .alone : .away
-        }
-    }
+    var currentPage: Int { spreads.reportedPage(forSpread: currentSpread) }
 
     var visiblePages: ClosedRange<Int>? { pages(inSlots: visibleSlots) }
 
@@ -83,9 +69,8 @@ final class ReaderPagedView: UIScrollView, UIScrollViewDelegate, ReaderContentVi
     }
 
     func advance(by offset: Int, animated: Bool) -> Bool {
-        // A trailer of its own is one more step after the last spread, and the end.
         let index = (targetSpread ?? currentSpread) + offset
-        guard index >= 0, index < spreads.slotCount else { return false }
+        guard index >= 0, index < spreads.spreadCount else { return false }
         scroll(toSpread: index, animated: animated)
         return true
     }
@@ -117,11 +102,10 @@ final class ReaderPagedView: UIScrollView, UIScrollViewDelegate, ReaderContentVi
 
     // MARK: Layout
 
-    /// Applies a new size, page layout or reading direction in one step and stays on `page`,
-    /// or on the trailer when the reader was on it (`onTrailer`).
+    /// Applies a new size, page layout or reading direction in one step and stays on `page`.
     func setLayout(
         viewportSize size: CGSize, spreads newSpreads: ReaderSpreadLayout, rightToLeft newRightToLeft: Bool,
-        showing page: Int, onTrailer: Bool = false
+        showing page: Int
     ) {
         let pagesMoved = newSpreads != spreads || newRightToLeft != rightToLeft
         guard pagesMoved || size != viewportSize else { return }
@@ -134,23 +118,17 @@ final class ReaderPagedView: UIScrollView, UIScrollViewDelegate, ReaderContentVi
         rightToLeft = newRightToLeft
         viewportSize = size
         currentSpread = spreads.spreadIndex(forPage: page)
-        if onTrailer, let slot = spreads.trailerSlot {
-            currentSpread = slot
-        }
         targetSpread = nil
 
         frame = CGRect(origin: .zero, size: size)
-        contentSize = CGSize(width: CGFloat(spreads.slotCount) * size.width, height: size.height)
+        contentSize = CGSize(width: CGFloat(spreads.spreadCount) * size.width, height: size.height)
         contentOffset = CGPoint(x: offsetX(forSpread: currentSpread), y: 0)
         for (index, view) in tiled {
             view.frame = frame(forSpread: index)
-            view.setViewportSize(view.frame.size)
+            view.setViewportSize(size)
             layoutPages(in: view)
-            let request = decodeRequest(columns: columns(inSpread: index), zoomed: false)
+            let request = decodeRequest(pagesInSpread: view.pageViews.count, zoomed: false)
             view.pageViews.forEach { $0.setDecodeRequest(request) }
-        }
-        if let trailer, let frame = trailerFrame {
-            trailer.frame = frame
         }
         isAdjusting = false
         tile()
@@ -178,10 +156,9 @@ final class ReaderPagedView: UIScrollView, UIScrollViewDelegate, ReaderContentVi
                 for (index, view) in tiled where !wanted.contains(slot(forSpread: index)) {
                     recycle(view, at: index)
                 }
-                // A trailer's own slot is past the last spread and holds no spread view.
                 for slot in wanted {
                     let index = spread(forSlot: slot)
-                    if index < spreads.spreadCount, tiled[index] == nil {
+                    if tiled[index] == nil {
                         addSpreadView(for: index)
                     }
                 }
@@ -197,7 +174,6 @@ final class ReaderPagedView: UIScrollView, UIScrollViewDelegate, ReaderContentVi
         }
         if changed {
             host?.contentDidChangeVisiblePages()
-            placeTrailer(in: wanted)
         }
     }
 
@@ -205,10 +181,10 @@ final class ReaderPagedView: UIScrollView, UIScrollViewDelegate, ReaderContentVi
         let view = spreadPool.popLast() ?? ReaderSpreadView()
         view.frame = frame(forSpread: index)
         view.maximumZoomScale = configuration.sanitizedMaximumZoomScale
-        view.setViewportSize(view.frame.size)
+        view.setViewportSize(viewportSize)
 
         let pages = spreads.pagesOnScreen(inSpread: index, rightToLeft: rightToLeft)
-        let request = decodeRequest(columns: columns(inSpread: index), zoomed: false)
+        let request = decodeRequest(pagesInSpread: pages.count, zoomed: false)
         let pageViews = pages.map { page in
             let pageView = pagePool.popLast() ?? ReaderPageView()
             host?.configure(pageView, forPage: page, request: request)
@@ -218,7 +194,7 @@ final class ReaderPagedView: UIScrollView, UIScrollViewDelegate, ReaderContentVi
         layoutPages(in: view)
         view.onZoomChange = { [weak self, weak view] zoomed in
             guard let self, let view else { return }
-            let request = decodeRequest(columns: columns(inSpread: view.spreadIndex), zoomed: zoomed)
+            let request = decodeRequest(pagesInSpread: view.pageViews.count, zoomed: zoomed)
             view.pageViews.forEach { $0.setDecodeRequest(request) }
         }
         addSubview(view)
@@ -241,49 +217,16 @@ final class ReaderPagedView: UIScrollView, UIScrollViewDelegate, ReaderContentVi
         }
         tiledSlots = nil
         visibleSlots = nil
-        placeTrailer(in: nil)
-    }
-
-    /// Puts the trailer in its place while that place is among the tiled slots, and takes it
-    /// out otherwise. The host makes its content the first time this asks at a good moment.
-    private func placeTrailer(in slots: ClosedRange<Int>?) {
-        guard let slots, let index = spreads.trailerSlot, slots.contains(slot(forSpread: index)),
-              let frame = trailerFrame
-        else {
-            if let trailer, trailer.superview === self {
-                trailer.removeFromSuperview()
-            }
-            trailer = nil
-            return
-        }
-        // Its content is made at rest, so that the cost does not land in a page turn; a place
-        // that is already on screen cannot wait.
-        let isOnScreen = visibleSlots?.contains(slot(forSpread: index)) == true
-        let isMoving = isDragging || isDecelerating || targetSpread != nil
-        guard let view = trailer ?? host?.trailerView(isOnScreen: isOnScreen, isMoving: isMoving) else { return }
-        trailer = view
-        UIView.performWithoutAnimation {
-            if view.superview !== self {
-                addSubview(view)
-            }
-            if view.frame != frame {
-                view.frame = frame
-            }
-        }
-    }
-
-    func placeTrailerIfNeeded() {
-        placeTrailer(in: tiledSlots)
     }
 
     private func layoutPages(in view: ReaderSpreadView) {
         view.layoutPages(aspectRatios: view.pageViews.map { host?.aspectRatio(forPage: $0.page) })
     }
 
-    /// A page is decoded for the part of the viewport it can fill, one of `columns`; zoomed
-    /// in, for up to three times that (the pixel budget of the target still applies).
-    private func decodeRequest(columns: Int, zoomed: Bool) -> ReaderDecodeRequest {
-        let box = CGSize(width: viewportSize.width / CGFloat(max(columns, 1)), height: viewportSize.height)
+    /// A page is decoded for the part of the viewport it can fill; zoomed in, for up to three
+    /// times that (the pixel budget of the target still applies).
+    private func decodeRequest(pagesInSpread: Int, zoomed: Bool) -> ReaderDecodeRequest {
+        let box = CGSize(width: viewportSize.width / CGFloat(max(pagesInSpread, 1)), height: viewportSize.height)
         let zoom = zoomed ? min(configuration.sanitizedMaximumZoomScale, 3) : 1
         let target = ImageDecodeTarget(
             size: box, constrainsHeight: true, displayScale: traitCollection.displayScale, zoom: zoom
@@ -294,8 +237,8 @@ final class ReaderPagedView: UIScrollView, UIScrollViewDelegate, ReaderContentVi
     // MARK: Scrolling
 
     private func scroll(toSpread index: Int, animated: Bool) {
-        guard spreads.slotCount > 0 else { return }
-        let index = min(max(index, 0), spreads.slotCount - 1)
+        guard spreads.spreadCount > 0 else { return }
+        let index = min(max(index, 0), spreads.spreadCount - 1)
         guard viewportSize.width > 0 else {
             // Not laid out yet: the first layout shows this spread.
             currentSpread = index
@@ -320,35 +263,56 @@ final class ReaderPagedView: UIScrollView, UIScrollViewDelegate, ReaderContentVi
     }
 
     func scrollViewDidScroll(_ scrollView: UIScrollView) {
-        guard !isAdjusting, viewportSize.width > 0, spreads.slotCount > 0 else { return }
+        guard !isAdjusting, viewportSize.width > 0, spreads.spreadCount > 0 else { return }
         let slot = ReaderGeometry.nearestSlot(
-            offsetX: contentOffset.x, pageWidth: viewportSize.width, slotCount: spreads.slotCount
+            offsetX: contentOffset.x, pageWidth: viewportSize.width, slotCount: spreads.spreadCount
         )
         let index = spread(forSlot: slot)
         guard index != currentSpread else { return }
         currentSpread = index
         host?.contentDidChangeCurrentPage(currentPage)
-        host?.contentDidChangeTrailer(trailerState)
     }
 
     func scrollViewWillBeginDragging(_ scrollView: UIScrollView) {
         targetSpread = nil
     }
 
-    // At rest the trailer's content can be made, if its place is tiled and it was put off.
-
     func scrollViewDidEndScrollingAnimation(_ scrollView: UIScrollView) {
         targetSpread = nil
-        placeTrailer(in: tiledSlots)
     }
 
-    func scrollViewDidEndDecelerating(_ scrollView: UIScrollView) {
-        placeTrailer(in: tiledSlots)
+    // MARK: Geometry
+
+    /// The slots under the visible part of the scroll view, plus `margin` on each side.
+    private func slots(margin: Int) -> ClosedRange<Int>? {
+        ReaderGeometry.slots(
+            fromX: bounds.minX, toX: bounds.maxX, pageWidth: viewportSize.width,
+            slotCount: spreads.spreadCount, margin: margin
+        )
     }
 
-    func scrollViewDidEndDragging(_ scrollView: UIScrollView, willDecelerate decelerate: Bool) {
-        if !decelerate {
-            placeTrailer(in: tiledSlots)
-        }
+    private func slot(forSpread index: Int) -> Int {
+        ReaderGeometry.slot(forSpread: index, spreadCount: spreads.spreadCount, rightToLeft: rightToLeft)
+    }
+
+    private func spread(forSlot slot: Int) -> Int {
+        ReaderGeometry.spread(forSlot: slot, spreadCount: spreads.spreadCount, rightToLeft: rightToLeft)
+    }
+
+    private func offsetX(forSpread index: Int) -> CGFloat {
+        CGFloat(slot(forSpread: index)) * viewportSize.width
+    }
+
+    private func frame(forSpread index: Int) -> CGRect {
+        CGRect(origin: CGPoint(x: offsetX(forSpread: index), y: 0), size: viewportSize)
+    }
+
+    private func pages(inSlots slots: ClosedRange<Int>?) -> ClosedRange<Int>? {
+        guard let slots, spreads.spreadCount > 0 else { return nil }
+        let first = spread(forSlot: slots.lowerBound)
+        let last = spread(forSlot: slots.upperBound)
+        let lower = spreads.pages(inSpread: min(first, last)).lowerBound
+        let upper = spreads.pages(inSpread: max(first, last)).upperBound
+        return lower...upper
     }
 }
