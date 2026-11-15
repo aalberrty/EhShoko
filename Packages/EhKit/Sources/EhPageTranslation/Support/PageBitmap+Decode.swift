@@ -3,14 +3,14 @@ import CoreGraphics
 import Foundation
 import ImageIO
 
-extension PageImage {
+extension PageBitmap {
     /// Decodes a page's bytes on the global executor, never on the caller's actor: a
     /// 4-megapixel page takes tens of milliseconds.
     @concurrent
     public static func decode(
-        _ data: Data, maximumPixelCount: Int = PageImage.maximumPixelCount
-    ) async throws(PageImageError) -> PageImage {
-        try PageImage(data: data, maximumPixelCount: maximumPixelCount)
+        _ data: Data, maximumPixelCount: Int = PageBitmap.maximumPixelCount
+    ) async throws(PageBitmapError) -> PageBitmap {
+        try PageBitmap(data: data, maximumPixelCount: maximumPixelCount)
     }
 
     /// Decodes on the calling thread. Code on an actor calls `decode(_:maximumPixelCount:)`.
@@ -20,7 +20,7 @@ extension PageImage {
     /// brought down with vImage, which takes half the time of ImageIO's own reduction. A larger
     /// page, or one with an EXIF orientation, is decoded by ImageIO reduced and upright (a JPEG
     /// at a fraction of its size), so no full-size bitmap of it ever exists.
-    public init(data: Data, maximumPixelCount: Int = PageImage.maximumPixelCount) throws(PageImageError) {
+    public init(data: Data, maximumPixelCount: Int = PageBitmap.maximumPixelCount) throws(PageBitmapError) {
         Self.decodeObserver?()
         let source = try Self.singleFrameSource(data)
         let upright = try Self.uprightSize(source)
@@ -58,7 +58,7 @@ extension PageImage {
     @TaskLocal static var decodeObserver: (@Sendable () -> Void)?
 
     /// The source of a still image with all its bytes.
-    private static func singleFrameSource(_ data: Data) throws(PageImageError) -> CGImageSource {
+    private static func singleFrameSource(_ data: Data) throws(PageBitmapError) -> CGImageSource {
         guard let source = CGImageSourceCreateWithData(data as CFData, [kCGImageSourceShouldCache: false] as CFDictionary)
         else { throw .unreadable }
         switch CGImageSourceGetCount(source) {
@@ -73,7 +73,7 @@ extension PageImage {
     /// The page's size once its EXIF orientation is applied, and that orientation.
     private static func uprightSize(
         _ source: CGImageSource
-    ) throws(PageImageError) -> (width: Int, height: Int, orientation: UInt32) {
+    ) throws(PageBitmapError) -> (width: Int, height: Int, orientation: UInt32) {
         guard let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any],
               let width = (properties[kCGImagePropertyPixelWidth] as? NSNumber)?.intValue,
               let height = (properties[kCGImagePropertyPixelHeight] as? NSNumber)?.intValue,
@@ -100,7 +100,7 @@ extension PageImage {
     }
 
     /// `image` drawn at its own size into a new bitmap of this type's layout.
-    private static func draw(_ image: CGImage, in space: CGColorSpace) throws(PageImageError) -> Data {
+    private static func draw(_ image: CGImage, in space: CGColorSpace) throws(PageBitmapError) -> Data {
         let width = image.width, height = image.height, bytesPerRow = width * 4
         var pixels = Data(count: bytesPerRow * height)
         let hasAlpha = ![.none, .noneSkipFirst, .noneSkipLast].contains(image.alphaInfo)
@@ -127,7 +127,7 @@ extension PageImage {
     /// `pixels` resampled to `target` with vImage's high-quality filter.
     private static func scale(
         _ pixels: Data, from size: (width: Int, height: Int), to target: (width: Int, height: Int)
-    ) throws(PageImageError) -> Data {
+    ) throws(PageBitmapError) -> Data {
         var scaled = Data(count: target.width * target.height * 4)
         let error = pixels.withUnsafeBytes { source in
             scaled.withUnsafeMutableBytes { destination in

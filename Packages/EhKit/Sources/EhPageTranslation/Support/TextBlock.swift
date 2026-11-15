@@ -3,7 +3,7 @@ import EhModels
 
 /// One block of text as it moves through the stages: the detector makes it, the reader fills
 /// `source`, the translator `translation`, and drawing turns it into a patch. In pixels of
-/// the page bitmap (`PageImage`), origin at the top left.
+/// the page bitmap (`PageBitmap`), origin at the top left.
 public struct TextBlock: Sendable, Equatable {
     /// The block's box.
     public var box: CGRect

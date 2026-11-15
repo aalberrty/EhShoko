@@ -25,7 +25,7 @@ import Testing
             let truth = try JSONDecoder().decode(
                 Truth.self, from: Data(contentsOf: folder.url("\(Self.truth)/\(name).json"))
             )
-            let page = try PageImage(data: Data(contentsOf: url))
+            let page = try PageBitmap(data: Data(contentsOf: url))
             #expect([page.width, page.height] == truth.size, "\(name)")
             #expect(!page.isReduced)
             #expect(page.colorSpace.model == .rgb)
@@ -39,8 +39,8 @@ import Testing
         var largest = 0, differing = 0, total = 0
         for webP in try folder.files(in: Self.webPPages, withExtensions: ["webp"]) {
             let name = webP.deletingPathExtension().lastPathComponent
-            let app = try PageImage(data: Data(contentsOf: webP))
-            let research = try PageImage(data: Data(contentsOf: folder.url("\(Self.pngPages)/\(name).png")))
+            let app = try PageBitmap(data: Data(contentsOf: webP))
+            let research = try PageBitmap(data: Data(contentsOf: folder.url("\(Self.pngPages)/\(name).png")))
             try #require(app.width == research.width && app.height == research.height)
             app.pixels.withUnsafeBytes { a in
                 research.pixels.withUnsafeBytes { b in
@@ -63,7 +63,7 @@ import Testing
     @Test func aLowerCapReducesARealPageAndKeepsItsShape() throws {
         let folder = try PrivateFolder.required()
         let url = try #require(try folder.files(in: Self.pngPages, withExtensions: ["png"]).first)
-        let page = try PageImage(data: Data(contentsOf: url), maximumPixelCount: 1_000_000)
+        let page = try PageBitmap(data: Data(contentsOf: url), maximumPixelCount: 1_000_000)
         #expect(page.isReduced)
         #expect(page.width * page.height <= 1_000_000 && page.width * page.height > 990_000)
         let shape = Double(page.width) / Double(page.height)

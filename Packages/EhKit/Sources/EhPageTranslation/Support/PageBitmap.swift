@@ -6,7 +6,7 @@ import Foundation
 ///
 /// Its colour space is the page's own when that is an RGB space, so the models see the values
 /// as encoded, and sRGB otherwise (grey and CMYK pages are converted once, here).
-public struct PageImage: Sendable {
+public struct PageBitmap: Sendable {
     /// 4 megapixels: about 16 MB of bitmap. The largest test page (7 MP) is brought down to it.
     public static let maximumPixelCount = 4_000_000
 
@@ -27,7 +27,7 @@ public struct PageImage: Sendable {
     /// Wraps pixels that are already in this layout.
     init(
         width: Int, height: Int, originalWidth: Int, originalHeight: Int, pixels: Data, colorSpace: CGColorSpace
-    ) throws(PageImageError) {
+    ) throws(PageBitmapError) {
         let bytesPerRow = width * 4
         guard width > 0, height > 0, pixels.count == bytesPerRow * height,
               let provider = CGDataProvider(data: pixels as CFData),
@@ -70,7 +70,7 @@ public struct PageImage: Sendable {
     }
 }
 
-public enum PageImageError: Error, Equatable {
+public enum PageBitmapError: Error, Equatable {
     /// Not an image ImageIO can decode. A file cut short after its header still decodes, the
     /// missing part grey, as the reader shows it.
     case unreadable

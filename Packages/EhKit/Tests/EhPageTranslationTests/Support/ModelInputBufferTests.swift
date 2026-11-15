@@ -45,8 +45,8 @@ import Testing
     @Test func keepsThePagesOwnRGBSpaceAndConvertsOthersToSRGB() throws {
         let p3 = try #require(CGColorSpace(name: CGColorSpace.displayP3))
         let colour = try #require(SyntheticImages.image(width: 2, height: 2, space: p3) { _ in })
-        #expect(PageImage.colorSpace(for: colour) == p3)
+        #expect(PageBitmap.colorSpace(for: colour) == p3)
         let grey = try #require(SyntheticImages.image(width: 2, height: 2, space: CGColorSpaceCreateDeviceGray()) { _ in })
-        #expect(PageImage.colorSpace(for: grey).name == CGColorSpace.sRGB)
+        #expect(PageBitmap.colorSpace(for: grey).name == CGColorSpace.sRGB)
     }
 }

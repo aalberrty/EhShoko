@@ -59,7 +59,7 @@ public final class ModelInputBuffer {
         try withMutableBytes { base, bytesPerRow in
             guard let context = CGContext(
                 data: base, width: width, height: height, bitsPerComponent: 8, bytesPerRow: bytesPerRow,
-                space: PageImage.colorSpace(for: image), bitmapInfo: Self.bitmapInfo
+                space: PageBitmap.colorSpace(for: image), bitmapInfo: Self.bitmapInfo
             ) else { throw ModelInputBufferError.context }
             if let padding {
                 let grey = CGFloat(padding) / 255
