@@ -73,7 +73,7 @@ private struct DesignSetupKeepCard: View {
                         .fixedSize(horizontal: false, vertical: true)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
-                DesignSetupRadioMark(isSelected: isSelected)
+                RadioMark(isSelected: isSelected)
             }
             .padding(Tokens.Spacing.small)
             .padding(.trailing, Tokens.Spacing.small)

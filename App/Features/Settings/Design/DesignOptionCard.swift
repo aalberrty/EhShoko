@@ -77,8 +77,9 @@ struct DesignOptionCard: View {
     }
 }
 
-/// An empty ring, or a filled circle with a check in the tint.
-private struct RadioMark: View {
+/// An empty ring, or a filled circle with a check in the tint: the option card's mark, and the
+/// wizard's on its own "Keep what I have" card.
+struct RadioMark: View {
     let isSelected: Bool
 
     @Environment(\.look) private var look
