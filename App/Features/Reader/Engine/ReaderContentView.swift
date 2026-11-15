@@ -20,6 +20,19 @@ protocol ReaderContentHost: AnyObject {
 
     /// The pages on screen, or the pages that have a view, changed.
     func contentDidChangeVisiblePages()
+
+    /// The view for the trailer's place, which has come within the tiled range. `nil` when
+    /// there is none, or when its content does not exist yet and this is not the moment to
+    /// make it (`ReaderEngineViewController.trailerView(isOnScreen:isMoving:)` has the rule).
+    /// A scroll view that got `nil` asks again whenever it comes to rest and when
+    /// `placeTrailerIfNeeded()` is called.
+    func trailerView(isOnScreen: Bool, isMoving: Bool) -> ReaderTrailerView?
+
+    /// The height the trailer's content asks for at a width, for the vertical strip; 0 until
+    /// the content exists.
+    func trailerFittingHeight(forWidth width: CGFloat) -> CGFloat
+
+    func contentDidChangeTrailer(_ state: ReaderTrailerState)
 }
 
 /// One reading mode: the vertical strip or the horizontal pager. The engine owns exactly one
@@ -29,6 +42,9 @@ protocol ReaderContentView: UIScrollView {
 
     /// The page to report as current.
     var currentPage: Int { get }
+
+    /// Where the trailer is relative to what the reader is on.
+    var trailerState: ReaderTrailerState { get }
 
     /// Pages that are at least partly on screen.
     var visiblePages: ClosedRange<Int>? { get }
@@ -42,12 +58,17 @@ protocol ReaderContentView: UIScrollView {
 
     func scroll(toPage page: Int, animated: Bool)
 
-    /// Moves by whole pages (or spreads). Returns `false` at either end of the gallery.
+    /// Moves by whole pages (or spreads), and between the last page and a trailer that is
+    /// not beside it. Returns `false` at either end.
     func advance(by offset: Int, animated: Bool) -> Bool
 
     func pageView(forPage page: Int) -> ReaderPageView?
 
     func forEachPageView(_ body: (ReaderPageView) -> Void)
+
+    /// The host is now willing to make the trailer's content: ask for it again if its place
+    /// is tiled and still empty.
+    func placeTrailerIfNeeded()
 
     /// The engine learned (or changed) a page's aspect ratio.
     func aspectRatioDidChange(forPage page: Int)

@@ -19,6 +19,28 @@ protocol ReaderEngineDataSource: AnyObject {
     /// returning `nil` is always fine; a known ratio just means the page has its final shape
     /// before its image arrives.
     func aspectRatio(at page: Int) -> CGFloat?
+
+    /// Whether something that is not a page follows the last page: the trailer, which holds
+    /// the closing page. Read together with `pageCount`, on every reload and long before
+    /// anything of it is shown, so answering must cost nothing and create nothing.
+    var hasTrailer: Bool { get }
+
+    /// The trailer's content. Asked once, when the trailer is about to be shown and never
+    /// earlier, so this is the place to create what the content needs. The engine keeps the
+    /// controller as a child for as long as it lives.
+    ///
+    /// In the paged directions the content fills the trailer's slot: the viewport, or the
+    /// half beside a last page that is alone. In the vertical direction it is as tall as its
+    /// view's `sizeThatFits` says for the strip's width and a height of 0, and at least 70%
+    /// of the viewport; a later change of that height is announced with the controller's
+    /// `preferredContentSize`.
+    func makeTrailerViewController() -> UIViewController?
+}
+
+extension ReaderEngineDataSource {
+    var hasTrailer: Bool { false }
+
+    func makeTrailerViewController() -> UIViewController? { nil }
 }
 
 /// What the engine reports back.
@@ -55,4 +77,13 @@ protocol ReaderEngineDelegate: AnyObject {
 
     /// The context menu for a page, or `nil` for none.
     func readerContextMenu(for page: Int) -> UIMenu?
+
+    /// The trailer became what the reader is on, or stopped being it. It is not a page: the
+    /// current page meanwhile is the last page. It is also current while it shares the screen
+    /// with a last page that is alone (two pages side by side).
+    func readerDidChangeTrailerVisibility(_ isCurrent: Bool)
+}
+
+extension ReaderEngineDelegate {
+    func readerDidChangeTrailerVisibility(_ isCurrent: Bool) {}
 }
