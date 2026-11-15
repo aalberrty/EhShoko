@@ -1,20 +1,36 @@
 #if DEBUG
+import EhCore
 import EhModels
+import os
 import SwiftUI
 
 /// The harness's sheet: the gallery of previews, like a Settings sheet holds them.
+///
+/// With `-HarnessScroll YES` it scrolls itself to the end and back twice, inside a
+/// `PreviewHarnessScroll` signpost interval, and then shows the sizes page: a recording of
+/// `SchematicDraw` signposts shows whether scrolling draws the previews again (it should not)
+/// and, as the control, that the sizes page draws its own.
 struct PreviewHarnessSheet: View {
     @Binding var page: PreviewHarnessPage
     @Environment(\.look) private var look
     @Environment(\.dismiss) private var dismiss
 
+    private static let signposter = OSSignposter(
+        subsystem: PerformanceSignposts.subsystem, category: PerformanceSignposts.category
+    )
+
     var body: some View {
         NavigationStack {
-            ScrollView {
-                switch page {
-                case .options: PreviewHarnessGallery()
-                case .sizes: PreviewHarnessSizes()
+            ScrollViewReader { proxy in
+                ScrollView {
+                    Color.clear.frame(height: 0).id(ScrollMark.top)
+                    switch page {
+                    case .options: PreviewHarnessGallery()
+                    case .sizes: PreviewHarnessSizes()
+                    }
+                    Color.clear.frame(height: 0).id(ScrollMark.bottom)
                 }
+                .task { await scrollIfAsked(proxy) }
             }
             .background(look.background)
             .navigationTitle(Text(verbatim: "Previews"))
@@ -40,6 +56,23 @@ struct PreviewHarnessSheet: View {
                 }
             }
         }
+    }
+}
+
+private enum ScrollMark: Hashable { case top, bottom }
+
+extension PreviewHarnessSheet {
+    private func scrollIfAsked(_ proxy: ScrollViewProxy) async {
+        guard UserDefaults.standard.bool(forKey: "HarnessScroll") else { return }
+        try? await Task.sleep(for: .seconds(5))
+        let interval = Self.signposter.beginInterval("PreviewHarnessScroll")
+        for mark in [ScrollMark.bottom, .top, .bottom, .top] {
+            withAnimation(.linear(duration: 1.5)) { proxy.scrollTo(mark, anchor: mark == .top ? .top : .bottom) }
+            try? await Task.sleep(for: .seconds(2.5))
+        }
+        Self.signposter.endInterval("PreviewHarnessScroll", interval)
+        try? await Task.sleep(for: .seconds(2))
+        page = .sizes
     }
 }
 

@@ -19,6 +19,7 @@ import SwiftUI
 /// | `-HarnessCycle <n>` | `0` | Opens and closes the sheet once, then n times in each further round, writing the memory after each round (`runScripted`). |
 /// | `-HarnessRounds <k>` | `2` | The rounds of n after the first. |
 /// | `-HarnessControl YES` | `NO` | Plain rectangles in place of the previews, the control for the allocations check. |
+/// | `-HarnessScroll YES` | `NO` | The sheet scrolls itself to the end and back twice, then shows the sizes page (`PreviewHarnessSheet`). |
 /// | `-HarnessExport YES` | `NO` | Writes a contact sheet of every preview in each look, light and dark, to `Library/Caches/PreviewHarness/`. |
 ///
 /// The sheet holds the only previews; closing it releases them, so opening and closing it is
