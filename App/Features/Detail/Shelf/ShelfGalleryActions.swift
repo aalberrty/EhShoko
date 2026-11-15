@@ -52,6 +52,7 @@ struct ShelfGalleryActions: View {
             } primaryAction: {
                 isFavorited ? model.unfavorite() : model.quickFavorite()
             }
+            .menuStyle(.button)
             .menuOrder(.fixed)
             .buttonStyle(.plain)
             .accessibilityLabel(title)

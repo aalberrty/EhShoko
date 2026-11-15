@@ -1,8 +1,8 @@
 import SwiftUI
 
 nonisolated extension GallerySchematic {
-    /// Shelf's page: the cover beside the title, a ruled row of five figures, four action
-    /// tiles, a strip of page previews, and the dock.
+    /// Shelf's page: the cover beside the title, the other title in full beneath, a ruled row
+    /// of five figures, four action tiles, a strip of page previews, and the dock.
     static func shelf(_ canvas: SchematicCanvas) {
         let palette = canvas.palette
         topButtons(canvas)
@@ -13,7 +13,10 @@ nonisolated extension GallerySchematic {
         canvas.box(41, 38.5, 38, 4.2, palette.label)
         canvas.box(41, 46, 40, 3, palette.accent)
         canvas.box(41, 61, 44, 2.4, palette.tertiary)
-        canvas.rule(0, 72, 100)
+        // The other title, two lines in the tertiary colour under the cover.
+        canvas.box(6, 67.6, 82, 1.6, palette.tertiary)
+        canvas.box(6, 70.2, 56, 1.6, palette.tertiary)
+        canvas.rule(0, 73, 100)
         for figure in 0..<5 {
             let x = 5 + CGFloat(figure) * 19
             canvas.box(x + 3, 75, 10, 1.8, palette.tertiary)

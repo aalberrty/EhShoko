@@ -49,14 +49,17 @@ struct ShelfGalleryHeader: View {
 private struct ShelfGalleryCover: View {
     let url: URL?
 
+    @Environment(\.look) private var look
+
     var body: some View {
         let shape = RoundedRectangle(cornerRadius: 12, style: .continuous)
         CoverImage(url: url, size: ShelfGalleryHeader.coverSize, cornerRadius: 12)
             // The shadow is cast by a plain shape behind the image, which Core Animation draws
-            // from its path, not from the image's pixels.
+            // from its path, not from the image's pixels. The shape is the ground's colour, so
+            // the cover's translucent placeholder shows as the look draws it.
             .background {
                 shape
-                    .fill(.black)
+                    .fill(look.background)
                     .shadow(color: .black.opacity(0.28), radius: 15, y: 10)
             }
             .overlay { shape.strokeBorder(.gray.opacity(0.35), lineWidth: 0.5) }
@@ -124,6 +127,7 @@ private struct ShelfGalleryCredit: View {
                 } label: {
                     label
                 }
+                .menuStyle(.button)
             } else {
                 Button {
                     if let target = searches.first {

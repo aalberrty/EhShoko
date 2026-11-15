@@ -9,6 +9,8 @@ struct ShelfPreviewsScreen: View {
     let detail: GalleryDetailModel
 
     @State private var model: PreviewsModel
+    /// The page the grid is scrolled to: the page last read when it opens.
+    @State private var position: Int?
 
     @Environment(StackRouter.self) private var stack: StackRouter?
     @Environment(AppRouter.self) private var appRouter: AppRouter?
@@ -21,40 +23,37 @@ struct ShelfPreviewsScreen: View {
             gallery: detail.gallery, pageCount: detail.pageCount,
             config: detail.previewConfig, previewURLs: detail.previewURLs
         ))
+        _position = State(initialValue: detail.readingProgress.flatMap { $0 > 1 ? $0 : nil })
     }
 
     var body: some View {
         let widths = Tokens.ImageSize.previewWidths(for: sizeClass)
         let gid = model.gallery.gid
-        ScrollViewReader { proxy in
-            ScrollView {
-                LazyVGrid(
-                    columns: [GridItem(.adaptive(minimum: widths.lowerBound, maximum: widths.upperBound), spacing: 10)],
-                    spacing: Tokens.Spacing.medium
-                ) {
-                    ForEach(1..<(model.pageCount + 1), id: \.self) { index in
-                        Button {
-                            model.select(index)
-                        } label: {
-                            ShelfPreviewGridCell(
-                                index: index, thumbnail: model.preview(at: index), failed: model.hasFailed(at: index),
-                                width: widths.upperBound, isCurrent: index == lastRead
-                            )
-                            .readerSource(.preview(gid: gid, page: index))
-                        }
-                        .buttonStyle(.plain)
-                        .id(index)
-                        .onAppear { model.thumbnailAppeared(index) }
-                        .onDisappear { model.thumbnailDisappeared(index) }
+        ScrollView {
+            LazyVGrid(
+                columns: [GridItem(.adaptive(minimum: widths.lowerBound, maximum: widths.upperBound), spacing: 10)],
+                spacing: Tokens.Spacing.medium
+            ) {
+                ForEach(1..<(model.pageCount + 1), id: \.self) { index in
+                    Button {
+                        model.select(index)
+                    } label: {
+                        ShelfPreviewGridCell(
+                            index: index, thumbnail: model.preview(at: index), failed: model.hasFailed(at: index),
+                            width: widths.upperBound, isCurrent: index == lastRead
+                        )
+                        .readerSource(.preview(gid: gid, page: index))
                     }
+                    .buttonStyle(.plain)
+                    .onAppear { model.thumbnailAppeared(index) }
+                    .onDisappear { model.thumbnailDisappeared(index) }
                 }
-                .padding(.horizontal)
-                .padding(.vertical, Tokens.Spacing.small)
             }
-            .onAppear {
-                if lastRead > 1 { proxy.scrollTo(lastRead, anchor: .center) }
-            }
+            .scrollTargetLayout()
+            .padding(.horizontal)
+            .padding(.vertical, Tokens.Spacing.small)
         }
+        .scrollPosition(id: $position, anchor: .center)
         .background(look.background)
         .navigationTitle(L10n.Localizable.PreviewsView.Title.previews)
         .navigationBarTitleDisplayMode(.inline)
