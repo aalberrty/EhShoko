@@ -11,49 +11,33 @@ import UIKit
 final class ReaderStripView: UIScrollView, UIScrollViewDelegate, ReaderContentView {
     weak var host: ReaderContentHost?
 
-    // Not private where the extensions in `ReaderStripView+Layout.swift` and
-    // `ReaderStripView+Trailer.swift` need them.
-    private(set) var configuration: ReaderConfiguration
+    private var configuration: ReaderConfiguration
     private var pageCount: Int
-    var layout = ReaderStripLayout(pageCount: 0, width: 0, gap: 0, displayScale: 1) { _ in nil }
-    private(set) var viewportSize = CGSize.zero
-    let container = UIView()
+    private var layout = ReaderStripLayout(pageCount: 0, width: 0, gap: 0, displayScale: 1) { _ in nil }
+    private var viewportSize = CGSize.zero
+    private let container = UIView()
 
-    private(set) var tiled: [Int: ReaderPageView] = [:]
+    private var tiled: [Int: ReaderPageView] = [:]
     private var tiledPages: ClosedRange<Int>?
     private var shownPages: ClosedRange<Int>?
     private var pool: [ReaderPageView] = []
-
-    let hasTrailer: Bool
-    /// The trailer's view while its place is within the tiled band.
-    var trailer: ReaderTrailerView?
-    /// Whether the trailer was last found to be what the reader is on.
-    private var reportedTrailer = false
-    /// The strip was last told to show the trailer (`requestedPage` is then `nil`).
-    private(set) var isTrailerRequested: Bool
 
     private var reportedPage: Int
     /// The page the strip was last told to show. It stays the current page while it is on
     /// screen and the reader has not scrolled by hand, even where the strip's ends keep it
     /// from reaching the middle of the viewport.
-    private(set) var requestedPage: Int?
-    var isAnimatingScroll = false
+    private var requestedPage: Int?
+    private var isAnimatingScroll = false
     /// Set while this view moves things itself, so that layout does not run half way through.
-    var isAdjusting = false
+    private var isAdjusting = false
     /// Whether pages are decoded for a zoomed-in strip.
-    var decodesForZoom = false
+    private var decodesForZoom = false
 
-    /// `onTrailer`: the reader was on the trailer, so the strip opens on it, not on `page`.
-    init(
-        configuration: ReaderConfiguration, pageCount: Int, showing page: Int,
-        hasTrailer: Bool = false, onTrailer: Bool = false
-    ) {
+    init(configuration: ReaderConfiguration, pageCount: Int, showing page: Int) {
         self.configuration = configuration
         self.pageCount = max(pageCount, 0)
-        self.hasTrailer = hasTrailer && pageCount > 0
-        isTrailerRequested = self.hasTrailer && onTrailer
         reportedPage = page
-        requestedPage = isTrailerRequested ? nil : page
+        requestedPage = page
         super.init(frame: .zero)
         delegate = self
         minimumZoomScale = 1
@@ -77,8 +61,6 @@ final class ReaderStripView: UIScrollView, UIScrollViewDelegate, ReaderContentVi
 
     var currentPage: Int { reportedPage }
 
-    var trailerState: ReaderTrailerState { reportedTrailer || isTrailerRequested ? .alone : .away }
-
     var visiblePages: ClosedRange<Int>? { shownPages }
 
     var loadedPages: ClosedRange<Int>? { tiledPages }
@@ -93,54 +75,28 @@ final class ReaderStripView: UIScrollView, UIScrollViewDelegate, ReaderContentVi
         maximumZoomScale = maximum
         if newConfiguration.pageGap != old.pageGap, viewportSize.width > 0 {
             let anchor = layout.anchor(atY: viewportMinY)
-            let staysOnTrailer = keepTrailerOrPage()
+            if requestedPage == nil {
+                requestedPage = reportedPage
+            }
             layout.setGap(newConfiguration.pageGap)
             applyLayoutChange(from: 1) { [self] in
-                if staysOnTrailer, let offset = layout.trailerOffset(viewportHeight: viewportHeight) {
-                    contentOffset.y = offset * zoomScale
-                } else if let anchor {
+                if let anchor {
                     contentOffset.y = layout.y(for: anchor) * zoomScale
                 }
             }
         }
     }
 
-    /// Before a change that moves pages under the viewport: what the reader is on stays what
-    /// the reader is on. Returns whether that is the trailer.
-    private func keepTrailerOrPage() -> Bool {
-        if reportedTrailer || isTrailerRequested {
-            isTrailerRequested = true
-            requestedPage = nil
-            return true
-        }
-        if requestedPage == nil {
-            requestedPage = reportedPage
-        }
-        return false
-    }
-
     func scroll(toPage page: Int, animated: Bool) {
         guard pageCount > 0 else { return }
         let page = min(max(page, 1), pageCount)
         requestedPage = page
-        isTrailerRequested = false
         guard viewportSize.width > 0 else {
             // Not laid out yet: the first layout shows this page.
             reportedPage = page
             return
         }
-        scroll(toY: offsetY(forPage: page), animated: animated)
-    }
-
-    private func scrollToTrailer(animated: Bool) {
-        guard let offset = layout.trailerOffset(viewportHeight: viewportHeight) else { return }
-        requestedPage = nil
-        isTrailerRequested = true
-        scroll(toY: offset * zoomScale, animated: animated)
-    }
-
-    private func scroll(toY y: CGFloat, animated: Bool) {
-        let target = CGPoint(x: contentOffset.x, y: y)
+        let target = CGPoint(x: contentOffset.x, y: offsetY(forPage: page))
         let distance = target.y - contentOffset.y
         guard animated, abs(distance) > 0.5, window != nil, !UIAccessibility.isReduceMotionEnabled else {
             isAnimatingScroll = false
@@ -159,13 +115,7 @@ final class ReaderStripView: UIScrollView, UIScrollViewDelegate, ReaderContentVi
     }
 
     func advance(by offset: Int, animated: Bool) -> Bool {
-        // The trailer follows the last page: one step on from it, and the end.
-        let isOnTrailer = isTrailerRequested || (requestedPage == nil && reportedTrailer)
-        let page = (isOnTrailer ? pageCount + 1 : requestedPage ?? reportedPage) + offset
-        if page == pageCount + 1, hasTrailer, !isOnTrailer {
-            scrollToTrailer(animated: animated)
-            return true
-        }
+        let page = (requestedPage ?? reportedPage) + offset
         guard page >= 1, page <= pageCount else { return false }
         scroll(toPage: page, animated: animated)
         return true
@@ -197,8 +147,6 @@ final class ReaderStripView: UIScrollView, UIScrollViewDelegate, ReaderContentVi
         guard let scale = ReaderGeometry.doubleTapScale(current: zoomScale, configuration: configuration) else {
             return
         }
-        // The trailer is not a page: a double tap on it zooms back out, never in.
-        if ReaderGeometry.isZoomed(scale), isOnTrailer(container.convert(point, from: self)) { return }
         let rect = ReaderGeometry.zoomRect(
             scale: scale,
             contentPoint: container.convert(point, from: self),
@@ -211,15 +159,16 @@ final class ReaderStripView: UIScrollView, UIScrollViewDelegate, ReaderContentVi
 
     // MARK: Size
 
-    /// Resizes the strip and keeps the same part of the same page at the top of the view, or
-    /// the trailer on screen when the reader is on it, whatever its new height.
+    /// Resizes the strip and keeps the same part of the same page at the top of the view.
     func setViewportSize(_ size: CGSize) {
         guard size != viewportSize, size.width > 0, size.height > 0 else { return }
         let isFirstLayout = viewportSize.width <= 0
         let anchor = isFirstLayout ? nil : layout.anchor(atY: viewportMinY)
-        // The top of the view stays where it was, but its middle can land on a neighbouring
-        // page. Resizing is not reading on, so the current page stays the current page.
-        let staysOnTrailer = isFirstLayout ? isTrailerRequested : keepTrailerOrPage()
+        if !isFirstLayout, requestedPage == nil {
+            // The top of the view stays where it was, but its middle can land on a neighbouring
+            // page. Resizing is not reading on, so the current page stays the current page.
+            requestedPage = reportedPage
+        }
         isAdjusting = true
         if zoomScale != 1 {
             setZoomScale(1, animated: false)
@@ -236,20 +185,13 @@ final class ReaderStripView: UIScrollView, UIScrollViewDelegate, ReaderContentVi
         } else {
             layout.setWidth(size.width)
         }
-        layout.setTrailerHeight(trailerHeight)
         updateContentGeometry()
         let request = decodeRequest
         for (page, view) in tiled {
             view.frame = layout.frame(ofPage: page)
             view.setDecodeRequest(request)
         }
-        if let trailer, let frame = layout.trailerFrame {
-            trailer.frame = frame
-        }
-        var top = anchor.map(layout.y(for:)) ?? layout.offset(forPage: reportedPage, viewportHeight: size.height)
-        if staysOnTrailer, let offset = layout.trailerOffset(viewportHeight: size.height) {
-            top = offset
-        }
+        let top = anchor.map(layout.y(for:)) ?? layout.offset(forPage: reportedPage, viewportHeight: size.height)
         contentOffset = CGPoint(x: 0, y: min(max(top, 0), layout.maximumOffset(viewportHeight: size.height)))
         isAdjusting = false
         setNeedsLayout()
@@ -295,7 +237,6 @@ final class ReaderStripView: UIScrollView, UIScrollViewDelegate, ReaderContentVi
         if changed {
             host?.contentDidChangeVisiblePages()
         }
-        placeTrailer(fromY: top - margin, toY: top + height + margin)
     }
 
     private func addPageView(for page: Int, request: ReaderDecodeRequest) {
@@ -318,25 +259,95 @@ final class ReaderStripView: UIScrollView, UIScrollViewDelegate, ReaderContentVi
         if let requestedPage, shownPages?.contains(requestedPage) == true {
             page = requestedPage
         }
-        if let page, page != reportedPage {
-            reportedPage = page
-            host?.contentDidChangeCurrentPage(page)
+        guard let page, page != reportedPage else { return }
+        reportedPage = page
+        host?.contentDidChangeCurrentPage(page)
+    }
+
+    // MARK: Geometry
+
+    /// Top of the visible area, in strip coordinates (which do not scale with zoom).
+    private var viewportMinY: CGFloat { bounds.minY / max(zoomScale, 0.01) }
+
+    private var viewportHeight: CGFloat { bounds.height / max(zoomScale, 0.01) }
+
+    private func offsetY(forPage page: Int) -> CGFloat {
+        layout.offset(forPage: page, viewportHeight: viewportHeight) * zoomScale
+    }
+
+    /// A page is decoded for the width of the strip; zoomed in, for up to twice that (the pixel
+    /// budget of the target still applies). Several pages are on screen here, so the factor is
+    /// lower than in the paged modes.
+    private var decodeRequest: ReaderDecodeRequest {
+        let zoom = decodesForZoom ? min(configuration.sanitizedMaximumZoomScale, 2) : 1
+        let target = ImageDecodeTarget(
+            size: CGSize(width: viewportSize.width, height: 0), constrainsHeight: false,
+            displayScale: traitCollection.displayScale, zoom: zoom
+        )
+        return ReaderDecodeRequest(target: target, keepsInMemory: !decodesForZoom)
+    }
+
+    /// Sizes the container and the scrollable area after the layout changed.
+    private func updateContentGeometry() {
+        let scale = zoomScale
+        container.bounds = CGRect(x: 0, y: 0, width: layout.width, height: layout.contentHeight)
+        contentSize = CGSize(width: layout.width * scale, height: layout.contentHeight * scale)
+        centerContainer()
+    }
+
+    /// The container's transform is the scroll view's, so it is placed by its centre. Below 1×
+    /// (while a pinch bounces) the strip is narrower than the view and stays centred.
+    private func centerContainer() {
+        let size = contentSize
+        container.center = CGPoint(x: max(size.width, bounds.width) / 2, y: size.height / 2)
+    }
+
+    /// Re-stacks the page views from `firstPage` down after `layout` changed, moves the scroll
+    /// position with `moveOffset`, and keeps a running scroll animation on target.
+    private func applyLayoutChange(from firstPage: Int, moveOffset: () -> Void) {
+        isAdjusting = true
+        UIView.performWithoutAnimation {
+            updateContentGeometry()
+            for (page, view) in tiled where page >= firstPage {
+                view.frame = layout.frame(ofPage: page)
+            }
+            moveOffset()
+            clampOffsetIfIdle()
         }
-        let onTrailer = layout.isTrailerCurrent(viewportMinY: viewportMinY, viewportHeight: viewportHeight)
-        if onTrailer != reportedTrailer {
-            reportedTrailer = onTrailer
-            host?.contentDidChangeTrailer(trailerState)
+        isAdjusting = false
+        if isAnimatingScroll, let requestedPage {
+            // The destination moved with the layout.
+            let target = CGPoint(x: contentOffset.x, y: offsetY(forPage: requestedPage))
+            if abs(target.y - contentOffset.y) > 0.5 {
+                setContentOffset(target, animated: true)
+            } else {
+                isAnimatingScroll = false
+            }
+        }
+        setNeedsLayout()
+    }
+
+    /// Brings the scroll position back in range after the strip got shorter. While a finger or
+    /// an animation is moving the strip, the scroll view does that itself when it settles.
+    private func clampOffsetIfIdle() {
+        guard !isDragging, !isDecelerating, !isZooming, !isZoomBouncing, !isAnimatingScroll else { return }
+        let maximumX = max(contentSize.width - bounds.width, 0)
+        let maximumY = max(contentSize.height - bounds.height, 0)
+        let clamped = CGPoint(
+            x: min(max(contentOffset.x, 0), maximumX),
+            y: min(max(contentOffset.y, 0), maximumY)
+        )
+        if clamped != contentOffset {
+            contentOffset = clamped
         }
     }
 
-    /// A pinch that starts on the trailer does not zoom in. (Zoomed in, the strip is one
-    /// surface and the pinch works everywhere, the trailer included, so there is a way back.)
-    override func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
-        if gestureRecognizer === pinchGestureRecognizer, !ReaderGeometry.isZoomed(zoomScale),
-           isOnTrailer(gestureRecognizer.location(in: container)) {
-            return false
-        }
-        return super.gestureRecognizerShouldBegin(gestureRecognizer)
+    private func setDecodesForZoom(_ zoomed: Bool) {
+        guard zoomed != decodesForZoom else { return }
+        decodesForZoom = zoomed
+        guard zoomed else { return }
+        let request = decodeRequest
+        tiled.values.forEach { $0.setDecodeRequest(request) }
     }
 
     // MARK: UIScrollViewDelegate
@@ -356,28 +367,9 @@ final class ReaderStripView: UIScrollView, UIScrollViewDelegate, ReaderContentVi
     func scrollViewWillBeginDragging(_ scrollView: UIScrollView) {
         requestedPage = nil
         isAnimatingScroll = false
-        if isTrailerRequested {
-            isTrailerRequested = false
-            // A finger took over before the strip got there: the request no longer counts.
-            host?.contentDidChangeTrailer(trailerState)
-        }
     }
-
-    // At rest the trailer's content can be made, if its place is tiled and it was put off:
-    // the next layout pass asks for it.
 
     func scrollViewDidEndScrollingAnimation(_ scrollView: UIScrollView) {
         isAnimatingScroll = false
-        setNeedsLayout()
-    }
-
-    func scrollViewDidEndDecelerating(_ scrollView: UIScrollView) {
-        setNeedsLayout()
-    }
-
-    func scrollViewDidEndDragging(_ scrollView: UIScrollView, willDecelerate decelerate: Bool) {
-        if !decelerate {
-            setNeedsLayout()
-        }
     }
 }

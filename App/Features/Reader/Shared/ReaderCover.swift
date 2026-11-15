@@ -22,17 +22,28 @@ enum ReaderSourceID: Hashable, Sendable {
     case preview(gid: String, page: Int)
 }
 
-/// Where the closing page sends the reader (`Design/designs/closing-page.md`). The reader
-/// closes, and once it has gone its presenter goes there, so the reader never navigates by
-/// itself.
+/// Where the closing page sends the reader (`Design/designs/closing-page.md`). The presenter
+/// closes the reader and goes there, so the reader never navigates by itself.
 enum ReaderExit: Hashable, Sendable {
-    /// The gallery's page.
     case gallery
-    /// The gallery's comments, from the top.
     case comments
-    /// A search, such as the circle or artist of "More by".
     case search(keyword: String)
     case signIn
+}
+
+/// Leaves the reader for `ReaderExit`, through its presenter. Read from the environment by
+/// what is shown inside the reader (the closing page).
+struct ReaderExitAction {
+    fileprivate let action: (ReaderExit) -> Void
+
+    func callAsFunction(_ exit: ReaderExit) {
+        action(exit)
+    }
+}
+
+extension EnvironmentValues {
+    /// Set by `readerCover` on the reader it presents; `nil` elsewhere.
+    @Entry var readerExit: ReaderExitAction?
 }
 
 extension View {
@@ -47,15 +58,12 @@ extension View {
     /// Presents the reader for `item` over the whole screen.
     ///
     /// - Parameters:
-    ///   - detail: the gallery page's model, when a gallery page presents it. The closing page
-    ///     shows it, so a rating or favourite made there is on the page when the reader closes;
-    ///     without it, the closing page makes a model of its own when it is reached.
+    ///   - detail: the gallery page's model, when a gallery page presents it.
     ///   - source: the control the reader zooms out of, asked when it opens. `nil`, or no
     ///     namespace in the environment, gives the system's cover transition; the choice
     ///     cannot be made when it closes. A control that has gone while reading is zoomed back
     ///     to where it was.
-    ///   - onExit: where to go after the closing page closed the reader, called once the reader
-    ///     has gone, before `onDismiss`.
+    ///   - onExit: where to go after the closing page closed the reader.
     ///   - onDismiss: after the reader went away, however it was closed: a list refreshes its
     ///     rows' reading progress here.
     func readerCover(
@@ -110,27 +118,16 @@ private struct ReaderCover: ViewModifier {
     let onDismiss: (() -> Void)?
 
     @Environment(\.zoomNamespace) private var namespace
-    /// Where the closing page asked to go, kept until the reader has gone, so that the
-    /// presenter pushes or presents over a settled screen rather than under a leaving cover.
-    @State private var pendingExit: ReaderExit?
 
     func body(content: Content) -> some View {
-        content.fullScreenCover(item: $item, onDismiss: readerDidClose) { request in
+        content.fullScreenCover(item: $item, onDismiss: onDismiss) { request in
             ReaderScreen(gallery: request.gallery, initialPage: request.page, detail: detail?.detail)
-                .readerClosingContext(detail: detail) { exit in
-                    pendingExit = exit
-                    item = nil
-                }
                 .modifier(ReaderZoom(sourceID: source(request), namespace: namespace))
+                .environment(\.readerExit, ReaderExitAction { exit in
+                    item = nil
+                    onExit(exit)
+                })
         }
-    }
-
-    private func readerDidClose() {
-        if let exit = pendingExit {
-            pendingExit = nil
-            onExit(exit)
-        }
-        onDismiss?()
     }
 }
 

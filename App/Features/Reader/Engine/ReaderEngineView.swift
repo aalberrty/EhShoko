@@ -90,19 +90,9 @@ final class ReaderEngineProxy {
         engine?.reloadData()
     }
 
-    #if DEBUG || HARNESS
-    /// For the reader harness: handed to the engine when it attaches, before its first layout.
-    var trace: ((String) -> Void)?
-
-    var harnessEngine: ReaderEngineViewController? { engine }
-    #endif
-
     fileprivate func attach(to controller: ReaderEngineViewController) {
         guard engine !== controller else { return }
         engine = controller
-        #if DEBUG || HARNESS
-        controller.trace = trace
-        #endif
         if let pendingPage {
             self.pendingPage = nil
             controller.scrollToPage(pendingPage, animated: false)

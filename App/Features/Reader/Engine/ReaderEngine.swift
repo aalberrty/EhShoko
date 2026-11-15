@@ -19,24 +19,6 @@ protocol ReaderEngineDataSource: AnyObject {
     /// returning `nil` is always fine; a known ratio just means the page has its final shape
     /// before its image arrives.
     func aspectRatio(at page: Int) -> CGFloat?
-
-    /// Whether something that is not a page follows the last page (the closing page). Read
-    /// together with `pageCount`, so it must cost nothing and create nothing.
-    var hasTrailer: Bool { get }
-
-    /// The trailer's content. Asked once, the first time the trailer is about to be shown:
-    /// when its place is next to the screen, the reader is at rest and its first image is up,
-    /// or when its place is on screen. The engine keeps it as a child for as long as it lives.
-    /// It has no page number, and no zoom, menu or Live Text. In the vertical direction it is
-    /// as tall as its view's `sizeThatFits` says for the strip's width, and at least 70% of
-    /// the viewport.
-    func makeTrailerViewController() -> UIViewController?
-}
-
-extension ReaderEngineDataSource {
-    var hasTrailer: Bool { false }
-
-    func makeTrailerViewController() -> UIViewController? { nil }
 }
 
 /// What the engine reports back.
@@ -73,14 +55,4 @@ protocol ReaderEngineDelegate: AnyObject {
 
     /// The context menu for a page, or `nil` for none.
     func readerContextMenu(for page: Int) -> UIMenu?
-
-    /// The trailer became, or stopped being, what the reader is on: alone, or beside the last
-    /// page where two pages share the screen. The current page stays the last page meanwhile,
-    /// and is reported before this. A gallery of two pages shown as one spread is the one
-    /// place where the page changes with it: that spread reports page 1, the trailer page 2.
-    func readerDidChangeTrailerVisibility(_ isCurrent: Bool)
-}
-
-extension ReaderEngineDelegate {
-    func readerDidChangeTrailerVisibility(_ isCurrent: Bool) {}
 }
