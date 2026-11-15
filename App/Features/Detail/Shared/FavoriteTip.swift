@@ -147,7 +147,7 @@ private struct FavoriteTipPresenter: UIViewRepresentable {
 
 /// A clear view behind the Favourite button, the popover's source and passthrough view.
 ///
-/// While it is in a window it follows TipKit's verdict on the tip, unless the tip is settled,
+/// While it is in a window it follows TipKit's verdict on the tip until the tip is settled,
 /// which after its one showing it always is: then it waits for nothing at all.
 private final class FavoriteTipSourceView: UIView {
     var tip: FavoriteTip
@@ -198,11 +198,17 @@ private final class FavoriteTipSourceView: UIView {
 
     private func follow() async {
         if await FavoriteTip.isSettled() { return }
-        for await shouldDisplay in tip.shouldDisplayUpdates {
+        for await status in tip.statusUpdates {
             if Task.isCancelled { return }
-            if shouldDisplay {
+            switch status {
+            case .available:
                 present()
-            } else {
+            case .invalidated:
+                // Settled for good, perhaps only now that TipKit has read its store: nothing
+                // more to wait for on this screen.
+                closePopover(animated: true)
+                return
+            default:
                 closePopover(animated: true)
             }
         }
