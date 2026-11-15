@@ -41,7 +41,7 @@ nonisolated struct WallPileMetrics: Equatable, Sendable {
 }
 
 /// One pile: three cards fanned, each with a hairline edge and no shadow, then the folder's
-/// colour dot and name on one line and its count beneath. It sits in scrolling content, so
+/// colour dot and name on one line (two at accessibility sizes) and its count beneath. It sits in scrolling content, so
 /// nothing in it is glass, material or shadow; it takes values only and its body formats
 /// nothing.
 struct WallPileView: View, Equatable {
@@ -86,8 +86,8 @@ struct WallPileView: View, Equatable {
     }
 }
 
-/// The three covers: the newest in front, straight; the second behind it to the left and the
-/// third to the right, turned. A place with no cover is a tile.
+/// The three cards: the newest cover in front, straight; the second behind it to the left
+/// and the third to the right, turned.
 private struct WallPileFan: View {
     let pile: WallPile
     let metrics: WallPileMetrics
