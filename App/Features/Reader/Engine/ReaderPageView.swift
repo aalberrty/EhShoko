@@ -1,23 +1,38 @@
 import EhFeatures
+import EhModels
 import Kingfisher
 import UIKit
 
 /// What a page view is asked to show. The engine derives it from the host's page state and
-/// from the image failures it remembers.
+/// from the image failures it remembers. A failure carries its reason when it is known, for
+/// the line under "This page didn't load".
 enum ReaderPageContent: Equatable {
     /// The image URL is not resolved yet.
     case pending
     /// Resolving the image URL failed.
-    case resolutionFailed
+    case resolutionFailed(AppError?)
     case image(URL)
     /// The image at the URL could not be loaded.
-    case imageFailed
+    case imageFailed(AppError?)
+
+    var isFailure: Bool {
+        switch self {
+        case .resolutionFailed, .imageFailed: true
+        case .pending, .image: false
+        }
+    }
+
+    var isResolutionFailure: Bool {
+        if case .resolutionFailed = self { true } else { false }
+    }
 }
 
 protocol ReaderPageViewDelegate: AnyObject {
     func pageView(_ pageView: ReaderPageView, didLoadImageWithPixelSize pixelSize: CGSize)
-    func pageViewDidFailToLoadImage(_ pageView: ReaderPageView)
+    func pageView(_ pageView: ReaderPageView, didFailToLoadImageFor reason: AppError?)
     func pageViewDidRequestRetry(_ pageView: ReaderPageView)
+    /// "Reload all N failed pages" on the page's failure card.
+    func pageViewDidRequestRetryAllFailed(_ pageView: ReaderPageView)
     func contextMenu(for pageView: ReaderPageView) -> UIMenu?
 }
 
@@ -62,6 +77,10 @@ final class ReaderPageView: UIView, UIContextMenuInteractionDelegate {
             guard let self else { return }
             delegate?.pageViewDidRequestRetry(self)
         }
+        statusView.onRetryAllFailed = { [weak self] in
+            guard let self else { return }
+            delegate?.pageViewDidRequestRetryAllFailed(self)
+        }
         addSubview(statusView)
 
         imageView.frame = bounds
@@ -98,11 +117,17 @@ final class ReaderPageView: UIView, UIContextMenuInteractionDelegate {
         switch content {
         case .pending:
             showStatus(.resolving)
-        case .resolutionFailed, .imageFailed:
+        case .resolutionFailed(let reason), .imageFailed(let reason):
+            statusView.setFailureReason(reason)
             showStatus(.failed)
         case .image(let url):
             show(url, request: request)
         }
+    }
+
+    /// How many pages of the gallery have failed, which a failure card offers to reload.
+    func setFailedPageCount(_ count: Int) {
+        statusView.setFailedPageCount(count)
     }
 
     /// The page's content changed (URL resolved, failure, retry); everything else stays.
@@ -207,13 +232,13 @@ final class ReaderPageView: UIView, UIContextMenuInteractionDelegate {
                 let image = try await ImagePipeline.image(
                     for: load.url, target: load.request.target, displayScale: scale,
                     keepsInMemory: load.request.keepsInMemory,
-                    progress: { [weak self] fraction in self?.updateProgress(fraction, for: load) }
+                    progress: { [weak self] progress in self?.updateProgress(progress, for: load) }
                 )
                 guard !Task.isCancelled else { return }
                 self?.finish(load, with: image)
             } catch {
                 guard !Task.isCancelled else { return }
-                self?.fail(load)
+                self?.fail(load, reason: ReaderImageFailure.reason(for: error))
             }
         }
     }
@@ -224,9 +249,9 @@ final class ReaderPageView: UIView, UIContextMenuInteractionDelegate {
         loading = nil
     }
 
-    private func updateProgress(_ fraction: Double, for load: Load) {
+    private func updateProgress(_ progress: ImageLoadProgress, for load: Load) {
         guard loading == load, shown == nil else { return }
-        statusView.setProgress(Float(fraction))
+        statusView.setProgress(progress)
     }
 
     private func finish(_ load: Load, with image: UIImage) {
@@ -238,15 +263,16 @@ final class ReaderPageView: UIView, UIContextMenuInteractionDelegate {
         reportLoaded(load)
     }
 
-    private func fail(_ load: Load) {
+    private func fail(_ load: Load, reason: AppError?) {
         guard loading == load else { return }
         loading = nil
         loadTask = nil
         // A failed upgrade leaves the image that is already there.
         guard shown == nil else { return }
-        content = .imageFailed
+        content = .imageFailed(reason)
+        statusView.setFailureReason(reason)
         showStatus(.failed)
-        delegate?.pageViewDidFailToLoadImage(self)
+        delegate?.pageView(self, didFailToLoadImageFor: reason)
     }
 
     private func reportLoaded(_ load: Load) {

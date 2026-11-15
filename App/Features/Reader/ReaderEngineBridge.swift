@@ -1,4 +1,5 @@
 import EhFeatures
+import EhModels
 import UIKit
 
 /// Connects the reader engine to `ReaderModel`: the engine's questions and events go to the
@@ -37,6 +38,12 @@ final class ReaderEngineBridge: ReaderEngineDataSource, ReaderEngineDelegate {
         model.aspectRatio(at: page)
     }
 
+    func failureReason(at page: Int) -> AppError? {
+        model.failureReason(at: page)
+    }
+
+    var failedPageCount: Int { model.failedPageCount }
+
     /// Asked once per engine, after the first page and at rest within one page of the end:
     /// only then is the closing page made, and with it, for a reader that no gallery page
     /// presented, its detail model and request.
@@ -60,6 +67,10 @@ final class ReaderEngineBridge: ReaderEngineDataSource, ReaderEngineDelegate {
 
     func readerDidRequestRetry(page: Int) {
         model.retry(page: page)
+    }
+
+    func readerDidRequestRetryAllFailed() {
+        model.retryAllFailedImages()
     }
 
     func readerDidLoadImage(page: Int, pixelSize: CGSize) {
