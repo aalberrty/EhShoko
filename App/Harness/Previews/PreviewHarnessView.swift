@@ -32,6 +32,10 @@ struct PreviewHarnessView: View {
     @State private var isPresented: Bool
     @State private var status = ""
 
+    /// The sheet is requested from the first `.task`, once the root is in a window, rather
+    /// than as the initial state: on the iOS 18 simulator a launch with a colour scheme set
+    /// did not show a sheet requested before the root appeared.
+    private let opensAtLaunch: Bool
     private let cycles: Int
     private let exports: Bool
 
@@ -53,7 +57,8 @@ struct PreviewHarnessView: View {
         default: nil
         }
         page = defaults.string(forKey: "HarnessPage").flatMap(PreviewHarnessPage.init(rawValue:)) ?? .options
-        isPresented = defaults.bool(forKey: "HarnessOpen")
+        isPresented = false
+        opensAtLaunch = defaults.bool(forKey: "HarnessOpen")
         cycles = defaults.integer(forKey: "HarnessCycle")
         exports = defaults.bool(forKey: "HarnessExport")
     }
@@ -110,6 +115,9 @@ struct PreviewHarnessView: View {
     /// warms the caches; growth that goes on round after round is what an opening leaves
     /// behind, and `-HarnessControl YES` shows how much of it the sheet itself leaves.
     private func runScripted() async {
+        if opensAtLaunch {
+            isPresented = true
+        }
         if cycles > 0 {
             try? await Task.sleep(for: .seconds(3))
             let rounds = max(UserDefaults.standard.integer(forKey: "HarnessRounds"), 2)
