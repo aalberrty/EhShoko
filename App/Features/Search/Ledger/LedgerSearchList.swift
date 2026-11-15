@@ -152,9 +152,9 @@ private struct LedgerCopiedLinkLabel: View {
 
 /// A group's heading in Ledger's small capitals, with a link in the tint trailing ("Clear").
 /// At accessibility sizes the link goes under the heading, so neither is cut short.
-struct LedgerSearchHeading<Link: View>: View {
+struct LedgerSearchHeading<Trailing: View>: View {
     let title: String
-    @ViewBuilder var link: Link
+    @ViewBuilder var link: Trailing
 
     @Environment(\.dynamicTypeSize) private var typeSize
 
@@ -194,7 +194,7 @@ struct LedgerSearchHeading<Link: View>: View {
     }
 }
 
-extension LedgerSearchHeading where Link == EmptyView {
+extension LedgerSearchHeading where Trailing == EmptyView {
     init(title: String) {
         self.init(title: title) { EmptyView() }
     }

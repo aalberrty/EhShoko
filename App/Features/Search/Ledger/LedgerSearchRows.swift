@@ -112,12 +112,13 @@ struct LedgerSearchWordRow: View {
             words
                 .foregroundStyle(look.label)
                 .truncationMode(.middle)
-                .layoutPriority(1)
             if let name = word.name {
                 Spacer(minLength: 8)
+                // The name the user gave it is kept whole first; the words give way.
                 Text(name)
                     .font(.subheadline)
                     .foregroundStyle(look.secondaryLabel)
+                    .layoutPriority(1)
             }
         }
         .lineLimit(typeSize.isAccessibilitySize ? 3 : 1)
