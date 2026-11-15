@@ -53,6 +53,9 @@ struct ListSignInState: View {
                 }
             }
             .multilineTextAlignment(.center)
+            // ViewThatFits measures each choice at its ideal size; without this the
+            // sentences would be measured, and drawn, on one line.
+            .fixedSize(horizontal: false, vertical: true)
             VStack(spacing: Tokens.Spacing.medium) {
                 signInButton(isScrolling: isScrolling)
                 Button(L10n.Localizable.List.Signin.cookies) { open([.settings(.account)]) }
@@ -62,6 +65,7 @@ struct ListSignInState: View {
                 .font(.footnote)
                 .foregroundStyle(look.tertiaryLabel)
                 .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
         }
         .padding(.horizontal, Tokens.Spacing.xxLarge)
         .padding(.vertical, Tokens.Spacing.xLarge)

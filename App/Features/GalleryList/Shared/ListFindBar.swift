@@ -22,14 +22,12 @@ private struct ListFindBarModifier: ViewModifier {
 
     func body(content: Content) -> some View {
         content
-            .topBar(spacing: 0) {
-                if isPresented {
-                    ListFindBar(text: $text) {
-                        text = ""
-                        isPresented = false
-                    }
-                    .transition(.move(edge: .top).combined(with: .opacity))
+            .topBar(isPresented: isPresented, spacing: 0) {
+                ListFindBar(text: $text) {
+                    text = ""
+                    isPresented = false
                 }
+                .transition(.move(edge: .top).combined(with: .opacity))
             }
             .animation(.smooth(duration: 0.3), value: isPresented)
     }

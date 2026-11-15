@@ -56,6 +56,7 @@ struct ActionDock: View {
                 DockSymbol(systemImage: systemImage, isDimmed: false)
             }
             .menuStyle(.button)
+            .menuOrder(.fixed)
             .buttonStyle(.plain)
             .chromeShape(.trailing, in: .circle)
             .accessibilityLabel(title)
@@ -146,6 +147,9 @@ private struct DockRoundButton: View {
                 perform(item.action)
             }
             .menuStyle(.button)
+            // Menus open upward from the dock, where the system would list them bottom-up;
+            // fixed keeps the order the design wrote (folder 0 at the top).
+            .menuOrder(.fixed)
         } else {
             Button { perform(item.action) } label: { symbol }
         }
@@ -168,26 +172,45 @@ private struct DockSymbol: View {
     }
 }
 
-/// The tinted pill, taking the width the round buttons leave.
+/// The tinted pill, taking the width the round buttons leave and never more: when the title
+/// and the detail do not fit (a 372 pt side pane), it shows the title alone, and VoiceOver
+/// still reads both. A design that wants a shorter detail there passes one ("23 / 48").
 private struct DockPill: View {
     let item: DockItem
     let perform: (DockAction) -> Void
+    @Environment(\.lookTint) private var tint
 
-    /// The label's height inside the prominent style's padding, so that the pill is as tall as
-    /// the round buttons.
-    private static let labelHeight: CGFloat = 38
+    /// The label's height inside the prominent style's padding at the large control size
+    /// (measured: about 27 pt in all), so that the pill is as tall as the round buttons.
+    private static let labelHeight: CGFloat = ActionDock.height - 27
 
     var body: some View {
         Button { perform(item.action) } label: { label }
             .glassProminentButtonStyle()
             .buttonBorderShape(.capsule)
             .controlSize(.large)
+            // The concrete colour, not the inherited accent, which turns grey in an
+            // inspector shown as a sheet on iOS 26.
+            .tint(tint)
+            .accessibilityLabel([item.title, item.detail].compactMap(\.self).joined(separator: ", "))
             .disabled(!item.isEnabled)
             .opacity(item.isDimmed ? 0.6 : 1)
             .chromeMorph(.centre)
     }
 
     private var label: some View {
+        ViewThatFits(in: .horizontal) {
+            line(showsDetail: true)
+            line(showsDetail: false)
+        }
+        .font(.body)
+        .lineLimit(1)
+        .padding(.horizontal, Tokens.Spacing.xSmall)
+        .frame(maxWidth: .infinity, minHeight: Self.labelHeight)
+        .contentTransition(.interpolate)
+    }
+
+    private func line(showsDetail: Bool) -> some View {
         HStack(spacing: Tokens.Spacing.xSmall + 2) {
             if let systemImage = item.systemImage {
                 Image(systemName: systemImage)
@@ -195,18 +218,12 @@ private struct DockPill: View {
             }
             Text(item.title)
                 .fontWeight(.semibold)
-            if let detail = item.detail {
+            if showsDetail, let detail = item.detail {
                 Text(detail)
                     .monospacedDigit()
                     .opacity(0.85)
             }
         }
-        .font(.body)
-        .lineLimit(1)
-        .minimumScaleFactor(0.75)
-        .padding(.horizontal, Tokens.Spacing.xSmall)
-        .frame(maxWidth: .infinity, minHeight: Self.labelHeight)
-        .contentTransition(.interpolate)
     }
 }
 

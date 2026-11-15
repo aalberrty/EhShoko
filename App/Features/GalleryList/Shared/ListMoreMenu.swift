@@ -136,13 +136,11 @@ private struct ListMoreMenuContent<Form: View>: View {
     var body: some View {
         Section {
             if let summary = controls.filterSummary {
+                // A menu entry takes a second text as its subtitle, and an image as its symbol.
                 Button { perform(.filters) } label: {
-                    Label {
-                        Text(L10n.Localizable.ToolbarItem.Button.filters)
-                        Text(summary.shortText)
-                    } icon: {
-                        Image(systemName: summary.isDefault ? "line.3.horizontal.decrease" : "line.3.horizontal.decrease.circle.fill")
-                    }
+                    Text(L10n.Localizable.ToolbarItem.Button.filters)
+                    Text(summary.shortText)
+                    Image(systemName: summary.isDefault ? "line.3.horizontal.decrease" : "line.3.horizontal.decrease.circle.fill")
                 }
             }
             if let sort = controls.sort {
@@ -198,14 +196,11 @@ private struct ListMoreMenuContent<Form: View>: View {
                 }
             }
         } label: {
-            Label {
-                Text(picker.title)
-                if let selected = picker.options.first(where: { $0.id == picker.selection }) {
-                    Text(selected.title)
-                }
-            } icon: {
-                Image(systemName: picker.systemImage)
+            Text(picker.title)
+            if let selected = picker.options.first(where: { $0.id == picker.selection }) {
+                Text(selected.title)
             }
+            Image(systemName: picker.systemImage)
         }
     }
 }

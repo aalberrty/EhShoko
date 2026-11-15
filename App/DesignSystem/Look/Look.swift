@@ -26,6 +26,11 @@ extension EnvironmentValues {
     /// The colour of text and symbols drawn on a fill of the tint (the prominent pill, a
     /// selected chip). Set with the tint by `lookEnvironment(_:accent:)`.
     @Entry var onTint: Color = .white
+    /// The tint as a concrete colour, for a surface that must keep it where the inherited
+    /// accent does not reach: on iOS 26 a prominent glass button in an inspector shown as a
+    /// sheet turns grey with the inherited tint and stays tinted with an explicit one
+    /// (`spikes/S5.md`). Set with `onTint` by `lookEnvironment(_:accent:)`.
+    @Entry var lookTint: Color = .accentColor
 }
 
 extension View {
@@ -45,6 +50,7 @@ private struct LookEnvironment: ViewModifier {
         content
             .environment(\.look, look)
             .environment(\.onTint, tint.onTint)
+            .environment(\.lookTint, tint.tint)
             .tint(tint.tint)
     }
 }

@@ -31,7 +31,8 @@ struct DockHarnessView: View {
     /// Signed in with made-up cookies, so the menus show their favourite entries; nothing it
     /// sends reaches the site with them.
     @State private var actions = withDependencies {
-        let storage = HTTPCookieStorage()
+        // A storage of its own, apart from the app's: a bare `HTTPCookieStorage()` keeps nothing.
+        let storage = HTTPCookieStorage.sharedCookieStorage(forGroupContainerIdentifier: "app.ehgaro.dock-harness")
         let store = CookieStore(storage: storage)
         if let url = URL(string: "https://e-hentai.org/") {
             store.setOrEditCookie(for: url, name: CookieName.ipbMemberId, value: "1")
@@ -58,10 +59,11 @@ struct DockHarnessView: View {
             .overlay(alignment: .bottom) { DockHarnessChrome(setup: $setup) }
             .presentationDetents([.medium, .large])
         }
+        // Inside the stores it reads: the HUD names the folder from `UserStore`.
+        .galleryActionsFeedback(actions)
         .environment(stack)
         .environment(appRouter)
         .environment(userStore)
-        .galleryActionsFeedback(actions)
         .lookEnvironment(setup.look, accent: .systemBlue)
         .preferredColorScheme(setup.scheme)
         .task {
