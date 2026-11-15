@@ -47,12 +47,12 @@
 #                         of GalleryOpen and ReaderOpen, the opening transition.
 #   --app-arg <arg>       signposts: one more launch argument, repeatable (for example
 #                         --app-arg -Harness --app-arg reader to time the reader harness).
-#   --bundle-id <id>      The app to measure. Default: $EHPANDA_BUNDLE_ID, else app.ehpanda.
+#   --bundle-id <id>      The app to measure. Default: $APP_BUNDLE_ID, else app.ehshoko.
 #
 # The harness and the launch arguments above exist in Debug builds, and in any build compiled
 # with the HARNESS condition, which measures optimised code: add
 #   'SWIFT_ACTIVE_COMPILATION_CONDITIONS=$(inherited) HARNESS'
-# to the Release xcodebuild command in CLAUDE.md.
+# to the Release xcodebuild command that builds the app for the device.
 #
 # Example, from the repository root, with a Debug build installed on the iOS 26 simulator:
 #   Scripts/measure.sh --device 37B2537D-E570-4030-B731-E2857E827B7E list v3-rows
