@@ -102,8 +102,8 @@ nonisolated extension GalleryEntry {
     }
 
     /// How long ago something happened, in its largest whole unit: what a row shows as "3 h",
-    /// "2 d" or "opened 5 min ago". There are about 120 values, so the app can keep each one's
-    /// text instead of formatting it in a row.
+    /// "2 d" or "opened 5 min ago". A list meets fewer than 150 values, so the app can keep each
+    /// one's text instead of formatting it in a row.
     public nonisolated struct Age: Hashable, Sendable {
         public enum Unit: Int, Hashable, Sendable, CaseIterable {
             case minute, hour, day, week, month, year
@@ -123,11 +123,9 @@ nonisolated extension GalleryEntry {
         /// clock ahead of the device's, counts as now. Counted in seconds, not in calendar days,
         /// so it does not depend on the time zone.
         public init(from date: Date, to now: Date) {
-            let seconds = max(now.timeIntervalSince(date), 0)
-            guard seconds.isFinite else {
-                self.init(count: 1, unit: .minute)
-                return
-            }
+            let interval = now.timeIntervalSince(date)
+            // Held under about 30,000 years, so that no date, however wrong, overflows a count.
+            let seconds = interval.isNaN ? 0 : min(max(interval, 0), 1e12)
             let days = Int(seconds / 86_400)
             switch seconds {
             case ..<3_600: self.init(count: max(Int(seconds / 60), 1), unit: .minute)

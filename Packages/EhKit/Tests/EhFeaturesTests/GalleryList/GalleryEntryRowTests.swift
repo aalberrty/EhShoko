@@ -106,6 +106,14 @@ import Testing
         #expect(age == GalleryEntry.Age(count: count, unit: unit))
     }
 
+    @Test func aDateBeyondAnyRealOneStillGivesAnAge() {
+        #expect(GalleryEntry.Age(from: .distantPast, to: Self.now).unit == .year)
+        let endless = GalleryEntry.Age(from: Date(timeIntervalSinceReferenceDate: -.infinity), to: Self.now)
+        #expect(endless == GalleryEntry.Age(count: 31_709, unit: .year))
+        let undefined = GalleryEntry.Age(from: Date(timeIntervalSinceReferenceDate: .nan), to: Self.now)
+        #expect(undefined == GalleryEntry.Age(count: 1, unit: .minute))
+    }
+
     @Test func anAgeGivesTheSystemFormattersOneUnit() {
         #expect(GalleryEntry.Age(count: 5, unit: .minute).dateComponents == DateComponents(minute: 5))
         #expect(GalleryEntry.Age(count: 3, unit: .hour).dateComponents == DateComponents(hour: 3))
