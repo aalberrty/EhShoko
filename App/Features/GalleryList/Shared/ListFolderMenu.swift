@@ -7,7 +7,8 @@ import SwiftUI
 /// their screens have, each with its count when a favourites page has told it, the current one
 /// checked (v3's folder menu).
 /// Choosing another replaces the screen with that folder's, so folders change without going
-/// back. Each list design puts it on its title (`ListDesignInput.ownFolder(hasHeader:)`).
+/// back. Wall and Ledger put it on their title (`ListDesignInput.ownFolder(hasHeader:)`); Shelf,
+/// whose large title takes no menu, puts it in More.
 ///
 /// Its entries are built when the menu opens.
 struct ListFolderMenu: View {
