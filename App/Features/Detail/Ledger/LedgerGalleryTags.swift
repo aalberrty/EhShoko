@@ -13,7 +13,9 @@ private typealias MenuTitles = L10n.Localizable.DetailView.ContextMenu.Button
 ///
 /// Each tag is a link: a tap searches it. Vote switches the links to open the tag's menu
 /// (Vote up, Vote down or Withdraw vote, and Tag detail when the tag has one) until Vote is
-/// tapped again.
+/// tapped again. A long press on a namespace's line lists its tags that have a detail, signed
+/// in or not, as the old app's long press on a tag offered it to everyone; a line is one
+/// text, so the menu is the line's rather than one tag's.
 struct LedgerGalleryTags: View {
     let model: GalleryDetailModel
 
@@ -42,6 +44,7 @@ struct LedgerGalleryTags: View {
                     )
                     .equatable()
                     .padding(.vertical, 8)
+                    .contextMenu { detailMenu(for: row) }
                 }
             }
             .environment(\.openURL, OpenURLAction { url in
@@ -106,6 +109,24 @@ struct LedgerGalleryTags: View {
         }
         if settings.translatesTags, let detail = chip.detail {
             Button(MenuTitles.detail) { model.showTagDetail(detail) }
+        }
+    }
+
+    /// The tag details of a namespace's tags, while tags are translated; empty, and so no
+    /// menu, when none of them has one.
+    @ViewBuilder
+    private func detailMenu(for row: DetailTagRow) -> some View {
+        if settings.translatesTags {
+            let chips = row.chips.filter { $0.detail != nil }
+            if !chips.isEmpty {
+                Section(MenuTitles.detail) {
+                    ForEach(chips) { chip in
+                        if let detail = chip.detail {
+                            Button(chipText(chip), systemImage: "doc.richtext") { model.showTagDetail(detail) }
+                        }
+                    }
+                }
+            }
         }
     }
 
