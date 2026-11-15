@@ -45,6 +45,18 @@ extension ReaderModel {
         return Array((sliderPage - reach)...(sliderPage + reach))
     }
 
+    /// Loads the thumbnails the strip lacks around the slider's page, for a strip that shows
+    /// outside a scrub. Shelf's panel shows its strip whenever the controls show, so it calls
+    /// this when the panel appears, when the reader moves on and when a preview page arrives
+    /// (which can show that the strip's pages are listed on another preview page). Each
+    /// preview page is requested once, so calling it again costs nothing.
+    ///
+    /// During a scrub it does nothing: the scrub loads them itself, where the slider rests.
+    public func loadStripThumbnails() {
+        guard !showsSliderPreview else { return }
+        loadStripPreviews()
+    }
+
     private func jump(to page: Int) {
         // On the closing page `currentPage` is still the last page, which is then a place to go.
         guard page != currentPage || isAtEnd else { return }
