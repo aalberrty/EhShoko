@@ -69,8 +69,8 @@ internal enum L10n {
     }
     internal enum Website {
       internal enum Response {
-        /// ExHentai didn't accept your sign-in. It may have expired, or this account may not have access to ExHentai. Sign in again in Settings › Account, or switch to E-Hentai there.
-        internal static let exhentaiAccessDenied = L10n.tr("Localizable", "error_view.title.exhentai_access_denied", fallback: "ExHentai didn't accept your sign-in. It may have expired, or this account may not have access to ExHentai. Sign in again in Settings › Account, or switch to E-Hentai there.")
+        /// ExHentai did not accept your login. The login may have expired, or this account may not have access to ExHentai. Log in again in Settings › Account, or switch the gallery host to E-Hentai there.
+        internal static let exhentaiAccessDenied = L10n.tr("Localizable", "error_view.title.exhentai_access_denied", fallback: "ExHentai did not accept your login. The login may have expired, or this account may not have access to ExHentai. Log in again in Settings › Account, or switch the gallery host to E-Hentai there.")
         /// This gallery has been removed or is unavailable.
         internal static let galleryUnavailable = L10n.tr("Constant", "website.response.gallery_unavailable", fallback: "This gallery has been removed or is unavailable.")
         /// Constant.strings
