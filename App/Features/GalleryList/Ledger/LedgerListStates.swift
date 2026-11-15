@@ -195,7 +195,7 @@ struct LedgerInlineState: View {
         switch phase {
         case .signedOut:
             Button(L10n.Localizable.NotLoginView.Button.login) {
-                appRouter.presentSettings([.settings(.account), .settings(.login)])
+                appRouter.presentSignIn()
             }
         case .failed(let error) where error.isRetryable:
             Button(L10n.Localizable.ErrorView.Button.retry) { feed.retry() }

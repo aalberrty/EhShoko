@@ -9,8 +9,8 @@ import SwiftUI
 
 /// Signed out, on a list that needs an account (Watched, favourites): a symbol in a circle,
 /// what the list is, a Sign In pill in the tint, "Use cookies instead", and what else needs an
-/// account (`shelf/10-watched-signed-out-light`). Sign In opens Settings at Account › Login,
-/// the link Settings at Account.
+/// account (`shelf/10-watched-signed-out-light`). Sign In opens Settings › Sign in
+/// (`AppRouter.presentSignIn`), the link Settings › Cookies.
 struct ListSignInState: View {
     enum Kind: Equatable, Sendable {
         case watched
@@ -74,7 +74,7 @@ struct ListSignInState: View {
 
     @ViewBuilder
     private func signInButton(isScrolling: Bool) -> some View {
-        let button = Button { open([.settings(.account), .settings(.login)]) } label: {
+        let button = Button(action: signIn) {
             Text(L10n.Localizable.NotLoginView.Button.login)
                 .font(.headline)
                 .padding(.horizontal, Tokens.Spacing.xLarge)
@@ -93,6 +93,11 @@ struct ListSignInState: View {
         case .watched: L10n.Localizable.List.Signin.Watched.title
         case .favorites: L10n.Localizable.List.Signin.Favorites.title
         }
+    }
+
+    private func signIn() {
+        requests += 1
+        appRouter.presentSignIn()
     }
 
     private func open(_ path: [Route]) {
