@@ -59,8 +59,10 @@ struct ShelfListRows<Header: View>: View {
                     .listRowSeparator(.hidden)
                     .listRowBackground(Color.clear)
             case .signedOut, .empty, .failed:
-                // Under a header: the state below it, as `shelf.md` asks for Home.
+                // Under a header: the state below it, as `shelf.md` asks for Home. In the
+                // list, so its buttons are filled, not glass.
                 ShelfListState(input: input)
+                    .statusActionForm(.filled)
                     .frame(minHeight: ShelfListLayout.stateHeight)
                     .listRowSeparator(.hidden)
                     .listRowBackground(Color.clear)

@@ -92,7 +92,9 @@ struct ShelfListGrid<Header: View>: View {
             ShelfListFooterRow(footer: input.feed.footer, retry: input.feed.retryNextPage)
                 .loadsNextPage(of: input.feed)
         case .signedOut, .empty, .failed:
+            // Under a header, in the scroll view: its buttons are filled, not glass.
             ShelfListState(input: input)
+                .statusActionForm(.filled)
                 .frame(maxWidth: .infinity, minHeight: ShelfListLayout.stateHeight)
         case .loading:
             EmptyView()

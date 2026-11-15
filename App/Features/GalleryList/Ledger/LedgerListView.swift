@@ -44,9 +44,10 @@ struct LedgerListView<Header: View>: View {
     @ViewBuilder
     private func content(style: LedgerRowStyle) -> some View {
         let feed = input.feed
-        // A list under a first screen's header keeps the header: its states are rows (in
-        // `LedgerListContent`). Otherwise they take the screen, where their buttons may be glass.
-        switch (feed.phase, input.context.embedsInStart) {
+        // A list under a header (a first screen's, the library's) keeps the header: its states
+        // are rows (in `LedgerListContent`), without glass. Otherwise they take the screen,
+        // where their buttons may be glass.
+        switch (feed.phase, hasHeader) {
         case (.signedOut(let kind), false):
             ListSignInState(kind: kind)
                 .background { look.background.ignoresSafeArea() }
@@ -72,6 +73,9 @@ struct LedgerListView<Header: View>: View {
                 .background { look.background.ignoresSafeArea() }
         }
     }
+
+    /// A first screen or the library passes a header; a list of its own passes none.
+    private var hasHeader: Bool { !(Header.self is EmptyView.Type) }
 
     /// The Search filter, which only a search's empty state reads.
     private var filterForLoosening: Filter {
@@ -171,7 +175,7 @@ private struct LedgerListContent<Header: View>: View {
                     .listRowSeparator(.hidden)
                     .listRowBackground(Color.clear)
             case .empty, .failed, .signedOut:
-                // Only under a first screen's header; see `LedgerListView.content`.
+                // Only under a header; see `LedgerListView.content`.
                 LedgerInlineState(phase: feed.phase, feed: feed, filters: input.filtersAction)
                     .listRowInsets(EdgeInsets())
                     .listRowSeparator(.hidden)

@@ -227,8 +227,10 @@ struct WallListGrid<Header: View>: View {
             WallListFooter(footer: input.feed.footer, retry: input.feed.retryNextPage)
                 .loadsNextPage(of: input.feed)
         case .signedOut, .empty, .failed:
-            // Under a header: the state below it.
+            // Under a header: the state below it. In the scroll view, so its buttons are
+            // filled, not glass.
             WallListState(input: input)
+                .statusActionForm(.filled)
                 .frame(maxWidth: .infinity, minHeight: Self.stateHeight)
         case .loading:
             EmptyView()

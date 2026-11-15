@@ -3,9 +3,11 @@ import EhModels
 import SwiftUI
 
 // The states every list design shows (`Design/designs/README.md` section 5.3, item 5), in
-// the look's colours. A design decides where each goes: the full-screen ones in place of its
-// scroll view, never inside it, because their buttons are glass; the banner and the row
-// inside the scroll view, where nothing is glass.
+// the look's colours. A design decides where each goes. In place of its scroll view their
+// buttons are glass; a list that keeps a header above them (a first screen, the library)
+// draws them as a row of its scroll view, under `statusActionForm(.filled)`, where the buttons
+// are filled instead: glass is never in scrolling content (section 13). The banner and the
+// next-page row are always inside the scroll view, and nothing in them is glass.
 
 /// Signed out, on a list that needs an account (Watched, favourites): a symbol in a circle,
 /// what the list is, a Sign In pill in the tint, "Use cookies instead", and what else needs an
@@ -21,6 +23,8 @@ struct ListSignInState: View {
 
     @Environment(AppRouter.self) private var appRouter
     @Environment(\.look) private var look
+    @Environment(\.statusActionForm) private var actionForm
+    @Environment(\.onTint) private var onTint
     @State private var requests = 0
 
     var body: some View {
@@ -81,8 +85,9 @@ struct ListSignInState: View {
         }
         .buttonBorderShape(.capsule)
         .controlSize(.large)
-        if isScrolling {
-            button.buttonStyle(.borderedProminent)
+        if isScrolling || actionForm == .filled {
+            // The style draws its label white, which vanishes on a light tint.
+            button.buttonStyle(.borderedProminent).foregroundStyle(onTint)
         } else {
             button.glassProminentButtonStyle()
         }
@@ -107,6 +112,7 @@ struct ListEmptyState: View {
     private let message: String
     private let filters: (() -> Void)?
     @Environment(\.look) private var look
+    @Environment(\.statusActionForm) private var actionForm
 
     /// - Parameter filters: opens Filters; pass it only when the filter is not the default.
     init(message: String = L10n.Localizable.List.empty, filters: (() -> Void)? = nil) {
@@ -128,7 +134,7 @@ struct ListEmptyState: View {
         } actions: {
             if let filters {
                 FiltersButton(action: filters)
-                    .glassButtonStyle()
+                    .statusSecondaryButtonStyle(actionForm)
                     .buttonBorderShape(.capsule)
             }
         }
@@ -142,6 +148,8 @@ struct ListFailedState: View {
     private let retry: () -> Void
     private let openHistory: (() -> Void)?
     @Environment(\.look) private var look
+    @Environment(\.statusActionForm) private var actionForm
+    @Environment(\.onTint) private var onTint
 
     init(error: AppError, retry: @escaping () -> Void, openHistory: (() -> Void)? = nil) {
         self.error = error
@@ -164,14 +172,25 @@ struct ListFailedState: View {
             } description: {
                 Text(error.alertText).foregroundStyle(look.secondaryLabel)
             } actions: {
-                Button(L10n.Localizable.ErrorView.Button.retry, action: retry)
-                    .glassProminentButtonStyle()
+                retryButton
                 Button(L10n.Localizable.List.Offline.history, action: openHistory)
-                    .glassButtonStyle()
+                    .statusSecondaryButtonStyle(actionForm)
             }
             .buttonBorderShape(.capsule)
         } else {
             ErrorStateView(error: error, retry: error.isRetryable ? retry : nil)
+        }
+    }
+
+    @ViewBuilder
+    private var retryButton: some View {
+        let button = Button(L10n.Localizable.ErrorView.Button.retry, action: retry)
+        switch actionForm {
+        case .glass:
+            button.glassProminentButtonStyle()
+        case .filled:
+            // The style draws its label white, which vanishes on a light tint.
+            button.buttonStyle(.borderedProminent).foregroundStyle(onTint)
         }
     }
 }
@@ -214,24 +233,16 @@ struct ListOfflineBanner: View {
     let retry: () -> Void
     @Environment(\.look) private var look
     @Environment(\.onTint) private var onTint
+    @Environment(\.dynamicTypeSize) private var typeSize
 
     var body: some View {
         switch form {
         case .line(let text):
-            HStack(spacing: Tokens.Spacing.small) {
-                Image(systemName: "wifi.slash")
-                    .foregroundStyle(look.secondaryLabel)
-                Text(text ?? L10n.Localizable.List.Offline.title)
-                    .foregroundStyle(look.label)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                Button(L10n.Localizable.ErrorView.Button.retry, action: retry)
-                    .buttonStyle(.borderless)
-                    .fontWeight(.semibold)
-            }
-            .font(.subheadline)
-            .padding(.horizontal, Tokens.Spacing.medium)
-            .frame(minHeight: 40)
-            .background(look.surface, in: .rect(cornerRadius: Tokens.Radius.chip, style: .continuous))
+            line(text ?? L10n.Localizable.List.Offline.title)
+                .font(.subheadline)
+                .padding(.horizontal, Tokens.Spacing.medium)
+                .frame(minHeight: 40)
+                .background(look.surface, in: .rect(cornerRadius: Tokens.Radius.chip, style: .continuous))
         case .card:
             VStack(alignment: .leading, spacing: Tokens.Spacing.small) {
                 Label(L10n.Localizable.List.Offline.title, systemImage: "wifi.slash")
@@ -262,6 +273,50 @@ struct ListOfflineBanner: View {
                             .fill(Color.orange.opacity(0.16))
                     }
             }
+        }
+    }
+
+    /// The symbol, the text and Retry on one line; at the accessibility text sizes Retry goes
+    /// under the text, which would otherwise be squeezed to a word a line.
+    @ViewBuilder
+    private func line(_ text: String) -> some View {
+        let symbol = Image(systemName: "wifi.slash")
+            .foregroundStyle(look.secondaryLabel)
+        let retryButton = Button(L10n.Localizable.ErrorView.Button.retry, action: retry)
+            .buttonStyle(.borderless)
+            .fontWeight(.semibold)
+        if typeSize.isAccessibilitySize {
+            VStack(alignment: .leading, spacing: Tokens.Spacing.xSmall) {
+                HStack(alignment: .firstTextBaseline, spacing: Tokens.Spacing.small) {
+                    symbol
+                    Text(text)
+                        .foregroundStyle(look.label)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                retryButton
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.vertical, Tokens.Spacing.small)
+        } else {
+            HStack(spacing: Tokens.Spacing.small) {
+                symbol
+                Text(text)
+                    .foregroundStyle(look.label)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                retryButton
+            }
+        }
+    }
+}
+
+private extension View {
+    /// A state's second button: glass where the state stands alone, a tinted fill in scrolling
+    /// content.
+    @ViewBuilder
+    func statusSecondaryButtonStyle(_ form: StatusActionForm) -> some View {
+        switch form {
+        case .glass: glassButtonStyle()
+        case .filled: buttonStyle(.bordered)
         }
     }
 }
