@@ -35,7 +35,7 @@ struct ShelfListView<Header: View>: View {
 
     var body: some View {
         content
-            .modifier(ShelfListChrome(input: input, width: width))
+            .modifier(ShelfListChrome(input: input, width: width, ownFolder: input.ownFolder(hasHeader: hasHeader)))
             .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { width = $0 }
             .onAppear {
                 // Back from a gallery page pushed over the list, or from a reader it presented:
@@ -46,6 +46,7 @@ struct ShelfListView<Header: View>: View {
                 hasAppeared = true
             }
             .onDisappear { prefetcher.stop() }
+            .followsFavoriteChanges(of: input)
     }
 
     @ViewBuilder

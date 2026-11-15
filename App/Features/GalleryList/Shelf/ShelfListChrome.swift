@@ -12,6 +12,8 @@ struct ShelfListChrome: ViewModifier {
     let input: ListDesignInput
     /// The list's width, for the period control's form.
     let width: CGFloat
+    /// A favourites folder on a screen of its own: its title is a menu of the folders.
+    let ownFolder: Int?
 
     @Environment(\.dynamicTypeSize) private var typeSize
 
@@ -35,7 +37,7 @@ struct ShelfListChrome: ViewModifier {
                     ListMoreMenu(controls: menu, perform: input.perform)
                 }
             }
-            .modifier(ShelfListTitle(context: input.context))
+            .modifier(ShelfListTitle(context: input.context, ownFolder: ownFolder))
     }
 
     /// At accessibility sizes or under 380 pt, five segments do not fit: a row of chips.
@@ -64,6 +66,7 @@ struct ShelfListChrome: ViewModifier {
 /// iOS 26 and be blurred by it.
 private struct ShelfListTitle: ViewModifier {
     let context: ListContext
+    let ownFolder: Int?
 
     func body(content: Content) -> some View {
         if context.embedsInStart {
@@ -72,6 +75,7 @@ private struct ShelfListTitle: ViewModifier {
             content
                 .navigationTitle(context.title)
                 .toolbarTitleDisplayMode(.inlineLarge)
+                .listFolderTitleMenu(ownFolder)
         }
     }
 }

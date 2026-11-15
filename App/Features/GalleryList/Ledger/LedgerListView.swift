@@ -30,7 +30,9 @@ struct LedgerListView<Header: View>: View {
     var body: some View {
         let style = LedgerRowStyle(showsCover: settings.ledgerShowsCovers, look: look)
         content(style: style)
-            .modifier(LedgerListChrome(input: input, showsCovers: showsCovers))
+            .modifier(LedgerListChrome(
+                input: input, ownFolder: input.ownFolder(hasHeader: hasHeader), showsCovers: showsCovers
+            ))
             .onAppear {
                 // Rows read their reading progress when their page is mapped; a gallery or a
                 // reader opened from here may have moved it.
@@ -39,6 +41,7 @@ struct LedgerListView<Header: View>: View {
                 }
             }
             .onDisappear { visits.hasLeft = true }
+            .followsFavoriteChanges(of: input)
     }
 
     @ViewBuilder

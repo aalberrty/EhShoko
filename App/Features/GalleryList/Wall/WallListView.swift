@@ -52,7 +52,9 @@ struct WallListView<Header: View>: View {
         content(density)
             // Inside the chrome, so that it lies under the find field and not on its glass.
             .overlay(alignment: .top) { WallDensityHintView(hint: hint) }
-            .modifier(WallListChrome(input: input, density: density) { setDensity($0, from: density) })
+            .modifier(WallListChrome(input: input, density: density, ownFolder: input.ownFolder(hasHeader: hasHeader)) {
+                setDensity($0, from: density)
+            })
             .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { width = $0 }
             // Another wall changed the setting (a tab's, or the list under a pushed one).
             .onChange(of: settings.wallDensity) { old, new in
@@ -72,6 +74,7 @@ struct WallListView<Header: View>: View {
                 hasAppeared = true
             }
             .onDisappear { prefetcher.stop() }
+            .followsFavoriteChanges(of: input)
     }
 
     @ViewBuilder
