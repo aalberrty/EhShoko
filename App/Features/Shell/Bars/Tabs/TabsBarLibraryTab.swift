@@ -1,35 +1,50 @@
 import SwiftUI
 
 /// The Library tab's root: a Favourites / History switch that the bar owns, over the library
-/// part and the History list (`Design/designs/README.md` section 5.1). History is not part
-/// of the library design: it is a list.
+/// part and the History list (`Design/designs/README.md` section 5.1, `shelf.md` section 7).
+/// History is not part of the library design: it is a list.
 ///
-/// A first working form, for task A1: the switch is the system's segmented control in the
-/// top bar, and the two screens do not keep their state across it.
+/// The bar supplies the title, the account button (`tabsAccountButton()`, added around this
+/// view) and the switch, pinned under the top bar. A title set by the screen under the switch
+/// would win over this one, so History is asked for without its own; the library part leaves
+/// its title out under `tabs`.
+///
+/// One screen exists at a time. Two screens kept alive under one navigation bar both put
+/// their items into it, so what must outlive the switch belongs above it: the segment is in
+/// `TabsBarLibrarySwitch`; the favourites that were loaded are `LibraryScreen`'s.
 struct TabsBarLibraryTab: View {
-    @State private var segment = TabsBarLibrarySegment.favorites
+    @Environment(TabsBarLibrarySwitch.self) private var library
 
     var body: some View {
         Group {
-            switch segment {
+            switch library.segment {
             case .favorites: LibraryScreen()
-            case .history: GalleryListScreen(context: .place(.history))
+            case .history: GalleryListScreen(context: .place(.history, embedsInStart: true))
             }
         }
-        .toolbar {
-            ToolbarItem(placement: .principal) {
-                Picker(L10n.Localizable.Shell.Tab.library, selection: $segment) {
-                    Text(L10n.Localizable.Shell.Library.favorites).tag(TabsBarLibrarySegment.favorites)
-                    Text(L10n.Localizable.HistoryView.Title.history).tag(TabsBarLibrarySegment.history)
-                }
-                .pickerStyle(.segmented)
-                .fixedSize()
-            }
+        .navigationTitle(L10n.Localizable.Shell.Tab.library)
+        // Large and leading, in the bar's own row: a large title below the bar would sit under
+        // the switch's scroll edge effect on iOS 26 and be blurred by it.
+        .toolbarTitleDisplayMode(.inlineLarge)
+        .topBar {
+            TabsBarLibraryPicker(library: library)
         }
     }
 }
 
-nonisolated enum TabsBarLibrarySegment: Hashable, Sendable {
-    case favorites
-    case history
+/// The switch itself: the system's segmented control (`README.md` section 13). It alone
+/// writes the segment.
+private struct TabsBarLibraryPicker: View {
+    @Bindable var library: TabsBarLibrarySwitch
+
+    var body: some View {
+        Picker(L10n.Localizable.Shell.Tab.library, selection: $library.segment) {
+            Text(L10n.Localizable.Shell.Library.favorites).tag(TabsBarLibrarySegment.favorites)
+            Text(L10n.Localizable.HistoryView.Title.history).tag(TabsBarLibrarySegment.history)
+        }
+        .pickerStyle(.segmented)
+        .labelsHidden()
+        .padding(.horizontal, 16)
+        .padding(.vertical, 6)
+    }
 }
