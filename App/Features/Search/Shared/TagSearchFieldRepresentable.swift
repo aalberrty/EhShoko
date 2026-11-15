@@ -19,22 +19,29 @@ import UIKit
 /// - Parameters:
 ///   - prompt: what the empty field says; the scope's `localizedPrompt`.
 ///   - tokenStyle: the colour behind every token. The system draws token text white.
+///   - showsClearButton: whether the field draws its own clear button while editing; off
+///     where the design has a clear control of its own (Shelf's clear circle).
 ///   - accessory: a row shown on top of the keyboard while the field has focus (Ledger's
 ///     keys), or none.
 struct TagSearchField<Accessory: View>: UIViewRepresentable {
     let model: SearchSurfaceModel
     let prompt: String
     let tokenStyle: SearchTokenStyle
+    var showsClearButton = true
     let accessory: Accessory?
 
     @Environment(\.searchFieldController) private var controller
     @Environment(\.lookTint) private var tint
     @Environment(\.look) private var look
 
-    init(model: SearchSurfaceModel, prompt: String, tokenStyle: SearchTokenStyle, @ViewBuilder accessory: () -> Accessory) {
+    init(
+        model: SearchSurfaceModel, prompt: String, tokenStyle: SearchTokenStyle, showsClearButton: Bool = true,
+        @ViewBuilder accessory: () -> Accessory
+    ) {
         self.model = model
         self.prompt = prompt
         self.tokenStyle = tokenStyle
+        self.showsClearButton = showsClearButton
         self.accessory = accessory()
     }
 
@@ -72,6 +79,8 @@ struct TagSearchField<Accessory: View>: UIViewRepresentable {
             field.placeholder = prompt
             field.accessibilityLabel = prompt
         }
+        let clearButtonMode: UITextField.ViewMode = showsClearButton ? .whileEditing : .never
+        if field.clearButtonMode != clearButtonMode { field.clearButtonMode = clearButtonMode }
         let background = tokenStyle.background(tint: UIColor(tint))
         if field.tokenBackgroundColor != background { field.tokenBackgroundColor = background }
         if field.textColor != look.uiLabel { field.textColor = look.uiLabel }
@@ -102,10 +111,11 @@ struct TagSearchField<Accessory: View>: UIViewRepresentable {
 }
 
 extension TagSearchField where Accessory == EmptyView {
-    init(model: SearchSurfaceModel, prompt: String, tokenStyle: SearchTokenStyle) {
+    init(model: SearchSurfaceModel, prompt: String, tokenStyle: SearchTokenStyle, showsClearButton: Bool = true) {
         self.model = model
         self.prompt = prompt
         self.tokenStyle = tokenStyle
+        self.showsClearButton = showsClearButton
         accessory = nil
     }
 }
