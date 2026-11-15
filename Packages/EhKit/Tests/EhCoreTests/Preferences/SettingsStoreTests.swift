@@ -79,7 +79,12 @@ import Testing
         .ledgerShowsCovers: { $0.ledgerShowsCovers = $1.ledgerShowsCovers },
         .lastFavoriteFolder: { $0.lastFavoriteFolder = $1.lastFavoriteFolder },
         .lastPlace: { $0.lastPlace = $1.lastPlace },
-        .experienceOfferShown: { $0.experienceOfferShown = $1.experienceOfferShown }
+        .experienceOfferShown: { $0.experienceOfferShown = $1.experienceOfferShown },
+        .pageTranslationDetector: { $0.pageTranslationDetector = $1.pageTranslationDetector },
+        .pageTranslationReader: { $0.pageTranslationReader = $1.pageTranslationReader },
+        .pageTranslationTranslator: { $0.pageTranslationTranslator = $1.pageTranslationTranslator },
+        .pageTranslationRepaint: { $0.pageTranslationRepaint = $1.pageTranslationRepaint },
+        .pageTranslationSourceAddress: { $0.pageTranslationSourceAddress = $1.pageTranslationSourceAddress }
     ]
 
     @Test func everyKeyHasASetter() {

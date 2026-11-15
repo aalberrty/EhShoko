@@ -81,6 +81,11 @@ extension Setting {
         setting.lastFavoriteFolder = 7
         setting.lastPlace = .watched
         setting.experienceOfferShown = true
+        setting.pageTranslationDetector = .rtmdet2
+        setting.pageTranslationReader = .narSmall
+        setting.pageTranslationTranslator = .hyMT2
+        setting.pageTranslationRepaint = .off
+        setting.pageTranslationSourceAddress = "https://models.example/store"
         return setting
     }()
 }

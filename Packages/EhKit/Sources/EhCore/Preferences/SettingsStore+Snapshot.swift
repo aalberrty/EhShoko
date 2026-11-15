@@ -45,6 +45,11 @@ extension SettingsStore {
         setting.lastFavoriteFolder = lastFavoriteFolder
         setting.lastPlace = lastPlace
         setting.experienceOfferShown = experienceOfferShown
+        setting.pageTranslationDetector = pageTranslationDetector
+        setting.pageTranslationReader = pageTranslationReader
+        setting.pageTranslationTranslator = pageTranslationTranslator
+        setting.pageTranslationRepaint = pageTranslationRepaint
+        setting.pageTranslationSourceAddress = pageTranslationSourceAddress
         return setting
     }
 
@@ -95,6 +100,11 @@ extension SettingsStore {
         lastFavoriteFolder = setting.lastFavoriteFolder
         lastPlace = setting.lastPlace
         experienceOfferShown = setting.experienceOfferShown
+        pageTranslationDetector = setting.pageTranslationDetector
+        pageTranslationReader = setting.pageTranslationReader
+        pageTranslationTranslator = setting.pageTranslationTranslator
+        pageTranslationRepaint = setting.pageTranslationRepaint
+        pageTranslationSourceAddress = setting.pageTranslationSourceAddress
     }
 
     /// Sets the device-dependent default list display mode (legacy: `.thumbnail` on iPad-width

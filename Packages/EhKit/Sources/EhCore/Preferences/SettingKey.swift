@@ -23,6 +23,9 @@ enum SettingKey: String, CaseIterable, Sendable {
     case designBar, designStart, designList, designGallery, designReader, designSearch
     case designLibrary, designLook, designCustom
     case wallDensity, ledgerShowsCovers, lastFavoriteFolder, lastPlace, experienceOfferShown
+    // Page translation
+    case pageTranslationDetector, pageTranslationReader, pageTranslationTranslator, pageTranslationRepaint
+    case pageTranslationSourceAddress
 
     var name: String {
         self == .galleryHost ? "galleryHost" : "settings.\(rawValue)"
@@ -86,6 +89,10 @@ extension BarStyle: PreferenceValue {}
 extension DesignStyle: PreferenceValue {}
 extension WallDensity: PreferenceValue {}
 extension GalleryListKind: PreferenceValue {}
+extension TextDetectorChoice: PreferenceValue {}
+extension TextReaderChoice: PreferenceValue {}
+extension TranslatorChoice: PreferenceValue {}
+extension RepaintChoice: PreferenceValue {}
 
 extension DesignChoices: PreferenceValue {
     /// One dictionary of raw strings keyed by part. Any missing or unknown value makes the
