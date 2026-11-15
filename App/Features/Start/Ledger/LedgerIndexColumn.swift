@@ -29,7 +29,7 @@ struct LedgerIndexColumn: View {
         }
         .listStyle(.sidebar)
         .environment(\.defaultMinListRowHeight, 36)
-        .refreshable { await model.refreshFolderCounts() }
+        .refreshable { await model.folderCounts.refresh() }
         .ledgerIndexBarTitle()
     }
 

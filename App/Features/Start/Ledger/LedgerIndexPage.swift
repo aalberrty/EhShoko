@@ -27,7 +27,7 @@ struct LedgerIndexPage: View {
             .padding(.bottom, 24)
         }
         .background { look.background.ignoresSafeArea() }
-        .refreshable { await model.refreshFolderCounts() }
+        .refreshable { await model.folderCounts.refresh() }
         .ledgerIndexBarTitle()
     }
 }

@@ -1,5 +1,6 @@
 import Dependencies
 import EhCore
+import EhFeatures
 import EhModels
 import EhNetworking
 import Foundation
@@ -19,14 +20,11 @@ final class LedgerIndexModel {
     /// The saved quick searches, in the user's order.
     private(set) var quickSearches: [QuickSearchWord] = []
 
-    /// The counts are asked for once per Index, when nobody has loaded a favourites page
-    /// this session; after that a pull to refresh asks again.
-    @ObservationIgnored private var hasRequestedCounts = false
+    /// The favourites folders' counts, asked for while nobody has loaded a favourites page
+    /// this session; a pull to refresh asks again.
+    let folderCounts = FavoriteFolderCounts()
 
     @ObservationIgnored @Dependency(\.database) private var database
-    @ObservationIgnored @Dependency(\.ehClient) private var client
-    @ObservationIgnored @Dependency(\.userStore) private var userStore
-    @ObservationIgnored @Dependency(\.accountSession) private var accountSession
     @ObservationIgnored @Dependency(\.clipboardClient) private var clipboard
 
     /// Follows History's size until the calling task is cancelled.
@@ -48,27 +46,6 @@ final class LedgerIndexModel {
             }
         } catch {
             // As above: the section keeps what it had.
-        }
-    }
-
-    /// Asks for the folders' counts when no favourites page was loaded this session: one
-    /// favourites request, signed in only. Until it answers the counts are absent.
-    func loadFolderCountsIfUnknown() async {
-        guard !hasRequestedCounts, userStore.favoriteFolderCounts.isEmpty else { return }
-        hasRequestedCounts = true
-        await refreshFolderCounts()
-    }
-
-    /// Pull to refresh: the first page of All favourites, for the counts it lists. The page
-    /// itself is not kept; `UserStore` takes the counts and the folders' names.
-    func refreshFolderCounts() async {
-        guard accountSession.isLoggedIn else { return }
-        do {
-            let page = try await client.favorites(category: -1)
-            userStore.updateFavoriteFolders(page.folders)
-        } catch {
-            // Offline or cancelled: the Index is local apart from the counts, and shows what
-            // it has.
         }
     }
 

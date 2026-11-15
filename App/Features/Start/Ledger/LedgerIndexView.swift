@@ -18,6 +18,7 @@ struct LedgerIndexView: View {
     @State private var hud: HUDConfiguration?
 
     @Environment(\.chrome) private var chrome
+    @Environment(AccountSession.self) private var accountSession
     @Environment(AppRouter.self) private var appRouter
     @Environment(StackRouter.self) private var stack
     @Environment(\.openURL) private var openURL
@@ -51,7 +52,8 @@ struct LedgerIndexView: View {
         .hud($hud)
         .task { await model.observeHistoryCount() }
         .task { await model.observeQuickSearches() }
-        .task { await model.loadFolderCountsIfUnknown() }
+        // Again when the user signs in: an Index first shown signed out has asked nothing.
+        .task(id: accountSession.isLoggedIn) { await model.folderCounts.loadIfUnknown() }
         // Everything the Index shows but the counts is local: it is the first screen's
         // content as soon as it is on screen. Only the first call in the process counts.
         .onAppear { PerformanceSignposts.contentShown("index") }

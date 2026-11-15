@@ -16,9 +16,9 @@ struct LedgerLibraryView: View {
     /// `LibraryScreen`'s model. Ledger pushes each folder as its own list and reads none of it.
     let model: FavoritesModel
 
-    /// The counts request. The Index's, which asks only while the counts are unknown, so the
-    /// library and the Index between them ask once.
-    @State private var counts = LedgerIndexModel()
+    /// The counts request, shared with the Index: it asks only while the counts are unknown,
+    /// so the library and the Index between them ask once.
+    @State private var counts = FavoriteFolderCounts()
     /// The Library tab's re-selections seen while this screen showed its root.
     @State private var reselection: Int?
 
@@ -33,7 +33,7 @@ struct LedgerLibraryView: View {
         Group {
             if isSignedIn {
                 LedgerLibraryPage(showsTitle: hasTitle, open: open) {
-                    await counts.refreshFolderCounts()
+                    await counts.refresh()
                 }
             } else {
                 ListSignInState(kind: .favorites)
@@ -43,17 +43,14 @@ struct LedgerLibraryView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background { look.background.ignoresSafeArea() }
-        // Again when the user signs in on this screen. Only while signed in: a request that
-        // found no account would count as the one the Index's model allows itself.
-        .task(id: isSignedIn) {
-            if isSignedIn { await counts.loadFolderCountsIfUnknown() }
-        }
+        // Again when the user signs in on this screen.
+        .task(id: isSignedIn) { await counts.loadIfUnknown() }
         // Re-selecting the Library tab at its root reloads what this screen shows: the counts.
         .onChange(of: appRouter.rootReselectionCount(for: .library)) { _, count in
             reselection = count
         }
         .task(id: reselection) {
-            if reselection != nil, isSignedIn { await counts.refreshFolderCounts() }
+            if reselection != nil { await counts.refresh() }
         }
     }
 
