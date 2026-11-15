@@ -31,6 +31,8 @@ struct WallReaderMoreMenu: UIViewRepresentable {
         configuration.preferredSymbolConfigurationForImage = UIImage.SymbolConfiguration(textStyle: .body)
             .applying(UIImage.SymbolConfiguration(weight: .semibold))
         let button = UIButton(configuration: configuration)
+        // The circle keeps its size, so the symbol stops growing where the capsule's label does.
+        button.maximumContentSizeCategory = .accessibilityMedium
         button.showsMenuAsPrimaryAction = true
         // The menu opens upwards from the bottom of the screen. Its order is kept as written,
         // so what is used most is nearest the thumb whichever way the system would sort it.
