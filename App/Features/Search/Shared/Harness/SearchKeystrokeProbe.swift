@@ -37,6 +37,10 @@ final class SearchKeystrokeProbe {
             try? await Task.sleep(for: .seconds(delay))
             field.focus()
             try? await Task.sleep(for: .seconds(1))
+            // Today's screen (the design adapters) has a `.searchable` field the controller
+            // does not know: focus the first search field on screen instead.
+            if FirstResponder.current == nil { focusFirstSearchField() }
+            try? await Task.sleep(for: .seconds(1))
             let probe = SearchKeystrokeProbe()
             probe.install()
             for step in script.split(separator: "|") {
@@ -70,6 +74,22 @@ final class SearchKeystrokeProbe {
             field.blur()
         default:
             break
+        }
+    }
+
+    private static func focusFirstSearchField() {
+        let windows = UIApplication.shared.connectedScenes
+            .compactMap { $0 as? UIWindowScene }
+            .flatMap(\.windows)
+        func find(in view: UIView) -> UISearchTextField? {
+            if let field = view as? UISearchTextField, field.window != nil, !field.isHidden { return field }
+            for subview in view.subviews {
+                if let field = find(in: subview) { return field }
+            }
+            return nil
+        }
+        for window in windows where window.isKeyWindow {
+            _ = find(in: window)?.becomeFirstResponder()
         }
     }
 

@@ -47,16 +47,19 @@ private struct SearchSampleList: View {
     var body: some View {
         let rows = TagSuggestionRowContent.rows(for: model.suggestions.suggestions)
         List {
-            SearchTitlesButton(model: model)
-            if rows.isEmpty {
-                SearchSampleIdle(model: model)
-            } else {
-                Section(L10n.Localizable.Search.Group.tags) {
-                    ForEach(rows) { row in
-                        Button { field.accept(row.item) } label: { SearchSampleRow(row: row) }
+            Group {
+                SearchTitlesButton(model: model)
+                if rows.isEmpty {
+                    SearchSampleIdle(model: model)
+                } else {
+                    Section(L10n.Localizable.Search.Group.tags) {
+                        ForEach(rows) { row in
+                            Button { field.accept(row.item) } label: { SearchSampleRow(row: row) }
+                        }
                     }
                 }
             }
+            .listRowBackground(Color.clear)
         }
         .listStyle(.plain)
         .scrollContentBackground(.hidden)
