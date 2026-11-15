@@ -1,11 +1,13 @@
 import EhFeatures
 import SwiftUI
 
-/// Wall's first screen (`wall.md` section 2): the current place's list, with the Continue
-/// banner as its header on Front Page when Continue is not in the bar's chrome.
+/// Wall's first screen (`wall.md` section 2): the current place's list, whatever place that
+/// is. On Front Page the list has no title, the covers run to the top, and the Continue banner
+/// is its header when Continue is not in the bar's chrome. Other places are their list as it
+/// is anywhere else, with its own title.
 ///
-/// **Adapter.** Until task B2 builds it, this is the place's list alone, without the banner.
-/// B2 replaces this file and keeps the initializer, which is what `StartScreen` calls.
+/// It keeps no account button: Settings is in the place menu, and under `tabs` the shell adds
+/// the button around this screen.
 struct WallStartView: View {
     @Environment(AppRouter.self) private var appRouter
     @Environment(\.chrome) private var chrome
@@ -15,7 +17,14 @@ struct WallStartView: View {
         // root is Front Page.
         switch chrome.bar == .command ? appRouter.rootPlace : .start {
         case .start:
-            GalleryListScreen(context: .place(.frontpage))
+            GalleryListScreen(context: .place(.frontpage, embedsInStart: true)) {
+                if !chrome.continueIsInChrome {
+                    WallContinueBanner()
+                }
+            }
+            // No top bar on Front Page. Under `tabs` there is one all the same: it holds the
+            // account button the shell adds.
+            .toolbarVisibility(chrome.bar == .command ? .hidden : .automatic, for: .navigationBar)
         case .list(.favorites):
             LibraryScreen()
         case .list(let kind):
