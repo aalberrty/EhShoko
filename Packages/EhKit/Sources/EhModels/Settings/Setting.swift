@@ -68,6 +68,22 @@ public struct Setting: Sendable, Equatable {
     /// Whether the offer after install was shown.
     public var experienceOfferShown = false
 
+    // Page translation. There is no switch: Translate is pressed in each reader.
+    public var pageTranslationDetector: TextDetectorChoice = .default
+    public var pageTranslationReader: TextReaderChoice = .default
+    public var pageTranslationTranslator: TranslatorChoice = .default
+    public var pageTranslationRepaint: RepaintChoice = .default
+    /// The address of the private store the app's own model files come from; empty until
+    /// the user enters one. Its access token is kept in the Keychain, not here.
+    public var pageTranslationSourceAddress = ""
+
     public init() {}
+
+    /// The detector, reader and translator the page translation settings choose.
+    public var pageTranslationModelSet: PageTranslationModelSet {
+        PageTranslationModelSet(
+            detector: pageTranslationDetector, reader: pageTranslationReader, translator: pageTranslationTranslator
+        )
+    }
 }
 

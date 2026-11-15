@@ -131,6 +131,32 @@ public final class SettingsStore {
         didSet { persist(.experienceOfferShown, experienceOfferShown, oldValue) }
     }
 
+    // MARK: Page translation
+    // Read by the reader's translation model and the Translation settings screen only; no
+    // cell and no engine view reads them. There is no switch: Translate is pressed in each
+    // reader and lasts until it closes.
+    public var pageTranslationDetector: TextDetectorChoice {
+        didSet { persist(.pageTranslationDetector, pageTranslationDetector, oldValue) }
+    }
+    public var pageTranslationReader: TextReaderChoice {
+        didSet { persist(.pageTranslationReader, pageTranslationReader, oldValue) }
+    }
+    public var pageTranslationTranslator: TranslatorChoice {
+        didSet { persist(.pageTranslationTranslator, pageTranslationTranslator, oldValue) }
+    }
+    public var pageTranslationRepaint: RepaintChoice {
+        didSet { persist(.pageTranslationRepaint, pageTranslationRepaint, oldValue) }
+    }
+    public var pageTranslationSourceAddress: String {
+        didSet { persist(.pageTranslationSourceAddress, pageTranslationSourceAddress, oldValue) }
+    }
+    /// The detector, reader and translator the settings choose. Reading it observes those three.
+    public var pageTranslationModelSet: PageTranslationModelSet {
+        PageTranslationModelSet(
+            detector: pageTranslationDetector, reader: pageTranslationReader, translator: pageTranslationTranslator
+        )
+    }
+
     /// Loads every setting from `defaults`; a missing or invalid key falls back to `Setting()`.
     ///
     /// `nonisolated` so a `DependencyKey` can create the store from any context.
@@ -184,6 +210,11 @@ public final class SettingsStore {
         _lastFavoriteFolder = setting.lastFavoriteFolder
         _lastPlace = setting.lastPlace
         _experienceOfferShown = setting.experienceOfferShown
+        _pageTranslationDetector = setting.pageTranslationDetector
+        _pageTranslationReader = setting.pageTranslationReader
+        _pageTranslationTranslator = setting.pageTranslationTranslator
+        _pageTranslationRepaint = setting.pageTranslationRepaint
+        _pageTranslationSourceAddress = setting.pageTranslationSourceAddress
     }
 
     /// Reads the selected host off the main actor from the same defaults this store writes.
@@ -249,5 +280,14 @@ extension Setting {
         lastFavoriteFolder = storage.value(.lastFavoriteFolder, fallback: defaults.lastFavoriteFolder)
         lastPlace = storage.optionalValue(.lastPlace, as: GalleryListKind.self)
         experienceOfferShown = storage.value(.experienceOfferShown, fallback: defaults.experienceOfferShown)
+        pageTranslationDetector = storage.value(.pageTranslationDetector, fallback: defaults.pageTranslationDetector)
+        pageTranslationReader = storage.value(.pageTranslationReader, fallback: defaults.pageTranslationReader)
+        pageTranslationTranslator = storage.value(
+            .pageTranslationTranslator, fallback: defaults.pageTranslationTranslator
+        )
+        pageTranslationRepaint = storage.value(.pageTranslationRepaint, fallback: defaults.pageTranslationRepaint)
+        pageTranslationSourceAddress = storage.value(
+            .pageTranslationSourceAddress, fallback: defaults.pageTranslationSourceAddress
+        )
     }
 }
