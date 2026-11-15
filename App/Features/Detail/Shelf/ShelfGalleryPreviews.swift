@@ -87,6 +87,8 @@ private struct ShelfPreviewCell: View {
                     .padding(.horizontal, 5)
                     .padding(.vertical, 1)
                     .background(.black.opacity(0.6), in: .rect(cornerRadius: 5, style: .continuous))
+                    // A badge on a 74 pt page: past this size it would hide the page.
+                    .dynamicTypeSize(...DynamicTypeSize.xLarge)
                     .padding(4)
             }
             .overlay {

@@ -81,9 +81,14 @@ struct ShelfCommentByline: View {
     let item: CommentItem
 
     @Environment(\.look) private var look
+    @Environment(\.dynamicTypeSize) private var typeSize
 
     var body: some View {
-        HStack(alignment: .firstTextBaseline, spacing: Tokens.Spacing.small) {
+        // At the accessibility text sizes each part takes a line of its own.
+        let layout = typeSize.isAccessibilitySize
+            ? AnyLayout(VStackLayout(alignment: .leading, spacing: 2))
+            : AnyLayout(HStackLayout(alignment: .firstTextBaseline, spacing: Tokens.Spacing.small))
+        layout {
             Text(item.author)
                 .font(.subheadline.weight(.semibold))
                 .foregroundStyle(look.label)
@@ -96,7 +101,9 @@ struct ShelfCommentByline: View {
             Text(item.comment.formattedDateString)
                 .font(.footnote)
                 .foregroundStyle(look.secondaryLabel)
-            Spacer(minLength: Tokens.Spacing.small)
+            if !typeSize.isAccessibilitySize {
+                Spacer(minLength: Tokens.Spacing.small)
+            }
             if item.comment.votedUp || item.comment.votedDown {
                 Image(systemName: item.comment.votedUp ? "hand.thumbsup.fill" : "hand.thumbsdown.fill")
                     .font(.caption)

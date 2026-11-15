@@ -122,6 +122,9 @@ private struct ShelfFigureView: View {
                 RatingStars(rating: rating, tint: .look)
                     .font(.caption2)
                     .imageScale(.small)
+                    // Stars do not shrink to fit: past this size they would starve the
+                    // other figures of width.
+                    .dynamicTypeSize(...DynamicTypeSize.xxLarge)
                     .accessibilityHidden(true)
             case nil:
                 // Keeps the values of a row on one line.
@@ -131,7 +134,7 @@ private struct ShelfFigureView: View {
             }
         }
         .lineLimit(1)
-        .minimumScaleFactor(0.7)
+        .minimumScaleFactor(0.5)
         .frame(maxWidth: .infinity)
         .padding(.vertical, Tokens.Spacing.small)
         .accessibilityElement(children: .combine)

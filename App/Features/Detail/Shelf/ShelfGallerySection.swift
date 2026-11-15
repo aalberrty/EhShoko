@@ -13,7 +13,6 @@ struct ShelfGallerySectionHeading: View {
         HStack(alignment: .firstTextBaseline) {
             Text(title)
                 .lookSectionHeader()
-                .lineLimit(1)
             Spacer(minLength: Tokens.Spacing.small)
             if let link {
                 Button(action: action) {
@@ -25,7 +24,6 @@ struct ShelfGallerySectionHeading: View {
                     }
                     .font(.subheadline.weight(.medium))
                     .foregroundStyle(.tint)
-                    .lineLimit(1)
                     .contentShape(.rect)
                 }
                 .buttonStyle(.plain)

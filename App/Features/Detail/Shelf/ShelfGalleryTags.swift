@@ -113,6 +113,7 @@ private struct ShelfTagGroup: View, Equatable {
     let actions: ShelfTagActions
 
     @Environment(\.look) private var look
+    @Environment(\.dynamicTypeSize) private var typeSize
 
     static func == (lhs: Self, rhs: Self) -> Bool {
         lhs.row == rhs.row && lhs.isExpanded == rhs.isExpanded && lhs.style == rhs.style
@@ -120,15 +121,21 @@ private struct ShelfTagGroup: View, Equatable {
 
     var body: some View {
         let hidden = isExpanded ? 0 : max(row.chips.count - ShelfGalleryTags.visibleChips, 0)
-        HStack(alignment: .top, spacing: 10) {
+        // At the accessibility text sizes the name goes above its chips, which then have the
+        // width.
+        let isStacked = typeSize.isAccessibilitySize
+        let layout = isStacked
+            ? AnyLayout(VStackLayout(alignment: .leading, spacing: 4))
+            : AnyLayout(HStackLayout(alignment: .top, spacing: 10))
+        layout {
             // As tall as a chip, so the name sits level with the first line of chips.
             Text(row.tag.namespace?.localizedName ?? row.tag.rawNamespace)
                 .font(.caption)
                 .foregroundStyle(look.secondaryLabel)
                 .lineLimit(1)
                 .minimumScaleFactor(0.8)
-                .frame(width: 60, alignment: .trailing)
-                .frame(minHeight: 28)
+                .frame(width: isStacked ? nil : 60, alignment: .trailing)
+                .frame(minHeight: isStacked ? nil : 28)
                 .accessibilityAddTraits(.isHeader)
             FlowLayout(spacing: 6) {
                 ForEach(row.chips.prefix(row.chips.count - hidden)) { chip in

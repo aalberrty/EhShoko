@@ -15,6 +15,7 @@ struct ShelfGalleryHeader: View {
     let copied: () -> Void
 
     @Environment(SettingsStore.self) private var settings
+    @Environment(\.dynamicTypeSize) private var typeSize
     @State private var titles: ShelfGalleryTitles?
 
     static let coverSize = CGSize(width: 132, height: 189)
@@ -26,10 +27,14 @@ struct ShelfGalleryHeader: View {
         )
         // Made in the first frame, before it is drawn, and again only when a title changes.
         let shown = titles ?? ShelfGalleryTitles(source)
+        // At the accessibility text sizes the text goes under the cover, where it has the width.
+        let layout = typeSize.isAccessibilitySize
+            ? AnyLayout(VStackLayout(alignment: .leading, spacing: 14))
+            : AnyLayout(HStackLayout(alignment: .top, spacing: 14))
         VStack(alignment: .leading, spacing: 0) {
-            HStack(alignment: .top, spacing: 14) {
+            layout {
                 ShelfGalleryCover(url: model.gallery.coverURL ?? model.detail?.coverURL)
-                ShelfGalleryHeading(model: model, titles: shown)
+                ShelfGalleryHeading(model: model, titles: shown, isStacked: typeSize.isAccessibilitySize)
             }
             .padding(.leading, 20)
             .padding(.trailing, 16)
@@ -70,6 +75,9 @@ private struct ShelfGalleryCover: View {
 private struct ShelfGalleryHeading: View {
     let model: GalleryDetailModel
     let titles: ShelfGalleryTitles
+    /// Under the cover rather than beside it: nothing is cut short, and nothing is kept as
+    /// tall as the cover.
+    let isStacked: Bool
 
     @Environment(\.look) private var look
 
@@ -91,7 +99,7 @@ private struct ShelfGalleryHeading: View {
                 .font(.title3.bold())
                 .lookTitleDesign()
                 .foregroundStyle(look.label)
-                .lineLimit(4)
+                .lineLimit(isStacked ? nil : 4)
                 .fixedSize(horizontal: false, vertical: true)
                 .padding(.top, 8)
                 .accessibilityAddTraits(.isHeader)
@@ -102,7 +110,10 @@ private struct ShelfGalleryHeading: View {
             Spacer(minLength: Tokens.Spacing.small)
             ShelfGalleryUploader(model: model)
         }
-        .frame(maxWidth: .infinity, minHeight: ShelfGalleryHeader.coverSize.height, alignment: .topLeading)
+        .lineLimit(isStacked ? nil : 2)
+        .frame(
+            maxWidth: .infinity, minHeight: isStacked ? nil : ShelfGalleryHeader.coverSize.height, alignment: .topLeading
+        )
     }
 }
 
@@ -145,7 +156,6 @@ private struct ShelfGalleryCredit: View {
         Text(credit)
             .font(.subheadline.weight(.medium))
             .foregroundStyle(.tint)
-            .lineLimit(2)
             .multilineTextAlignment(.leading)
     }
 
@@ -170,7 +180,6 @@ private struct ShelfGalleryUploader: View {
                 .font(.footnote)
                 .foregroundStyle(look.secondaryLabel)
                 .tint(look.secondaryLabel)
-                .lineLimit(2)
                 .environment(\.openURL, OpenURLAction { _ in
                     stack?.push(.search(keyword: DetailSearchKeyword.uploader(uploader)))
                     return .handled

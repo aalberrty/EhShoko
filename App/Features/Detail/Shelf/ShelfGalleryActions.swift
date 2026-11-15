@@ -13,9 +13,15 @@ struct ShelfGalleryActions: View {
     let signIn: () -> Void
 
     @Environment(UserStore.self) private var userStore
+    @Environment(\.dynamicTypeSize) private var typeSize
 
     var body: some View {
-        HStack(spacing: Tokens.Spacing.small) {
+        // Two by two at the accessibility text sizes, so each label keeps its width.
+        let columns = typeSize.isAccessibilitySize ? 2 : 4
+        LazyVGrid(
+            columns: Array(repeating: GridItem(.flexible(), spacing: Tokens.Spacing.small), count: columns),
+            spacing: Tokens.Spacing.small
+        ) {
             favorite
             rate
             ShelfActionTile(
@@ -145,7 +151,8 @@ private struct ShelfActionLabel: View {
                 .contentTransition(.symbolEffect(.replace))
             Text(title)
                 .font(.caption2.weight(.medium))
-                .lineLimit(1)
+                .lineLimit(2)
+                .multilineTextAlignment(.center)
                 .minimumScaleFactor(0.8)
         }
         .foregroundStyle(isDimmed ? AnyShapeStyle(look.tertiaryLabel) : AnyShapeStyle(.tint))
