@@ -8,6 +8,8 @@ import Testing
     @Test func coversAFractionalRectangle() {
         #expect(PixelRect(covering: CGRect(x: 1.5, y: 2.2, width: 3, height: 0.5)) == PixelRect(x0: 1, y0: 2, x1: 5, y1: 3))
         #expect(PixelRect(covering: .null) == .zero)
+        #expect(PixelRect(covering: CGRect(x: CGFloat.nan, y: 0, width: 4, height: 4)) == .zero)
+        #expect(PixelRect(covering: CGRect(x: 0, y: 0, width: 1e12, height: 4)) == .zero)
     }
 
     @Test func setOperations() {

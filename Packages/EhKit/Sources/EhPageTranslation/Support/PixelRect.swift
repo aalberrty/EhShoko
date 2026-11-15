@@ -17,9 +17,11 @@ public struct PixelRect: Hashable, Sendable {
         self.init(x0: x, y0: y, x1: x + width, y1: y + height)
     }
 
-    /// The smallest rectangle of whole pixels that covers `rect`.
+    /// The smallest rectangle of whole pixels that covers `rect`; `.zero` for a rectangle that
+    /// is null or not finite, as a model that misbehaves can return.
     public init(covering rect: CGRect) {
-        guard !rect.isNull, !rect.isInfinite else {
+        let edges = [rect.minX, rect.minY, rect.maxX, rect.maxY]
+        guard !rect.isNull, !rect.isInfinite, edges.allSatisfy({ $0.isFinite && abs($0) < 1e9 }) else {
             self = .zero
             return
         }

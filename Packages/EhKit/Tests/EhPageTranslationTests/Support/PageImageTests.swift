@@ -113,6 +113,14 @@ import Testing
         #expect(page.rgb(5, 5) == (0, 0, 0))
     }
 
+    @Test func theImageSharesTheBitmapsMemory() throws {
+        let page = try PageImage(data: try png(SyntheticImages.page(width: 300, height: 200)))
+        let image = try #require(page.cgImage.dataProvider?.data)
+        let imageBytes = try #require(CFDataGetBytePtr(image))
+        let bitmapBytes = page.pixels.withUnsafeBytes { $0.baseAddress }
+        #expect(UnsafeRawPointer(imageBytes) == bitmapBytes)
+    }
+
     @Test func cropsShareThePageAndAreCutToIt() throws {
         let data = try png(SyntheticImages.bands(width: 40, height: 30, colors: [Self.red, Self.blue]))
         let page = try PageImage(data: data)
