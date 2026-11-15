@@ -16,6 +16,8 @@ nonisolated struct ShelfGalleryTitles: Equatable {
         let prefersJapanese: Bool
     }
 
+    /// The title the heading shows, in full.
+    let shown: String
     let parsed: ParsedTitle
     /// The full string of the title the heading does not show, or, without one, the heading's
     /// own full string when parsing shortened it. `nil` when it would repeat the heading.
@@ -24,6 +26,7 @@ nonisolated struct ShelfGalleryTitles: Equatable {
     init(_ source: Source) {
         let japanese = source.japaneseTitle.flatMap { $0.isEmpty ? nil : $0 }
         let shown = source.prefersJapanese ? japanese ?? source.title : source.title
+        self.shown = shown
         parsed = TitleParser.parse(shown)
         let counterpart = shown == source.title ? japanese : source.title
         if let counterpart, counterpart != shown {
@@ -49,11 +52,13 @@ nonisolated struct ShelfGalleryTitles: Equatable {
     }
 
     /// The circle and artists as searches, matched against the gallery's tags. Asked when the
-    /// credit is tapped or its menu opens, so the header does not follow the tags.
+    /// credit is tapped or its menu opens, so the header does not follow the tags; the entry
+    /// made for it parses the shown title again, once per tap.
     func creditSearches(in gallery: Gallery, tags: [GalleryTag]) -> [GalleryCreditSearch] {
-        var tagged = gallery
-        if !tags.isEmpty { tagged.tags = tags }
-        return GalleryCreditSearch.targets(for: GalleryEntry(gallery: tagged, title: parsed, languageCode: nil))
+        var shownGallery = gallery
+        shownGallery.title = shown
+        if !tags.isEmpty { shownGallery.tags = tags }
+        return GalleryCreditSearch.targets(for: GalleryEntry(gallery: shownGallery))
     }
 
     /// Whether the credit names more than one name, so a tap offers a menu.
