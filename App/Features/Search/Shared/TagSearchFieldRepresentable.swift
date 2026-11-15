@@ -59,7 +59,7 @@ struct TagSearchField<Accessory: View>: UIViewRepresentable {
         // surface came back to the screen.
         coordinator.apply(model)
         if let accessory {
-            field.inputAccessoryView = TagSearchAccessoryView(content: accessoryContent(accessory))
+            field.inputAccessoryView = TagSearchAccessoryView(host: UIHostingController(rootView: accessoryContent(accessory)))
         }
         controller.register(coordinator)
         return field
@@ -84,13 +84,18 @@ struct TagSearchField<Accessory: View>: UIViewRepresentable {
         let background = tokenStyle.background(tint: UIColor(tint))
         if field.tokenBackgroundColor != background { field.tokenBackgroundColor = background }
         if field.textColor != look.uiLabel { field.textColor = look.uiLabel }
-        if let accessory, let view = field.inputAccessoryView as? TagSearchAccessoryView<AccessoryContent> {
-            view.update(accessoryContent(accessory))
+        if let accessory, let view = field.inputAccessoryView as? TagSearchAccessoryView,
+           let host = view.host as? UIHostingController<AccessoryContent> {
+            host.rootView = accessoryContent(accessory)
         }
     }
 
     static func dismantleUIView(_ field: TagSearchTextField, coordinator: TagSearchFieldCoordinator) {
         coordinator.fieldWillGo()
+        // Whatever may still hold the accessory once the field has gone, the row, its host and
+        // what the row holds (the look, the controller) go with the design that drew them.
+        (field.inputAccessoryView as? TagSearchAccessoryView)?.releaseHost()
+        field.inputAccessoryView = nil
     }
 
     func sizeThatFits(_ proposal: ProposedViewSize, uiView field: TagSearchTextField, context: Context) -> CGSize? {

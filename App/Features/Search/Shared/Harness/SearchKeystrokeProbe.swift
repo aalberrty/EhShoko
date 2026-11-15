@@ -90,7 +90,8 @@ final class SearchKeystrokeProbe {
         case "heap":
             // Let what the last step released go first.
             try? await Task.sleep(for: .seconds(1))
-            let report = PartHarnessHeap.report() + "\nkeys-row accessory views alive: \(SearchAccessoryCensus.live)\n"
+            let report = PartHarnessHeap.report()
+                + "\nkeys-row accessory views alive: \(SearchAccessoryCensus.live) \(SearchAccessoryCensus.addresses)\n"
             if let documents = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first {
                 try? report.write(to: documents.appending(path: "search-heap-\(argument).txt"), atomically: true, encoding: .utf8)
             }
@@ -164,6 +165,12 @@ final class SearchKeystrokeProbe {
 /// row, so the heap report cannot name it; it counts itself here.
 enum SearchAccessoryCensus {
     static var live = 0
+    /// The live views, for finding what holds them with a debugger.
+    static let views = NSHashTable<UIView>.weakObjects()
+
+    static var addresses: String {
+        views.allObjects.map { "\(Unmanaged.passUnretained($0).toOpaque())" }.joined(separator: " ")
+    }
 }
 
 /// The first responder, found the way UIKit's own actions find their target.
