@@ -16,7 +16,7 @@ struct LookHarnessPieces: View {
             Text(verbatim: "Tags").lookSectionHeader()
             VStack(alignment: .leading, spacing: Tokens.Spacing.xSmall) {
                 TagText(namespace: "female", color: TagNamespace.female.markColor, tags: [
-                    TagText.Tag("glasses", url: URL(string: "ehgaro-harness:tag")), TagText.Tag("kimono"),
+                    TagText.Tag("glasses", url: URL(string: "ehshoko-harness:tag")), TagText.Tag("kimono"),
                     TagText.Tag("sole female", isWeak: true), TagText.Tag("full color"),
                 ])
                 TagText(namespace: "parody", color: TagNamespace.parody.markColor, tags: [TagText.Tag("original")])

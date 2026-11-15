@@ -46,17 +46,17 @@ private typealias T = RequestTesting
 
     @Test func profileCreate() {
         T.expectFormPOST(
-            T.eh.ehProfile(action: .create, name: "EhGaro"),
+            T.eh.ehProfile(action: .create, name: "EhShoko"),
             "https://e-hentai.org/uconfig.php",
-            body: "profile_action=create&profile_name=EhGaro"
+            body: "profile_action=create&profile_name=EhShoko"
         )
     }
 
     @Test func profileRename() {
         T.expectFormPOST(
-            T.ex.ehProfile(action: .rename, name: "EhGaro (Default)", set: 2),
+            T.ex.ehProfile(action: .rename, name: "EhShoko (Default)", set: 2),
             "https://exhentai.org/uconfig.php",
-            body: "profile_action=rename&profile_name=EhGaro%20(Default)&profile_set=2"
+            body: "profile_action=rename&profile_name=EhShoko%20(Default)&profile_set=2"
         )
     }
 

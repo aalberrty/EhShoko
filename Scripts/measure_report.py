@@ -15,7 +15,7 @@ import sys
 import xml.etree.ElementTree as ElementTree
 from pathlib import Path
 
-SUBSYSTEM = "app.ehgaro"
+SUBSYSTEM = "app.ehshoko"
 
 
 def export(trace, xpath):
@@ -144,7 +144,7 @@ def report_instruments_hitches(trace):
         print("    Instruments: no hitches table (Animation Hitches recorded nothing here)")
 
 
-APP_BINARIES = ("EhGaro", "EhGaro.debug.dylib")
+APP_BINARIES = ("EhShoko", "EhShoko.debug.dylib")
 
 
 def report_time_profile(trace):

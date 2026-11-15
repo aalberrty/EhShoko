@@ -1,14 +1,16 @@
 name: Test
 on:
-  # The repository is private, where a run on a Mac counts ten times against the
-  # account's minutes, so runs are started by hand: gh workflow run Test --ref <branch>
+  push:
+    # Document changes do not need a build.
+    paths-ignore:
+      - '**.md'
   workflow_dispatch:
 # Only the newest push of a branch is worth testing.
 concurrency:
   group: test-${{ github.ref }}
   cancel-in-progress: true
 env:
-   SCHEME_NAME: 'EhGaro'
+   SCHEME_NAME: 'EhShoko'
    DEVELOPER_DIR: /Applications/Xcode_26.6.app
 jobs:
   Test:
@@ -30,7 +32,7 @@ jobs:
         run: swift test --package-path Packages/EhKit
       - name: Build app for simulator
         run: xcodebuild build
-          -project EhGaro.xcodeproj
+          -project EhShoko.xcodeproj
           -scheme ${{ env.SCHEME_NAME }}
           -destination 'generic/platform=iOS Simulator'
           -skipMacroValidation

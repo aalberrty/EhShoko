@@ -3,7 +3,7 @@ import os
 
 /// The timings the performance budgets are measured with (`Design/designs/README.md` 9.5).
 ///
-/// Each is an `os_signpost` interval under subsystem `app.ehgaro`, category `Performance`,
+/// Each is an `os_signpost` interval under subsystem `app.ehshoko`, category `Performance`,
 /// which Instruments shows in its os_signpost and Points of Interest tracks and
 /// `Scripts/measure.sh signposts` prints. A signpost is not a log line: it costs a
 /// few nanoseconds when nothing records it, so it may mark every page load and every screen.

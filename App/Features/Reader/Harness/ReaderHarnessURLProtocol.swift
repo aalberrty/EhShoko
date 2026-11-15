@@ -15,7 +15,7 @@ nonisolated final class ReaderHarnessURLProtocol: URLProtocol, @unchecked Sendab
     static let host = "reader-harness.invalid"
 
     private static let queue = DispatchQueue(
-        label: "app.ehgaro.reader-harness", qos: .utility, attributes: .concurrent
+        label: "app.ehshoko.reader-harness", qos: .utility, attributes: .concurrent
     )
     private static let chunkCount = 10
 

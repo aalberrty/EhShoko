@@ -1,6 +1,6 @@
 /*
   Localizable.strings
-  EhGaro
+  EhShoko
 */
 
 // MARK: BanInterval
@@ -26,7 +26,7 @@
 "hud.caption.saved_to_photo_library" = "已存储到“照片”";
 
 // MARK: AutoLock
-"local_authorization.reason" = "解锁 EhGaro 以继续。";
+"local_authorization.reason" = "解锁 EhShoko 以继续。";
 
 // MARK: Common value
 "common.value.stars" = "%@ 颗星";
@@ -67,10 +67,10 @@
 "error_view.button.drop_database" = "删除数据库";
 "error_view.title.try_later" = "请过一会儿再试。";
 "error_view.title.network" = "无法连接到网站。";
-"error_view.title.parsing" = "网站返回了 EhGaro 无法读取的页面。网站可能有所改动，或暂时无法访问。";
+"error_view.title.parsing" = "网站返回了 EhShoko 无法读取的页面。网站可能有所改动，或暂时无法访问。";
 "error_view.title.unknown" = "出了点问题。";
 "error_view.title.not_found" = "这里什么都没有。";
-"error_view.title.database_corrupted" = "EhGaro 的数据库已损坏。\n请在 GitHub 上报告此问题。";
+"error_view.title.database_corrupted" = "EhShoko 的数据库已损坏。\n请在 GitHub 上报告此问题。";
 "error_view.title.ip_banned" = "由于短时间内载入了过多页面，看起来像是在自动下载，网站已暂时封锁你的 IP 地址。封锁将在 %@后解除。";
 "error_view.title.copyright_claim" = "因 %@ 提出版权主张，此画廊已被下架。";
 "error_view.title.gallery_unavailable" = "此画廊已被移除或无法查看。";
@@ -83,7 +83,7 @@
 "error_view.headline.server_error" = "服务器错误";
 
 // MARK: ConfirmationDialog
-"confirmation_dialog.title.drop_database" = "EhGaro 存储的所有内容都将被抹掉。\n要删除数据库吗？";
+"confirmation_dialog.title.drop_database" = "EhShoko 存储的所有内容都将被抹掉。\n要删除数据库吗？";
 "confirmation_dialog.title.remove_custom_translations" = "要移除你导入的翻译吗？";
 "confirmation_dialog.title.logout" = "要退出登录吗？";
 "confirmation_dialog.title.delete" = "要删除吗？此操作无法撤销。";
@@ -164,7 +164,7 @@
 "enum.setting_state_route.value.appearance" = "外观";
 "enum.setting_state_route.value.reading" = "阅读";
 "enum.setting_state_route.value.laboratory" = "实验室";
-"enum.setting_state_route.value.about" = "关于 EhGaro";
+"enum.setting_state_route.value.about" = "关于 EhShoko";
 
 // MARK: AccountSettingView
 "account_setting_view.title.account" = "账户";
@@ -260,7 +260,7 @@
 "laboratory_setting_view.title.bypasses_SNI_filtering" = "绕过 SNI 过滤";
 
 // MARK: AboutView
-"about_view.title.ehGaro" = "EhGaro";
+"about_view.title.ehShoko" = "EhShoko";
 "about_view.button.website" = "网站";
 "about_view.button.altStore_source" = "AltStore 源";
 "about_view.title.version" = "版本";
@@ -1183,7 +1183,7 @@
 "settings.design.stage.a11y.wall" = "一整面封面墙，底部只有一条工具栏。双指开合改变封面大小，轻扫工具栏切换列表，进入画廊后工具栏变为操作按钮。阅读器只有一条可拖移翻页的工具栏。";
 "settings.design.stage.a11y.ledger" = "从列表索引进入紧凑的列表。轻扫列表行显示操作。画廊像一页文档，阅读器的控制栏是可以上拉的面板。";
 "offer.title" = "选择你的体验";
-"offer.body" = "EhGaro 提供三种风格。看看每一种，选一种，或自己搭配。随时可以在设置中更改。";
+"offer.body" = "EhShoko 提供三种风格。看看每一种，选一种，或自己搭配。随时可以在设置中更改。";
 "offer.use" = "使用 %@";
 "offer.not_now" = "以后再说";
 "tip.favorite.title" = "按住可选择收藏夹";

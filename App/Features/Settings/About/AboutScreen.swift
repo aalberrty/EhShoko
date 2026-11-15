@@ -21,7 +21,7 @@ struct AboutScreen: View {
                 AboutLinkRows(links: AboutLink.acknowledgements)
             }
         }
-        .navigationTitle(L10n.Localizable.AboutView.Title.ehGaro)
+        .navigationTitle(L10n.Localizable.AboutView.Title.ehShoko)
         .toolbar {
             if #available(iOS 26, *) {
                 ToolbarItem(placement: .largeSubtitle) {

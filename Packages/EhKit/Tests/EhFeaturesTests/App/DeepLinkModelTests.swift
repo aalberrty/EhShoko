@@ -66,7 +66,7 @@ import Testing
         let (model, _) = try await makeModel()
         transport.on(.any, reply: .fixture(AppFixture.detailPage))
 
-        await open("ehgaro://e-hentai.org/g/3103480/0000000000/", in: model)
+        await open("ehshoko://e-hentai.org/g/3103480/0000000000/", in: model)
 
         #expect(requestedURLs == ["https://e-hentai.org/g/3103480/0000000000/"])
         #expect(router.presentedGallery?.gid == "3103480")

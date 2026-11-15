@@ -27,7 +27,7 @@ public struct HTTPResponse: Sendable {
 }
 
 enum NetworkLog {
-    static let logger = Logger(subsystem: "app.ehgaro", category: "network")
+    static let logger = Logger(subsystem: "app.ehshoko", category: "network")
 }
 
 extension URLError {

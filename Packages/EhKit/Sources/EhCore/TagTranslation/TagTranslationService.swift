@@ -159,7 +159,7 @@ struct SendableUserDefaults: @unchecked Sendable {
 extension UserDefaults {
     /// A new, empty suite that nothing else reads, for tests and previews.
     static func ephemeral() -> UserDefaults {
-        let name = "EhGaro.ephemeral.\(UUID().uuidString)"
+        let name = "EhShoko.ephemeral.\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: name) ?? .standard
         defaults.removePersistentDomain(forName: name)
         return defaults

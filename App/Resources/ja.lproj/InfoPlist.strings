@@ -1,7 +1,7 @@
 /* 
   InfoPlist.strings
-  EhGaro
+  EhShoko
 */
 
-"NSFaceIDUsageDescription" = "自動ロックがオンのとき、EhGaro は Face ID を使ってロックを解除します。";
-"NSPhotoLibraryAddUsageDescription" = "EhGaro は、選んだ画像を写真ライブラリに保存します。";
+"NSFaceIDUsageDescription" = "自動ロックがオンのとき、EhShoko は Face ID を使ってロックを解除します。";
+"NSPhotoLibraryAddUsageDescription" = "EhShoko は、選んだ画像を写真ライブラリに保存します。";

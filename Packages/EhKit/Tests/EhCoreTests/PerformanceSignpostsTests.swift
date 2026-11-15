@@ -5,7 +5,7 @@ import Testing
 @testable import EhCore
 
 struct PerformanceSignpostsTests {
-    private let signposter = OSSignposter(subsystem: "app.ehgaro.tests", category: "Performance")
+    private let signposter = OSSignposter(subsystem: "app.ehshoko.tests", category: "Performance")
 
     @Test func intervalEndsOnce() {
         let interval = PerformanceSignposts.begin(.listPage, "frontpage first")

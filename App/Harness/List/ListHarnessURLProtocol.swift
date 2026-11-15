@@ -15,7 +15,7 @@ nonisolated final class ListHarnessURLProtocol: URLProtocol, @unchecked Sendable
     static let coverSize = CGSize(width: 250, height: 354)
 
     private static let queue = DispatchQueue(
-        label: "app.ehgaro.list-harness", qos: .userInitiated, attributes: .concurrent
+        label: "app.ehshoko.list-harness", qos: .userInitiated, attributes: .concurrent
     )
     /// Covers served since launch, for the run's result.
     static let servedCount = OSAllocatedUnfairLock(initialState: 0)

@@ -34,7 +34,7 @@ struct NetworkingDependencyTests {
     @Test func testCookieStoreIsIsolatedFromTheSharedJar() {
         @Dependency(\.cookieStore) var cookies
         let url = GalleryHost.ehentai.url
-        let name = "ehgaro_test_isolation"
+        let name = "ehshoko_test_isolation"
 
         cookies.setOrEditCookie(for: url, name: name, value: "1")
 
@@ -44,7 +44,7 @@ struct NetworkingDependencyTests {
 
     @Test func liveCookieStoreUsesTheSharedJar() {
         // The live client and cookie store must see the same jar as the live transport.
-        let name = "ehgaro_test_shared_\(UUID().uuidString)"
+        let name = "ehshoko_test_shared_\(UUID().uuidString)"
         let url = GalleryHost.ehentai.url
         CookieStore.liveValue.setOrEditCookie(for: url, name: name, value: "1")
         defer { HTTPCookieStorage.shared.cookies(for: url)?.filter { $0.name == name }.forEach(HTTPCookieStorage.shared.deleteCookie) }

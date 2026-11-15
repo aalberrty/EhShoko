@@ -20,9 +20,9 @@ public struct EhLinkAnalysis: Sendable, Equatable {
 /// Pure helpers for recognising and rewriting the site's URLs, for deep links,
 /// clipboard detection and links inside comments.
 public enum EhURL {
-    /// Rewrites the app's own `ehgaro://` scheme to `https://`; other URLs are returned as is.
+    /// Rewrites the app's own `ehshoko://` scheme to `https://`; other URLs are returned as is.
     public static func resolvingAppScheme(_ url: URL) -> URL {
-        guard url.scheme == "ehgaro" else { return url }
+        guard url.scheme == "ehshoko" else { return url }
         return replacing(url) { $0.scheme = "https" } ?? url
     }
 

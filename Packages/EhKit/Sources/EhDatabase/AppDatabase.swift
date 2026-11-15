@@ -39,7 +39,7 @@ public final class AppDatabase: Sendable {
 
     private static func makeConfiguration() -> Configuration {
         var configuration = Configuration()
-        configuration.label = "EhGaro.AppDatabase"
+        configuration.label = "EhShoko.AppDatabase"
         configuration.qos = .userInitiated
         return configuration
     }

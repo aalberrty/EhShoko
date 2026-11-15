@@ -1,7 +1,7 @@
 /* 
   InfoPlist.strings
-  EhGaro
+  EhShoko
 */
 
-"NSFaceIDUsageDescription" = "開啟自動上鎖後，EhGaro 會使用 Face ID 解鎖。";
-"NSPhotoLibraryAddUsageDescription" = "EhGaro 會將你選擇的影像儲存至相片圖庫。";
+"NSFaceIDUsageDescription" = "開啟自動上鎖後，EhShoko 會使用 Face ID 解鎖。";
+"NSPhotoLibraryAddUsageDescription" = "EhShoko 會將你選擇的影像儲存至相片圖庫。";

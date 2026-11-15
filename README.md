@@ -1,4 +1,4 @@
-# EhGaro
+# EhShoko
 
 An unofficial iPhone and iPad app for browsing and reading E-Hentai galleries.
 
@@ -21,7 +21,7 @@ This is a ground-up rebuild in SwiftUI, designed for iOS 26 with a native fallba
 
 ```sh
 swift test --package-path Packages/EhKit
-xcodebuild build -project EhGaro.xcodeproj -scheme EhGaro \
+xcodebuild build -project EhShoko.xcodeproj -scheme EhShoko \
   -destination 'platform=iOS Simulator,name=iPhone 17' -skipMacroValidation
 ```
 

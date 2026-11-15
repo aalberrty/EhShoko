@@ -1,6 +1,6 @@
 /* 
   Constant.strings
-  EhGaro
+  EhShoko
 */
 
 // MARK: Website response
@@ -12,7 +12,7 @@
 // MARK: App
 
 // Contact
-"app.contact.link.gitHub" = "https://github.com/aalberrty/EhGaro";
+"app.contact.link.gitHub" = "https://github.com/aalberrty/EhShoko";
 "app.contact.text.gitHub" = "GitHub";
 
 // Acknowledgement link

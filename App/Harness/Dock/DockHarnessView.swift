@@ -27,12 +27,12 @@ struct DockHarnessView: View {
     @State private var titleFilter = ""
     @State private var stack = StackRouter()
     @State private var appRouter = AppRouter()
-    @State private var userStore = UserStore(defaults: UserDefaults(suiteName: "app.ehgaro.dock-harness") ?? .standard)
+    @State private var userStore = UserStore(defaults: UserDefaults(suiteName: "app.ehshoko.dock-harness") ?? .standard)
     /// Signed in with made-up cookies, so the menus show their favourite entries; nothing it
     /// sends reaches the site with them.
     @State private var actions = withDependencies {
         // A storage of its own, apart from the app's: a bare `HTTPCookieStorage()` keeps nothing.
-        let storage = HTTPCookieStorage.sharedCookieStorage(forGroupContainerIdentifier: "app.ehgaro.dock-harness")
+        let storage = HTTPCookieStorage.sharedCookieStorage(forGroupContainerIdentifier: "app.ehshoko.dock-harness")
         let store = CookieStore(storage: storage)
         if let url = URL(string: "https://e-hentai.org/") {
             store.setOrEditCookie(for: url, name: CookieName.ipbMemberId, value: "1")

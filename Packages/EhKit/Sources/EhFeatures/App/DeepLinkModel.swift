@@ -5,7 +5,7 @@ import EhNetworking
 import Foundation
 import Observation
 
-/// Opens gallery links from outside the app: `ehgaro://` URLs (the share extension rewrites
+/// Opens gallery links from outside the app: `ehshoko://` URLs (the share extension rewrites
 /// shared links to that scheme) and links found on the clipboard (legacy `AppRouteReducer`).
 ///
 /// A link is resolved to its gallery, from the history when it was opened before, otherwise from

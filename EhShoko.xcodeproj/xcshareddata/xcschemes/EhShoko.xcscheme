@@ -16,9 +16,9 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "E10000000000000000000A01"
-               BuildableName = "EhGaro.app"
-               BlueprintName = "EhGaro"
-               ReferencedContainer = "container:EhGaro.xcodeproj">
+               BuildableName = "EhShoko.app"
+               BlueprintName = "EhShoko"
+               ReferencedContainer = "container:EhShoko.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
       </BuildActionEntries>
@@ -106,9 +106,9 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "E10000000000000000000A01"
-            BuildableName = "EhGaro.app"
-            BlueprintName = "EhGaro"
-            ReferencedContainer = "container:EhGaro.xcodeproj">
+            BuildableName = "EhShoko.app"
+            BlueprintName = "EhShoko"
+            ReferencedContainer = "container:EhShoko.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </LaunchAction>
@@ -123,9 +123,9 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "E10000000000000000000A01"
-            BuildableName = "EhGaro.app"
-            BlueprintName = "EhGaro"
-            ReferencedContainer = "container:EhGaro.xcodeproj">
+            BuildableName = "EhShoko.app"
+            BlueprintName = "EhShoko"
+            ReferencedContainer = "container:EhShoko.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </ProfileAction>

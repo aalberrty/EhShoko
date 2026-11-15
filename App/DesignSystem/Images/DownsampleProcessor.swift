@@ -40,7 +40,7 @@ nonisolated struct DownsampleProcessor: ImageProcessor {
         self.pixelSize = CGSize(width: pixelSize.width.rounded(.up), height: pixelSize.height.rounded(.up))
         self.mode = mode
         self.webtoon = webtoon
-        var identifier = "app.ehgaro.downsample(\(Int(self.pixelSize.width))x\(Int(self.pixelSize.height)),\(mode.rawValue)"
+        var identifier = "app.ehshoko.downsample(\(Int(self.pixelSize.width))x\(Int(self.pixelSize.height)),\(mode.rawValue)"
         if let webtoon {
             identifier += ",webtoon(\(webtoon.minAspect),\(webtoon.idealAspect))"
         }

@@ -21,9 +21,9 @@
 # Options (before the run name):
 #   --device <udid>       Simulator or device to record on. Default: $APP_DEVICE, else the
 #                         booted simulator.
-#   --app <EhGaro.app>   Build to install first. Default: none; the installed app is used.
+#   --app <EhShoko.app>   Build to install first. Default: none; the installed app is used.
 #   --out <dir>           Where traces and the report go. Default: a new folder under
-#                         ${TMPDIR}ehgaro-measure.
+#                         ${TMPDIR}ehshoko-measure.
 #   --templates <list>    Which recordings of a list run: hitches,time,alloc (default all three).
 #   --speed <pt/s>        Scroll speed (default 2000).   --count <n>   Galleries (default 500).
 #   --tags                Rows show their tags.          --latency <s> Cover latency (default 0.08).
@@ -36,7 +36,7 @@ set -euo pipefail
 
 export DEVELOPER_DIR="${DEVELOPER_DIR:-/Applications/Xcode.app/Contents/Developer}"
 here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-bundle_id="${APP_BUNDLE_ID:-app.ehgaro}"
+bundle_id="${APP_BUNDLE_ID:-app.ehshoko}"
 
 device="${APP_DEVICE:-}"
 app=""
@@ -105,7 +105,7 @@ else
 fi
 
 stamp="$(date +%Y%m%d-%H%M%S)"
-out="${out:-${TMPDIR:-/tmp/}ehgaro-measure/$run-${1:-default}-$stamp}"
+out="${out:-${TMPDIR:-/tmp/}ehshoko-measure/$run-${1:-default}-$stamp}"
 mkdir -p "$out"
 
 terminate() {

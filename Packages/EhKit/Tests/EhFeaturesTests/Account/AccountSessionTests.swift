@@ -71,7 +71,7 @@ import Testing
         #expect(posts.count == 1)
         let body = posts.first.map(AccountHarness.body(of:)) ?? ""
         #expect(body.contains("profile_action=create"))
-        #expect(body.contains("profile_name=EhGaro"))
+        #expect(body.contains("profile_name=EhShoko"))
         #expect(harness.cookie(CookieName.selectedProfile, GalleryHost.ehentai.url) == "2")
     }
 

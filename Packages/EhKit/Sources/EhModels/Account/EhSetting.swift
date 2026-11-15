@@ -174,7 +174,7 @@ extension EhSetting {
 
     /// Whether `name` is one of the names the app gives its own profile.
     public static func verifyAppProfileName(with name: String?) -> Bool {
-        ["EhGaro", "EhGaro (Default)"].contains(name ?? "")
+        ["EhShoko", "EhShoko (Default)"].contains(name ?? "")
     }
 
     /// The profile the app created for itself, if any.

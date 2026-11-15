@@ -16,7 +16,7 @@ nonisolated struct CoverProcessor: ImageProcessor {
     static let maxPixelWidth: CGFloat = 250
     static let shared = CoverProcessor()
 
-    let identifier = "app.ehgaro.cover(250)"
+    let identifier = "app.ehshoko.cover(250)"
     private let webtoon = WebtoonCrop.standard
 
     func process(item: ImageProcessItem, options: KingfisherParsedOptionsInfo) -> KFCrossPlatformImage? {

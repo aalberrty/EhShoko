@@ -36,7 +36,7 @@ public enum EhProfileAction: String, Sendable, Hashable {
 
 /// Whether the app's own settings profile exists on the site.
 public struct VerifyEhProfileResponse: Sendable, Equatable {
-    /// The value of the EhGaro profile, when one exists.
+    /// The value of the EhShoko profile, when one exists.
     public let profileValue: Int?
     public let isProfileNotFound: Bool
 

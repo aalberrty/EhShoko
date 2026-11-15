@@ -33,7 +33,7 @@ final class ListHarnessScroller: NSObject {
         var hitchRatio: Double { duration > 0 ? hitchTime * 1_000 / duration : 0 }
     }
 
-    private static let signposter = OSSignposter(subsystem: "app.ehgaro", category: "Harness")
+    private static let signposter = OSSignposter(subsystem: "app.ehshoko", category: "Harness")
 
     /// A view inside the list's container; set by `ListHarnessAnchor`.
     weak var anchor: UIView?

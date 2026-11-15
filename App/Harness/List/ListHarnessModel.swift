@@ -33,7 +33,7 @@ final class ListHarnessModel {
     @ObservationIgnored private var coverDecodesAtStart = 0
     @ObservationIgnored @Dependency(\.imageCacheClient) private var imageCache
 
-    private static let settingsSuite = "app.ehgaro.list-harness"
+    private static let settingsSuite = "app.ehshoko.list-harness"
 
     init(options: ListHarnessOptions) {
         self.options = options
