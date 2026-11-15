@@ -22,13 +22,58 @@ struct WallStartView: View {
                     WallContinueBanner()
                 }
             }
-            // No top bar on Front Page. Under `tabs` there is one all the same: it holds the
-            // account button the shell adds.
-            .toolbarVisibility(chrome.bar == .command ? .hidden : .automatic, for: .navigationBar)
+            // Under `tabs` the navigation bar stays: it holds the account button the shell
+            // adds, and brings the system's edge under the status bar.
+            .toolbarVisibility(hasTopBar ? .automatic : .hidden, for: .navigationBar)
+            .modifier(WallStatusBarFade(isActive: !hasTopBar))
         case .list(.favorites):
             LibraryScreen()
         case .list(let kind):
             GalleryListScreen(context: .place(kind))
+        }
+    }
+
+    /// Front Page has no top bar under `command`, where nothing would be in it.
+    private var hasTopBar: Bool {
+        chrome.bar == .tabs
+    }
+}
+
+/// The short fade the covers run under at the top of a screen with no top bar
+/// (`wall.md` section 2), so the status bar stays legible over them.
+///
+/// It is drawn by hand on every system: the scroll edge effect that replaces such fades on
+/// iOS 26 comes with a navigation bar, and a screen without one gets none, not from a top
+/// `safeAreaBar` nor from `scrollEdgeEffectStyle` or `scrollEdgeEffectHidden` (tried on
+/// iOS 26.3). It covers the status bar's area and nothing below it, so at rest it lies on the
+/// background and is not seen.
+private struct WallStatusBarFade: ViewModifier {
+    let isActive: Bool
+
+    @Environment(\.look) private var look
+
+    func body(content: Content) -> some View {
+        content.overlay(alignment: .top) {
+            if isActive {
+                // A line of no height at the safe area's top edge, whose background reaches up
+                // to the screen's edge: the status bar's area, which is nothing in landscape on
+                // a phone. A view of fixed height would keep that height when it ignores the
+                // safe area; a background takes the area it is given.
+                Color.clear
+                    .frame(height: 0)
+                    .background {
+                        LinearGradient(
+                            stops: [
+                                .init(color: look.background, location: 0.35),
+                                .init(color: look.background.opacity(0), location: 1),
+                            ],
+                            startPoint: .top, endPoint: .bottom
+                        )
+                        .ignoresSafeArea(edges: .top)
+                    }
+                    .allowsHitTesting(false)
+                    .accessibilityHidden(true)
+            }
         }
     }
 }
