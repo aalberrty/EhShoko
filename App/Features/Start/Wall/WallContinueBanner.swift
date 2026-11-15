@@ -19,10 +19,19 @@ struct WallContinueBanner: View {
                 WallContinueBannerContent(item: item)
             }
             .buttonStyle(.plain)
+            .accessibilityLabel(L10n.Localizable.Shell.Continue.reading)
+            .accessibilityValue(Self.accessibilityValue(of: item))
             .padding(.horizontal, 6)
             .padding(.top, 6)
             .padding(.bottom, 8)
         }
+    }
+
+    /// The title and how far into it reading is: "…, Page 87 of 212 · 41%".
+    private static func accessibilityValue(of item: ContinueItem) -> String {
+        let percent = Int((item.fraction * 100).rounded())
+        return [item.title.core, L10n.Localizable.Shell.Continue.progress(item.page, item.pageCount, percent)]
+            .joined(separator: ", ")
     }
 }
 
@@ -34,6 +43,7 @@ private struct WallContinueBannerContent: View {
     @Environment(\.look) private var look
     @Environment(\.lookTint) private var tint
     @Environment(\.onTint) private var onTint
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     private static var height: CGFloat { 76 }
     private static var cornerRadius: CGFloat { 22 }
@@ -58,9 +68,6 @@ private struct WallContinueBannerContent: View {
         .frame(maxWidth: .infinity, minHeight: Self.height, alignment: .leading)
         .background(look.surface, in: .rect(cornerRadius: Self.cornerRadius, style: .continuous))
         .contentShape(.rect(cornerRadius: Self.cornerRadius, style: .continuous))
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel(L10n.Localizable.Shell.Continue.reading)
-        .accessibilityValue(accessibilityValue)
     }
 
     private var details: some View {
@@ -70,29 +77,46 @@ private struct WallContinueBannerContent: View {
                 .tracking(0.6)
                 .textCase(.uppercase)
                 .foregroundStyle(look.secondaryLabel)
+                .lineLimit(1)
             Text(item.title.core)
                 .font(.subheadline.weight(.semibold))
                 .lookTitleDesign()
                 .foregroundStyle(look.label)
+                .lineLimit(isLarge ? 2 : 1)
                 .padding(.top, 1)
                 .padding(.bottom, 6)
-            HStack(spacing: 8) {
-                WallProgressBar(fraction: item.fraction, track: look.fill2, fill: tint)
-                    .frame(height: 4)
-                Text(L10n.Localizable.Gallery.Continue.short(item.page, item.pageCount))
-                    .font(.caption)
-                    .monospacedDigit()
-                    .foregroundStyle(look.secondaryLabel)
-                    .fixedSize()
+            // At the accessibility sizes the count goes under the bar, which keeps its width.
+            if isLarge {
+                VStack(alignment: .leading, spacing: 4) {
+                    progress
+                    count
+                }
+            } else {
+                HStack(spacing: 8) {
+                    progress
+                    count
+                }
             }
         }
-        .lineLimit(1)
     }
 
-    private var accessibilityValue: String {
-        let percent = Int((item.fraction * 100).rounded())
-        return [item.title.core, L10n.Localizable.Shell.Continue.progress(item.page, item.pageCount, percent)]
-            .joined(separator: ", ")
+    private var progress: some View {
+        WallProgressBar(fraction: item.fraction, track: look.fill2, fill: tint)
+            .frame(height: 4)
+    }
+
+    /// "87 / 212".
+    private var count: some View {
+        Text(L10n.Localizable.Gallery.Continue.short(item.page, item.pageCount))
+            .font(.caption)
+            .monospacedDigit()
+            .foregroundStyle(look.secondaryLabel)
+            .lineLimit(1)
+            .fixedSize()
+    }
+
+    private var isLarge: Bool {
+        dynamicTypeSize.isAccessibilitySize
     }
 }
 
