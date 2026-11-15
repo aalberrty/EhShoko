@@ -21,9 +21,7 @@ import SwiftUI
 struct WallGalleryView: View {
     let model: GalleryDetailModel
 
-    @Environment(AppRouter.self) private var appRouter: AppRouter?
     @Environment(StackRouter.self) private var stack: StackRouter?
-    @Environment(UserStore.self) private var userStore
     @Environment(\.chrome) private var chrome
     @Environment(\.look) private var look
     @Environment(\.verticalSizeClass) private var verticalSizeClass
@@ -66,19 +64,8 @@ struct WallGalleryView: View {
         .toolbar { toolbar }
         .wallGalleryDock(model, signIn: signIn, search: search)
         .hud($hud)
-        .onChange(of: model.favoriteReport) { _, report in
-            guard let report else { return }
-            hud = .symbol("heart.fill", title: L10n.Localizable.List.Favorited.hud(userStore.favoriteFolderName(report.folder)))
-            FavoriteTip.record(report)
-        }
-        .alert(L10n.Localizable.ErrorView.Headline.loginRequired, isPresented: $asksToSignIn) {
-            Button(L10n.Localizable.NotLoginView.Button.login) {
-                appRouter?.presentSettings([.settings(.account), .settings(.login)])
-            }
-            AlertCancelButton(title: L10n.Localizable.JumpPageView.Button.cancel)
-        } message: {
-            Text(L10n.Localizable.List.Signin.note)
-        }
+        .galleryFavoriteHUD(model, hud: $hud)
+        .gallerySignInAlert(isPresented: $asksToSignIn)
         .sensoryFeedback(.success, trigger: copyCount)
         .sensoryFeedback(.impact(flexibility: .soft), trigger: searchCount)
     }

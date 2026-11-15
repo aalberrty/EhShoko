@@ -64,11 +64,7 @@ struct LedgerGalleryView: View {
         .task(id: source) {
             titles = await LedgerGalleryTitles.make(source, gallery: model.gallery)
         }
-        .onChange(of: model.favoriteReport) { _, report in
-            guard let report else { return }
-            hud = .symbol("heart.fill", title: L10n.Localizable.List.Favorited.hud(userStore.favoriteFolderName(report.folder)))
-            FavoriteTip.record(report)
-        }
+        .galleryFavoriteHUD(model, hud: $hud)
         .sensoryFeedback(.success, trigger: copyCount)
         .sensoryFeedback(.impact(flexibility: .soft), trigger: searchCount)
     }
@@ -163,21 +159,9 @@ struct LedgerGalleryView: View {
     }
 
     private func perform(_ action: DockAction, rate: () -> Void) {
-        switch action {
-        case .favorite:
-            if model.isLoggedIn { model.quickFavorite() } else { signIn() }
-        case .favoriteIn(let folder):
-            model.favorite(category: folder)
-        case .unfavorite:
-            model.unfavorite()
-        case .read:
-            model.read()
-        case .comments:
-            model.destination = .comments(scrollTo: nil)
-        case .rate:
+        guard !GalleryDockItems.perform(action, model: model, signIn: signIn) else { return }
+        if action == .rate {
             if model.isLoggedIn { rate() } else { signIn() }
-        default:
-            break
         }
     }
 
