@@ -26,9 +26,17 @@ struct ReaderEngineView: UIViewControllerRepresentable {
     /// Held weakly by the engine: whoever owns the reader's state keeps these alive.
     var dataSource: any ReaderEngineDataSource
     var delegate: any ReaderEngineDelegate
+    #if DEBUG || HARNESS
+    /// The reader harness's record of the engine's own decisions. Only read when the engine
+    /// is created.
+    var probe: ((ReaderEngineProbeEvent) -> Void)?
+    #endif
 
     func makeUIViewController(context: Context) -> ReaderEngineViewController {
         let controller = ReaderEngineViewController(configuration: configuration, initialPage: initialPage)
+        #if DEBUG || HARNESS
+        controller.probe = probe
+        #endif
         controller.delegate = delegate
         controller.dataSource = dataSource
         proxy.attach(to: controller)
@@ -66,8 +74,8 @@ final class ReaderEngineProxy {
         engine.scrollToPage(page, animated: animated)
     }
 
-    /// Goes to the next page or spread. Returns `false` at the end of the gallery, which is
-    /// where auto-play should stop.
+    /// Goes to the next page or spread, or from the last page onto the trailer. Returns
+    /// `false` at the end, which is where auto-play should stop.
     @discardableResult
     func advance(animated: Bool = true) -> Bool {
         engine?.advance(animated: animated) ?? false
@@ -89,6 +97,11 @@ final class ReaderEngineProxy {
     func reloadData() {
         engine?.reloadData()
     }
+
+    #if DEBUG || HARNESS
+    /// The engine itself, for the reader harness's scripts and checks.
+    var inspectedEngine: ReaderEngineViewController? { engine }
+    #endif
 
     fileprivate func attach(to controller: ReaderEngineViewController) {
         guard engine !== controller else { return }
