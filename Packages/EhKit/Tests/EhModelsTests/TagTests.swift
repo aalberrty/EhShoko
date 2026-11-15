@@ -66,21 +66,6 @@ import Testing
         #expect(end.before == "big bre" && end.match == "asts" && end.after.isEmpty)
     }
 
-    @Test func translatorLookup() {
-        let translation = TagTranslation(namespace: .female, key: "big breasts", value: "巨乳")
-        let translator = TagTranslator(translations: ["femalebig breasts": translation])
-        let display: (TagTranslation) -> String = { $0.value }
-
-        let prefixed = translator.lookup(word: "female:big breasts", returnOriginal: false, display: display)
-        #expect(prefixed.0 == "female:巨乳" && prefixed.1 == translation)
-
-        let original = translator.lookup(word: "female:big breasts", returnOriginal: true, display: display)
-        #expect(original.0 == "female:big breasts" && original.1 == nil)
-
-        let bare = translator.lookup(word: "big breasts", returnOriginal: false, display: display)
-        #expect(bare.0 == "big breasts" && bare.1 == nil)
-    }
-
     @Test func namespaceAbbreviations() {
         #expect(TagNamespace.abbreviations["female"] == "f")
         #expect(TagNamespace.abbreviations["cosplayer"] == "cos")

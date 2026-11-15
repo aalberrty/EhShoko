@@ -66,8 +66,8 @@ public struct Filter: Codable, Sendable, Equatable {
 extension Filter {
     /// Ported from the legacy app: a missing or malformed key decodes as its fallback.
     ///
-    /// Unlike `init()`, the fallback for `galleryName` and `galleryTags` is `false`;
-    /// that quirk is kept so legacy data decodes exactly as it did before.
+    /// Unlike `init()`, the fallback for `galleryName` and `galleryTags` is `false`, a quirk of
+    /// the legacy app that is kept.
     public init(from decoder: any Decoder) {
         let container = try? decoder.container(keyedBy: CodingKeys.self)
         func value<T: Decodable>(_ key: CodingKeys, _ fallback: T) -> T {

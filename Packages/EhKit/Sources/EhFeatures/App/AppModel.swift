@@ -12,7 +12,7 @@ import Observation
 @Observable
 public final class AppModel {
     public enum LaunchState: Equatable, Sendable {
-        /// Opening the database and importing the old app's data.
+        /// Opening the database.
         case launching
         /// The tabs are shown; post-launch work may still be running.
         case ready

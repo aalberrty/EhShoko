@@ -11,8 +11,8 @@ struct LogRecord: Sendable {
 
     /// `2026-11-10 08:30:15.123 INFO [Reader] EhFeatures/ReaderModel.swift:42 - message`
     ///
-    /// The timestamp format matches the legacy SwiftyBeaver lines so both parse alike.
-    /// Newlines are escaped so one record is always one line.
+    /// The Logs screen reads a line's date from the text before its first space. Newlines are
+    /// escaped so one record is always one line.
     func formatted(with formatter: DateFormatter) -> String {
         let text = message
             .replacingOccurrences(of: "\r", with: "\\r")

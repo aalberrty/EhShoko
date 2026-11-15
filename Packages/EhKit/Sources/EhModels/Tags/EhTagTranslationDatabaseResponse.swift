@@ -8,7 +8,7 @@ public struct EhTagTranslationDatabaseResponse: Codable, Sendable {
         self.data = data
     }
 
-    /// Every translation keyed by namespace raw value + tag key, as `TagTranslator` stores them.
+    /// Every translation keyed by namespace raw value + tag key, e.g. `"femalebig breasts"`.
     public var tagTranslations: [String: TagTranslation] {
         .init(
             data.flatMap(\.tagTranslations).map { ($0.namespace.rawValue + $0.key, $0) },

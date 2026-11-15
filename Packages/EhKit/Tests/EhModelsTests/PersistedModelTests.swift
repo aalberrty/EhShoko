@@ -52,36 +52,6 @@ import Testing
         #expect(try roundTrip(words) == words)
     }
 
-    @Test func decodesLegacyTagTranslator() throws {
-        let json = """
-        { "language": { "simplifiedChinese": {} }, "hasCustomTranslations": true,
-          "updatedDate": 700000000,
-          "translations": { "femalebig breasts": { "namespace": "female", "key": "big breasts",
-            "value": "巨乳", "description": "胸部很大", "linksString": "[维基](https://x.org)" } } }
-        """
-        let translator = try decodeJSON(TagTranslator.self, json)
-        #expect(translator.language == .simplifiedChinese)
-        #expect(translator.hasCustomTranslations)
-        #expect(translator.updatedDate == Date(timeIntervalSinceReferenceDate: 700000000))
-        let translation = try #require(translator.translations["femalebig breasts"])
-        #expect(translation == TagTranslation(
-            namespace: .female, key: "big breasts", value: "巨乳",
-            description: "胸部很大", linksString: "[维基](https://x.org)"
-        ))
-        #expect(try roundTrip(translator) == translator)
-    }
-
-    @Test func tagTranslatorToleratesMissingKeys() throws {
-        let translator = try decodeJSON(TagTranslator.self, "{}")
-        #expect(translator == TagTranslator())
-        #expect(translator.updatedDate == .distantPast)
-    }
-
-    @Test func translatableLanguageUsesSynthesizedForm() throws {
-        let data = try JSONEncoder().encode(TranslatableLanguage.traditionalChinese)
-        #expect(String(decoding: data, as: UTF8.self) == #"{"traditionalChinese":{}}"#)
-    }
-
     @Test func decodesLegacyGalleryTags() throws {
         let json = """
         [{ "rawNamespace": "female", "contents": [

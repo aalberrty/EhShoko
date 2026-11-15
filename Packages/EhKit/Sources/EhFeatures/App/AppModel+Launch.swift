@@ -9,7 +9,7 @@ import Observation
 // `SettingReducer.loadUserSettings`).
 //
 // Only what the first screen depends on blocks it: the database (opened alongside the cookie
-// housekeeping), the one-time import and the settings that change how requests are sent.
+// housekeeping) and the settings that change how requests are sent.
 // Everything else runs concurrently once the tabs are up, as child tasks of `launch`, so it is
 // cancelled with the view's `.task`.
 
@@ -45,11 +45,6 @@ extension AppModel {
             return
         }
         launchClient.installDatabase(database)
-
-        let report = await launchClient.importLegacyData(database)
-        if report.outcome != .nothingToImport {
-            logger.log(report.outcome == .completed ? .info : .error, report.description, category: Self.logCategory)
-        }
         guard !Task.isCancelled else { return }
 
         await sharedStoresCreated
@@ -158,9 +153,8 @@ extension AppModel {
         }
     }
 
-    /// The stored choice can disagree with the icon the system actually shows (an imported
-    /// setting, a switch that failed); the system wins. Legacy: `SettingReducer.syncAppIconType`,
-    /// which ignored the primary icon because its default was an alternate; here it is `.default`.
+    /// The stored choice can disagree with the icon the system actually shows (after a switch
+    /// that failed); the system wins. The primary icon reads as `.default`.
     func syncAppIcon() {
         let icon = AppIconType(alternateIconName: application.alternateIconName())
         if settings.appIconType != icon {

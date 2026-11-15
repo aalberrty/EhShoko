@@ -63,3 +63,11 @@ import Testing
         #expect(ClipboardChangeCountStore.key == "clipboardChangeCount")
     }
 }
+
+/// The first value of a database observation.
+func first<S: AsyncSequence & Sendable>(_ sequence: S) async throws -> S.Element where S.Element: Sendable {
+    for try await value in sequence {
+        return value
+    }
+    throw CancellationError()
+}

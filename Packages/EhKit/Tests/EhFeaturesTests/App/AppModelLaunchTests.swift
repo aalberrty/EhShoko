@@ -32,7 +32,6 @@ final class LaunchHarness {
     ) {
         let events = events
         let opens = LockIsolated(0)
-        let modelBox = LockIsolated<AppModel?>(nil)
         let launchClient = LaunchClient(
             prepareCookies: { events.record("cookies") },
             openDatabase: {
@@ -46,10 +45,6 @@ final class LaunchHarness {
                 if dropFails { throw StubError.cannotDrop }
             },
             installDatabase: { _ in events.record("install") },
-            importLegacyData: { _ in
-                events.record("import while \(modelBox.value.map { "\($0.launchState)" } ?? "?")")
-                return .nothingToImport
-            },
             expirePages: { _ in
                 events.record("expire")
                 await expireGate?.wait()
@@ -79,7 +74,6 @@ final class LaunchHarness {
             AppModel()
         }
         self.model = model
-        modelBox.withValue { $0 = model }
     }
 
     func launch(isRegularWidth: Bool = false) async {
@@ -110,8 +104,6 @@ final class LaunchHarness {
         let install = try #require(events.index(of: "install"))
         #expect(try #require(events.index(of: "open")) < install)
         #expect(try #require(events.index(of: "cookies")) < install)
-        // The import runs on the installed database, before the tabs exist.
-        #expect(try #require(events.index(of: "import while launching")) > install)
         #expect(try #require(events.index(of: "expire")) > install)
         #expect(harness.model.launchState == .ready)
     }
@@ -196,7 +188,6 @@ final class LaunchHarness {
         }
         #expect(reason?.contains("cannotOpen") == true)
         #expect(harness.events.index(of: "install") == nil)
-        #expect(!harness.events.all.contains { $0.hasPrefix("import") })
         #expect(harness.events.index(of: "expire") == nil)
     }
 

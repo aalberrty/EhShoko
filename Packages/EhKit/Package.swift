@@ -46,7 +46,7 @@ let package = Package(
         .target(name: "EhNetworking", dependencies: ["EhModels", "EhParser"]),
         .testTarget(name: "EhNetworkingTests", dependencies: ["EhNetworking", "EhTestSupport"]),
 
-        // SQLite persistence (GRDB): schema, migrations, queries, legacy Core Data import.
+        // SQLite persistence (GRDB): schema, migrations, queries.
         .target(
             name: "EhDatabase",
             dependencies: ["EhModels", .product(name: "GRDB", package: "GRDB.swift")]

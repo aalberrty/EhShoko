@@ -124,7 +124,7 @@ public struct AppLogger: Sendable {
 // MARK: Log files
 
 extension AppLogger {
-    /// Log files, newest first. Includes files written by the legacy app.
+    /// Log files, newest first.
     public func logFiles() async -> [LogFile] {
         await sink?.logFiles() ?? []
     }
@@ -158,7 +158,7 @@ extension AppLogger {
 // MARK: Dependency
 
 extension AppLogger: DependencyKey {
-    /// The legacy location, `Documents/logs`, so files written by the old app keep showing up.
+    /// `Documents/logs`, which the Files app shows (the app shares its Documents folder).
     public static var defaultDirectory: URL {
         URL.documentsDirectory.appending(path: "logs", directoryHint: .isDirectory)
     }
