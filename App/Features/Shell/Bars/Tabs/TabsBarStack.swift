@@ -10,15 +10,10 @@ extension EnvironmentValues {
 }
 
 /// Around one tab's stack: what the bar does for every screen of that tab. Its own modifier,
-/// so a push, a pop or a re-selection runs this body and not the tab view's.
+/// so a re-selection runs this body and not the tab view's.
 ///
 /// - It hands the tab's screens its count of re-selections at the root.
-/// - It hides the tab bar while a gallery page or one of its child screens is on top, and
-///   shows it for every other screen, at any depth: the bar is this folder's, so it hides
-///   itself, from the path, outside the stack. The stack's root asks for the same, but what
-///   a root asks for does not always arrive: on iOS 26.0 the bar stayed over the dock of a
-///   gallery opened from Shelf's Home. It is still never hidden by the destination, which
-///   brings the accessory back a few frames before the bar (`spikes/S3.md` section 3).
+/// - On iOS 26.0 it hides the tab bar on gallery routes (`TabsBarHiding`).
 /// - On the systems without the accessory it tells the tab's screens what the capsule needs
 ///   to know of the bottom edge (`TabsBarLegacyEdge`).
 struct TabsBarStack: ViewModifier {
@@ -29,7 +24,38 @@ struct TabsBarStack: ViewModifier {
     func body(content: Content) -> some View {
         content
             .environment(\.tabsBarRootReselections, appRouter.rootReselectionCount(for: tab))
-            .toolbarVisibility(appRouter.stack(for: tab).hidesBrowseChrome ? .hidden : .automatic, for: .tabBar)
+            .modifier(TabsBarHiding(tab: tab))
             .modifier(TabsBarLegacyEdgeReader())
     }
+}
+
+/// Hides the tab bar while a gallery page or one of its child screens is on top of this
+/// tab's stack, from the path, outside the stack. On iOS 26.0 only.
+///
+/// Every stack's root already asks for this (`RoutedStack`), and on iOS 18 and from iOS 26.1
+/// that is enough. On iOS 26.0 what the root asks for does not always arrive: the bar stayed
+/// over the dock of a gallery opened from Shelf's Home, and asking from the tab's own content
+/// hides it. It must not be asked twice elsewhere: on iOS 18.5 the two requests fight when a
+/// list is pushed over a gallery, the bar stays hidden, the list is laid out under its top
+/// bar and the app never comes to rest. It is never asked by the destination either, which
+/// brings the accessory back a few frames before the bar (`spikes/S3.md` section 3).
+private struct TabsBarHiding: ViewModifier {
+    let tab: AppTab
+
+    @Environment(AppRouter.self) private var appRouter
+
+    func body(content: Content) -> some View {
+        // The same for the whole life of the process, so this `if` never rebuilds a tab,
+        // and on the other systems a push or a pop does not run this body.
+        if Self.isNeeded {
+            content.toolbarVisibility(appRouter.stack(for: tab).hidesBrowseChrome ? .hidden : .automatic, for: .tabBar)
+        } else {
+            content
+        }
+    }
+
+    /// iOS 26.0: the system that draws the capsule on iOS 26.
+    private static let isNeeded: Bool = {
+        if #available(iOS 26, *) { !TabAccessoryKind.usesSystemAccessory } else { false }
+    }()
 }
