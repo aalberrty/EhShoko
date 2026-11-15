@@ -3,14 +3,18 @@ import EhModels
 import SFSafeSymbols
 import SwiftUI
 
-/// Settings › Account › Account configuration: the site's own settings page (`uconfig.php`).
+/// Settings › Site account settings: My tags and the daily reward, then the site's own settings
+/// page (`uconfig.php`).
 struct EhSettingScreen: View {
     @State private var model = EhSettingModel()
     @State private var hud: HUDConfiguration?
     @State private var task: Task<Void, Never>?
+    @Environment(\.look) private var look
 
     var body: some View {
         content
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(look.surface)
             .navigationTitle(L10n.Localizable.EhSettingView.Title.hostSettings(model.galleryHost.rawValue))
             .toolbar { toolbar }
             .sheet(item: $model.destination) { destination in

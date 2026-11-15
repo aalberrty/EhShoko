@@ -15,7 +15,7 @@ struct EhProfileSection: View, Equatable {
     }
 
     var body: some View {
-        Section(L10n.Localizable.EhSettingView.Section.Title.profileSettings) {
+        EhSettingSection(title: L10n.Localizable.EhSettingView.Section.Title.profileSettings) {
             if let selected = model.selectedProfile {
                 Picker(L10n.Localizable.EhSettingView.Title.selectedProfile, selection: selection(selected)) {
                     ForEach(profiles) { profile in
