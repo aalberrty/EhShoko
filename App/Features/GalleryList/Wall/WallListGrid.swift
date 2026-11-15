@@ -140,6 +140,9 @@ struct WallListGrid<Header: View>: View {
                 }
             }
             .coordinateSpace(.named(WallListSpace.name))
+            // Entries that change inside someone else's animation (the find field closing) take
+            // their places at once: what a lazy grid lays out must not be animated.
+            .transaction(value: WallListEntriesKey(entries)) { $0.animation = nil }
             .padding(.horizontal, WallGridLayout.margin)
             .background { WallListPinch(onStep: step) }
         }
