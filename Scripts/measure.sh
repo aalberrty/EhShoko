@@ -9,13 +9,20 @@
 #                              went. Slots: v3-rows (default), v3-grid; see ListHarnessSlot.
 #                              Hitches: on a device, Instruments' Animation Hitches as well as the
 #                              harness's own count; on a simulator, where Instruments cannot record
-#                              hitches, the harness's count from its display link only.
+#                              hitches, the harness's count from its display link only. On a
+#                              device the hitches recording has a time profile of its own, so
+#                              --templates hitches,alloc gives every figure in fewer runs.
 #   measure.sh signposts [s]   Launches the app normally and records its Performance signposts
 #                              for s seconds (default 30): Launch and FirstContent at once, and
 #                              GalleryOpen, ReaderOpen and ListPage for whatever is opened meanwhile
-#                              (by hand or with agent-device). Prints every interval and event.
+#                              (by hand, with agent-device, or with --link). Prints every interval
+#                              and event, and with --runs the median and spread of each.
 #                              With --attach, records while the app already runs instead (no
 #                              Launch or FirstContent then), so a screen can be reached first.
+#   measure.sh launch          Launches the app under Instruments' App Launch template (with the
+#                              signposts), --runs times, and prints the time to the first frame,
+#                              split into the system's process creation and the app's own part,
+#                              and the Launch signpost.
 #   measure.sh report <dir>    Prints the numbers of an earlier run again.
 #
 # Options (before the run name):
@@ -27,8 +34,25 @@
 #   --templates <list>    Which recordings of a list run: hitches,time,alloc (default all three).
 #   --speed <pt/s>        Scroll speed (default 2000).   --count <n>   Galleries (default 500).
 #   --tags                Rows show their tags.          --latency <s> Cover latency (default 0.08).
-#   --runs <n>            Repeat the hitches recording n times and report each (default 1).
+#   --runs <n>            Repeat the hitches and time recordings of a list run, or a signposts
+#                         run, n times; reports each and the median and spread (default 1).
 #   --attach              signposts: attach to the running app rather than launching it.
+#   --link <url>          signposts: open this gallery link at launch (an image page link also
+#                         opens the reader). Needs a build with the harness (see below).
+#   --clear-images        signposts: empty the image cache before the link is opened.
+#   --exit-after <s>      signposts: the app writes its footprint and quits s seconds after its
+#                         root appears, which ends the recording early.
+#   --template <name>     signposts: the Instruments template (default Logging). With
+#                         "Animation Hitches" the report counts the hitches of the first 600 ms
+#                         of GalleryOpen and ReaderOpen, the opening transition.
+#   --app-arg <arg>       signposts: one more launch argument, repeatable (for example
+#                         --app-arg -Harness --app-arg reader to time the reader harness).
+#   --bundle-id <id>      The app to measure. Default: $APP_BUNDLE_ID, else app.ehshoko.
+#
+# The harness and the launch arguments above exist in Debug builds, and in any build compiled
+# with the HARNESS condition, which measures optimised code: add
+#   'SWIFT_ACTIVE_COMPILATION_CONDITIONS=$(inherited) HARNESS'
+# to the Release xcodebuild command that builds the app for the device.
 #
 # Example, from the repository root, with a Debug build installed on the iOS 26 simulator:
 #   Scripts/measure.sh --device 37B2537D-E570-4030-B731-E2857E827B7E list v3-rows
@@ -48,6 +72,11 @@ tags=NO
 latency=0.08
 runs=1
 attach=NO
+link=""
+clear_images=NO
+exit_after=""
+extra_args=()
+signpost_template=Logging
 
 die() { echo "measure.sh: $*" >&2; exit 1; }
 
@@ -63,14 +92,20 @@ while [[ $# -gt 0 ]]; do
     --latency) latency="$2"; shift 2 ;;
     --runs) runs="$2"; shift 2 ;;
     --attach) attach=YES; shift ;;
-    -h|--help) sed -n '2,39p' "$0"; exit 0 ;;
+    --link) link="$2"; shift 2 ;;
+    --clear-images) clear_images=YES; shift ;;
+    --exit-after) exit_after="$2"; shift 2 ;;
+    --bundle-id) bundle_id="$2"; shift 2 ;;
+    --app-arg) extra_args+=("$2"); shift 2 ;;
+    --template) signpost_template="$2"; shift 2 ;;
+    -h|--help) sed -n '2,64p' "$0"; exit 0 ;;
     --*) die "unknown option $1" ;;
     *) break ;;
   esac
 done
 
 run="${1:-}"
-[[ -n "$run" ]] || die "name a run: list, signposts or report (see --help)"
+[[ -n "$run" ]] || die "name a run: list, signposts, launch or report (see --help)"
 shift
 
 if [[ "$run" == report ]]; then
@@ -111,7 +146,28 @@ mkdir -p "$out"
 terminate() {
   if is_simulator; then
     xcrun simctl terminate "$device" "$bundle_id" >/dev/null 2>&1 || true
+    return
   fi
+  # On a device: the processes whose executable is inside this bundle's install folder, so
+  # another build of the app (installed beside it under another bundle id) is never touched.
+  local apps processes pid
+  apps="$out/.apps.json"
+  processes="$out/.processes.json"
+  xcrun devicectl device info apps --device "$device" --bundle-id "$bundle_id" --json-output "$apps" >/dev/null 2>&1 || return 0
+  xcrun devicectl device info processes --device "$device" --json-output "$processes" >/dev/null 2>&1 || return 0
+  for pid in $(python3 -I - "$apps" "$processes" <<'PY'
+import json, sys
+apps = json.load(open(sys.argv[1]))["result"]["apps"]
+folders = [app["url"] for app in apps if app.get("url")]
+for process in json.load(open(sys.argv[2]))["result"]["runningProcesses"]:
+    executable = process.get("executable", "")
+    if folders and any(executable.startswith(folder) for folder in folders):
+        print(process["processIdentifier"])
+PY
+  ); do
+    xcrun devicectl device process terminate --device "$device" --pid "$pid" >/dev/null 2>&1 || true
+  done
+  rm -f "$apps" "$processes"
 }
 
 # record <template> <trace> <time limit> <extra instruments...> -- <app arguments...>
@@ -121,25 +177,55 @@ record() {
   local instruments=()
   while [[ "$1" != -- ]]; do instruments+=(--instrument "$1"); shift; done
   shift
-  terminate
-  echo "Recording $template → $trace" >&2
-  # xctrace exits non-zero for warnings too; whether the trace is usable shows in the report.
-  xcrun xctrace record --quiet --no-prompt --device "$device" --template "$template" \
-    ${instruments[@]+"${instruments[@]}"} --time-limit "$limit" --output "$trace" \
-    --launch -- "$target" "$@" >/dev/null || echo "measure.sh: xctrace reported issues (above)" >&2
+  local attempt issues="$out/.xctrace-issues.txt"
+  for attempt in 1 2 3 4 5; do
+    terminate
+    rm -rf "$trace"
+    echo "Recording $template → $trace" >&2
+    # xctrace exits non-zero for warnings too; whether the trace is usable shows in the report.
+    xcrun xctrace record --quiet --no-prompt --device "$device" --template "$template" \
+      ${instruments[@]+"${instruments[@]}"} --time-limit "$limit" --output "$trace" \
+      --launch -- "$target" "$@" >/dev/null 2>"$issues" || echo "measure.sh: xctrace reported issues" >&2
+    cat "$issues" >&2
+    # A device refuses to record ("an unknown problem") while the app still runs, which a
+    # terminate that timed out under load leaves behind, and for a while after a heavy
+    # recording (Animation Hitches) ends; terminate again and retry, waiting longer each time.
+    grep -q "preventing this device from recording" "$issues" || break
+    echo "measure.sh: the device would not record (attempt $attempt); retrying" >&2
+    sleep $((attempt * 20))
+  done
+  rm -f "$issues"
 }
 
-# Copies the list harness's result file of the last run to $1.
-fetch_result() {
+# mark_stale <file in Library/Caches/ListHarness>: replaces what an earlier run left there with
+# {"stale": true}, so a run that never started cannot hand on the last run's result; the
+# report skips such a file.
+mark_stale() {
+  local source="Library/Caches/ListHarness/$1" marker="$out/.stale.json"
+  echo '{"stale": true}' > "$marker"
   if is_simulator; then
     local data
     data="$(xcrun simctl get_app_container "$device" "$bundle_id" data)"
-    cp "$data/Library/Caches/ListHarness/result.json" "$1" 2>/dev/null
+    mkdir -p "$data/Library/Caches/ListHarness" && cp "$marker" "$data/$source"
+  else
+    xcrun devicectl device copy to --device "$device" --domain-type appDataContainer \
+      --domain-identifier "$bundle_id" --source "$marker" --destination "$source" >/dev/null 2>&1
+  fi || echo "measure.sh: could not reset $1 on the device" >&2
+  rm -f "$marker"
+}
+
+# fetch_file <file in Library/Caches/ListHarness> <destination>: copies what the harness wrote
+# in the last run.
+fetch_file() {
+  local source="Library/Caches/ListHarness/$1"
+  if is_simulator; then
+    local data
+    data="$(xcrun simctl get_app_container "$device" "$bundle_id" data)"
+    cp "$data/$source" "$2" 2>/dev/null
   else
     xcrun devicectl device copy from --device "$device" --domain-type appDataContainer \
-      --domain-identifier "$bundle_id" --source Library/Caches/ListHarness/result.json \
-      --destination "$1" >/dev/null 2>&1
-  fi || echo "measure.sh: the harness wrote no result (did the run finish?)" >&2
+      --domain-identifier "$bundle_id" --source "$source" --destination "$2" >/dev/null 2>&1
+  fi || echo "measure.sh: the harness wrote no $1 (did the run finish?)" >&2
 }
 
 case "$run" in
@@ -161,11 +247,15 @@ case "$run" in
               xcrun simctl launch --console-pty "$device" "$bundle_id" "${harness_args[@]}" > "$out/console-$index.txt" 2>&1 \
                 || echo "measure.sh: the launch failed (see console-$index.txt)" >&2
             else
+              mark_stale result.json
               record "Animation Hitches" "$out/hitches-$index.trace" 240s os_signpost -- "${harness_args[@]}"
             fi
-            fetch_result "$out/result-$index.json"
+            fetch_file result.json "$out/result-$index.json"
           done ;;
-        time) record "Time Profiler" "$out/time.trace" 240s os_signpost -- "${harness_args[@]}" ;;
+        time)
+          for ((index = 1; index <= runs; index++)); do
+            record "Time Profiler" "$out/time-$index.trace" 240s os_signpost -- "${harness_args[@]}"
+          done ;;
         alloc) record "Allocations" "$out/alloc.trace" 240s -- "${harness_args[@]}" ;;
         *) die "unknown template $template (hitches, time, alloc)" ;;
       esac
@@ -184,9 +274,25 @@ case "$run" in
       python3 -I "$here/measure_report.py" "$out"
       exit 0
     fi
-    record "Logging" "$out/signposts.trace" "${seconds}s" os_signpost --
+    app_args=(${extra_args[@]+"${extra_args[@]}"})
+    [[ -z "$link" ]] || app_args+=(-HarnessLink "$link")
+    [[ "$clear_images" == NO ]] || app_args+=(-HarnessClearImageCache YES)
+    [[ -z "$exit_after" ]] || app_args+=(-HarnessExitAfter "$exit_after")
+    printf '%s\n' "link=${link:-none}" "clear_images=$clear_images" "exit_after=${exit_after:-none}" "arguments=${extra_args[*]:-none}" "template=$signpost_template" \
+      "device=$device" >> "$out/run.txt"
+    for ((index = 1; index <= runs; index++)); do
+      [[ -z "$exit_after" ]] || mark_stale footprint.json
+      record "$signpost_template" "$out/signposts-$index.trace" "${seconds}s" os_signpost -- ${app_args[@]+"${app_args[@]}"}
+      [[ -z "$exit_after" ]] || fetch_file footprint.json "$out/footprint-$index.json"
+    done
     ;;
-  *) die "unknown run $run (list, signposts, report)" ;;
+  launch)
+    printf '%s\n' "kind=launch" "device=$device" > "$out/run.txt"
+    for ((index = 1; index <= runs; index++)); do
+      record "App Launch" "$out/launch-$index.trace" 10s os_signpost --
+    done
+    ;;
+  *) die "unknown run $run (list, signposts, launch, report)" ;;
 esac
 
 terminate

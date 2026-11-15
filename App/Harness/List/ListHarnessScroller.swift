@@ -1,4 +1,4 @@
-#if DEBUG
+#if DEBUG || HARNESS
 import os
 import SwiftUI
 import UIKit

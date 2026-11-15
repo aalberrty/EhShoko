@@ -51,10 +51,13 @@ nonisolated struct DockItem: Equatable, Sendable {
     /// Drawn at reduced emphasis but still tappable: an action that needs an account, whose
     /// tap asks the user to sign in.
     var isDimmed: Bool
+    /// On the pill: the gallery whose reader it opens. The dock marks the pill as where that
+    /// reader zooms out of (`readerSource(.dock(gid:))`); `nil` for a pill that opens no reader.
+    var readerGalleryID: String?
 
     init(
         title: String, detail: String? = nil, systemImage: String? = nil, action: DockAction,
-        menu: DockMenu? = nil, isEnabled: Bool = true, isDimmed: Bool = false
+        menu: DockMenu? = nil, isEnabled: Bool = true, isDimmed: Bool = false, readerGalleryID: String? = nil
     ) {
         self.title = title
         self.detail = detail
@@ -63,6 +66,7 @@ nonisolated struct DockItem: Equatable, Sendable {
         self.menu = menu
         self.isEnabled = isEnabled
         self.isDimmed = isDimmed
+        self.readerGalleryID = readerGalleryID
     }
 }
 

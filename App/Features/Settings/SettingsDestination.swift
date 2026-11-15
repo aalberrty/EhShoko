@@ -1,29 +1,23 @@
-import EhCore
 import EhFeatures
 import EhModels
 import SwiftUI
 
-/// Maps a `SettingsRoute` to its screen. Every settings screen is tinted with the accent colour,
-/// as in legacy.
+/// Maps a `SettingsRoute` to its screen. Every screen takes the tint the shell set from the
+/// look and the accent.
 struct SettingsDestination: View {
     let route: SettingsRoute
 
-    @Environment(SettingsStore.self) private var settings
-
     var body: some View {
-        screen.tint(settings.accentColor.color)
-    }
-
-    @ViewBuilder private var screen: some View {
         switch route {
         case .account: AccountSettingScreen()
         case .login: LoginScreen()
         case .ehSetting: EhSettingScreen()
         case .general: GeneralSettingsScreen()
-        // Until the Experience screen exists, its row opens v3's Appearance screen.
-        case .design: AppearanceSettingsScreen()
-        case .designPart, .designSetup: EmptyView()
         case .appIcon: AppIconScreen()
+        case .design: DesignScreen()
+        case .designPart(let part): DesignOptionsScreen(part: part)
+        // The setup wizard's screen goes here when it exists (`DesignSetupEntry`).
+        case .designSetup: EmptyView()
         case .reading: ReadingSettingsScreen()
         case .laboratory: LaboratorySettingsScreen()
         case .logs: LogsScreen()

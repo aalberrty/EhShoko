@@ -3,71 +3,88 @@ import EhFeatures
 import EhModels
 import SwiftUI
 
-/// Every option group of the settings page, in the site's order.
+/// The site's account settings: My tags and the daily reward, then every option group of the
+/// settings page, on the look's colours.
 ///
 /// This view reads `model.setting` and hands each section only the values it shows. Sections
 /// are `Equatable`, so an edit re-renders the section that changed and leaves the others.
 struct EhSettingForm: View {
     let model: EhSettingModel
     let perform: (@escaping () async -> Void) -> Void
-    @Environment(SettingsStore.self) private var settings
 
     var body: some View {
         if let setting = model.setting {
-            let editor = EhSettingEditor(model: model)
             Form {
-                EhProfileSection(
-                    model: model, profiles: setting.ehProfiles,
-                    canCreate: setting.isCapableOfCreatingNewProfile, perform: perform
-                )
-                ImageLoadSection(
-                    editor: editor, value: setting.loadThroughHathSetting,
-                    options: setting.capableLoadThroughHathSettings,
-                    country: setting.browsingCountry,
-                    detectedCountry: setting.localizedLiteralBrowsingCountry ?? setting.literalBrowsingCountry
-                )
-                ImageSizeSection(
-                    editor: editor, resolution: setting.imageResolution,
-                    resolutions: setting.capableImageResolutions, useOriginalImages: setting.useOriginalImages,
-                    width: setting.imageSizeWidth, height: setting.imageSizeHeight
-                )
-                GalleryNameSection(editor: editor, value: setting.galleryName)
-                ArchiverSection(editor: editor, value: setting.archiverBehavior)
-                FrontPageSection(
-                    editor: editor, host: settings.galleryHost, disabledCategories: setting.disabledCategories,
-                    displayMode: setting.displayMode, showsRangeIndicator: setting.showSearchRangeIndicator
-                )
-                OptionalUISection(editor: editor, isOn: setting.enableGalleryThumbnailSelector)
-                FavoritesSection(
-                    editor: editor, host: settings.galleryHost,
-                    names: setting.favoriteCategories, sortOrder: setting.favoritesSortOrder
-                )
-                SearchResultCountSection(
-                    editor: editor, value: setting.searchResultCount, options: setting.capableSearchResultCounts
-                )
-                ThumbnailSection(
-                    editor: editor, timing: setting.thumbnailLoadTiming, size: setting.thumbnailConfigSize,
-                    sizes: setting.capableThumbnailConfigSizes, rows: setting.thumbnailConfigRows,
-                    rowOptions: setting.capableThumbnailConfigRowCounts
-                )
-                CoverScalingSection(editor: editor, value: setting.coverScaleFactor)
-                RatingsSection(editor: editor, value: setting.ratingsColor)
-                TagWatchingSection(editor: editor, value: setting.tagWatchingThreshold)
-                TagFilteringSection(editor: editor, value: setting.tagFilteringThreshold)
-                FilteredRemovalSection(editor: editor, isOn: setting.showFilteredRemovalCount)
-                ExcludedLanguagesSection(editor: editor, values: setting.excludedLanguages)
-                ExcludedUploadersSection(editor: editor, text: setting.excludedUploaders)
-                ViewportSection(editor: editor, value: setting.viewportVirtualWidth)
-                CommentsSection(editor: editor, order: setting.commentsSortOrder, timing: setting.commentVotesShowTiming)
-                TagsSection(editor: editor, value: setting.tagsSortOrder)
-                PageLabelingSection(editor: editor, value: setting.galleryPageNumbering)
-                MultiPageViewerSection(
-                    editor: editor, isOn: setting.useMultiplePageViewer,
-                    style: setting.multiplePageViewerStyle, showsPane: setting.multiplePageViewerShowThumbnailPane
-                )
+                SiteAccountSection()
+                Group {
+                    EhSettingSections(model: model, setting: setting, perform: perform)
+                }
+                .settingsRow()
             }
+            .settingsFormStyle()
             .scrollDismissesKeyboard(.interactively)
         }
+    }
+}
+
+/// Every option group of the site's page, in the site's order.
+private struct EhSettingSections: View {
+    let model: EhSettingModel
+    let setting: EhSetting
+    let perform: (@escaping () async -> Void) -> Void
+    @Environment(SettingsStore.self) private var settings
+
+    var body: some View {
+        let editor = EhSettingEditor(model: model)
+        EhProfileSection(
+            model: model, profiles: setting.ehProfiles,
+            canCreate: setting.isCapableOfCreatingNewProfile, perform: perform
+        )
+        ImageLoadSection(
+            editor: editor, value: setting.loadThroughHathSetting,
+            options: setting.capableLoadThroughHathSettings,
+            country: setting.browsingCountry,
+            detectedCountry: setting.localizedLiteralBrowsingCountry ?? setting.literalBrowsingCountry
+        )
+        ImageSizeSection(
+            editor: editor, resolution: setting.imageResolution,
+            resolutions: setting.capableImageResolutions, useOriginalImages: setting.useOriginalImages,
+            width: setting.imageSizeWidth, height: setting.imageSizeHeight
+        )
+        GalleryNameSection(editor: editor, value: setting.galleryName)
+        ArchiverSection(editor: editor, value: setting.archiverBehavior)
+        FrontPageSection(
+            editor: editor, host: settings.galleryHost, disabledCategories: setting.disabledCategories,
+            displayMode: setting.displayMode, showsRangeIndicator: setting.showSearchRangeIndicator
+        )
+        OptionalUISection(editor: editor, isOn: setting.enableGalleryThumbnailSelector)
+        FavoritesSection(
+            editor: editor, host: settings.galleryHost,
+            names: setting.favoriteCategories, sortOrder: setting.favoritesSortOrder
+        )
+        SearchResultCountSection(
+            editor: editor, value: setting.searchResultCount, options: setting.capableSearchResultCounts
+        )
+        ThumbnailSection(
+            editor: editor, timing: setting.thumbnailLoadTiming, size: setting.thumbnailConfigSize,
+            sizes: setting.capableThumbnailConfigSizes, rows: setting.thumbnailConfigRows,
+            rowOptions: setting.capableThumbnailConfigRowCounts
+        )
+        CoverScalingSection(editor: editor, value: setting.coverScaleFactor)
+        RatingsSection(editor: editor, value: setting.ratingsColor)
+        TagWatchingSection(editor: editor, value: setting.tagWatchingThreshold)
+        TagFilteringSection(editor: editor, value: setting.tagFilteringThreshold)
+        FilteredRemovalSection(editor: editor, isOn: setting.showFilteredRemovalCount)
+        ExcludedLanguagesSection(editor: editor, values: setting.excludedLanguages)
+        ExcludedUploadersSection(editor: editor, text: setting.excludedUploaders)
+        ViewportSection(editor: editor, value: setting.viewportVirtualWidth)
+        CommentsSection(editor: editor, order: setting.commentsSortOrder, timing: setting.commentVotesShowTiming)
+        TagsSection(editor: editor, value: setting.tagsSortOrder)
+        PageLabelingSection(editor: editor, value: setting.galleryPageNumbering)
+        MultiPageViewerSection(
+            editor: editor, isOn: setting.useMultiplePageViewer,
+            style: setting.multiplePageViewerStyle, showsPane: setting.multiplePageViewerShowThumbnailPane
+        )
     }
 }
 
@@ -107,10 +124,10 @@ struct EhSettingSection<Content: View>: View {
         Section {
             content
         } header: {
-            Text(title)
+            Text(title).settingsSectionHeader()
         } footer: {
             if let description {
-                Text(LocalizedStringKey(description))
+                Text(LocalizedStringKey(description)).settingsFootnote()
             }
         }
     }

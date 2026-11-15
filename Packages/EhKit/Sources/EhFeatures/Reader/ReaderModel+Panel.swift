@@ -25,6 +25,22 @@ extension ReaderModel {
         }
     }
 
+    /// Ends a scrub without going anywhere: the strip comes down and the slider returns to
+    /// the page being read.
+    ///
+    /// Wall's capsule scrubs from a touch anywhere on it, so a touch that lifts where it
+    /// landed has chosen no page: letting go as usual would leave the closing page for the
+    /// last page on a mere tap. It also serves a touch the system took away.
+    public func cancelSliderEditing() {
+        guard showsSliderPreview else { return }
+        showsSliderPreview = false
+        previewDebounce?.cancel()
+        previewDebounce = nil
+        if sliderPage != currentPage {
+            sliderPage = currentPage
+        }
+    }
+
     /// The slider moved. Without the strip (an accessibility adjustment, for example) the
     /// reader follows at once.
     public func setSliderPage(_ page: Int) {
@@ -43,6 +59,18 @@ extension ReaderModel {
     public var previewStripPages: [Int] {
         let reach = max(previewStripLength - 1, 0) / 2
         return Array((sliderPage - reach)...(sliderPage + reach))
+    }
+
+    /// Loads the thumbnails the strip lacks around the slider's page, for a strip that shows
+    /// outside a scrub. Shelf's panel shows its strip whenever the controls show, so it calls
+    /// this when the panel appears, when the reader moves on and when a preview page arrives
+    /// (which can show that the strip's pages are listed on another preview page). Each
+    /// preview page is requested once, so calling it again costs nothing.
+    ///
+    /// During a scrub it does nothing: the scrub loads them itself, where the slider rests.
+    public func loadStripThumbnails() {
+        guard !showsSliderPreview else { return }
+        loadStripPreviews()
     }
 
     private func jump(to page: Int) {
@@ -114,6 +142,32 @@ extension ReaderModel {
                 }
             }
         }
+    }
+
+    // MARK: What a control sheet shows
+
+    /// The title without the groups the site's convention puts around it ("Yoake no Hakoniwa"
+    /// of "[Circle (Artist)] Yoake no Hakoniwa [English]"), for a control with little room
+    /// (Ledger's sheet). A title outside the convention is returned whole.
+    public func shortTitle(prefersJapanese: Bool) -> String {
+        TitleParser.parse(title(prefersJapanese: prefersJapanese)).core
+    }
+
+    /// How many pages have failed: those that could not be resolved and those whose image did
+    /// not load. "Retry failed pages" is for these (Ledger's sheet shows the button only while
+    /// there are any).
+    ///
+    /// Not observable, like every page state: a page that fails touches that page's view and
+    /// nothing in SwiftUI. A control that shows it asks again when it appears and while the
+    /// reader moves.
+    public var failedPageCount: Int {
+        var failed = failedImagePages
+        for (page, status) in resolver.statuses {
+            if case .failed = status {
+                failed.insert(page)
+            }
+        }
+        return failed.count
     }
 
     // MARK: Menu

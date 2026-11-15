@@ -13,7 +13,7 @@ struct MainApp: App {
         ImageDownloaderConfiguration.configure()
         prepareDependencies {
             $0.domainFronting = .appWide
-            #if DEBUG
+            #if DEBUG || HARNESS
             // The part harness, launched as the whole app, runs on a database and a client
             // of its own.
             if HarnessRequest.atLaunch == .part {

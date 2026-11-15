@@ -26,7 +26,7 @@ struct CommentsSection: View, Equatable {
     let timing: EhSetting.CommentVotesShowTiming
 
     var body: some View {
-        Section(L10n.Localizable.EhSettingView.Section.Title.galleryComments) {
+        EhSettingSection(title: L10n.Localizable.EhSettingView.Section.Title.galleryComments) {
             OptionPicker(
                 title: L10n.Localizable.EhSettingView.Title.commentsSortOrder,
                 selection: editor.binding(\.commentsSortOrder, order),
@@ -46,7 +46,7 @@ struct TagsSection: View, Equatable {
     let value: EhSetting.TagsSortOrder
 
     var body: some View {
-        Section(L10n.Localizable.EhSettingView.Section.Title.galleryTags) {
+        EhSettingSection(title: L10n.Localizable.EhSettingView.Section.Title.galleryTags) {
             OptionPicker(
                 title: L10n.Localizable.EhSettingView.Title.tagsSortOrder,
                 selection: editor.binding(\.tagsSortOrder, value),
@@ -61,7 +61,7 @@ struct PageLabelingSection: View, Equatable {
     let value: EhSetting.GalleryPageNumbering
 
     var body: some View {
-        Section(L10n.Localizable.EhSettingView.Section.Title.galleryPageThumbnailLabeling) {
+        EhSettingSection(title: L10n.Localizable.EhSettingView.Section.Title.galleryPageThumbnailLabeling) {
             OptionPicker(
                 title: L10n.Localizable.EhSettingView.Title.showLabelBelowGalleryThumbnails,
                 selection: editor.binding(\.galleryPageNumbering, value),
@@ -83,7 +83,7 @@ struct MultiPageViewerSection: View, Equatable {
         if let isOn = editor.binding(\.useMultiplePageViewer, isOn),
            let style = editor.binding(\.multiplePageViewerStyle, style),
            let showsPane = editor.binding(\.multiplePageViewerShowThumbnailPane, showsPane) {
-            Section(L10n.Localizable.EhSettingView.Section.Title.multiPageViewer) {
+            EhSettingSection(title: L10n.Localizable.EhSettingView.Section.Title.multiPageViewer) {
                 Toggle(L10n.Localizable.EhSettingView.Title.useMultiPageViewer, isOn: isOn)
                 OptionPicker(
                     title: L10n.Localizable.EhSettingView.Title.displayStyle, selection: style,

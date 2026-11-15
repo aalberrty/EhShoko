@@ -42,6 +42,15 @@ nonisolated extension DetailDestination: Identifiable {
     public var id: Self { self }
 }
 
+/// The control on a gallery page that opened the reader, so that the reader grows out of it
+/// and back into it.
+nonisolated public enum ReaderOrigin: Hashable, Sendable {
+    /// Read, Continue or Read again: the dock's pill. Also what opens the reader for a link.
+    case readButton
+    /// A page's preview on the page's strip of previews.
+    case preview(page: Int)
+}
+
 /// Something a detail screen should do as soon as it has opened, asked for by whoever opened
 /// it: a link to an image page opens the reader there, a link to a comment opens the comments
 /// at that comment. It travels in `Route.detail` into `GalleryDetailModel.init`.

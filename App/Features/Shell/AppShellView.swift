@@ -52,6 +52,7 @@ struct AppShellView: View {
         }
         .onAppear { PerformanceSignposts.rootAppeared() }
         .onOpenURL { model.links.open($0) }
+        .harnessLaunchActions { model.links.open($0) }
         .onChange(of: scenePhase, initial: true) { _, phase in
             model.scenePhaseChanged(to: AppModel.ScenePhase(phase))
         }

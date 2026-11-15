@@ -3,23 +3,29 @@ import EhFeatures
 import EhModels
 import SwiftUI
 
-/// Settings › General (legacy `GeneralSettingView`).
+/// Settings › General (legacy `GeneralSettingView`), with the app icon after the language.
 struct GeneralSettingsScreen: View {
     @State private var model = GeneralSettingsModel()
     @State private var isConfirmingClearCache = false
     @Environment(SettingsStore.self) private var settings
+    @Environment(\.look) private var look
 
     var body: some View {
         @Bindable var settings = settings
         Form {
             Section {
                 languageRow
+                // Hidden while the app has one icon.
+                if AppIconModel.offersChoice {
+                    appIconRow
+                }
                 NavigationLink(value: Route.settings(.logs)) {
-                    Text(L10n.Localizable.GeneralSettingView.Button.logs)
+                    Text(L10n.Localizable.GeneralSettingView.Button.logs).foregroundStyle(look.label)
                 }
             }
+            .settingsRow()
             TagTranslationSection()
-            Section(L10n.Localizable.GeneralSettingView.Section.Title.navigation) {
+            Section {
                 Toggle(
                     L10n.Localizable.GeneralSettingView.Title.redirectsLinksToTheSelectedHost,
                     isOn: $settings.redirectsLinksToSelectedHost
@@ -28,14 +34,31 @@ struct GeneralSettingsScreen: View {
                     L10n.Localizable.GeneralSettingView.Title.detectsLinksFromClipboard,
                     isOn: $settings.detectsLinksFromClipboard
                 )
+            } header: {
+                Text(L10n.Localizable.GeneralSettingView.Section.Title.navigation).settingsSectionHeader()
             }
+            .settingsRow()
             SecuritySection(isPasscodeSet: model.isPasscodeSet)
-            Section(L10n.Localizable.GeneralSettingView.Section.Title.caches) {
+            Section {
                 clearCacheRow
+            } header: {
+                Text(L10n.Localizable.GeneralSettingView.Section.Title.caches).settingsSectionHeader()
             }
+            .settingsRow()
         }
+        .settingsFormStyle()
         .navigationTitle(L10n.Localizable.GeneralSettingView.Title.general)
         .task { await model.onAppear() }
+    }
+
+    private var appIconRow: some View {
+        NavigationLink(value: Route.settings(.appIcon)) {
+            LabeledContent {
+                Text(settings.appIconType.localizedName)
+            } label: {
+                Text(L10n.Localizable.AppearanceSettingView.Button.appIcon).foregroundStyle(look.label)
+            }
+        }
     }
 
     private var languageRow: some View {
@@ -45,7 +68,7 @@ struct GeneralSettingsScreen: View {
             LabeledContent {
                 Text(Self.languageName).foregroundStyle(.tint)
             } label: {
-                Text(L10n.Localizable.GeneralSettingView.Title.language).foregroundStyle(Color.primary)
+                Text(L10n.Localizable.GeneralSettingView.Title.language).foregroundStyle(look.label)
             }
         }
     }
@@ -61,7 +84,7 @@ struct GeneralSettingsScreen: View {
                     Text(Int64(size), format: .byteCount(style: .file)).foregroundStyle(.tint)
                 }
             } label: {
-                Text(L10n.Localizable.GeneralSettingView.Button.clearImageCaches).foregroundStyle(Color.primary)
+                Text(L10n.Localizable.GeneralSettingView.Button.clearImageCaches).foregroundStyle(look.label)
             }
         }
         .disabled(model.isClearingImageCache)
@@ -92,7 +115,7 @@ private struct SecuritySection: View {
 
     var body: some View {
         @Bindable var settings = settings
-        Section(L10n.Localizable.GeneralSettingView.Section.Title.security) {
+        Section {
             Picker(selection: $settings.autoLockPolicy) {
                 ForEach(AutoLockPolicy.allCases, id: \.self) { policy in
                     Text(policy.localizedName).tag(policy)
@@ -119,7 +142,10 @@ private struct SecuritySection: View {
                 }
                 .accessibilityValue(Text(settings.backgroundBlurRadius, format: .number))
             }
+        } header: {
+            Text(L10n.Localizable.GeneralSettingView.Section.Title.security).settingsSectionHeader()
         }
+        .settingsRow()
     }
 }
 

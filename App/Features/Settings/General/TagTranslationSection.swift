@@ -51,7 +51,7 @@ struct TagTranslationSection: View {
                 }
             }
         } header: {
-            Text(L10n.Localizable.GeneralSettingView.Section.Title.tags)
+            Text(L10n.Localizable.GeneralSettingView.Section.Title.tags).settingsSectionHeader()
         } footer: {
             if let failure = model.failure {
                 Label {
@@ -59,8 +59,10 @@ struct TagTranslationSection: View {
                 } icon: {
                     Image(systemName: failure.symbol.rawValue).accessibilityHidden(true)
                 }
+                .settingsFootnote()
             }
         }
+        .settingsRow()
         .fileImporter(isPresented: $isImporting, allowedContentTypes: [.json]) { result in
             guard case .success(let url) = result else { return }
             Task { await model.importCustomTranslations(from: url) }
