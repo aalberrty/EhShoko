@@ -150,10 +150,18 @@ final class ReaderHarnessModel: ReaderEngineDataSource, ReaderEngineDelegate {
         return showsClosingSlot
     }
 
+    /// The closing page, with a detail model of its own whose requests are counted in the log
+    /// (`ReaderClosingHarness`). The walk's height case keeps the stand-in, whose height it
+    /// changes from outside.
     func makeTrailerViewController() -> UIViewController? {
         recorder?.add("D makeTrailer")
         let started = CACurrentMediaTime()
-        let controller = ReaderHarnessStandIn.makeController(model: self)
+        let name = setup.name
+        let controller = name == "walk-height"
+            ? ReaderHarnessStandIn.makeController(model: self)
+            : ReaderClosingHarness.makeController(pageCount: galleryPageCount) { line in
+                ReaderHarnessFiles.log("\(name): \(line)")
+            }
         let duration = CACurrentMediaTime() - started
         trailerMakeDuration = duration
         log(String(format: "closing page made in %.1f ms, on page %d", duration * 1_000, currentPage))
