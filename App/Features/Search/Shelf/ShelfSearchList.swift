@@ -52,32 +52,51 @@ private struct ShelfSearchHint: View {
 
 /// A group's label: small capitals in the secondary colour, with a link in the tint
 /// trailing ("Edit", "Clear"). The line is 44 pt high when it has a link, the link's target.
+/// At accessibility sizes the link goes under the label, so neither is cut short.
 struct ShelfSearchHeading<Trailing: View>: View {
     let title: String
     @ViewBuilder var link: Trailing
 
     @Environment(\.look) private var look
+    @Environment(\.dynamicTypeSize) private var typeSize
 
     private var hasLink: Bool { Trailing.self != EmptyView.self }
 
     var body: some View {
-        HStack(alignment: .firstTextBaseline, spacing: 8) {
-            Text(title)
-                .font(.footnote.weight(.semibold))
-                .tracking(0.3)
-                .textCase(.uppercase)
-                .foregroundStyle(look.secondaryLabel)
-                .lineLimit(1)
-                .accessibilityAddTraits(.isHeader)
-            Spacer(minLength: 0)
-            link
-                .font(.subheadline.weight(.medium))
-                // In a list row only the link takes the tap, not the whole row.
-                .buttonStyle(.borderless)
+        Group {
+            if typeSize.isAccessibilitySize {
+                VStack(alignment: .leading, spacing: 4) {
+                    label
+                    styledLink
+                }
+            } else {
+                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                    label
+                    Spacer(minLength: 0)
+                    styledLink
+                }
+            }
         }
         .frame(maxWidth: .infinity, minHeight: hasLink ? 44 : 30, alignment: .leading)
         .padding(.top, hasLink ? 6 : 14)
         .shelfSearchRow()
+    }
+
+    private var label: some View {
+        Text(title)
+            .font(.footnote.weight(.semibold))
+            .tracking(0.3)
+            .textCase(.uppercase)
+            .foregroundStyle(look.secondaryLabel)
+            .lineLimit(typeSize.isAccessibilitySize ? 2 : 1)
+            .accessibilityAddTraits(.isHeader)
+    }
+
+    private var styledLink: some View {
+        link
+            .font(.subheadline.weight(.medium))
+            // In a list row only the link takes the tap, not the whole row.
+            .buttonStyle(.borderless)
     }
 }
 

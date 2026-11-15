@@ -107,7 +107,8 @@ private struct ShelfSuggestionColumns<Lead: View, Main: View>: View {
                 }
             }
         }
-        .lineLimit(1)
+        // At accessibility sizes a tag or the titles row wraps rather than losing its middle.
+        .lineLimit(typeSize.isAccessibilitySize ? 3 : 1)
         .frame(maxWidth: .infinity, minHeight: 50, alignment: .leading)
         .contentShape(.rect)
     }
