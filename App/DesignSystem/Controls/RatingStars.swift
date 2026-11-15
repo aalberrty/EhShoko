@@ -1,10 +1,15 @@
 import SwiftUI
+import UIKit
 
 /// Five stars showing a 0–5 rating in half-star steps (legacy `RatingView`).
 ///
-/// Size comes from the environment's font. The colour is the look's rating colour with
-/// `tint: .look`, which the designs use; v3's screens pass `.inherited` (the default) and set
-/// it with `foregroundStyle`. VoiceOver reads it as one element, e.g. "Average rating, 3.5/5".
+/// Size comes from the environment's font. Where that font is one of the text styles (the
+/// common case: `.caption`, `.footnote`, `.body`, …), the stars are one image (`StarStrip`),
+/// drawn as the symbols would be in that style at the environment's text size, weight and
+/// image scale; otherwise, and in the `symbols` form, they are five symbols. The colour is the
+/// look's rating colour with `tint: .look`, which the designs use; v3's screens pass
+/// `.inherited` (the default) and set it with `foregroundStyle`. VoiceOver reads it as one
+/// element, e.g. "Average rating, 3.5/5".
 struct RatingStars: View {
     enum Tint {
         /// The surrounding foreground style.
@@ -13,17 +18,30 @@ struct RatingStars: View {
         case look
     }
 
+    enum Form {
+        /// One image where the font allows it, else five symbols.
+        case strip
+        /// Five symbols, which a symbol effect can animate (the rating control's bounce).
+        case symbols
+    }
+
     private let rating: Double
     private let label: String
     private let tint: Tint
+    private let form: Form
     @Environment(\.look) private var look
+    @Environment(\.font) private var font
+    @Environment(\.dynamicTypeSize) private var typeSize
+    @Environment(\.imageScale) private var imageScale
+    @Environment(\.legibilityWeight) private var legibilityWeight
 
     init(
-        rating: Double, tint: Tint = .inherited,
+        rating: Double, tint: Tint = .inherited, form: Form = .strip,
         accessibilityLabel: String = L10n.Localizable.GalleryInfosView.Title.averageRating
     ) {
         self.rating = Self.halfRounded(rating)
         self.tint = tint
+        self.form = form
         label = accessibilityLabel
     }
 
@@ -36,16 +54,48 @@ struct RatingStars: View {
 
     @ViewBuilder
     private var stars: some View {
-        let row = HStack(spacing: 0) {
-            ForEach(0..<5, id: \.self) { index in
-                Image(systemName: Self.symbolName(forStar: index, rating: rating))
-            }
-        }
         switch tint {
-        case .inherited: row
-        case .look: row.foregroundStyle(look.rating)
+        case .inherited: drawn
+        case .look: drawn.foregroundStyle(look.rating)
         }
     }
+
+    @ViewBuilder
+    private var drawn: some View {
+        if form == .strip, let style = Self.textStyles[font ?? .body] {
+            StarStrip.strip(Int((rating * 2).rounded()), of: StarStrip.strips(font: uiFont(style), scale: symbolScale))
+        } else {
+            HStack(spacing: 0) {
+                ForEach(0..<5, id: \.self) { index in
+                    Image(systemName: Self.symbolName(forStar: index, rating: rating))
+                }
+            }
+        }
+    }
+
+    /// The text style's font at the environment's text size and weight, as SwiftUI resolves it.
+    private func uiFont(_ style: UIFont.TextStyle) -> UIFont {
+        let traits = UITraitCollection { traits in
+            traits.preferredContentSizeCategory = UIContentSizeCategory(typeSize)
+            traits.legibilityWeight = legibilityWeight == .bold ? .bold : .regular
+        }
+        return UIFont.preferredFont(forTextStyle: style, compatibleWith: traits)
+    }
+
+    private var symbolScale: UIImage.SymbolScale {
+        switch imageScale {
+        case .small: .small
+        case .large: .large
+        default: .medium
+        }
+    }
+
+    /// The fonts whose symbols the strip can stand in for.
+    private static let textStyles: [Font: UIFont.TextStyle] = [
+        .largeTitle: .largeTitle, .title: .title1, .title2: .title2, .title3: .title3, .headline: .headline,
+        .subheadline: .subheadline, .body: .body, .callout: .callout, .footnote: .footnote, .caption: .caption1,
+        .caption2: .caption2,
+    ]
 
     /// Rounds to the nearest half like legacy `Float.halfRounded` (x.25 rounds up to x.5).
     static func halfRounded(_ value: Double) -> Double {

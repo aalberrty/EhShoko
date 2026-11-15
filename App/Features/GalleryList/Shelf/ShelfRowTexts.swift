@@ -113,9 +113,9 @@ final class ShelfRowTexts {
     /// text size: one image in the row instead of five symbols.
     func stars(halfStars: Int) -> Image {
         if starStrips.isEmpty {
-            starStrips = ShelfRowStars.strips(pointSize: metrics.starPointSize)
+            starStrips = StarStrip.strips(pointSize: metrics.starPointSize)
         }
-        return starStrips[min(max(halfStars, 0), starStrips.count - 1)]
+        return StarStrip.strip(halfStars, of: starStrips)
     }
 }
 
@@ -158,33 +158,5 @@ struct ShelfRowMetrics: Equatable {
     static func == (lhs: Self, rhs: Self) -> Bool {
         lhs.standard == rhs.standard && lhs.ranked == rhs.ranked && lhs.starPointSize == rhs.starPointSize
             && lhs.chipWidth == rhs.chipWidth
-    }
-}
-
-/// The eleven strips of five stars, one per half-star rating, as template images.
-enum ShelfRowStars {
-    static func strips(pointSize: CGFloat) -> [Image] {
-        let configuration = UIImage.SymbolConfiguration(pointSize: pointSize, weight: .regular)
-        let symbols = ["star", "star.leadinghalf.filled", "star.fill"].map {
-            UIImage(systemName: $0, withConfiguration: configuration)
-        }
-        let width = symbols.compactMap { $0?.size.width }.max() ?? pointSize
-        let height = symbols.compactMap { $0?.size.height }.max() ?? pointSize
-        let renderer = UIGraphicsImageRenderer(size: CGSize(width: width * 5, height: height))
-        return (0...10).map { half in
-            let strip = renderer.image { _ in
-                for index in 0..<5 {
-                    // 2 for a full star, 1 for half, 0 for none.
-                    let fill = min(max(half - index * 2, 0), 2)
-                    guard let symbol = symbols[fill] else { continue }
-                    let origin = CGPoint(
-                        x: CGFloat(index) * width + (width - symbol.size.width) / 2,
-                        y: (height - symbol.size.height) / 2
-                    )
-                    symbol.withTintColor(.black).draw(at: origin)
-                }
-            }
-            return Image(uiImage: strip.withRenderingMode(.alwaysTemplate))
-        }
     }
 }
