@@ -5,7 +5,7 @@ import SwiftUI
 /// A list view under test with 500 synthetic galleries, and the scripted scroll that measures it.
 ///
 /// Opened from Settings › Laboratory, or as the whole app with `-Harness list` (see
-/// `ListHarnessOptions` for the arguments and `Design/designs/tools/measure.sh` for recording a
+/// `ListHarnessOptions` for the arguments and `Scripts/measure.sh` for recording a
 /// run with Instruments). The list sits in a navigation stack with an inline title, as list
 /// screens do; the controls are in the toolbar and an opaque status line, so nothing translucent
 /// is added over the list being measured.

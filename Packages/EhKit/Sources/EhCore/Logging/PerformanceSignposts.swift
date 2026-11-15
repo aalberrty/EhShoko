@@ -5,7 +5,7 @@ import os
 ///
 /// Each is an `os_signpost` interval under subsystem `app.ehgaro`, category `Performance`,
 /// which Instruments shows in its os_signpost and Points of Interest tracks and
-/// `Design/designs/tools/measure.sh signposts` prints. A signpost is not a log line: it costs a
+/// `Scripts/measure.sh signposts` prints. A signpost is not a log line: it costs a
 /// few nanoseconds when nothing records it, so it may mark every page load and every screen.
 ///
 /// | Interval | From | To |

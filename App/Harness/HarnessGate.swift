@@ -4,7 +4,7 @@ import SwiftUI
 ///
 /// In debug builds, launching with `-Harness list`, `-Harness reader`, `-Harness look` or `-Harness dock` shows that harness as
 /// the whole app: the shell, its launch sequence and the first screen's requests never start,
-/// so nothing else competes with the run being measured. `Design/designs/tools/measure.sh`
+/// so nothing else competes with the run being measured. `Scripts/measure.sh`
 /// launches it this way; `ListHarnessOptions` lists the other arguments.
 struct HarnessGate<Content: View>: View {
     @ViewBuilder let content: () -> Content

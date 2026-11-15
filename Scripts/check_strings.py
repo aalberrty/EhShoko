@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Checks the app's localized strings against each other and against Strings.swift.
 
-  python3 Design/designs/tools/check_strings.py          # check, exit 1 on any problem
-  python3 Design/designs/tools/check_strings.py --write  # also regenerate the Localizable
+  python3 Scripts/check_strings.py          # check, exit 1 on any problem
+  python3 Scripts/check_strings.py --write  # also regenerate the Localizable
                                                          # part of App/Generated/Strings.swift
 
 Checks, for App/Resources/*.lproj/Localizable.strings:
@@ -17,7 +17,7 @@ import re
 import sys
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[3]
+ROOT = Path(__file__).resolve().parents[1]
 RESOURCES = ROOT / "App/Resources"
 SWIFT = ROOT / "App/Generated/Strings.swift"
 TABLE = "Localizable"

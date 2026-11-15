@@ -31,7 +31,7 @@
 #   --attach              signposts: attach to the running app rather than launching it.
 #
 # Example, from the repository root, with a Debug build installed on the iOS 26 simulator:
-#   Design/designs/tools/measure.sh --device 37B2537D-E570-4030-B731-E2857E827B7E list v3-rows
+#   Scripts/measure.sh --device 37B2537D-E570-4030-B731-E2857E827B7E list v3-rows
 set -euo pipefail
 
 export DEVELOPER_DIR="${DEVELOPER_DIR:-/Applications/Xcode.app/Contents/Developer}"

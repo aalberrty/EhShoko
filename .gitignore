@@ -16,3 +16,6 @@ AGENTS.md
 .aider*
 .codex/
 .github/copilot-instructions.md
+
+# Design notes, plans and mockups stay on the development machine
+/Design
