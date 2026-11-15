@@ -1,8 +1,9 @@
 import SwiftUI
 
 nonisolated extension GallerySchematic {
-    /// Wall's page: a backdrop in the cover's colours, the cover centred on it, a panel with
-    /// the title, five round actions and tag chips, and the dock with "More".
+    /// Wall's page: a backdrop in the cover's colours, the cover centred on it between Close
+    /// and Share, a panel with the title, five round actions and the first tag chips with the
+    /// count of the rest, and the dock with "More".
     static func wall(_ canvas: SchematicCanvas) {
         let palette = canvas.palette
         let cover = SchematicPalette.cover(4)
@@ -33,12 +34,16 @@ nonisolated extension GallerySchematic {
             canvas.box(x + 1.5, 112, 8, 1.8, palette.tertiary)
         }
         canvas.box(6, 118, 12, 2.2, palette.tertiary)
+        // The chips wrap inside the panel; the last is the count of the tags not shown.
         var x: CGFloat = 6
-        for (chip, width) in [CGFloat(24), 28, 18, 20].enumerated() {
+        for (chip, width) in [CGFloat(22), 26, 17].enumerated() {
             canvas.box(x, 123, width, 6.5, palette.surface, 3.3)
             canvas.circle(x + 2, 125.2, 2.2, SchematicPalette.namespace(chip))
+            canvas.box(x + 6, 125.4, width - 9.5, 1.8, palette.tertiary)
             x += width + 2.5
         }
+        canvas.box(x, 123, 12, 6.5, palette.surface, 3.3)
+        canvas.box(x + 3, 125.4, 6, 1.8, palette.tertiary)
         dock(canvas, trailing: .more)
     }
 }
