@@ -102,7 +102,8 @@ struct ShellPresentations: ViewModifier {
 }
 
 /// Settings: a sheet with its own stack, opened from the account button, the place menu and
-/// the sign-in prompts (`AppRouter.presentSettings`).
+/// the sign-in prompts (`AppRouter.presentSettings`). Done, the system's confirm button at the
+/// top trailing corner, closes it (`settings.md`).
 private struct SettingsSheet: View {
     let router: AppRouter
 
@@ -110,8 +111,8 @@ private struct SettingsSheet: View {
         RoutedStack(router: router.settings) {
             SettingsScreen()
                 .toolbar {
-                    ToolbarItem(placement: .topBarLeading) {
-                        SheetCloseButton { router.dismissSettings() }
+                    ToolbarItem(placement: .confirmationAction) {
+                        SheetConfirmButton { router.dismissSettings() }
                     }
                 }
         }

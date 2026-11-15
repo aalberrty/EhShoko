@@ -6,7 +6,7 @@ import SwiftUI
 /// icons and descriptions. The account card, Experience, then one row per settings screen.
 ///
 /// It is the root of the Settings sheet's stack; the shell presents the sheet and gives it
-/// its close button.
+/// its Done button.
 struct SettingsScreen: View {
     var body: some View {
         List {
