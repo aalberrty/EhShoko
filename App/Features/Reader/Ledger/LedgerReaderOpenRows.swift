@@ -144,6 +144,8 @@ private struct LedgerGroupRow<Trailing: View>: View {
             Image(systemName: symbol)
                 .font(.body)
                 .frame(minWidth: 24)
+                // The row's name says it; VoiceOver need not stop on the picture.
+                .accessibilityHidden(true)
             Text(title)
                 .font(.callout)
                 .lineLimit(2)
