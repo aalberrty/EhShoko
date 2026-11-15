@@ -20,17 +20,14 @@ struct LedgerCommentsView: View {
     @Environment(\.look) private var look
     @Dependency(\.clipboardClient) private var clipboard
 
-    /// The site gives the uploader's comment this id.
-    private static let uploaderCommentID = "0"
-
     init(detail: GalleryDetailModel, scrollTo commentID: String?) {
         _model = State(initialValue: CommentsModel(detail: detail, scrollTo: commentID))
     }
 
     var body: some View {
         let comments = model.comments
-        let uploader = comments.first { $0.id == Self.uploaderCommentID }
-        let others = comments.filter { $0.id != Self.uploaderCommentID }
+        let uploader = comments.first(where: \.isUploaderComment)
+        let others = comments.filter { !$0.isUploaderComment }
         ScrollViewReader { proxy in
             List {
                 if let uploader {

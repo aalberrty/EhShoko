@@ -122,7 +122,7 @@ struct ShelfCommentsScreen: View {
 
     /// The uploader's comment first, the rest in the site's order.
     private static func ordered(_ comments: [CommentItem]) -> [CommentItem] {
-        guard let index = comments.firstIndex(where: ShelfCommentByline.isUploader), index > 0 else { return comments }
+        guard let index = comments.firstIndex(where: \.isUploaderComment), index > 0 else { return comments }
         var ordered = comments
         ordered.insert(ordered.remove(at: index), at: 0)
         return ordered

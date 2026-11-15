@@ -93,7 +93,7 @@ struct ShelfCommentByline: View {
                 .font(.subheadline.weight(.semibold))
                 .foregroundStyle(look.label)
                 .layoutPriority(1)
-            if Self.isUploader(item) {
+            if item.isUploaderComment {
                 Text(L10n.Localizable.Gallery.Comments.uploader)
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(.tint)
@@ -122,10 +122,5 @@ struct ShelfCommentByline: View {
             }
         }
         .lineLimit(1)
-    }
-
-    /// The site gives the uploader's comment the id 0 and no score.
-    static func isUploader(_ item: CommentItem) -> Bool {
-        item.comment.commentID == "0"
     }
 }
