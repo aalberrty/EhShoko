@@ -13,7 +13,8 @@ import SwiftUI
 /// their items into it, so what must outlive the switch belongs above it: the segment is in
 /// `TabsBarLibrarySwitch`; the favourites that were loaded are `LibraryScreen`'s.
 struct TabsBarLibraryTab: View {
-    @Environment(TabsBarLibrarySwitch.self) private var library
+    /// The switch `TabsShell` owns.
+    let library: TabsBarLibrarySwitch
 
     var body: some View {
         Group {

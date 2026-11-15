@@ -10,6 +10,10 @@ nonisolated enum TabsBarLibrarySegment: Hashable, Sendable {
 /// Which of its two screens the Library tab shows. The tab's root is not the only one that
 /// chooses: a first screen's link to History selects the History segment from another tab, so
 /// the choice is the bar's, kept by `TabsShell` and gone with it.
+///
+/// It is passed to the Library tab, never put into the environment: when the bar setting
+/// changes, a copy of the tab view's environment outlives the tab view, and it would keep the
+/// switch alive under the other bar.
 @Observable
 final class TabsBarLibrarySwitch {
     var segment = TabsBarLibrarySegment.favorites
@@ -23,10 +27,11 @@ final class TabsBarLibrarySwitch {
 /// with `AppRouter.go(to:start:)`.
 ///
 /// Equal when it acts on the same router and switch, so the screens that read it are not drawn
-/// again each time the shell's body runs.
+/// again each time the shell's body runs. It holds both weakly, because an environment value
+/// can outlive the tab view it was set on (see `TabsBarLibrarySwitch`).
 nonisolated struct TabsBarHistoryOpener: Equatable {
-    private let router: AppRouter?
-    private let library: TabsBarLibrarySwitch?
+    private weak var router: AppRouter?
+    private weak var library: TabsBarLibrarySwitch?
 
     /// `TabsShell` passes its router and the switch it owns; `nil` is the opener that does
     /// nothing.
