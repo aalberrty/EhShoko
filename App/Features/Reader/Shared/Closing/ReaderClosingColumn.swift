@@ -34,13 +34,18 @@ struct ReaderClosingColumn: View {
                 .textCase(.uppercase)
                 .foregroundStyle(look.secondaryLabel)
                 .padding(.top, 16)
-            Text(shown.title)
-                .font(.title2.bold())
-                .lookTitleDesign()
-                .foregroundStyle(look.label)
-                .multilineTextAlignment(.center)
-                .lineLimit(2, reservesSpace: true)
-                .padding(.top, 4)
+            // Always two lines tall, so the column keeps its height when the title changes; a
+            // title of one line sits in their middle.
+            ZStack {
+                Text(verbatim: "\n").hidden()
+                Text(shown.title)
+                    .multilineTextAlignment(.center)
+                    .lineLimit(2)
+            }
+            .font(.title2.bold())
+            .lookTitleDesign()
+            .foregroundStyle(look.label)
+            .padding(.top, 4)
             Text(shown.credit ?? " ")
                 .font(.subheadline)
                 .foregroundStyle(look.secondaryLabel)

@@ -176,6 +176,8 @@ struct ReaderClosingStars: View {
             .font(.system(size: Self.starSize * 0.82))
             .foregroundStyle(symbol == "star" ? look.tertiaryLabel : look.rating)
             .frame(width: Self.starWidth, height: Self.starWidth)
+            // The symbol's own label is "Favourite"; the row is one element with its own.
+            .accessibilityHidden(true)
     }
 
     /// Each star is split in two: its leading half is the half-star value.
