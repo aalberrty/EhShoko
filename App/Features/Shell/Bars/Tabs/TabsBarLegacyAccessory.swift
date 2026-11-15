@@ -61,19 +61,23 @@ private struct TabsBarLegacyEdgeMeasure: ViewModifier {
     }
 }
 
-/// On every screen of every stack (`RoutedStack`). On iOS 18 and iOS 26.0 it draws the
-/// capsule on the screens that keep the tab bar; on later systems it reads nothing and adds
-/// nothing.
+/// On every screen of every stack (`RoutedStack`). On iOS 18 and iOS 26.0, under the tab
+/// bar, it draws the capsule on the screens that keep the bar. On later systems and under
+/// `command` it adds nothing: no view, no state.
 struct TabsBarLegacyAccessory: ViewModifier {
     /// Whether this screen's route keeps the tab bar.
     let isAllowed: Bool
 
+    @Environment(\.tabsBarKeepsLegacyAccessory) private var keepsAccessory
+
     func body(content: Content) -> some View {
-        // The same for the whole life of the process, so this `if` never rebuilds a screen.
-        if TabAccessoryKind.usesSystemAccessory {
-            content
-        } else {
+        // Neither changes while a screen exists: the system is the process's, and a screen
+        // is in a tab's stack for as long as it lives (changing the bar rebuilds every
+        // screen). So this `if` never rebuilds one.
+        if keepsAccessory, !TabAccessoryKind.usesSystemAccessory {
             content.modifier(TabsBarCapsule(isAllowed: isAllowed))
+        } else {
+            content
         }
     }
 }
@@ -83,7 +87,6 @@ private struct TabsBarCapsule: ViewModifier {
 
     /// This screen's own bottom safe area, outside the capsule's inset.
     @State private var screenInset: CGFloat = 0
-    @Environment(\.tabsBarKeepsLegacyAccessory) private var keepsAccessory
     @Environment(\.tabsBarHoldsSearchSurface) private var holdsSearchSurface
     @Environment(\.tabsBarLegacyEdge) private var edge
     @Environment(\.chrome) private var chrome
@@ -108,11 +111,11 @@ private struct TabsBarCapsule: ViewModifier {
     /// A screen of a tab's own stack whose route keeps the tab bar. The side pane's screens
     /// are inside a tab too, beside the list that has the capsule.
     private var isUnderBar: Bool {
-        keepsAccessory && isAllowed && !chrome.isSidePane
+        isAllowed && !chrome.isSidePane
     }
 
-    /// What is in progress is read last, and so only where a capsule can show: under
-    /// `command` and on gallery pages a change of it redraws no screen.
+    /// What is in progress is read last, and so only where a capsule can show: on gallery
+    /// pages a change of it redraws no screen.
     private var isVisible: Bool {
         guard !edge.isKeyboardUp else { return false }
         // The search surface is its stack's root, which nothing presents; a pushed screen

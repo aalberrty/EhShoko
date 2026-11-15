@@ -48,7 +48,7 @@ struct TabsShell: View {
             }
             Tab(L10n.Localizable.Shell.Tab.library, systemImage: "books.vertical", value: AppTab.library) {
                 StackHost(router: router.library) {
-                    TabsBarLibraryTab().tabsAccountButton()
+                    TabsBarLibraryTab(library: library).tabsAccountButton()
                 }
                 .modifier(TabsBarStack(tab: .library))
             }
@@ -65,7 +65,6 @@ struct TabsShell: View {
         .modifier(TabsBarAccessoryHost(router: router, hasLeadingColumn: hasLeadingColumn))
         .tabBarMinimizesOnScroll()
         .environment(\.tabsBarKeepsLegacyAccessory, true)
-        .environment(library)
         .environment(\.showLibraryHistory, TabsBarHistoryOpener(router: router, library: library))
         .sensoryFeedback(.impact(flexibility: .soft), trigger: model.tabReselectionFeedback)
     }
