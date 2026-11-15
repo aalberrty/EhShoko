@@ -19,15 +19,15 @@ nonisolated struct WallPileMetrics: Equatable, Sendable {
     /// reaches 65 pt from the centre.
     static let fanWidth: CGFloat = 130
 
-    static let full = WallPileMetrics(scale: 1)
+    /// How many lines a name may take: one, as drawn; two at accessibility text sizes,
+    /// where the grid has fewer columns and a name would otherwise lose most of itself.
+    let nameLines: Int
 
-    /// The metrics for a column `width` points wide.
-    init(columnWidth width: CGFloat) {
+    /// The metrics for a column `width` points wide; the drawn size while the width is not
+    /// known yet (0).
+    init(columnWidth width: CGFloat, nameLines: Int) {
         scale = width > 0 ? min(1, width / Self.fanWidth) : 1
-    }
-
-    private init(scale: CGFloat) {
-        self.scale = scale
+        self.nameLines = nameLines
     }
 
     var coverSize: CGSize {
@@ -40,7 +40,7 @@ nonisolated struct WallPileMetrics: Equatable, Sendable {
     var top: CGFloat { 6 * scale }
 }
 
-/// One pile: three covers fanned, each with a hairline edge and no shadow, then the folder's
+/// One pile: three cards fanned, each with a hairline edge and no shadow, then the folder's
 /// colour dot and name on one line and its count beneath. It sits in scrolling content, so
 /// nothing in it is glass, material or shadow; it takes values only and its body formats
 /// nothing.
@@ -62,6 +62,8 @@ struct WallPileView: View, Equatable {
                 Text(pile.name)
                     .font(.footnote.weight(.semibold))
                     .foregroundStyle(look.label)
+                    .lineLimit(metrics.nameLines)
+                    .multilineTextAlignment(.center)
             }
             .padding(.horizontal, 4)
             .padding(.top, 6)
@@ -70,10 +72,10 @@ struct WallPileView: View, Equatable {
                 .font(.caption)
                 .monospacedDigit()
                 .foregroundStyle(look.secondaryLabel)
+                .lineLimit(1)
                 .opacity(pile.count == nil ? 0 : 1)
                 .accessibilityHidden(pile.count == nil)
         }
-        .lineLimit(1)
         .frame(maxWidth: .infinity)
         .contentShape(.rect)
         .accessibilityElement(children: .combine)
@@ -106,22 +108,17 @@ private struct WallPileFan: View {
     }
 
     private func card(_ place: Int) -> some View {
-        WallPileCard(
-            cover: place < pile.covers.count ? pile.covers[place] : nil,
-            place: place, folder: pile.folder, tiles: pile.tiles, metrics: metrics
-        )
+        WallPileCard(card: pile.cards[place], place: place, folder: pile.folder, metrics: metrics)
     }
 }
 
-/// One cover, or a tile where the pile has none. Both lie on the look's background, so a
-/// cover still loading, whose placeholder is a translucent fill, does not show the cards
-/// behind it.
+/// One cover, a cover's placeholder, or a tile. Each lies on the look's background, so a
+/// translucent placeholder does not show the cards behind it.
 private struct WallPileCard: View {
-    let cover: URL?
+    let card: WallPile.Card
     /// 0 in front, 1 and 2 behind.
     let place: Int
     let folder: Int
-    let tiles: WallPile.Tiles
     let metrics: WallPileMetrics
 
     @Environment(\.look) private var look
@@ -130,9 +127,15 @@ private struct WallPileCard: View {
         let shape = RoundedRectangle(cornerRadius: metrics.cornerRadius, style: .continuous)
         let size = metrics.coverSize
         Group {
-            if let cover {
-                CoverImage(url: cover, size: size, cornerRadius: metrics.cornerRadius)
-            } else {
+            switch card {
+            case .cover(let url):
+                CoverImage(url: url, size: size, cornerRadius: metrics.cornerRadius)
+            case .pending:
+                // What `CoverImage` draws while it loads.
+                shape
+                    .fill(look.fill2)
+                    .frame(width: size.width, height: size.height)
+            case .tile:
                 shape
                     .fill(tileColor.opacity(Self.tileOpacity[place]))
                     .frame(width: size.width, height: size.height)
@@ -142,13 +145,9 @@ private struct WallPileCard: View {
         .overlay { shape.strokeBorder(look.separator, lineWidth: 0.5) }
     }
 
-    /// The folder's colour once the page has said the folder has nothing more; the look's
-    /// neutral fill while it is on its way, and for All.
+    /// The folder's colour; the look's neutral fill for All, which has none.
     private var tileColor: Color {
-        switch tiles {
-        case .folder where folder != WallPile.allFolders: FolderColor.color(forFolder: folder)
-        case .folder, .waiting: look.fill
-        }
+        folder == WallPile.allFolders ? look.fill : FolderColor.color(forFolder: folder)
     }
 
     /// The front tile full, the ones behind lighter, so three tiles still read as a fan.

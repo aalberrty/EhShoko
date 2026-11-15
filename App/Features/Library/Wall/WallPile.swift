@@ -1,16 +1,20 @@
 import EhFeatures
+import EhModels
 import Foundation
 
-/// One pile of Wall's library: All or a folder, its name and count, and the newest covers the
-/// app already has for it. Made once per change of the page, so a pile formats nothing.
+/// One pile of Wall's library: All or a folder, its name and count, and its three cards. Made
+/// once per change of the page, so a pile formats nothing.
 nonisolated struct WallPile: Identifiable, Equatable, Sendable {
-    /// What the pile's empty places are drawn as.
-    enum Tiles: Equatable, Sendable {
-        /// The page is still on its way: neutral tiles.
-        case waiting
-        /// The page is here and holds fewer than three of the folder's galleries: tiles in
-        /// the folder's colour (All's are neutral).
-        case folder
+    /// One of the three places of a pile.
+    enum Card: Equatable, Sendable {
+        /// One of the newest covers the app has for the folder.
+        case cover(URL)
+        /// A cover not drawn yet: the page is on its way, or the cover is being decoded for
+        /// two piles at once (`WallPileCovers.shared(in:)`). Drawn as a cover's placeholder.
+        case pending
+        /// The page is here and holds no more of the folder's galleries: a tile in the
+        /// folder's colour (All's is neutral).
+        case tile
     }
 
     /// 0 to 9, or `WallPile.allFolders`.
@@ -18,9 +22,9 @@ nonisolated struct WallPile: Identifiable, Equatable, Sendable {
     let name: String
     /// Formatted; `nil` while the count is unknown.
     let count: String?
-    /// At most `coversPerPile`, the newest first.
-    let covers: [URL]
-    let tiles: Tiles
+    /// `coversPerPile` cards: the front one, then the one behind it on the left and the one
+    /// on the right.
+    let cards: [Card]
 
     var id: Int { folder }
 
@@ -50,6 +54,31 @@ nonisolated enum WallPileCovers {
             if fullPiles == pileCount { break }
         }
         return covers
+    }
+
+    /// The covers shown in two piles at once: All's newest are also their folders' newest.
+    ///
+    /// Two cover views asking for one cover in the same frame each decode it when it comes
+    /// from the disk cache, which does not join the two loads as the downloader does. So the
+    /// page decodes these once itself, and both piles draw them once that is done.
+    static func shared(in covers: [Int: [URL]]) -> Set<URL> {
+        let all = Set(covers[WallPile.allFolders] ?? [])
+        guard !all.isEmpty else { return [] }
+        var shared = Set<URL>()
+        for (folder, urls) in covers where folder != WallPile.allFolders {
+            shared.formUnion(urls.filter(all.contains))
+        }
+        return shared
+    }
+
+    /// A pile's three cards: its covers, as many as it has, then tiles once the page is
+    /// here, or placeholders while it is on its way. A cover in `held` is a placeholder too.
+    static func cards(_ covers: [URL], held: Set<URL>, isLoaded: Bool) -> [WallPile.Card] {
+        (0..<WallPile.coversPerPile).map { place in
+            guard place < covers.count else { return isLoaded ? .tile : .pending }
+            let url = covers[place]
+            return held.contains(url) ? .pending : .cover(url)
+        }
     }
 
     /// Adds `url` to `pile` unless it is full; returns whether that filled it.

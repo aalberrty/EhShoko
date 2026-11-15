@@ -22,6 +22,8 @@ struct WallLibraryPage: View {
     @Environment(\.dynamicTypeSize) private var typeSize
     /// The grid's width, which sets the number of columns and the piles' size.
     @State private var width: CGFloat = 0
+    /// The covers in two piles that the page has decoded itself (`WallPileCovers.shared(in:)`).
+    @State private var decodedShared: Set<URL> = []
 
     var body: some View {
         let phase = WallLibraryPhase(list)
@@ -35,21 +37,22 @@ struct WallLibraryPage: View {
     }
 
     private func piles(_ phase: WallLibraryPhase) -> some View {
-        let covers: [Int: [URL]]
-        let tiles: WallPile.Tiles
+        let isLoaded: Bool
         let stale: AppError?
         switch phase {
         case .loaded(let error):
-            covers = WallPileCovers.covers(in: list?.entries ?? [])
-            tiles = .folder
+            isLoaded = true
             stale = error
         case .waiting, .failed:
-            covers = [:]
-            tiles = .waiting
+            isLoaded = false
             stale = nil
         }
+        let covers = isLoaded ? WallPileCovers.covers(in: list?.entries ?? []) : [:]
+        let held = WallPileCovers.shared(in: covers).subtracting(decodedShared)
         let columns = columnCount
-        let metrics = WallPileMetrics(columnWidth: columnWidth(columns))
+        let metrics = WallPileMetrics(
+            columnWidth: columnWidth(columns), nameLines: typeSize.isAccessibilitySize ? 2 : 1
+        )
         return ScrollView {
             VStack(alignment: .leading, spacing: 0) {
                 if showsSummary {
@@ -63,7 +66,7 @@ struct WallLibraryPage: View {
                         .padding(.vertical, 8)
                 }
                 LazyVGrid(columns: Self.columns(columns), spacing: 16) {
-                    ForEach(pileValues(covers, tiles: tiles)) { pile in
+                    ForEach(pileValues(covers, held: held, isLoaded: isLoaded)) { pile in
                         Button {
                             open(pile.folder)
                         } label: {
@@ -79,33 +82,42 @@ struct WallLibraryPage: View {
         }
         .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { width = $0 }
         .refreshable { await list?.refresh() }
+        .task(id: held) {
+            guard !held.isEmpty else { return }
+            await WallPileCovers.decode(held)
+            if !Task.isCancelled { decodedShared.formUnion(held) }
+        }
     }
 
     /// All, then the ten folders in the site's order. Names are the site's, stored from the
     /// last favourites page; counts are absent until a page has been loaded this session.
-    private func pileValues(_ covers: [Int: [URL]], tiles: WallPile.Tiles) -> [WallPile] {
+    private func pileValues(_ covers: [Int: [URL]], held: Set<URL>, isLoaded: Bool) -> [WallPile] {
         let counts = userStore.favoriteFolderCounts
+        func cards(_ folder: Int) -> [WallPile.Card] {
+            WallPileCovers.cards(covers[folder] ?? [], held: held, isLoaded: isLoaded)
+        }
         let all = WallPile(
             folder: WallPile.allFolders, name: L10n.Localizable.Library.all,
-            count: userStore.favoriteTotalCount?.formatted(), covers: covers[WallPile.allFolders] ?? [], tiles: tiles
+            count: userStore.favoriteTotalCount?.formatted(), cards: cards(WallPile.allFolders)
         )
         return [all] + (0..<WallPile.folderCount).map { folder in
             WallPile(
                 folder: folder, name: userStore.favoriteFolderName(folder), count: counts[folder]?.formatted(),
-                covers: covers[folder] ?? [], tiles: tiles
+                cards: cards(folder)
             )
         }
     }
 
     // MARK: Columns
 
-    /// Three across on a phone, five where there is room (an iPad, a phone on its side); one
-    /// fewer pair at accessibility text sizes, so the names keep some of their width.
+    /// Three across on a phone, five where there is room (an iPad, a phone on its side). At
+    /// accessibility text sizes one on a phone and three on a wider screen, as Ledger's
+    /// library does, so that a name keeps its words.
     private var columnCount: Int {
         let isWide = width >= Self.wideWidth
         switch (isWide, typeSize.isAccessibilitySize) {
         case (false, false): return 3
-        case (false, true): return 2
+        case (false, true): return 1
         case (true, false): return 5
         case (true, true): return 3
         }
