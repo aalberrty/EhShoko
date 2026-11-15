@@ -12,13 +12,13 @@ import SwiftUI
 ///
 /// Once the wizard has been opened (by hand or with the device tools) it waits, then records
 /// the process's CPU time while the stage plays, while an alert covers it and after it plays
-/// again; moves through every step to the summary and back two steps, counting late frames in
-/// the second after each move and listing the per-design objects in memory (the part
-/// harness's heap scan) at each step. With `-SetupProbeApply shelf|wall|ledger` it then goes
-/// back to the start, chooses that preset, walks to the summary and applies, lists the objects
-/// in memory again, and for comparison makes the same change directly, as a preset tile does
-/// (back to the original choices, then the preset). Everything goes to
-/// `Documents/setup-probe.txt`.
+/// again, and on step 2, without the stage, alone and under the same alert. It moves through
+/// every step to the summary and back two steps, counting late frames in the second after
+/// each move and listing the per-design objects in memory (the part harness's heap scan) at
+/// each step. With `-SetupProbeApply shelf|wall|ledger` it then goes back to the start,
+/// chooses that preset, walks to the summary and applies, lists the objects in memory again,
+/// and for comparison makes the same change directly, as a preset tile does (back to the
+/// original choices, then the preset). Everything goes to `Documents/setup-probe.txt`.
 @MainActor
 final class DesignSetupProbe {
     /// What the probe may do with the wizard on screen.
@@ -49,10 +49,10 @@ final class DesignSetupProbe {
         note("heap, step 1:\n" + PartHarnessHeap.report())
         note("step 1, stage playing: " + (await cpu(for: 3)))
         hooks.cover(true)
-        await rest(1)
+        await rest(3)
         note("step 1, alert over the stage: " + (await cpu(for: 3)))
         hooks.cover(false)
-        await rest(1)
+        await rest(3)
         note("step 1, alert closed: " + (await cpu(for: 3)))
 
         while hooks.model.step != .summary {
@@ -63,6 +63,12 @@ final class DesignSetupProbe {
             note("heap at \(hooks.model.stepNumber.map { "step \($0)" } ?? "the summary"):\n" + PartHarnessHeap.report())
             if hooks.model.stepNumber == 2 {
                 note("step 2, the stage gone: " + (await cpu(for: 3)))
+                // The alert's own cost, with no stage under it.
+                hooks.cover(true)
+                await rest(3)
+                note("step 2, the same alert: " + (await cpu(for: 3)))
+                hooks.cover(false)
+                await rest(3)
             }
         }
         for _ in 0..<2 {
