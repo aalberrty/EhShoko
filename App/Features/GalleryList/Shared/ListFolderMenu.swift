@@ -3,8 +3,9 @@ import EhFeatures
 import SwiftUI
 
 /// The favourites folders as the menu of a folder's title, when the folder is a screen of its
-/// own (`Route.favoritesFolder`): All and the ten folders, in the site's order, each with its
-/// count when a favourites page has told it, the current one checked (v3's folder menu).
+/// own (`Route.favoritesFolder`): All and the ten folders, in the site's order, under the names
+/// their screens have, each with its count when a favourites page has told it, the current one
+/// checked (v3's folder menu).
 /// Choosing another replaces the screen with that folder's, so folders change without going
 /// back. Each list design puts it on its title (`ListDesignInput.ownFolder(hasHeader:)`).
 ///
@@ -18,20 +19,12 @@ struct ListFolderMenu: View {
     var body: some View {
         ForEach(FavoritesModel.categories, id: \.self) { folder in
             Toggle(isOn: Binding(get: { folder == current }, set: { _ in choose(folder) })) {
-                Text(name(of: folder))
+                Text(userStore?.favoriteFolderName(folder) ?? "")
                 if let count = count(of: folder) {
                     Text(count.formatted())
                 }
             }
         }
-    }
-
-    /// "All Favorites", the user's own name for the folder, or "Favorites N": the title the
-    /// folder's screen has.
-    private func name(of folder: Int) -> String {
-        guard folder != -1 else { return L10n.Localizable.Library.All.title }
-        return userStore?.customFavoriteCategoryName(index: folder)
-            ?? L10n.Localizable.Struct.User.FavoriteCategory.default("\(folder)")
     }
 
     private func count(of folder: Int) -> Int? {
