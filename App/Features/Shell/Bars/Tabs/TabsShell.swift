@@ -30,32 +30,32 @@ struct TabsShell: View {
         TabView(selection: selection) {
             Tab(L10n.Localizable.TabItem.Title.home, systemImage: "house", value: AppTab.home) {
                 HomeStackHost(router: router.home)
-                    .modifier(TabsBarRootReselections(tab: .home))
+                    .modifier(TabsBarRootReselections(router: router, tab: .home))
             }
             Tab(L10n.Localizable.Shell.Tab.watched, systemImage: "eye", value: AppTab.watched) {
                 StackHost(router: router.watched) {
                     GalleryListScreen(context: .place(.watched)).tabsAccountButton()
                 }
-                .modifier(TabsBarRootReselections(tab: .watched))
+                .modifier(TabsBarRootReselections(router: router, tab: .watched))
             }
             Tab(L10n.Localizable.Shell.Tab.top, systemImage: "chart.bar", value: AppTab.top) {
                 // No account button: the list's page menu is in that position.
                 StackHost(router: router.top) {
                     GalleryListScreen(context: .top)
                 }
-                .modifier(TabsBarRootReselections(tab: .top))
+                .modifier(TabsBarRootReselections(router: router, tab: .top))
             }
             Tab(L10n.Localizable.Shell.Tab.library, systemImage: "books.vertical", value: AppTab.library) {
                 StackHost(router: router.library) {
                     TabsBarLibraryTab().tabsAccountButton()
                 }
-                .modifier(TabsBarRootReselections(tab: .library))
+                .modifier(TabsBarRootReselections(router: router, tab: .library))
             }
             Tab(value: AppTab.search, role: .search) {
                 StackHost(router: router.search) {
                     SearchSurface(scope: search.scope)
                 }
-                .modifier(TabsBarRootReselections(tab: .search))
+                .modifier(TabsBarRootReselections(router: router, tab: .search))
                 // The capsule that stands in for the accessory rides above the keyboard, so
                 // the search surface never shows it.
                 .environment(\.tabsBarKeepsLegacyAccessory, false)

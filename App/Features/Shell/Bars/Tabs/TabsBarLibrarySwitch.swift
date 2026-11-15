@@ -21,7 +21,10 @@ final class TabsBarLibrarySwitch {
 /// A screen reads `\.showLibraryHistory` and calls it. Under `command` there is no Library tab
 /// and it does nothing and answers `false`: History is a place there, which the caller opens
 /// with `AppRouter.go(to:start:)`.
-nonisolated struct TabsBarHistoryOpener {
+///
+/// Equal when it acts on the same router and switch, so the screens that read it are not drawn
+/// again each time the shell's body runs.
+nonisolated struct TabsBarHistoryOpener: Equatable {
     private let router: AppRouter?
     private let library: TabsBarLibrarySwitch?
 
@@ -45,6 +48,10 @@ nonisolated struct TabsBarHistoryOpener {
             router.select(.library)
         }
         return true
+    }
+
+    static func == (lhs: Self, rhs: Self) -> Bool {
+        lhs.router === rhs.router && lhs.library === rhs.library
     }
 }
 

@@ -12,11 +12,10 @@ extension EnvironmentValues {
 /// Around one tab's stack: hands that tab's screens its re-selection count. Its own
 /// modifier, so a re-selection runs this body and not the tab view's.
 struct TabsBarRootReselections: ViewModifier {
+    let router: AppRouter
     let tab: AppTab
 
-    @Environment(AppRouter.self) private var appRouter
-
     func body(content: Content) -> some View {
-        content.environment(\.tabsBarRootReselections, appRouter.rootReselectionCount(for: tab))
+        content.environment(\.tabsBarRootReselections, router.rootReselectionCount(for: tab))
     }
 }
