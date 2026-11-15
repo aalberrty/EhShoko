@@ -17,10 +17,28 @@ enum PreviewHarnessExport {
         return folder
     }
 
-    /// Writes an empty marker file, for a script waiting on a scripted run.
+    /// Writes a marker file for a script waiting on a scripted run, holding the process's
+    /// memory at that moment: what an opening leaves behind is the growth between two markers.
+    /// Read in the process, because `heap` and the Allocations export cannot reach a simulator
+    /// app on every Mac.
     static func mark(_ name: String) {
         guard let folder else { return }
-        FileManager.default.createFile(atPath: folder.appending(path: name).path, contents: Data())
+        var stats = malloc_statistics_t()
+        malloc_zone_statistics(nil, &stats)
+        let line = "footprint=\(physicalFootprint()) mallocInUse=\(stats.size_in_use) blocksInUse=\(stats.blocks_in_use)\n"
+        FileManager.default.createFile(atPath: folder.appending(path: name).path, contents: Data(line.utf8))
+    }
+
+    /// The process's physical footprint in bytes, as Xcode's memory gauge shows it.
+    private static func physicalFootprint() -> UInt64 {
+        var info = task_vm_info_data_t()
+        var count = mach_msg_type_number_t(MemoryLayout<task_vm_info_data_t>.size / MemoryLayout<integer_t>.size)
+        let result = withUnsafeMutablePointer(to: &info) { pointer in
+            pointer.withMemoryRebound(to: integer_t.self, capacity: Int(count)) {
+                task_info(mach_task_self_, task_flavor_t(TASK_VM_INFO), $0, &count)
+            }
+        }
+        return result == KERN_SUCCESS ? info.phys_footprint : 0
     }
 
     /// Renders the six sheets at 2× and writes them as PNG files; returns a line for the

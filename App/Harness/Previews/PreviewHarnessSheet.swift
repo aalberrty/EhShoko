@@ -147,15 +147,24 @@ private struct PreviewHarnessRow<Content: View>: View {
 }
 
 /// A preview at a fixed size in points, which does not grow with the text size.
+///
+/// With `-HarnessControl YES` a plain rounded rectangle stands in for every preview: the
+/// control for the allocations check, which tells what the sheet itself leaves behind.
 struct PreviewHarnessItem<Preview: View>: View {
     let caption: String
     let size: CGSize
     @ViewBuilder var preview: Preview
     @Environment(\.look) private var look
 
+    private static var isControl: Bool { UserDefaults.standard.bool(forKey: "HarnessControl") }
+
     var body: some View {
         VStack(spacing: 4) {
-            preview.frame(width: size.width, height: size.height)
+            if Self.isControl {
+                RoundedRectangle(cornerRadius: 9).fill(look.surface).frame(width: size.width, height: size.height)
+            } else {
+                preview.frame(width: size.width, height: size.height)
+            }
             if !caption.isEmpty {
                 Text(verbatim: caption)
                     .font(.caption2)
