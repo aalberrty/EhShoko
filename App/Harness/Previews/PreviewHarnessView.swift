@@ -1,4 +1,4 @@
-#if DEBUG
+#if DEBUG || HARNESS
 import EhCore
 import EhModels
 import SwiftUI

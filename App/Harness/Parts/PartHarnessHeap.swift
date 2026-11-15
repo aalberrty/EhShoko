@@ -1,4 +1,4 @@
-#if DEBUG
+#if DEBUG || HARNESS
 import Darwin
 import Foundation
 import ObjectiveC

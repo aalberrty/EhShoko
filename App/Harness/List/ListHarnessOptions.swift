@@ -1,4 +1,4 @@
-#if DEBUG
+#if DEBUG || HARNESS
 import Foundation
 
 /// How a list harness run is set up. From Laboratory every field starts at its default; a
