@@ -41,6 +41,24 @@ import Testing
         #expect(router.place == .start)
     }
 
+    @Test func theRootsPlaceIsNotChangedByAListPushedOverIt() {
+        let router = AppRouter()
+        router.go(to: .list(.watched), start: .wall)
+        #expect(router.rootPlace == .list(.watched))
+
+        // A list pushed at the bottom of the stack is the bar's place, not the root's.
+        router.home.push(.galleryList(.popular))
+        #expect(router.place == .list(.popular))
+        #expect(router.rootPlace == .list(.watched))
+
+        router.go(to: .list(.history), start: .shelf)
+        #expect(router.rootPlace == .start)
+
+        router.go(to: .list(.toplists), start: .wall)
+        router.resetNavigation()
+        #expect(router.rootPlace == .start)
+    }
+
     @Test(arguments: [DesignStyle.shelf, .ledger])
     func shelfAndLedgerShowTheListOverTheirRoot(start: DesignStyle) {
         let router = AppRouter()
@@ -185,6 +203,45 @@ import Testing
         let stack = StackRouter()
         stack.open(makeGallery(), inSidePane: true)
         #expect(!stack.hidesBrowseChrome)
+    }
+
+    @Test func aPaneThatLosesItsPlaceMovesOntoTheStackWithItsScreens() {
+        let stack = StackRouter()
+        let gallery = makeGallery()
+        stack.push(.galleryList(.watched))
+        stack.open(gallery, intent: .read(page: 3), inSidePane: true)
+        stack.side.push(.search(keyword: "a"))
+        stack.side.push(.search(keyword: "b"))
+
+        stack.moveSidePaneOntoStack()
+
+        #expect(stack.path == [
+            .galleryList(.watched), .detail(gallery, intent: .read(page: 3)),
+            .search(keyword: "a"), .search(keyword: "b"),
+        ])
+        #expect(stack.sideGallery == nil)
+        #expect(stack.sideIntent == nil)
+        #expect(stack.side.isAtRoot)
+        #expect(stack.hidesBrowseChrome == false)
+    }
+
+    @Test func movingAnEmptyPaneOntoTheStackChangesNothing() {
+        let stack = StackRouter()
+        stack.push(.galleryList(.popular))
+
+        stack.moveSidePaneOntoStack()
+
+        #expect(stack.path == [.galleryList(.popular)])
+        #expect(stack.sideGallery == nil)
+    }
+
+    @Test func aGalleryMovedOntoTheStackHidesTheBar() {
+        let stack = StackRouter()
+        stack.open(makeGallery(), inSidePane: true)
+
+        stack.moveSidePaneOntoStack()
+
+        #expect(stack.hidesBrowseChrome)
     }
 
     // MARK: hidesBrowseChrome
