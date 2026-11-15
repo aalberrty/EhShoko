@@ -25,6 +25,9 @@ struct WallSearchView: View {
     var body: some View {
         WallSearchStack(model: model, isTyping: isTyping)
             .background { WallSearchTypingProbe(model: model, isTyping: $isTyping) }
+            // An inline title keeps the system bar, whose scroll edge effect takes the rows
+            // that scroll up past the top; without it they run under the status bar.
+            .navigationTitle(L10n.Localizable.SearchView.Title.search)
             .navigationBarTitleDisplayMode(.inline)
             .containerBackground(backdrop, for: .navigation)
             .searchFieldBar {

@@ -153,10 +153,9 @@ private struct WallRecentSearchRow: View {
             }
             .buttonStyle(.plain)
             .padding(.trailing, WallSearchMetrics.rowInset - 14)
-            // VoiceOver offers removing as an action of the row, which names the words.
-            .accessibilityHidden(true)
+            // Read right after the row's words, so it needs no more than its verb.
+            .accessibilityLabel(L10n.Localizable.ConfirmationDialog.Button.remove)
         }
-        .accessibilityAction(named: L10n.Localizable.ConfirmationDialog.Button.remove, remove)
     }
 }
 
