@@ -1,7 +1,6 @@
 import EhFeatures
 import EhModels
 import SwiftUI
-import UIKit
 
 /// Every page of the gallery as a wall of thumbnails with its number under each
 /// (`wall.md` section 4): three across, or five after a pinch together, opened at the page
@@ -62,9 +61,10 @@ struct WallPreviewsView: View {
                 }
                 .padding(.horizontal, 6)
                 .padding(.bottom, 12)
+                // On the scroll view itself, where a pinch and a scroll never run together.
+                .background { WallScrollViewPinch { apart in step(to: apart ? .large : .small) } }
             }
             .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { width = $0 }
-            .gesture(WallPinch { apart in step(to: apart ? .large : .small) })
             // The new layout keeps the row that was at the top; nothing is animated.
             .onChange(of: density) {
                 if let anchor = visible.anchor {
@@ -172,27 +172,5 @@ private struct WallPreviewCell: View, Equatable {
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(L10n.Localizable.Reader.Page.label(index))
         .accessibilityHint(failed ? L10n.Localizable.ErrorView.Button.retry : "")
-    }
-}
-
-/// A pinch on the wall: fingers apart for larger thumbnails, together for smaller. A UIKit
-/// recognizer, so that it wins over the scroll and the cells' taps; it reports once and then
-/// ends, one step per pinch.
-private struct WallPinch: UIGestureRecognizerRepresentable {
-    /// `true` when the fingers moved apart.
-    let onStep: (Bool) -> Void
-
-    func makeUIGestureRecognizer(context: Context) -> UIPinchGestureRecognizer {
-        UIPinchGestureRecognizer()
-    }
-
-    func handleUIGestureRecognizerAction(_ recognizer: UIPinchGestureRecognizer, context: Context) {
-        guard recognizer.state == .changed else { return }
-        let apart = recognizer.scale > 1.25
-        guard apart || recognizer.scale < 0.8 else { return }
-        onStep(apart)
-        // Ends this pinch: the rest of it changes nothing.
-        recognizer.isEnabled = false
-        recognizer.isEnabled = true
     }
 }

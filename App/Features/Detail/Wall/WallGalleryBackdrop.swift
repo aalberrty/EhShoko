@@ -14,6 +14,9 @@ struct WallGalleryBackdrop: View {
     let metrics: WallGalleryMetrics
 
     @State private var palette: CoverPalette?
+    /// An attempt ran to its end, with or without colours. A cancelled one (the page was left
+    /// while the cover downloaded) does not count.
+    @State private var isSettled = false
     @Environment(\.look) private var look
 
     private static let coverCornerRadius: CGFloat = 12
@@ -35,8 +38,11 @@ struct WallGalleryBackdrop: View {
         .accessibilityHidden(true)
         .task(id: coverURL) {
             // Once: coming back from a child screen starts this task again.
-            guard palette == nil, let coverURL else { return }
-            palette = await WallCoverPalette.extract(from: coverURL)
+            guard !isSettled, let coverURL else { return }
+            let extracted = await WallCoverPalette.extract(from: coverURL)
+            guard !Task.isCancelled else { return }
+            isSettled = true
+            palette = extracted
         }
     }
 
