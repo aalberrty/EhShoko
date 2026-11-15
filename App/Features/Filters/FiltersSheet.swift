@@ -1,10 +1,14 @@
-import EhCore
 import EhFeatures
 import EhModels
 import SwiftUI
 
-/// Edits the search filter of one `FilterRange` (legacy `FiltersView`). Opens on the range of
-/// the list that presented it; legacy always opened on "Search".
+/// Edits the search filter of one `FilterRange` (legacy `FiltersView`), in Shelf's drawn layout
+/// (`Design/designs/mockups/shelf/09-filters-dark.html`) on the look's tokens: Reset, the title
+/// and Done in the bar; the set; the categories as tiles; one card for what narrows the results;
+/// the other advanced options one push away.
+///
+/// Opens on the range of the list that presented it; legacy always opened on "Search". Every
+/// change is saved as it is made, so Done only closes the sheet.
 struct FiltersSheet: View {
     @State private var model: FiltersModel
     @FocusState private var focusedBound: FiltersModel.Bound?
@@ -17,14 +21,19 @@ struct FiltersSheet: View {
     var body: some View {
         NavigationStack {
             Form {
-                FiltersBasicSection(model: model)
-                FiltersAdvancedSections(model: model, focusedBound: $focusedBound)
+                FiltersRangeSection(model: model)
+                FiltersCategorySection(model: model)
+                FiltersNarrowingSection(model: model, focusedBound: $focusedBound)
             }
+            .filtersFormStyle()
             .navigationTitle(L10n.Localizable.FiltersView.Title.filters)
             .toolbarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    SheetCloseButton { dismiss() }
+                ToolbarItem(placement: .topBarLeading) {
+                    FiltersResetButton(model: model)
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    SheetConfirmButton { dismiss() }
                 }
             }
         }
@@ -38,69 +47,48 @@ struct FiltersSheet: View {
     }
 }
 
-private struct FiltersBasicSection: View {
+/// Resets the edited range after a confirmation, from the bar's leading side.
+private struct FiltersResetButton: View {
     @Bindable var model: FiltersModel
+
+    var body: some View {
+        Button(L10n.Localizable.FiltersView.Button.resetFilters) {
+            model.presentResetConfirmation()
+        }
+        .confirmationDialog(
+            L10n.Localizable.ConfirmationDialog.Title.reset,
+            isPresented: $model.isResetConfirmationPresented, titleVisibility: .visible
+        ) {
+            Button(L10n.Localizable.ConfirmationDialog.Button.reset, role: .destructive) { model.reset() }
+        }
+    }
+}
+
+/// Which of the three filters the sheet edits, as a segmented control on the sheet's ground.
+private struct FiltersRangeSection: View {
+    @Bindable var model: FiltersModel
+
+    /// The drawing's order: the lists' filter, then Watched, then Search.
+    private static let ranges: [FilterRange] = [.global, .watched, .search]
 
     var body: some View {
         Section {
             Picker(selection: $model.range) {
-                ForEach(FilterRange.allCases) { range in
+                ForEach(Self.ranges) { range in
                     Text(range.localizedName).tag(range)
                 }
             } label: {
                 EmptyView()
             }
             .pickerStyle(.segmented)
-            .listRowSeparator(.hidden)
-            FilterCategoryGrid(model: model)
-            Button(L10n.Localizable.FiltersView.Button.resetFilters, role: .destructive) {
-                model.presentResetConfirmation()
-            }
-            .confirmationDialog(
-                L10n.Localizable.ConfirmationDialog.Title.reset,
-                isPresented: $model.isResetConfirmationPresented, titleVisibility: .visible
-            ) {
-                Button(L10n.Localizable.ConfirmationDialog.Button.reset, role: .destructive) { model.reset() }
-            }
-            Toggle(L10n.Localizable.FiltersView.Title.advancedSettings, isOn: $model.filter.advanced)
         }
+        .listRowBackground(Color.clear)
+        .listRowInsets(EdgeInsets())
     }
 }
 
-/// The ten categories as coloured tiles; a dimmed tile is excluded from results.
-private struct FilterCategoryGrid: View {
-    let model: FiltersModel
-
-    @Environment(SettingsStore.self) private var settings
-    @Environment(\.horizontalSizeClass) private var sizeClass
-    @State private var toggles = 0
-
-    var body: some View {
-        let host = settings.galleryHost
-        LazyVGrid(columns: [GridItem(.adaptive(minimum: sizeClass == .regular ? 100 : 80, maximum: 100))]) {
-            ForEach(FiltersModel.categories) { category in
-                let isExcluded = model.isExcluded(category)
-                Button {
-                    toggles += 1
-                    model.toggleExclusion(of: category)
-                } label: {
-                    Text(category.localizedName)
-                        .bold()
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.75)
-                        .foregroundStyle(.white)
-                        .padding(.vertical, 5)
-                        .frame(maxWidth: .infinity)
-                        .background(
-                            category.color(for: host).opacity(isExcluded ? 0.3 : 1),
-                            in: .rect(cornerRadius: 5, style: .continuous)
-                        )
-                }
-                .buttonStyle(.plain)
-                .accessibilityAddTraits(isExcluded ? [] : .isSelected)
-            }
-        }
-        .padding(.vertical, Tokens.Spacing.small)
-        .sensoryFeedback(.impact(flexibility: .soft), trigger: toggles)
+#Preview {
+    Color.clear.sheet(isPresented: .constant(true)) {
+        FiltersSheet(range: .global)
     }
 }

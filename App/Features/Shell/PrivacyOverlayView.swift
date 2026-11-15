@@ -1,18 +1,29 @@
+import Dependencies
+import EhCore
 import EhFeatures
 import SwiftUI
 
 /// The privacy blur over the whole app and, when the auto-lock expired, the lock control
 /// (legacy: the blurred tab view with an 80 pt `lock.fill` button).
+///
+/// Not glass (`Design/designs/README.md` section 13: a cover, not a control): the existing blur
+/// over the look's ground, and the lock on the look's fill. The look changes only colours: the
+/// blur, its radius and the material that hide the app are the same in every look.
 struct PrivacyOverlayView: View {
     let lock: AppLockModel
     let snapshot: PrivacySnapshot
     let unlock: () -> Void
 
+    // Hosted in its own window above the app (`SceneWindowBridge`), outside the root that puts
+    // the look into the environment, so it reads the look where the root does.
+    @Dependency(\.settings) private var settings
+
     var body: some View {
+        let look = Look(settings.look)
         ZStack {
             if let view = snapshot.view {
-                // The background shows at the blurred edges instead of the sharp window below.
-                Color(.systemBackground)
+                // The ground shows at the blurred edges instead of the sharp window below.
+                look.background
                 SnapshotView(view: view)
                     .autoBlur(radius: lock.blurRadius)
             } else {
@@ -28,6 +39,7 @@ struct PrivacyOverlayView: View {
         }
         .ignoresSafeArea()
         .animation(.default, value: lock.isLocked)
+        .lookEnvironment(look, accent: settings.accentColor)
     }
 }
 
@@ -45,15 +57,18 @@ private struct SnapshotView: UIViewRepresentable {
 private struct LockControl: View {
     let action: () -> Void
 
+    @Environment(\.look) private var look
+
     var body: some View {
         Button(action: action) {
             Image(systemName: "lock.fill")
                 .font(.system(size: 44, weight: .regular))
-                .foregroundStyle(.primary)
+                .foregroundStyle(look.label)
                 .frame(width: 96, height: 96)
+                .background(look.fill, in: .circle)
+                .contentShape(.circle)
         }
-        .glassButtonStyle()
-        .buttonBorderShape(.circle)
+        .buttonStyle(.plain)
         // There is no "Unlock" string; the prompt's reason says why the app is locked.
         .accessibilityLabel(L10n.Localizable.LocalAuthorization.reason)
     }
