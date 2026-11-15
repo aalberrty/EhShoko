@@ -29,9 +29,7 @@ struct LedgerSearchView: View {
                 // the keyboard goes away with a drag of the list or with Search.
                 if presentation.canClose {
                     ToolbarItem(placement: .topBarTrailing) {
-                        // The app has no generic "Cancel" yet; the jump-to-page alert's is the
-                        // same word in every language.
-                        Button(L10n.Localizable.JumpPageView.Button.cancel) { field.close() }
+                        Button(L10n.Localizable.Common.cancel) { field.close() }
                     }
                 }
             }

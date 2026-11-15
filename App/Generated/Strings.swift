@@ -196,6 +196,10 @@ internal enum L10n {
       }
     }
     internal enum Common {
+      /// Cancel
+      internal static let cancel = L10n.tr("Localizable", "common.cancel", fallback: "Cancel")
+      /// Close
+      internal static let close = L10n.tr("Localizable", "common.close", fallback: "Close")
       internal enum Value {
         /// %@ day
         internal static func day(_ p1: Any) -> String {
@@ -1716,6 +1720,8 @@ internal enum L10n {
         internal static let parody = L10n.tr("Localizable", "gallery.figure.parody", fallback: "Parody")
         /// people
         internal static let people = L10n.tr("Localizable", "gallery.figure.people", fallback: "people")
+        /// person
+        internal static let person = L10n.tr("Localizable", "gallery.figure.person", fallback: "person")
         /// Posted
         internal static let posted = L10n.tr("Localizable", "gallery.figure.posted", fallback: "Posted")
         /// Rating
@@ -1726,6 +1732,10 @@ internal enum L10n {
         internal static let translated = L10n.tr("Localizable", "gallery.figure.translated", fallback: "Translated")
         /// Uploader
         internal static let uploader = L10n.tr("Localizable", "gallery.figure.uploader", fallback: "Uploader")
+        /// %d vote
+        internal static func vote(_ p1: Int) -> String {
+          return L10n.tr("Localizable", "gallery.figure.vote", p1, fallback: "%d vote")
+        }
         /// %d votes
         internal static func votes(_ p1: Int) -> String {
           return L10n.tr("Localizable", "gallery.figure.votes", p1, fallback: "%d votes")
@@ -1736,6 +1746,10 @@ internal enum L10n {
             return L10n.tr("Localizable", "gallery.figure.pages.read", p1, fallback: "%d read")
           }
         }
+      }
+      internal enum Previews {
+        /// Columns
+        internal static let columns = L10n.tr("Localizable", "gallery.previews.columns", fallback: "Columns")
       }
       internal enum Tags {
         /// Tags · %d
@@ -1945,6 +1959,14 @@ internal enum L10n {
       internal static let empty = L10n.tr("Localizable", "list.empty", fallback: "No galleries")
       /// Find in this list
       internal static let find = L10n.tr("Localizable", "list.find", fallback: "Find in this list")
+      /// %d galleries
+      internal static func galleries(_ p1: Int) -> String {
+        return L10n.tr("Localizable", "list.galleries", p1, fallback: "%d galleries")
+      }
+      /// %d gallery
+      internal static func gallery(_ p1: Int) -> String {
+        return L10n.tr("Localizable", "list.gallery", p1, fallback: "%d gallery")
+      }
       /// opened %@
       internal static func opened(_ p1: Any) -> String {
         return L10n.tr("Localizable", "list.opened", String(describing: p1), fallback: "opened %@")
@@ -2235,8 +2257,14 @@ internal enum L10n {
       internal static let autoplay = L10n.tr("Localizable", "reader.autoplay", fallback: "Auto-play")
       /// End
       internal static let end = L10n.tr("Localizable", "reader.end", fallback: "End")
+      /// Live Text
+      internal static let liveText = L10n.tr("Localizable", "reader.live_text", fallback: "Live Text")
       /// Settings
       internal static let settings = L10n.tr("Localizable", "reader.settings", fallback: "Settings")
+      internal enum Action {
+        /// Save
+        internal static let save = L10n.tr("Localizable", "reader.action.save", fallback: "Save")
+      }
       internal enum Autoplay {
         /// every %d s
         internal static func every(_ p1: Int) -> String {
@@ -2363,6 +2391,8 @@ internal enum L10n {
     internal enum Search {
       /// Search by title or tag
       internal static let hint = L10n.tr("Localizable", "search.hint", fallback: "Search by title or tag")
+      /// Scope
+      internal static let scope = L10n.tr("Localizable", "search.scope", fallback: "Scope")
       /// Suggestions
       internal static let suggestions = L10n.tr("Localizable", "search.suggestions", fallback: "Suggestions")
       /// Search titles for “%@”
@@ -2376,6 +2406,16 @@ internal enum L10n {
         internal static let saved = L10n.tr("Localizable", "search.group.saved", fallback: "Saved")
         /// Tags
         internal static let tags = L10n.tr("Localizable", "search.group.tags", fallback: "Tags")
+      }
+      internal enum Key {
+        /// Exact match
+        internal static let exact = L10n.tr("Localizable", "search.key.exact", fallback: "Exact match")
+        /// Exclude
+        internal static let exclude = L10n.tr("Localizable", "search.key.exclude", fallback: "Exclude")
+        /// Insert %@
+        internal static func insert(_ p1: Any) -> String {
+          return L10n.tr("Localizable", "search.key.insert", String(describing: p1), fallback: "Insert %@")
+        }
       }
       internal enum Link {
         /// A link is on the clipboard
@@ -2394,6 +2434,12 @@ internal enum L10n {
         internal static let signin = L10n.tr("Localizable", "search.scope.signin", fallback: "Sign in to search here")
         /// Watched
         internal static let watched = L10n.tr("Localizable", "search.scope.watched", fallback: "Watched")
+      }
+      internal enum Token {
+        /// Not %@
+        internal static func excluded(_ p1: Any) -> String {
+          return L10n.tr("Localizable", "search.token.excluded", String(describing: p1), fallback: "Not %@")
+        }
       }
     }
     internal enum SearchView {

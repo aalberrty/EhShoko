@@ -42,7 +42,7 @@ private struct GallerySignInAlert: ViewModifier {
             Button(L10n.Localizable.NotLoginView.Button.login) {
                 appRouter?.presentSettings([.settings(.account), .settings(.login)])
             }
-            AlertCancelButton(title: L10n.Localizable.JumpPageView.Button.cancel)
+            AlertCancelButton(title: L10n.Localizable.Common.cancel)
         } message: {
             Text(L10n.Localizable.List.Signin.note)
         }
