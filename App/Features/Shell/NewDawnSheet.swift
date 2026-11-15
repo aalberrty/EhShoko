@@ -2,52 +2,54 @@ import EhFeatures
 import EhModels
 import SwiftUI
 
-/// The daily "New Dawn" reward (legacy `NewDawnView`): a sky gradient, the sun (with rays in
-/// light mode) in the top-trailing corner, two title lines and the rewards.
+/// The daily "New Dawn" reward (legacy `NewDawnView`): the sun (with rays in light mode) in the
+/// top-trailing corner, two title lines and the rewards.
+///
+/// A sheet below full height on the look's tokens (`Design/designs/README.md` section 13): the
+/// system's sheet is the ground, so its glass shows on iOS 26, where legacy filled it with a sky
+/// gradient. The sun takes the look's rating colour, the text its label colours and its title
+/// face. The text scrolls when it does not fit, at large text sizes.
 struct NewDawnSheet: View {
     let greeting: Greeting
 
     @Environment(\.colorScheme) private var colorScheme
-    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    @Environment(\.look) private var look
     @State private var width: CGFloat = 0
 
-    private var gradientColors: [Color] {
-        colorScheme == .light
-            ? [Color(.systemTeal), Color(.systemIndigo)]
-            : [Color(.systemGray5), Color(.systemGray2)]
-    }
-
-    /// Legacy sized the sun from the window width; this uses the sheet's own width.
-    private var sunWidth: CGFloat {
-        width * (horizontalSizeClass == .regular ? 0.5 : 0.6)
-    }
+    /// Centred on the sheet's top-trailing corner, so a quarter of it shows. Legacy sized the
+    /// sun from the window width; this uses the sheet's own width.
+    private var sunWidth: CGFloat { width * 0.4 }
 
     var body: some View {
-        ZStack {
-            LinearGradient(colors: gradientColors, startPoint: .top, endPoint: .bottom)
-            Sun(width: sunWidth, showsRays: colorScheme == .light)
-                .offset(x: width * 0.2, y: -width * 0.2)
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
+        ZStack(alignment: .topTrailing) {
+            // Rays are a shape, not a colour: legacy drew them only in the light appearance.
+            Sun(width: sunWidth, color: look.rating, showsRays: colorScheme == .light)
+                .offset(x: sunWidth / 2, y: -sunWidth / 2)
                 .accessibilityHidden(true)
-            VStack(spacing: 50) {
-                VStack(spacing: 10) {
-                    line(L10n.Localizable.NewDawnView.Title.first, font: .largeTitle)
-                    line(L10n.Localizable.NewDawnView.Title.second, font: .title2)
+            ScrollView {
+                VStack(alignment: .leading, spacing: 10) {
+                    line(L10n.Localizable.NewDawnView.Title.first, font: .largeTitle, color: look.label)
+                    line(L10n.Localizable.NewDawnView.Title.second, font: .title2, color: look.secondaryLabel)
+                    line(greeting.gainContent ?? "", font: .title3, color: look.label)
+                        .padding(.top, 40)
                 }
-                line(greeting.gainContent ?? "", font: .title3)
+                .padding(.horizontal, Tokens.Spacing.xLarge)
+                // Below the sun and the tips of its rays.
+                .padding(.top, sunWidth * 0.8)
+                .padding(.bottom, Tokens.Spacing.xLarge)
             }
-            .padding()
+            .scrollBounceBehavior(.basedOnSize)
         }
-        .drawingGroup()
-        .ignoresSafeArea()
+        .ignoresSafeArea(edges: .top)
         .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { width = $0 }
     }
 
-    private func line(_ text: String, font: Font) -> some View {
+    private func line(_ text: String, font: Font, color: Color) -> some View {
         Text(text)
             .font(font)
             .fontWeight(.bold)
-            .foregroundStyle(.white)
+            .fontDesign(look.titleDesign)
+            .foregroundStyle(color)
             .fixedSize(horizontal: false, vertical: true)
             .frame(maxWidth: .infinity, alignment: .leading)
     }
@@ -55,12 +57,13 @@ struct NewDawnSheet: View {
 
 private struct Sun: View {
     let width: CGFloat
+    let color: Color
     let showsRays: Bool
 
     var body: some View {
         ZStack {
             Circle()
-                .fill(.yellow)
+                .fill(color)
                 .frame(width: width, height: width)
             if showsRays {
                 ForEach(0..<8, id: \.self) { index in
@@ -76,7 +79,7 @@ private struct Sun: View {
         let distance = width / 1.2
         let radians = degrees * .pi / 180
         return RoundedRectangle(cornerRadius: beam / 3)
-            .fill(.yellow)
+            .fill(color)
             .frame(width: beam, height: beam * 5)
             .rotationEffect(.degrees(degrees))
             .offset(x: distance * sin(radians), y: -distance * cos(radians))
@@ -86,7 +89,8 @@ private struct Sun: View {
 // MARK: Presentation
 
 extension View {
-    /// Presents `router.presentedGreeting` as the New Dawn sheet with a light haptic.
+    /// Presents `router.presentedGreeting` as the New Dawn sheet with a light haptic, at the
+    /// medium height; it can be pulled up when large text does not fit.
     ///
     /// Only one view can present a sheet at a time, so the shell attaches this to the tabs and
     /// to the gallery sheet and marks the one on top with `isTopmost`.
@@ -103,6 +107,7 @@ private struct NewDawnPresenter: ViewModifier {
         content
             .sheet(item: greeting) { greeting in
                 NewDawnSheet(greeting: greeting)
+                    .presentationDetents([.medium, .large])
                     .presentationDragIndicator(.visible)
             }
             .sensoryFeedback(.impact(weight: .light), trigger: isTopmost ? router.presentedGreeting : nil) { _, new in

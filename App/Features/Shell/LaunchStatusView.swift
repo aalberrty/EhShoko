@@ -4,9 +4,12 @@ import SwiftUI
 
 /// What shows before the tabs (legacy `MigrationView`): nothing on a normal launch, "Preparing
 /// the database…" when opening or importing takes a moment, and the error with "Drop the
-/// database" when the database cannot be opened.
+/// database" when the database cannot be opened. On the look's tokens; the state views take
+/// their colours from it too.
 struct LaunchStatusView: View {
     @Bindable var model: AppModel
+
+    @Environment(\.look) private var look
 
     /// A normal launch is over before this, so it shows no spinner at all.
     private static let progressDelay: Duration = .milliseconds(400)
@@ -15,8 +18,13 @@ struct LaunchStatusView: View {
 
     var body: some View {
         ZStack {
-            // Matches the empty launch screen, so the hand-over is invisible.
+            // The empty launch screen is the system's background whatever the look, so the
+            // first frame matches it and the hand-over is invisible. The look's ground fades in
+            // only when there is something to show (Shelf's and Wall's are the same colour).
             Color(.systemBackground).ignoresSafeArea()
+            look.background
+                .ignoresSafeArea()
+                .opacity(showsStatus ? 1 : 0)
             switch model.launchState {
             case .launching:
                 if showsProgress {
@@ -37,6 +45,14 @@ struct LaunchStatusView: View {
             showsProgress = model.launchAttempt > 0
             guard (try? await Task.sleep(for: Self.progressDelay)) != nil else { return }
             showsProgress = true
+        }
+    }
+
+    private var showsStatus: Bool {
+        switch model.launchState {
+        case .launching: showsProgress
+        case .failed: true
+        case .ready: false
         }
     }
 
