@@ -94,7 +94,7 @@ private struct TabsBarAccessoryLabel: View {
                 }
             }
             .lineLimit(1)
-            Spacer(minLength: 0)
+            .frame(maxWidth: .infinity, alignment: .leading)
             TabsBarProgressRing(fraction: item.fraction)
         }
         // The ring is concentric with the capsule's end; the cover's corners stay inside the
