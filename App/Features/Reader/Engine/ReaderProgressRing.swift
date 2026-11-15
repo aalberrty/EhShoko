@@ -2,8 +2,8 @@ import UIKit
 
 /// A determinate ring: a track and the fraction done, drawn by two shape layers.
 ///
-/// Downloads report a few times a second (`ImageLoadProgressThrottle`), so a step forward is
-/// filled in over that interval by Core Animation, which runs it outside the app's main thread.
+/// A page shows its download's progress a few times a second (`ImageLoadProgressGate`), so a
+/// step forward is filled in over that interval by Core Animation, outside the main thread.
 final class ReaderProgressRing: UIView {
     private(set) var progress: CGFloat = 0
 
@@ -52,7 +52,7 @@ final class ReaderProgressRing: UIView {
         let fill = CABasicAnimation(keyPath: "strokeEnd")
         fill.fromValue = shown
         fill.toValue = newValue
-        fill.duration = ImageLoadProgressThrottle.interval / .seconds(1)
+        fill.duration = ImageLoadProgressGate.interval / .seconds(1)
         fill.timingFunction = CAMediaTimingFunction(name: .linear)
         progressLayer.add(fill, forKey: Self.fillKey)
     }

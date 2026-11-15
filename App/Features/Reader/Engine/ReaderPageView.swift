@@ -64,6 +64,8 @@ final class ReaderPageView: UIView, UIContextMenuInteractionDelegate {
     private var loading: Load?
     private var loadTask: Task<Void, Never>?
     private var lastLoadID = 0
+    /// What the status view is shown of the downloads, at most a few times a second.
+    private var progressGate = ImageLoadProgressGate()
     private var liveText: ReaderLiveText?
     private var isLiveTextEnabled = false
 
@@ -166,6 +168,7 @@ final class ReaderPageView: UIView, UIContextMenuInteractionDelegate {
         cancelLoad()
         clearImage()
         statusView.pause()
+        progressGate = ImageLoadProgressGate()
         page = 0
         content = .pending
         request = nil
@@ -250,7 +253,7 @@ final class ReaderPageView: UIView, UIContextMenuInteractionDelegate {
     }
 
     private func updateProgress(_ progress: ImageLoadProgress, for load: Load) {
-        guard loading == load, shown == nil else { return }
+        guard loading == load, shown == nil, progressGate.admits(progress) else { return }
         statusView.setProgress(progress)
     }
 

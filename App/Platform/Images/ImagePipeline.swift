@@ -62,9 +62,9 @@ nonisolated enum ImagePipeline {
     /// - Parameters:
     ///   - keepsInMemory: Whether to keep the result in the memory cache. Pass `false` for
     ///     one-off decodes such as a zoomed-in page.
-    ///   - progress: The bytes received and expected, at most a few times a second
-    ///     (`ImageLoadProgress`). Not called when the data is already on disk, nor while the
-    ///     server has not said how large the image is.
+    ///   - progress: The bytes received and expected (`ImageLoadProgress`), each time data
+    ///     arrives. Not called when the data is already on disk, nor while the server has not
+    ///     said how large the image is.
     @concurrent
     static func image(
         for url: URL, target: ImageDecodeTarget, displayScale: CGFloat, keepsInMemory: Bool = true,
@@ -202,11 +202,10 @@ nonisolated enum ImagePipeline {
     ) async throws -> Data {
         var progressBlock: DownloadProgressBlock?
         if let progress {
-            let throttle = ImageLoadProgressThrottle()
             // Kingfisher reports progress on the main queue, for every piece of data that
-            // arrives: dozens of times a second on a fast connection. Only a few go on.
+            // arrives. Whoever shows it decides how often (`ImageLoadProgressGate`).
             progressBlock = { received, total in
-                guard total > 0, throttle.admits(received: received, expected: total) else { return }
+                guard total > 0 else { return }
                 let update = ImageLoadProgress(receivedBytes: received, expectedBytes: total)
                 if Thread.isMainThread {
                     MainActor.assumeIsolated { progress(update) }
