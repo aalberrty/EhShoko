@@ -2,8 +2,7 @@ import SwiftUI
 
 nonisolated extension BarSchematic {
     /// The tab bar: the Continue capsule over a four-item bar and a round search button.
-    /// Minimised, the current tab alone, Continue inline beside it with its cover, its title
-    /// and its ring only, and search.
+    /// Minimised, the current tab alone, Continue inline beside it, and search.
     static func tabs(_ canvas: SchematicCanvas, selected: Int, minimised: Bool) {
         let palette = canvas.palette
         if minimised {
@@ -11,7 +10,8 @@ nonisolated extension BarSchematic {
             canvas.box(12.2, 138, 5.6, 5, palette.accent, 1.5)
             canvas.chrome(27, 132, 48, 18, 9)
             canvas.box(30.5, 135.5, 7, 10, SchematicPalette.cover(1), 1.2)
-            canvas.box(40, 139.7, 20, 2.6, palette.label)
+            canvas.box(40, 137.8, 20, 2.6, palette.label)
+            canvas.box(40, 142.3, 13, 2, palette.tertiary)
             canvas.ring(64, 136.5, 8.5, palette.accent, 1.3)
         } else {
             canvas.chrome(8, 117, 84, 11.5, 5.8)
