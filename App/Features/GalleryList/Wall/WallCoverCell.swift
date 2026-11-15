@@ -64,6 +64,9 @@ struct WallCoverCell: View, Equatable {
     let style: WallCellStyle
 
     var body: some View {
+        #if DEBUG || HARNESS
+        let _ = ListHarnessCells.note()
+        #endif
         let texts = style.texts
         let category = texts.category(entry.gallery.category)
         VStack(alignment: .leading, spacing: 0) {

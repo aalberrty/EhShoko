@@ -29,8 +29,28 @@ final class ListHarnessScroller: NSObject {
         var longHitches = 0
         var frameDuration: Double = 0
         var reachedEnd = false
+        /// The main thread's CPU time, in seconds, from the first movement to the last, and what
+        /// was built and served in that time.
+        var mainThreadCPU: Double = 0
+        var cellBodies = 0
+        var coversServed = 0
 
         var hitchRatio: Double { duration > 0 ? hitchTime * 1_000 / duration : 0 }
+    }
+
+    /// The main thread's clocks at one moment of the run. The scroller runs on the main thread,
+    /// so its thread's CPU clock is the main thread's.
+    private struct Mark {
+        var cpu: UInt64
+        var cells: Int
+        var served: Int
+
+        static var now: Mark {
+            Mark(
+                cpu: clock_gettime_nsec_np(CLOCK_THREAD_CPUTIME_ID), cells: ListHarnessCells.value,
+                served: ListHarnessURLProtocol.servedCount.withLock { $0 }
+            )
+        }
     }
 
     private static let signposter = OSSignposter(subsystem: "app.ehshoko", category: "Harness")
@@ -49,6 +69,9 @@ final class ListHarnessScroller: NSObject {
     private var previousDuration: CFTimeInterval = 0
     private var endReachedAt: CFTimeInterval?
     private var result = Result()
+    /// At the first movement, and at the latest one.
+    private var firstMove: Mark?
+    private var lastMove: Mark?
 
     var isRunning: Bool { link != nil }
 
@@ -61,6 +84,8 @@ final class ListHarnessScroller: NSObject {
         result = Result()
         startTime = nil
         endReachedAt = nil
+        firstMove = nil
+        lastMove = nil
         let top = -scrollView.adjustedContentInset.top
         scrollView.setContentOffset(CGPoint(x: scrollView.contentOffset.x, y: top), animated: false)
         startOffset = top
@@ -119,6 +144,11 @@ final class ListHarnessScroller: NSObject {
         let inset = scrollView.adjustedContentInset
         let maximum = max(scrollView.contentSize.height + inset.bottom - scrollView.bounds.height, -inset.top)
         let target = min(startOffset + CGFloat(speed * (now - startTime)), maximum)
+        if target != scrollView.contentOffset.y {
+            let mark = Mark.now
+            if firstMove == nil { firstMove = mark }
+            lastMove = mark
+        }
         scrollView.contentOffset.y = target
         result.distance = Double(target - startOffset)
         guard target >= maximum else {
@@ -143,6 +173,11 @@ final class ListHarnessScroller: NSObject {
         }
         if let startTime {
             result.duration = previousTimestamp - startTime
+        }
+        if let firstMove, let lastMove {
+            result.mainThreadCPU = Double(lastMove.cpu - firstMove.cpu) / 1e9
+            result.cellBodies = lastMove.cells - firstMove.cells
+            result.coversServed = lastMove.served - firstMove.served
         }
         continuation?.resume(returning: result)
         continuation = nil

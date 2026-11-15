@@ -95,9 +95,12 @@ final class ListHarnessModel {
         }
     }
 
+    /// Before the slot is built, so a list lays itself out once in the form measured.
     private func applySettings() {
         settings.listDisplayMode = options.slot == .v3Grid ? .thumbnail : .detail
         settings.showsTagsInList = options.showsTags
+        settings.wallDensity = options.slot.wallDensity ?? .medium
+        settings.ledgerShowsCovers = options.slot != .ledgerTitles
     }
 }
 
@@ -123,6 +126,15 @@ nonisolated struct ListHarnessResult: Equatable, Sendable, Codable {
     var coversServed: Int
     /// Covers decoded by `CoverImage` during the harness; 0 for slots that do not use it.
     var coversDecoded: Int
+    /// The main thread's CPU time from the scroll's first movement to its last (waiting for a
+    /// core is not in it), and the cells built meanwhile: what `spikes/S1.md` compares lists
+    /// by on a shared machine, where frame timing compares machine loads.
+    var mainThreadCPUMs: Double
+    var cellsCreated: Int
+    /// Whether `cellsCreated` counts the design's cell bodies (`ListHarnessCells`), or, for
+    /// v3's cells, which do not count themselves, the covers served during the scroll.
+    var cellsCounted: Bool
+    var cpuPerCellMs: Double
 
     init(
         options: ListHarnessOptions, galleryCount: Int, scroll: ListHarnessScroller.Result,
@@ -147,6 +159,10 @@ nonisolated struct ListHarnessResult: Equatable, Sendable, Codable {
         peakFootprintMB = footprint.map { Double($0.peak) / 1_048_576 } ?? 0
         self.coversServed = coversServed
         self.coversDecoded = coversDecoded
+        mainThreadCPUMs = scroll.mainThreadCPU * 1_000
+        cellsCounted = scroll.cellBodies > 0
+        cellsCreated = cellsCounted ? scroll.cellBodies : scroll.coversServed
+        cpuPerCellMs = cellsCreated > 0 ? mainThreadCPUMs / Double(cellsCreated) : 0
     }
 
     static var fileURL: URL {
@@ -155,9 +171,9 @@ nonisolated struct ListHarnessResult: Equatable, Sendable, Codable {
 
     var summary: String {
         String(
-            format: "%@%@: %.1f s, %d frames, hitch ratio %.1f ms/s, worst %.0f ms, %d long after the first screen, footprint %.0f MB (peak %.0f MB), covers served %d, decoded by CoverImage %d",
+            format: "%@%@: %.1f s, %d frames, hitch ratio %.1f ms/s, worst %.0f ms, %d long after the first screen, footprint %.0f MB (peak %.0f MB), covers served %d, decoded by CoverImage %d, main thread %.0f ms for %d cells (%@), %.2f ms a cell",
             slot, dock ? " + dock" : "", duration, frames, hitchRatioMsPerS, worstHitchMs, longHitchesAfterFirstScreen, footprintMB, peakFootprintMB,
-            coversServed, coversDecoded
+            coversServed, coversDecoded, mainThreadCPUMs, cellsCreated, cellsCounted ? "bodies" : "covers", cpuPerCellMs
         )
     }
 

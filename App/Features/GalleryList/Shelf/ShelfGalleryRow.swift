@@ -67,6 +67,9 @@ struct ShelfGalleryRow: View, Equatable {
     }
 
     var body: some View {
+        #if DEBUG || HARNESS
+        let _ = ListHarnessCells.note()
+        #endif
         let texts = style.texts
         HStack(alignment: .top, spacing: Self.coverSpacing) {
             if style.isRanked {

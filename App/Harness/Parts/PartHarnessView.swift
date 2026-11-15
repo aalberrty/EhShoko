@@ -161,8 +161,13 @@ private struct PartHarnessRoot: View {
         let options = model.options
         switch options.part {
         case .list:
-            GalleryListScreen(context: options.kind.context) {
-                PartHarnessHeader(isTall: options.hasTallHeader)
+            switch options.header {
+            case .absent:
+                GalleryListScreen(context: options.kind.context)
+            case .empty, .tall:
+                GalleryListScreen(context: options.kind.context) {
+                    PartHarnessHeader(isTall: options.header == .tall)
+                }
             }
         case .gallery, .start, .shell:
             // What a gallery is opened from: a list, whose covers are the zoom's sources.
@@ -247,6 +252,8 @@ final class PartHarnessModel {
         defaults.removePersistentDomain(forName: Self.settingsSuite)
         settings = SettingsStore(defaults: defaults)
         settings.designChoices = options.choices
+        settings.showsTagsInList = options.showsTags
+        settings.wallDensity = options.density
         fixtures.state = options.state
     }
 
@@ -298,6 +305,12 @@ final class PartHarnessModel {
         if options.state != old.state {
             fixtures.state = options.state
         }
+        if options.showsTags != old.showsTags {
+            settings.showsTagsInList = options.showsTags
+        }
+        if options.density != old.density {
+            settings.wallDensity = options.density
+        }
         // The whole shell follows its settings by itself. A part's stage is built again when
         // what it is built from changes: the part, the bar, how it is presented.
         var structure = options
@@ -306,6 +319,8 @@ final class PartHarnessModel {
         structure.usesLargestText = old.usesLargestText
         structure.showsPanelButton = old.showsPanelButton
         structure.memoryCheckPreset = old.memoryCheckPreset
+        structure.showsTags = old.showsTags
+        structure.density = old.density
         structure.choices = old.choices
         let barChanged = options.part != .shell && options.choices.bar != old.choices.bar
         if structure != old || barChanged {

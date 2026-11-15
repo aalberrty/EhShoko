@@ -108,8 +108,12 @@ final class PartHarnessFixtures: ListFixtureProvider {
     @concurrent
     nonisolated private static func makeEntries() async -> [GalleryEntry] {
         let galleries = await ListHarnessGalleries.make(count: 120, session: "parts", coverLatency: 0.05)
-        return galleries.enumerated().map { index, gallery in
-            GalleryEntry(
+        let now = Date()
+        return galleries.enumerated().map { index, original in
+            // Opened an hour and a half apart, newest first, so History's rows say when.
+            var gallery = original
+            gallery.lastOpenDate = now.addingTimeInterval(-Double(index) * 5_400 - 600)
+            return GalleryEntry(
                 gallery: gallery,
                 favorite: index % 7 == 3 ? FavoriteMark(folder: index % 10, favoritedDate: nil) : nil,
                 readingProgress: index % 5 == 1 ? max(gallery.pageCount / 3, 1) : nil
