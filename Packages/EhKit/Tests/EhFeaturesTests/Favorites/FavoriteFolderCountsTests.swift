@@ -74,6 +74,44 @@ import Testing
         #expect(env.transport.requests.count == 2)
     }
 
+    /// Ledger's library asks through `LibraryScreen`'s model: the page is its All list, so
+    /// Wall's piles or Shelf's All, shown next, ask nothing.
+    @Test func withTheLibraryThePageIsItsAllListAndIsNotAskedForAgain() async throws {
+        let env = try ListTestEnvironment()
+        env.transport.on(.any, reply: .fixture(ListFixture.favorites))
+        let library = env.make { FavoritesModel() }
+        let counts = env.make { FavoriteFolderCounts(library: library) }
+
+        await counts.loadIfUnknown()
+        #expect(env.transport.requests.count == 1)
+        #expect(env.query("favcat", ofRequest: 0) == "all")
+        #expect(!env.userStore.favoriteFolderCounts.isEmpty)
+        #expect(library.loadedList(for: FavoritesModel.allFolders)?.phase == .content)
+
+        var screen = ListScreenTask()
+        await screen.render(library.list)
+        #expect(env.transport.requests.count == 1)
+
+        await counts.refresh()
+        #expect(env.transport.requests.count == 2)
+    }
+
+    /// Shelf's library may have left another folder chosen: the counts load All without
+    /// changing that.
+    @Test func withTheLibraryTheChosenFolderStaysChosen() async throws {
+        let env = try ListTestEnvironment()
+        env.transport.on(.any, reply: .fixture(ListFixture.favorites))
+        let library = env.make { FavoritesModel() }
+        library.select(category: 3)
+        let counts = env.make { FavoriteFolderCounts(library: library) }
+
+        await counts.loadIfUnknown()
+
+        #expect(library.category == 3)
+        #expect(library.list.entries.isEmpty)
+        #expect(env.query("favcat", ofRequest: 0) == "all")
+    }
+
     @Test func refreshAsksEvenWhenTheCountsAreKnownButNotWhenSignedOut() async throws {
         let env = try ListTestEnvironment()
         env.transport.on(.any, reply: .fixture(ListFixture.favorites))

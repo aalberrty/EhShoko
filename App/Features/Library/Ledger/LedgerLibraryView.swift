@@ -9,16 +9,17 @@ import SwiftUI
 /// Under `tabs` the Library tab draws the title with its switch, so the screen draws none.
 ///
 /// The galleries of a folder are never shown here: each folder is pushed as a list with a
-/// model of its own (`Route.favoritesFolder`), so the shared model's galleries go unused under
-/// Ledger and nothing loads them. What the screen requests is the folders' counts, once, when
-/// nobody has loaded a favourites page this session.
+/// model of its own (`Route.favoritesFolder`). What the screen requests is the folders'
+/// counts, once, when nobody has loaded a favourites page this session. They come with All's
+/// first page, which goes into the shared model's All list, so Wall's piles or Shelf's All,
+/// if the design changes, find it loaded.
 struct LedgerLibraryView: View {
-    /// `LibraryScreen`'s model. Ledger pushes each folder as its own list and reads none of it.
+    /// `LibraryScreen`'s model, whose All list holds the counts' page.
     let model: FavoritesModel
 
-    /// The counts request, shared with the Index: it asks only while the counts are unknown,
-    /// so the library and the Index between them ask once.
-    @State private var counts = FavoriteFolderCounts()
+    /// The counts request, the Index's too: it asks only while the counts are unknown, so the
+    /// library and the Index between them ask once.
+    @State private var counts: FavoriteFolderCounts
     /// The Library tab's re-selections seen while this screen showed its root.
     @State private var reselection: Int?
 
@@ -27,6 +28,11 @@ struct LedgerLibraryView: View {
     @Environment(StackRouter.self) private var stack
     @Environment(\.chrome) private var chrome
     @Environment(\.look) private var look
+
+    init(model: FavoritesModel) {
+        self.model = model
+        _counts = State(initialValue: FavoriteFolderCounts(library: model))
+    }
 
     var body: some View {
         let isSignedIn = accountSession.isLoggedIn
