@@ -38,7 +38,7 @@ struct LedgerLibraryView: View {
             } else {
                 ListSignInState(kind: .favorites)
                     // No title on the page: the bar's is always shown.
-                    .ledgerLibraryBarTitle(isShown: hasTitle, isAlwaysVisible: true)
+                    .ledgerBarTitle(hasTitle ? L10n.Localizable.Shell.Place.favorites : nil, isAlwaysVisible: true)
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)

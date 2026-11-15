@@ -32,10 +32,6 @@ struct LedgerIndexView: View {
                 LedgerIndexPage(model: model, navigation: navigation) { editsQuickSearches = true }
             }
         }
-        // The bar's back menu and VoiceOver's screen name; the title itself is drawn by the
-        // Index in the look's title face.
-        .navigationTitle(L10n.Localizable.Shell.Place.index)
-        .toolbarTitleDisplayMode(.inline)
         // The Index keeps its account button under `command`; under `tabs` the shell adds it.
         .startAccountButton()
         // The command bar's trailing circle: a gallery link from the clipboard. Beside the

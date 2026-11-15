@@ -19,7 +19,7 @@ struct LedgerIndexColumn: View {
     var body: some View {
         List(selection: selection) {
             Section {
-                LedgerIndexTitle(isColumn: true)
+                LedgerTitle(L10n.Localizable.Shell.Place.index, isCompact: true)
                     .listRowSeparator(.hidden)
                 LedgerIndexColumnContinue(navigation: navigation)
             }
@@ -30,7 +30,7 @@ struct LedgerIndexColumn: View {
         .listStyle(.sidebar)
         .environment(\.defaultMinListRowHeight, 36)
         .refreshable { await model.folderCounts.refresh() }
-        .ledgerIndexBarTitle()
+        .ledgerBarTitle(L10n.Localizable.Shell.Place.index)
     }
 
     /// The place at the bottom of the stack beside the column. Choosing a row goes through the
@@ -82,7 +82,7 @@ private struct LedgerIndexColumnLists: View {
         )
         Section {
             ForEach(items) { item in
-                LedgerIndexLine(
+                LedgerLine(
                     mark: .symbol(item.kind.systemImage), title: item.kind.title, value: item.value,
                     showsChevron: false
                 )
@@ -104,13 +104,13 @@ private struct LedgerIndexColumnFavorites: View {
     var body: some View {
         Section {
             if accountSession.isLoggedIn {
-                LedgerIndexLine(
+                LedgerLine(
                     mark: .allFolders, title: L10n.Localizable.Library.all,
                     value: userStore.favoriteTotalCount?.formatted(), showsChevron: false
                 )
                 .tag(LedgerIndexPlace.folder(-1))
-                ForEach(userStore.ledgerIndexFolders) { folder in
-                    LedgerIndexLine(
+                ForEach(userStore.libraryFolders) { folder in
+                    LedgerLine(
                         mark: .folder(folder.index), title: folder.name, value: folder.count?.formatted(),
                         showsChevron: false
                     )
@@ -118,7 +118,7 @@ private struct LedgerIndexColumnFavorites: View {
                 }
             } else {
                 Button(action: navigation.signIn) {
-                    LedgerIndexLine(
+                    LedgerLine(
                         mark: .symbol("person.crop.circle"), title: L10n.Localizable.Start.Ledger.signInFavorites,
                         showsChevron: false
                     )
@@ -142,7 +142,7 @@ private struct LedgerIndexColumnQuickSearches: View {
             Section {
                 ForEach(words) { word in
                     Button { navigation.run(word.content) } label: {
-                        LedgerIndexLine(
+                        LedgerLine(
                             mark: .symbol("magnifyingglass"), title: word.content,
                             value: word.name.isEmpty ? nil : word.name, isSyntax: true, showsChevron: false
                         )

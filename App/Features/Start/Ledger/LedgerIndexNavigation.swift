@@ -91,23 +91,3 @@ struct LedgerIndexListItem: Identifiable, Equatable {
         ]
     }
 }
-
-/// One favourites folder as the Index shows it.
-struct LedgerIndexFolder: Identifiable, Equatable {
-    /// 0...9, or -1 for every folder.
-    let index: Int
-    let name: String
-    /// `nil` until a favourites page said.
-    let count: Int?
-
-    var id: Int { index }
-}
-
-extension UserStore {
-    /// The ten folders with their names and the counts known this session.
-    var ledgerIndexFolders: [LedgerIndexFolder] {
-        (0...9).map { index in
-            LedgerIndexFolder(index: index, name: favoriteFolderTitle(index), count: favoriteFolderCounts[index])
-        }
-    }
-}
