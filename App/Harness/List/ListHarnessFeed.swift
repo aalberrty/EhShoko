@@ -55,10 +55,11 @@ final class ListHarnessFeed: ListFeedSource {
     func feedRefreshReadingProgress() async {}
 }
 
-/// How many cells the list designs have built since launch: each design's cell counts itself
-/// in its body (`ShelfGalleryRow`, `WallCoverCell`, `LedgerGalleryRow`), so the harness can
-/// divide the main thread's time by the cells a run really created. v3's cells do not count;
-/// for them the covers served stand in, one per cell, since nothing prefetches there.
+/// How many cells the lists under test have built since launch: each cell counts itself in its
+/// body (the designs' `ShelfGalleryRow`, `WallCoverCell`, `LedgerGalleryRow`, and v3's
+/// `GalleryDetailRow` and `GalleryThumbnailCell`), so the harness can divide the main thread's
+/// time by the cells a run really created. Covers served do not stand in for v3's cells: on a
+/// loaded machine a fast scroll passes rows whose cover was never asked for.
 nonisolated enum ListHarnessCells {
     private static let count = Atomic<Int>(0)
 

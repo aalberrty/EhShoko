@@ -131,8 +131,8 @@ nonisolated struct ListHarnessResult: Equatable, Sendable, Codable {
     /// by on a shared machine, where frame timing compares machine loads.
     var mainThreadCPUMs: Double
     var cellsCreated: Int
-    /// Whether `cellsCreated` counts the design's cell bodies (`ListHarnessCells`), or, for
-    /// v3's cells, which do not count themselves, the covers served during the scroll.
+    /// Whether `cellsCreated` counts cell bodies (`ListHarnessCells`); for a list whose cells
+    /// do not count themselves it is the covers served during the scroll, which undercounts.
     var cellsCounted: Bool
     var cpuPerCellMs: Double
 
