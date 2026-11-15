@@ -72,21 +72,20 @@ struct LedgerIndexListItem: Identifiable, Equatable {
 
     var id: GalleryListKind { kind }
 
-    /// Front Page and Watched show their filter when it narrows anything; Watched asks to
-    /// sign in when signed out; History shows its size once it is known; Popular and Toplists
-    /// show nothing (v3 does not keep Toplists' period).
+    /// Front Page and Watched show their filter when it narrows anything and `showsFilters`;
+    /// Watched asks to sign in when signed out; History shows its size once it is known;
+    /// Popular and Toplists show nothing (v3 does not keep Toplists' period).
     static func items(
-        frontPage: FilterSummary, watched: FilterSummary, isSignedIn: Bool, historyCount: Int?
+        frontPage: FilterSummary, watched: FilterSummary, isSignedIn: Bool, historyCount: Int?,
+        showsFilters: Bool
     ) -> [Self] {
-        [
-            Self(kind: .frontpage, value: frontPage.isDefault ? nil : frontPage.shortText),
+        func summary(_ filter: FilterSummary) -> String? {
+            showsFilters && !filter.isDefault ? filter.shortText : nil
+        }
+        return [
+            Self(kind: .frontpage, value: summary(frontPage)),
             Self(kind: .popular, value: nil),
-            Self(
-                kind: .watched,
-                value: isSignedIn
-                    ? (watched.isDefault ? nil : watched.shortText)
-                    : L10n.Localizable.Start.Ledger.signIn
-            ),
+            Self(kind: .watched, value: isSignedIn ? summary(watched) : L10n.Localizable.Start.Ledger.signIn),
             Self(kind: .toplists, value: nil),
             Self(kind: .history, value: historyCount.map { $0.formatted() }),
         ]

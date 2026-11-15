@@ -24,6 +24,42 @@ struct LedgerIndexTitle: View {
     }
 }
 
+extension View {
+    /// The bar's own title stays empty while the Index's title is in view, and shows the same
+    /// name in the look's title face once that has scrolled under the bar.
+    func ledgerIndexBarTitle() -> some View {
+        modifier(LedgerIndexBarTitle())
+    }
+}
+
+private struct LedgerIndexBarTitle: ViewModifier {
+    @State private var isShown = false
+    @Environment(\.look) private var look
+
+    /// About the height of the Index's own title.
+    private static let scrollDistance: CGFloat = 40
+
+    func body(content: Content) -> some View {
+        content
+            .onScrollGeometryChange(for: Bool.self) { geometry in
+                geometry.contentOffset.y + geometry.contentInsets.top > Self.scrollDistance
+            } action: { _, isPast in
+                isShown = isPast
+            }
+            .toolbar {
+                ToolbarItem(placement: .principal) {
+                    Text(L10n.Localizable.Shell.Place.index)
+                        .font(.headline)
+                        .lookTitleDesign()
+                        .foregroundStyle(look.label)
+                        .opacity(isShown ? 1 : 0)
+                        .animation(.easeInOut(duration: 0.15), value: isShown)
+                        .accessibilityHidden(!isShown)
+                }
+            }
+    }
+}
+
 /// One line of the Index: its mark, a name, a value, and on a phone a chevron.
 struct LedgerIndexLine: View {
     enum Mark: Equatable {
@@ -53,7 +89,9 @@ struct LedgerIndexLine: View {
                 .fontDesign(isSyntax ? look.syntaxDesign : nil)
                 .foregroundStyle(look.label)
                 .lineLimit(1)
-                .layoutPriority(1)
+                // A name before its value; a saved search's own name before its syntax,
+                // which can run long.
+                .layoutPriority(isSyntax ? 0 : 1)
             Spacer(minLength: 8)
             if let value {
                 Text(value)
@@ -61,6 +99,10 @@ struct LedgerIndexLine: View {
                     .monospacedDigit()
                     .foregroundStyle(look.secondaryLabel)
                     .lineLimit(1)
+                    // A count or a filter is short and never cut; a saved search's name is
+                    // the user's and may be long.
+                    .fixedSize(horizontal: !isSyntax, vertical: false)
+                    .layoutPriority(isSyntax ? 1 : 0)
             }
             if showsChevron {
                 Image(systemName: "chevron.right")

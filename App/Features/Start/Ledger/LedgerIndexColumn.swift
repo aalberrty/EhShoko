@@ -30,6 +30,7 @@ struct LedgerIndexColumn: View {
         .listStyle(.sidebar)
         .environment(\.defaultMinListRowHeight, 36)
         .refreshable { await model.refreshFolderCounts() }
+        .ledgerIndexBarTitle()
     }
 
     /// The place at the bottom of the stack beside the column. Choosing a row goes through the
@@ -75,7 +76,9 @@ private struct LedgerIndexColumnLists: View {
             frontPage: FilterSummary(filterStore.globalFilter),
             watched: FilterSummary(filterStore.watchedFilter),
             isSignedIn: accountSession.isLoggedIn,
-            historyCount: model.historyCount
+            historyCount: model.historyCount,
+            // The column is narrow: as drawn, only History's count.
+            showsFilters: false
         )
         Section {
             ForEach(items) { item in

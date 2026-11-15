@@ -11,8 +11,6 @@ struct LedgerIndexPage: View {
     let navigation: LedgerIndexNavigation
     let editQuickSearches: () -> Void
 
-    /// The bar shows the title once the Index's own has scrolled under it.
-    @State private var showsBarTitle = false
     @Environment(\.look) private var look
 
     var body: some View {
@@ -30,26 +28,8 @@ struct LedgerIndexPage: View {
         }
         .background { look.background.ignoresSafeArea() }
         .refreshable { await model.refreshFolderCounts() }
-        .onScrollGeometryChange(for: Bool.self) { geometry in
-            geometry.contentOffset.y + geometry.contentInsets.top > Self.titleScrollDistance
-        } action: { _, isPast in
-            showsBarTitle = isPast
-        }
-        .toolbar {
-            ToolbarItem(placement: .principal) {
-                Text(L10n.Localizable.Shell.Place.index)
-                    .font(.headline)
-                    .lookTitleDesign()
-                    .foregroundStyle(look.label)
-                    .opacity(showsBarTitle ? 1 : 0)
-                    .animation(.easeInOut(duration: 0.15), value: showsBarTitle)
-                    .accessibilityHidden(!showsBarTitle)
-            }
-        }
+        .ledgerIndexBarTitle()
     }
-
-    /// About the height of the Index's own title.
-    private static let titleScrollDistance: CGFloat = 40
 }
 
 // MARK: Sections
@@ -83,7 +63,8 @@ private struct LedgerIndexPageLists: View {
             frontPage: FilterSummary(filterStore.globalFilter),
             watched: FilterSummary(filterStore.watchedFilter),
             isSignedIn: accountSession.isLoggedIn,
-            historyCount: model.historyCount
+            historyCount: model.historyCount,
+            showsFilters: true
         )
         LedgerIndexSectionHeader(title: L10n.Localizable.Start.Ledger.lists)
             .ledgerIndexPageHeader()
