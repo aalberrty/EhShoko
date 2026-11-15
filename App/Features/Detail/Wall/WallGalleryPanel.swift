@@ -15,20 +15,25 @@ struct WallGalleryPanel: View {
     let copy: (String) -> Void
     let signIn: () -> Void
 
+    @Environment(SettingsStore.self) private var settings
     @Environment(\.look) private var look
+    /// The parsed heading, the credit and the other title, once worked out.
+    @State private var parsedTitles: WallGalleryTitles?
 
     /// A wide pushed page (an iPad below the pane's width) keeps its text in a column.
     private static let maxContentWidth: CGFloat = 640
 
     var body: some View {
+        let input = titleInput
+        let titles = parsedTitles ?? WallGalleryTitles(unparsed: input)
         VStack(alignment: .leading, spacing: 0) {
             if !metrics.isPane {
                 grabber
             }
-            WallGalleryHeading(model: model, metrics: metrics, copy: copy)
+            WallGalleryHeading(model: model, titles: titles, metrics: metrics, copy: copy)
             WallGalleryActions(model: model, metrics: metrics, signIn: signIn)
                 .padding(.top, 16)
-            sections
+            sections(titles: titles)
         }
         .padding(.horizontal, metrics.panelPadding)
         .padding(.top, metrics.isPane ? 16 : 0)
@@ -45,6 +50,24 @@ struct WallGalleryPanel: View {
             .fill(metrics.ground(in: look))
             .padding(.bottom, -1_200)
         }
+        // Again when the page brings the Japanese title or the tags, which decide between a
+        // tag search and a quoted name.
+        .task(id: input) {
+            let titles = await WallGalleryTitles.make(from: input)
+            if !Task.isCancelled, titles != parsedTitles {
+                parsedTitles = titles
+            }
+        }
+    }
+
+    private var titleInput: WallGalleryTitles.Input {
+        let detail = model.detail
+        return WallGalleryTitles.Input(
+            shown: model.title(prefersJapanese: settings.displaysJapaneseTitle),
+            title: detail?.title ?? model.gallery.title, japaneseTitle: detail?.jpnTitle,
+            tags: model.tagRows.isEmpty ? model.gallery.tags : model.tagRows.map(\.tag),
+            uploader: model.uploader
+        )
     }
 
     private var grabber: some View {
@@ -58,14 +81,16 @@ struct WallGalleryPanel: View {
     }
 
     @ViewBuilder
-    private var sections: some View {
+    private func sections(titles: WallGalleryTitles) -> some View {
         if model.detail != nil {
             if let error = model.loadingState.failed {
                 WallGalleryOfflineNote(isNetworkError: error.isNetworkError) { model.refetch() }
             }
             WallGalleryTags(model: model, metrics: metrics)
             WallGalleryPreviewStrip(model: model, metrics: metrics)
-            WallGalleryOtherTitle(model: model, copy: copy)
+            if let other = titles.other {
+                WallGalleryOtherTitle(text: other, copyable: titles.copyable, copy: copy)
+            }
         } else if let error = model.loadingState.failed {
             ErrorStateView(error: error, retry: error.isRetryable ? { model.refetch() } : nil)
                 .padding(.top, 24)
@@ -80,25 +105,27 @@ struct WallGalleryPanel: View {
 /// The title, who made it, and one line of facts.
 private struct WallGalleryHeading: View {
     let model: GalleryDetailModel
+    let titles: WallGalleryTitles
     let metrics: WallGalleryMetrics
     let copy: (String) -> Void
 
-    @Environment(SettingsStore.self) private var settings
     @Environment(\.look) private var look
     @State private var showsFullTitle = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             title
-            WallGalleryCreditLine(model: model)
+            if let credit = titles.credit {
+                WallGalleryCreditLine(credit: credit)
+            }
             WallGalleryFacts(model: model)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    /// Up to three lines; a tap shows all of it, a long press copies it or the other title.
+    /// Up to three lines; a tap shows all of it, a long press copies either full title.
     private var title: some View {
-        Text(verbatim: model.title(prefersJapanese: settings.displaysJapaneseTitle))
+        Text(verbatim: titles.heading)
             .font(metrics.isPane ? .title3.bold() : .title2.bold())
             .lookTitleDesign()
             .foregroundStyle(look.label)
@@ -109,20 +136,17 @@ private struct WallGalleryHeading: View {
             .onTapGesture {
                 withAnimation(.snappy) { showsFullTitle.toggle() }
             }
-            .contextMenu { WallGalleryTitleMenu(model: model, copy: copy) }
+            .contextMenu { WallGalleryCopyMenu(titles: titles.copyable, copy: copy) }
             .accessibilityAddTraits(.isHeader)
     }
 }
 
-/// "Copy", with each title the gallery has as an entry.
-private struct WallGalleryTitleMenu: View {
-    let model: GalleryDetailModel
+/// "Copy", with each full title the gallery has as an entry.
+private struct WallGalleryCopyMenu: View {
+    let titles: [String]
     let copy: (String) -> Void
 
     var body: some View {
-        let titles = [model.detail?.title ?? model.gallery.title, model.detail?.jpnTitle]
-            .compactMap(\.self)
-            .filter { !$0.isEmpty }
         Section(L10n.Localizable.ReadingView.ContextMenu.Button.copy) {
             ForEach(titles, id: \.self) { title in
                 Button {
@@ -211,34 +235,25 @@ private struct WallGalleryFacts: View {
 
 // MARK: Under the sections
 
-/// The title the page does not show at its top: the original when the romanised one is the
-/// title, and the other way round. Wall's drawing leaves it out; here it closes the panel.
+/// The other title as the site has it, groups and all, which Wall's drawing leaves out:
+/// here it closes the panel, and a long press copies either full title.
 private struct WallGalleryOtherTitle: View {
-    let model: GalleryDetailModel
+    let text: String
+    let copyable: [String]
     let copy: (String) -> Void
 
-    @Environment(SettingsStore.self) private var settings
     @Environment(\.look) private var look
 
     var body: some View {
-        if let other {
-            Text(verbatim: other)
-                .font(.caption)
-                .foregroundStyle(look.secondaryLabel)
-                .multilineTextAlignment(.leading)
-                .fixedSize(horizontal: false, vertical: true)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.top, 20)
-                .contentShape(.rect)
-                .contextMenu { WallGalleryTitleMenu(model: model, copy: copy) }
-        }
-    }
-
-    private var other: String? {
-        guard let detail = model.detail, let japanese = detail.jpnTitle, !japanese.isEmpty,
-              japanese != detail.title
-        else { return nil }
-        return model.title(prefersJapanese: settings.displaysJapaneseTitle) == japanese ? detail.title : japanese
+        Text(verbatim: text)
+            .font(.caption)
+            .foregroundStyle(look.secondaryLabel)
+            .multilineTextAlignment(.leading)
+            .fixedSize(horizontal: false, vertical: true)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.top, 20)
+            .contentShape(.rect)
+            .contextMenu { WallGalleryCopyMenu(titles: copyable, copy: copy) }
     }
 }
 
