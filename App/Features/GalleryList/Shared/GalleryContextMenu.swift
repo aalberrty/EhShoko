@@ -184,11 +184,3 @@ extension ParsedTitle {
         }
     }
 }
-
-extension UserStore {
-    /// The folder's name on the site, or "Favorites n" when it has none of its own.
-    func favoriteFolderName(_ index: Int) -> String {
-        customFavoriteCategoryName(index: index)
-            ?? L10n.Localizable.Struct.User.FavoriteCategory.default("\(index)")
-    }
-}

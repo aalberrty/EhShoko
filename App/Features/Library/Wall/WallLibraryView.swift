@@ -9,8 +9,9 @@ import SwiftUI
 ///
 /// The piles make no request of their own. They draw the first page of All favourites in
 /// `LibraryScreen`'s model, the one request that also brings every folder's name and count,
-/// and each pile takes the newest covers of its folder that the page holds. The model keeps
-/// the page, so coming back to the library, or another library design, asks for nothing, and
+/// and each pile takes the newest covers of its folder that the page holds, or, for a folder
+/// opened this session in the same model, that folder's own newest. The model keeps the
+/// pages, so coming back to the library, or another library design, asks for nothing, and
 /// the Library tab's re-selection, which `LibraryScreen` performs on the model's list,
 /// reloads exactly what the piles show.
 ///
@@ -30,7 +31,7 @@ struct WallLibraryView: View {
         let isSignedIn = accountSession.isLoggedIn
         Group {
             if isSignedIn {
-                WallLibraryPage(list: allFavorites, showsSummary: hasTitle, open: open)
+                WallLibraryPage(list: allFavorites, folders: openedFolders, showsSummary: hasTitle, open: open)
             } else {
                 ListSignInState(kind: .favorites)
             }
@@ -58,6 +59,19 @@ struct WallLibraryView: View {
     /// The model's All favourites, once it is the chosen list.
     private var allFavorites: GalleryListModel? {
         model.category == WallPile.allFolders ? model.list : nil
+    }
+
+    /// What each folder opened this session in the model has loaded (Shelf's chips choose
+    /// folders in it): the newest covers of that folder, which All's first page may not hold.
+    /// Reading the lists here, not in the page, redraws the page when one is opened.
+    private var openedFolders: [Int: [GalleryEntry]] {
+        var folders: [Int: [GalleryEntry]] = [:]
+        for folder in 0..<WallPile.folderCount {
+            if let entries = model.loadedList(for: folder)?.entries, !entries.isEmpty {
+                folders[folder] = entries
+            }
+        }
+        return folders
     }
 
     /// Under `tabs` the Library tab names the screen above its switch.

@@ -9,16 +9,17 @@ import SwiftUI
 /// Under `tabs` the Library tab draws the title with its switch, so the screen draws none.
 ///
 /// The galleries of a folder are never shown here: each folder is pushed as a list with a
-/// model of its own (`Route.favoritesFolder`), so the shared model's galleries go unused under
-/// Ledger and nothing loads them. What the screen requests is the folders' counts, once, when
-/// nobody has loaded a favourites page this session.
+/// model of its own (`Route.favoritesFolder`). What the screen requests is the folders'
+/// counts, once, when nobody has loaded a favourites page this session. They come with All's
+/// first page, which goes into the shared model's All list, so Wall's piles or Shelf's All,
+/// if the design changes, find it loaded.
 struct LedgerLibraryView: View {
-    /// `LibraryScreen`'s model. Ledger pushes each folder as its own list and reads none of it.
+    /// `LibraryScreen`'s model, whose All list holds the counts' page.
     let model: FavoritesModel
 
-    /// The counts request. The Index's, which asks only while the counts are unknown, so the
+    /// The counts request, the Index's too: it asks only while the counts are unknown, so the
     /// library and the Index between them ask once.
-    @State private var counts = LedgerIndexModel()
+    @State private var counts: FavoriteFolderCounts
     /// The Library tab's re-selections seen while this screen showed its root.
     @State private var reselection: Int?
 
@@ -28,32 +29,34 @@ struct LedgerLibraryView: View {
     @Environment(\.chrome) private var chrome
     @Environment(\.look) private var look
 
+    init(model: FavoritesModel) {
+        self.model = model
+        _counts = State(initialValue: FavoriteFolderCounts(library: model))
+    }
+
     var body: some View {
         let isSignedIn = accountSession.isLoggedIn
         Group {
             if isSignedIn {
                 LedgerLibraryPage(showsTitle: hasTitle, open: open) {
-                    await counts.refreshFolderCounts()
+                    await counts.refresh()
                 }
             } else {
                 ListSignInState(kind: .favorites)
                     // No title on the page: the bar's is always shown.
-                    .ledgerLibraryBarTitle(isShown: hasTitle, isAlwaysVisible: true)
+                    .ledgerBarTitle(hasTitle ? L10n.Localizable.Shell.Place.favorites : nil, isAlwaysVisible: true)
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background { look.background.ignoresSafeArea() }
-        // Again when the user signs in on this screen. Only while signed in: a request that
-        // found no account would count as the one the Index's model allows itself.
-        .task(id: isSignedIn) {
-            if isSignedIn { await counts.loadFolderCountsIfUnknown() }
-        }
+        // Again when the user signs in on this screen.
+        .task(id: isSignedIn) { await counts.loadIfUnknown() }
         // Re-selecting the Library tab at its root reloads what this screen shows: the counts.
         .onChange(of: appRouter.rootReselectionCount(for: .library)) { _, count in
             reselection = count
         }
         .task(id: reselection) {
-            if reselection != nil, isSignedIn { await counts.refreshFolderCounts() }
+            if reselection != nil { await counts.refresh() }
         }
     }
 

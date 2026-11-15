@@ -2,162 +2,11 @@ import EhFeatures
 import EhModels
 import SwiftUI
 
-// The pieces the Index is made of, on a phone and in the iPad column (`ledger.md`
-// section 2). Sizes are the drawing's at the default text size; colours and faces are the
-// look's, so the same layout reads as paper and New York under the Ledger look and as SF on
-// black under Shelf's.
-
-/// The Index's own title: 36 pt on a phone, 28 in the column, in the look's title face.
-struct LedgerIndexTitle: View {
-    let isColumn: Bool
-
-    @ScaledMetric(relativeTo: .largeTitle) private var pageSize: CGFloat = 36
-    @Environment(\.look) private var look
-
-    var body: some View {
-        Text(L10n.Localizable.Shell.Place.index)
-            .font(isColumn ? .title.bold() : .system(size: pageSize, weight: .bold))
-            .lookTitleDesign()
-            .foregroundStyle(look.label)
-            .lineLimit(1)
-            .accessibilityAddTraits(.isHeader)
-    }
-}
-
-extension View {
-    /// The bar's own title stays empty while the Index's title is in view, and shows the same
-    /// name in the look's title face once that has scrolled under the bar.
-    func ledgerIndexBarTitle() -> some View {
-        modifier(LedgerIndexBarTitle())
-    }
-}
-
-private struct LedgerIndexBarTitle: ViewModifier {
-    @State private var isShown = false
-    @Environment(\.look) private var look
-
-    /// About the height of the Index's own title.
-    private static let scrollDistance: CGFloat = 40
-
-    func body(content: Content) -> some View {
-        content
-            .onScrollGeometryChange(for: Bool.self) { geometry in
-                geometry.contentOffset.y + geometry.contentInsets.top > Self.scrollDistance
-            } action: { _, isPast in
-                isShown = isPast
-            }
-            .toolbar {
-                ToolbarItem(placement: .principal) {
-                    Text(L10n.Localizable.Shell.Place.index)
-                        .font(.headline)
-                        .lookTitleDesign()
-                        .foregroundStyle(look.label)
-                        .opacity(isShown ? 1 : 0)
-                        .animation(.easeInOut(duration: 0.15), value: isShown)
-                        .accessibilityHidden(!isShown)
-                }
-            }
-    }
-}
-
-/// One line of the Index: its mark, a name, a value, and on a phone a chevron.
-struct LedgerIndexLine: View {
-    enum Mark: Equatable {
-        /// A symbol in the tint.
-        case symbol(String)
-        /// A favourites folder's colour.
-        case folder(Int)
-        /// Every folder: a neutral square.
-        case allFolders
-    }
-
-    let mark: Mark
-    let title: String
-    var value: String?
-    /// A saved search, set in the look's face for search syntax.
-    var isSyntax = false
-    var showsChevron = true
-
-    @ScaledMetric(relativeTo: .title3) private var markWidth = LedgerIndexLine.markWidth
-    @Environment(\.look) private var look
-    @Environment(\.dynamicTypeSize) private var typeSize
-
-    /// The mark's column at the default text size; the column grows with the text up to the
-    /// first accessibility size, where the marks stop growing so that names keep their room.
-    static let markWidth: CGFloat = 24
-    /// The space between the mark's column and the name.
-    static let markSpacing: CGFloat = 13
-    /// The largest text size the marks follow.
-    static let largestMarkSize = DynamicTypeSize.accessibility1
-
-    /// The mark's column for a scaled `markWidth`, held at the first accessibility size.
-    static func markColumn(_ scaledWidth: CGFloat) -> CGFloat {
-        min(scaledWidth, markWidth * 1.6)
-    }
-
-    var body: some View {
-        HStack(spacing: Self.markSpacing) {
-            markView
-                .dynamicTypeSize(...Self.largestMarkSize)
-                .frame(width: Self.markColumn(markWidth))
-            Text(title)
-                .font(isSyntax ? .footnote : .body)
-                .fontDesign(isSyntax ? look.syntaxDesign : nil)
-                .foregroundStyle(look.label)
-                // At accessibility sizes a name wraps rather than being cut.
-                .lineLimit(typeSize.isAccessibilitySize ? 2 : 1)
-                // A name before its value; a saved search's own name before its syntax,
-                // which can run long.
-                .layoutPriority(isSyntax ? 0 : 1)
-            Spacer(minLength: 8)
-            if let value {
-                Text(value)
-                    .font(.subheadline)
-                    .monospacedDigit()
-                    .foregroundStyle(look.secondaryLabel)
-                    .lineLimit(1)
-                    // A count or a filter is short and never cut; a saved search's name is
-                    // the user's and may be long.
-                    .fixedSize(horizontal: !isSyntax, vertical: false)
-                    .layoutPriority(isSyntax ? 1 : 0)
-            }
-            if showsChevron {
-                Image(systemName: "chevron.right")
-                    .font(.footnote.weight(.semibold))
-                    .foregroundStyle(look.tertiaryLabel)
-                    .accessibilityHidden(true)
-            }
-        }
-        .accessibilityElement(children: .combine)
-    }
-
-    @ViewBuilder
-    private var markView: some View {
-        switch mark {
-        case .symbol(let name):
-            Image(systemName: name)
-                .font(.title3)
-                .foregroundStyle(.tint)
-                .accessibilityHidden(true)
-        case .folder(let index):
-            LedgerIndexFolderSwatch(color: FolderColor.color(forFolder: index))
-        case .allFolders:
-            LedgerIndexFolderSwatch(color: look.tertiaryLabel)
-        }
-    }
-}
-
-/// A folder's colour as a 10 pt rounded square.
-struct LedgerIndexFolderSwatch: View {
-    let color: Color
-
-    var body: some View {
-        RoundedRectangle(cornerRadius: 3, style: .continuous)
-            .fill(color)
-            .frame(width: 10, height: 10)
-            .accessibilityHidden(true)
-    }
-}
+// The pieces only the Index is made of, on a phone and in the iPad column (`ledger.md`
+// section 2). Its title, its lines, its folder cells and its small capitals are shared with
+// Ledger's other parts (`Library/Shared`). Sizes are the drawing's at the default text size; colours and faces
+// are the look's, so the same layout reads as paper and New York under the Ledger look and
+// as SF on black under Shelf's.
 
 /// A section's heading with an optional control trailing ("1,284 in all", Edit), or under it
 /// at accessibility text sizes, where the two would not fit on one line.
@@ -214,30 +63,6 @@ struct LedgerIndexEditButton: View {
     }
 }
 
-/// A row's highlight while pressed: a fill from the look over the row's own ground, no
-/// glass, no shadow.
-struct LedgerIndexRowButtonStyle: ButtonStyle {
-    var cornerRadius: CGFloat = 0
-    /// The row's ground at rest: the folder cells' raised colour, or none.
-    var ground: Color?
-
-    @Environment(\.look) private var look
-
-    func makeBody(configuration: Configuration) -> some View {
-        let shape = RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-        configuration.label
-            .contentShape(shape)
-            .background {
-                if let ground {
-                    shape.fill(ground)
-                }
-                if configuration.isPressed {
-                    shape.fill(look.fill3)
-                }
-            }
-    }
-}
-
 // MARK: Continue
 
 /// The Continue card: the gallery read last, where it was left, and a tap to go on reading.
@@ -285,7 +110,7 @@ struct LedgerIndexContinueCard: View {
             )
             VStack(alignment: .leading, spacing: 2) {
                 Text(isCompact ? L10n.Localizable.Shell.Continue.title : L10n.Localizable.Shell.Continue.reading)
-                    .ledgerSmallCapitals()
+                    .ledgerSmallCaps()
                 Text(item.title.core)
                     .font(isCompact ? .subheadline.weight(.semibold) : .headline)
                     .lookTitleDesign()
@@ -330,64 +155,5 @@ struct LedgerIndexContinueCard: View {
     /// column, where the accessory is off and the card is that control.
     private var sourceID: ReaderSourceID {
         chrome.bar == .tabs ? .continueBar(gid: item.gallery.gid) : .continueCard(gid: item.gallery.gid)
-    }
-}
-
-extension View {
-    /// Ledger's small capitals: 11 pt bold, uppercase, tracked 0.9, secondary, under every
-    /// look. A layout detail, not the look's section heading. Uppercase is a text case, so
-    /// VoiceOver reads the original string.
-    func ledgerSmallCapitals() -> some View {
-        modifier(LedgerSmallCapitals())
-    }
-}
-
-private struct LedgerSmallCapitals: ViewModifier {
-    @Environment(\.look) private var look
-
-    func body(content: Content) -> some View {
-        content
-            .font(.caption2.bold())
-            .tracking(0.9)
-            .textCase(.uppercase)
-            .foregroundStyle(look.secondaryLabel)
-    }
-}
-
-// MARK: Favourites
-
-/// A folder in the phone's two-column grid: its colour, its name and its count.
-struct LedgerIndexFolderCell: View {
-    let folder: LedgerIndexFolder
-    let open: () -> Void
-
-    @Environment(\.look) private var look
-    @Environment(\.dynamicTypeSize) private var typeSize
-
-    var body: some View {
-        let shape = RoundedRectangle(cornerRadius: 11, style: .continuous)
-        Button(action: open) {
-            HStack(spacing: 8) {
-                LedgerIndexFolderSwatch(color: FolderColor.color(forFolder: folder.index))
-                Text(folder.name)
-                    .font(.subheadline.weight(.medium))
-                    .foregroundStyle(look.label)
-                    // One column at accessibility sizes, and there the name may wrap.
-                    .lineLimit(typeSize.isAccessibilitySize ? 2 : 1)
-                Spacer(minLength: 4)
-                if let count = folder.count {
-                    Text(count.formatted())
-                        .font(.footnote)
-                        .monospacedDigit()
-                        .foregroundStyle(look.secondaryLabel)
-                        .lineLimit(1)
-                }
-            }
-            .padding(.horizontal, 10)
-            .frame(maxWidth: .infinity, minHeight: 38)
-            .overlay { shape.strokeBorder(look.separator, lineWidth: 0.5) }
-        }
-        .buttonStyle(LedgerIndexRowButtonStyle(cornerRadius: 11, ground: look.raised))
-        .accessibilityElement(children: .combine)
     }
 }

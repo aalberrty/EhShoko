@@ -1,6 +1,7 @@
 @testable import EhFeatures
 import EhModels
 import EhTestSupport
+import Observation
 import Testing
 
 @Suite struct FavoritesModelTests {
@@ -61,6 +62,43 @@ import Testing
         await screen.render(model.list)
         #expect(env.transport.requests.count == 2)
         #expect(model.list.phase == .content)
+    }
+
+    @Test func aFolderReadWithoutChoosingItKeepsTheChoiceAndIsReusedWhenChosen() async throws {
+        let env = try ListTestEnvironment()
+        env.transport.on(.any, reply: .fixture(ListFixture.favorites))
+        let model = env.make { FavoritesModel() }
+        #expect(model.loadedList(for: 3) == nil)
+
+        let folder = model.list(for: 3)
+        #expect(model.category == -1)
+        #expect(model.loadedList(for: 3) === folder)
+        #expect(model.list(for: 3) === folder)
+        await folder.loadIfNeeded()
+        #expect(env.query("favcat", ofRequest: 0) == "3")
+
+        model.select(category: 3)
+        #expect(model.list === folder)
+        var screen = ListScreenTask()
+        await screen.render(model.list)
+        #expect(env.transport.requests.count == 1)
+    }
+
+    /// Wall's piles draw the folders opened this session: a folder opened after they were
+    /// drawn redraws them.
+    @Test func aViewOfTheLoadedListsSeesAFolderOpenedLater() throws {
+        let env = try ListTestEnvironment()
+        let model = env.make { FavoritesModel() }
+        let changed = Gate()
+        withObservationTracking {
+            _ = model.loadedList(for: 2)
+        } onChange: {
+            changed.open()
+        }
+
+        _ = model.list(for: 2)
+
+        #expect(changed.isOpen)
     }
 
     @Test func sortOrderChangeReloadsWithInlineSetAndDropsOtherFolders() async throws {

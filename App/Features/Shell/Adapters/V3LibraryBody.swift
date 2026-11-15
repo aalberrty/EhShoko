@@ -30,6 +30,6 @@ struct V3LibraryBody: View {
 
     /// "Favorites" for every folder, as on v3; else the folder's name.
     private func title(_ index: Int) -> String {
-        index == -1 ? L10n.Localizable.FavoritesView.Title.favorites : userStore.favoriteFolderTitle(index)
+        index == -1 ? L10n.Localizable.FavoritesView.Title.favorites : userStore.favoriteFolderName(index)
     }
 }

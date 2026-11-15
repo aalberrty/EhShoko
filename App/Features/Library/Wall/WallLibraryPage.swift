@@ -7,12 +7,15 @@ import SwiftUI
 /// eleven piles, three across on a phone and five on a wider screen
 /// (`wall.md` section 7, `mockups/wall/06-library-light`).
 ///
-/// It draws the first page of All favourites that `list` holds. Before the page is here the
-/// piles are placeholders, already named, since the names are stored; a first page that
-/// failed is the shared error view in place of the piles.
+/// It draws the first page of All favourites that `list` holds, and the folders opened this
+/// session. Before the page is here the piles are placeholders, already named, since the
+/// names are stored; a first page that failed is the shared error view in place of the piles.
 struct WallLibraryPage: View {
     /// All favourites, the shared model's; `nil` until the library has chosen it.
     let list: GalleryListModel?
+    /// The galleries of each folder opened this session, by folder; their piles take their
+    /// covers from these rather than from All's page.
+    let folders: [Int: [GalleryEntry]]
     /// The total under the bar's title. Off under `tabs`, where the screen has no title.
     let showsSummary: Bool
     /// A folder's list; `WallPile.allFolders` is every folder.
@@ -47,7 +50,7 @@ struct WallLibraryPage: View {
             isLoaded = false
             stale = nil
         }
-        let covers = isLoaded ? WallPileCovers.covers(in: list?.entries ?? []) : [:]
+        let covers = WallPileCovers.covers(in: isLoaded ? list?.entries ?? [] : [], folders: folders)
         let held = WallPileCovers.shared(in: covers).subtracting(decodedShared)
         let columns = columnCount
         let metrics = WallPileMetrics(
@@ -90,11 +93,12 @@ struct WallLibraryPage: View {
     }
 
     /// All, then the ten folders in the site's order. Names are the site's, stored from the
-    /// last favourites page; counts are absent until a page has been loaded this session.
+    /// last favourites page; counts are absent until a page has been loaded this session. A
+    /// folder opened this session has its own page, so its pile is complete without All's.
     private func pileValues(_ covers: [Int: [URL]], held: Set<URL>, isLoaded: Bool) -> [WallPile] {
         let counts = userStore.favoriteFolderCounts
         func cards(_ folder: Int) -> [WallPile.Card] {
-            WallPileCovers.cards(covers[folder] ?? [], held: held, isLoaded: isLoaded)
+            WallPileCovers.cards(covers[folder] ?? [], held: held, isLoaded: isLoaded || folders[folder] != nil)
         }
         let all = WallPile(
             folder: WallPile.allFolders, name: L10n.Localizable.Library.all,

@@ -1,29 +1,9 @@
 import SwiftUI
 
 // The pieces of Ledger's gallery page that read like a ruled ledger (`ledger.md` section 4):
-// labels in small capitals and tables of cells separated by hairlines. They are content, so
-// they take the look's colours and nothing here is glass.
-
-extension View {
-    /// Ledger's small capitals: uppercase, 11 pt bold, tracked 0.9, in the secondary colour
-    /// unless a colour is given. Uppercase is a text case, so VoiceOver reads the original.
-    func ledgerSmallCaps(_ color: Color? = nil) -> some View {
-        modifier(LedgerSmallCaps(color: color))
-    }
-}
-
-private struct LedgerSmallCaps: ViewModifier {
-    let color: Color?
-    @Environment(\.look) private var look
-
-    func body(content: Content) -> some View {
-        content
-            .font(.caption2.bold())
-            .tracking(0.9)
-            .textCase(.uppercase)
-            .foregroundStyle(color ?? look.secondaryLabel)
-    }
-}
+// tables of cells separated by hairlines, labelled in small capitals (`ledgerSmallCaps`, in
+// `Library/Shared`). They are content, so they take the look's colours and nothing here is
+// glass.
 
 /// A hairline in the look's separator colour, one pixel thick.
 struct LedgerRule: View {
