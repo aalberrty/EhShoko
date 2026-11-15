@@ -15,6 +15,8 @@ import SwiftUI
 /// the grid out again inside an animation showed the old layout at the new offset.
 struct WallPreviewsWall: View {
     let detail: GalleryDetailModel
+    /// The page the wall opens at: the page last read when it was opened.
+    private let opensAt: Int?
 
     @State private var model: PreviewsModel
     @State private var isDense = false
@@ -40,6 +42,7 @@ struct WallPreviewsWall: View {
             config: detail.previewConfig, previewURLs: detail.previewURLs
         ))
         let lastRead = detail.readingProgress ?? 0
+        opensAt = lastRead > 1 ? lastRead : nil
         _position = State(
             initialValue: lastRead > 1 ? ScrollPosition(id: lastRead, anchor: .center) : ScrollPosition(idType: Int.self)
         )
@@ -77,9 +80,14 @@ struct WallPreviewsWall: View {
         }
         .scrollPosition($position)
         .onScrollGeometryChange(for: WallPreviewsScroll.Mark.self) { geometry in
-            WallPreviewsScroll.Mark(offset: geometry.contentOffset.y, inset: geometry.contentInsets.top)
+            WallPreviewsScroll.Mark(
+                offset: geometry.contentOffset.y, inset: geometry.contentInsets.top,
+                bottomInset: geometry.contentInsets.bottom, container: geometry.containerSize,
+                contentHeight: geometry.contentSize.height
+            )
         } action: { _, mark in
             scroll.mark = mark
+            openAtPageLastRead(mark)
         }
         .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { width = $0 }
         .scaleEffect(cue.scale)
@@ -99,6 +107,28 @@ struct WallPreviewsWall: View {
             destination != nil
         }
         .sensoryFeedback(.selection, trigger: stepCount)
+    }
+
+    // MARK: Opening
+
+    /// iOS 18 does not take a page as the first position of a grid that has not been laid out
+    /// and opens at the top, so once the grid has its size the page last read is brought to
+    /// the middle by its offset. iOS 26 is there in its first frame, and nothing moves.
+    private func openAtPageLastRead(_ mark: WallPreviewsScroll.Mark) {
+        guard let opensAt, !scroll.hasOpened, mark.container.height > 0, mark.contentHeight > mark.container.height
+        else { return }
+        scroll.hasOpened = true
+        guard mark.offset + mark.inset < 1 else { return }
+        let layout = WallPreviewsLayout(isDense: isDense, width: mark.container.width, numberHeight: numberHeight)
+        let rowHeight = layout.pitch - WallPreviewsLayout.rowSpacing
+        let rowTop = WallPreviewsLayout.rowSpacing + CGFloat((opensAt - 1) / layout.columns) * layout.pitch
+        let visible = mark.container.height - mark.inset - mark.bottomInset
+        let centred = rowTop + rowHeight / 2 - mark.inset - visible / 2
+        let offset = min(centred, mark.contentHeight - mark.container.height + mark.bottomInset)
+        guard offset > -mark.inset + 1 else { return }
+        var transaction = Transaction(animation: nil)
+        transaction.disablesAnimations = true
+        withTransaction(transaction) { position.scrollTo(y: offset) }
     }
 
     // MARK: Density
@@ -192,7 +222,8 @@ nonisolated struct WallPreviewsLayout: Equatable {
     /// Three columns, or five, on a phone and in the side pane; a wider wall keeps about the
     /// same two thumbnail widths with more columns.
     init(isDense: Bool, width: CGFloat, numberHeight: CGFloat) {
-        let columns = isDense ? max(5, Int((width / 80).rounded())) : max(3, Int((width / 134).rounded()))
+        // 86 and 134 pt give five and three on every phone, from 320 to 440 pt wide.
+        let columns = isDense ? max(5, Int((width / 86).rounded())) : max(3, Int((width / 134).rounded()))
         self.columns = columns
         let inner = max(width - Self.margin * 2 - Self.columnSpacing * CGFloat(columns - 1), 0)
         let thumbnail = inner / CGFloat(columns) / Tokens.Aspect.preview
@@ -205,9 +236,14 @@ private final class WallPreviewsScroll {
     nonisolated struct Mark: Equatable {
         var offset: CGFloat = 0
         var inset: CGFloat = 0
+        var bottomInset: CGFloat = 0
+        var container: CGSize = .zero
+        var contentHeight: CGFloat = 0
     }
 
     var mark = Mark()
+    /// The wall has been brought to the page it opens at, or needed no bringing.
+    var hasOpened = false
 }
 
 /// The wall as a whole for a moment after its thumbnails changed width.
