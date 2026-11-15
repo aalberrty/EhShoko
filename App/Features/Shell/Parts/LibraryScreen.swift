@@ -43,15 +43,6 @@ struct LibraryFolderScreen: View {
     @Environment(UserStore.self) private var userStore
 
     var body: some View {
-        GalleryListScreen(context: ListContext(kind: .folder(folder), title: userStore.favoriteFolderTitle(folder)))
-    }
-}
-
-extension UserStore {
-    /// "All Favorites", the user's own name for the folder, or "Favorites N".
-    func favoriteFolderTitle(_ index: Int) -> String {
-        guard index != -1 else { return L10n.Localizable.Library.All.title }
-        return customFavoriteCategoryName(index: index)
-            ?? L10n.Localizable.Struct.User.FavoriteCategory.default("\(index)")
+        GalleryListScreen(context: ListContext(kind: .folder(folder), title: userStore.favoriteFolderName(folder)))
     }
 }
