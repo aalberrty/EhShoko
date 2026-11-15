@@ -113,7 +113,7 @@ public final class UserStore {
         update { $0.apikey = apikey }
     }
 
-    /// Replaces the whole profile (legacy import, tests).
+    /// Replaces the whole profile (tests).
     public func apply(_ user: User) {
         update { $0 = user }
     }

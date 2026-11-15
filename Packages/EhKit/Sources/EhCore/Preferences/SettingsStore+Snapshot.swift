@@ -98,22 +98,13 @@ extension SettingsStore {
     }
 
     /// Sets the device-dependent default list display mode (legacy: `.thumbnail` on iPad-width
-    /// screens). Call it at launch, before the legacy import. It only takes effect when no
-    /// display mode has ever been stored, and it stores `mode`, so it applies once per install
-    /// and never overrides a user's or an imported choice.
+    /// screens). Call it at launch. It only takes effect when no display mode has ever been
+    /// stored, and it stores `mode`, so it applies once per install and never overrides a
+    /// user's choice.
     public func registerDefaultListDisplayMode(_ mode: ListDisplayMode) {
         guard !storage.contains(.listDisplayMode) else { return }
         listDisplayMode = mode
-        storeListDisplayMode()
-    }
-
-    /// Stores the display mode even when it equals the built-in default, marking it decided.
-    func storeListDisplayMode() {
+        // Stored even when it equals the built-in default, marking it decided.
         storage.set(listDisplayMode, for: .listDisplayMode)
-    }
-
-    /// Whether `key` has a value in `UserDefaults` (as opposed to a fallback default).
-    func hasStoredValue(for key: SettingKey) -> Bool {
-        storage.contains(key)
     }
 }

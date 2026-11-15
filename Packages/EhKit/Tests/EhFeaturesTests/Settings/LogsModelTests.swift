@@ -18,12 +18,9 @@ import Testing
         logger.error("second")
         logger.debug("not written to the file")
         await logger.flush()
-        let legacyLines = "2024-01-02 10:00:00.000 INFO a\n2024-01-03 11:00:00.000 INFO b\n\n2024-01-04 12:00:00.000 c\n"
-        let legacyFile = directory.appending(path: "EhGaro.log.1")
-        try legacyLines.write(to: legacyFile, atomically: true, encoding: .utf8)
-        try FileManager.default.setAttributes(
-            [.modificationDate: Date(timeIntervalSince1970: 0)], ofItemAtPath: legacyFile.path()
-        )
+        let contents = "2024-01-02 10:00:00.000 INFO a\n2024-01-03 11:00:00.000 INFO b\n\n2024-01-04 12:00:00.000 c\n"
+        let earlierFile = directory.appending(path: "Log-20240102-100000-000.log")
+        try contents.write(to: earlierFile, atomically: true, encoding: .utf8)
 
         let model = withDependencies { $0.appLogger = logger } operation: { LogsModel() }
         await model.load()
@@ -35,11 +32,11 @@ import Testing
         #expect(model.latestLog == current.file)
         #expect(current.recordCount == 2)
         #expect(current.firstDate?.count == "yyyy-MM-dd".count)
-        let legacy = try #require(model.logs.last)
-        #expect(legacy.file.name == "EhGaro.log.1")
-        #expect(legacy.recordCount == 3)
-        #expect(legacy.firstDate == "2024-01-02")
-        #expect(legacy.lastDate == "2024-01-04")
+        let earlier = try #require(model.logs.last)
+        #expect(earlier.file.name == "Log-20240102-100000-000.log")
+        #expect(earlier.recordCount == 3)
+        #expect(earlier.firstDate == "2024-01-02")
+        #expect(earlier.lastDate == "2024-01-04")
     }
 
     @Test func emptyDirectoryListsNothing() async throws {

@@ -2,9 +2,7 @@ import Dependencies
 import Foundation
 
 /// The pasteboard change count the app last looked at, so a copied link is offered only once.
-///
-/// Kept under legacy's `"clipboardChangeCount"` `UserDefaults` key, so a link already handled by
-/// the old app is not offered again after the upgrade.
+/// Kept in `UserDefaults` under `"clipboardChangeCount"`.
 public struct ClipboardChangeCountStore: Sendable {
     public var load: @Sendable () -> Int?
     public var save: @Sendable (Int) -> Void

@@ -10,8 +10,8 @@ public struct TagTranslationRemote: Sendable {
     /// current copy is passed so an implementation may answer from a conditional request; it
     /// returns that date (or an earlier one) when it knows nothing newer exists.
     public var latestReleaseDate: @Sendable (_ language: TranslatableLanguage, _ storedDate: Date) async throws -> Date
-    /// Downloads and decodes the database for a language, keyed as `TagTranslator` stores
-    /// translations (`EhTagTranslationDatabaseResponse.tagTranslations`).
+    /// Downloads and decodes the database for a language, keyed by namespace raw value + tag
+    /// key (`EhTagTranslationDatabaseResponse.tagTranslations`).
     public var downloadDatabase: @Sendable (_ language: TranslatableLanguage) async throws -> [String: TagTranslation]
 
     public init(

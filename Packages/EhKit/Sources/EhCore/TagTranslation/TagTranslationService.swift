@@ -5,7 +5,7 @@ import Foundation
 import Observation
 
 /// Owns the tag translation database: the in-memory table cells translate from, downloads,
-/// custom translations, suggestions and the one-time legacy import.
+/// custom translations and suggestions.
 ///
 /// Translating a tag is a synchronous dictionary lookup. Everything else (database access,
 /// Markdown, OpenCC, ranking) runs off the main actor; results are published in one assignment.

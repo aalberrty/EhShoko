@@ -7,25 +7,29 @@ import Testing
         let directory = TemporaryLogDirectory()
         defer { directory.cleanUp() }
         try directory.writeFile(
-            named: "EhGaro.log.1",
+            named: "Log-20240102-100000-000.log",
             contents: "2024-01-02 10:00:00.000 INFO a\r\n2024-01-03 11:00:00.000 INFO b\n\n\n2024-01-04 12:00:00.000 c\n",
             modified: Date(timeIntervalSince1970: 0)
         )
-        try directory.writeFile(named: "EhGaro.log.2", contents: "", modified: Date(timeIntervalSince1970: 0))
-        try directory.writeFile(named: "EhGaro.log.3", contents: "nospace\n", modified: Date(timeIntervalSince1970: 0))
+        try directory.writeFile(
+            named: "Log-20240101-100000-000.log", contents: "", modified: Date(timeIntervalSince1970: 0)
+        )
+        try directory.writeFile(
+            named: "Log-20231231-100000-000.log", contents: "nospace\n", modified: Date(timeIntervalSince1970: 0)
+        )
         let logger = directory.makeLogger()
 
         let summaries = await logger.logSummaries()
         let byName = Dictionary(uniqueKeysWithValues: summaries.map { ($0.file.name, $0) })
 
-        let full = try #require(byName["EhGaro.log.1"])
+        let full = try #require(byName["Log-20240102-100000-000.log"])
         #expect(full.recordCount == 3)
         #expect(full.firstDate == "2024-01-02")
         #expect(full.lastDate == "2024-01-04")
-        let empty = try #require(byName["EhGaro.log.2"])
+        let empty = try #require(byName["Log-20240101-100000-000.log"])
         #expect(empty.recordCount == 0)
         #expect(empty.firstDate == nil && empty.lastDate == nil)
-        let undated = try #require(byName["EhGaro.log.3"])
+        let undated = try #require(byName["Log-20231231-100000-000.log"])
         #expect(undated.recordCount == 1)
         #expect(undated.firstDate == nil)
     }

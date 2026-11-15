@@ -4,8 +4,7 @@ import Foundation
 /// One `UserDefaults` key per `Setting` field. The raw value is the field's name.
 ///
 /// Keys are `"settings.<field>"`, except `galleryHost`, which keeps the bare `"galleryHost"`
-/// key the legacy app already mirrored the host into, so an upgraded install keeps its host
-/// and code off the main actor can read it (see `GalleryHostProvider`).
+/// key that code off the main actor reads (see `GalleryHostProvider`).
 enum SettingKey: String, CaseIterable, Sendable {
     // Account
     case galleryHost, showsNewDawnGreeting

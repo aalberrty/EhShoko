@@ -48,8 +48,8 @@ public struct LogSummary: Sendable, Hashable, Identifiable {
         byte == 0x0A || byte == 0x0D || byte == 0x0B || byte == 0x0C
     }
 
-    /// Lines written by both the new logger and legacy SwiftyBeaver start with
-    /// `yyyy-MM-dd HH:mm:ss.SSS`; legacy showed the text before the first space.
+    /// Lines start with `yyyy-MM-dd HH:mm:ss.SSS`; legacy showed the text before the first
+    /// space.
     private static func datePart(of data: Data, line: Range<Int>) -> String? {
         let bytes = data[(data.startIndex + line.lowerBound)..<(data.startIndex + line.upperBound)]
         guard let space = bytes.firstIndex(of: 0x20), space > bytes.startIndex else { return nil }

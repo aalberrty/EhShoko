@@ -13,8 +13,6 @@ public struct LaunchClient: Sendable {
     public var dropDatabase: @Sendable () async throws -> Void
     /// Makes the database available to everything that reads `\.database`.
     public var installDatabase: @Sendable (AppDatabase) -> Void
-    /// The one-time import of the old app's data into the database and the stores.
-    public var importLegacyData: @MainActor @Sendable (AppDatabase) async -> LegacyImportReport
     /// Deletes the stored page URLs of galleries not opened within `pageLifetime`; the site's
     /// image URLs expire (legacy `removeExpiredImageURLs`).
     public var expirePages: @Sendable (AppDatabase) async throws -> Void
@@ -27,14 +25,12 @@ public struct LaunchClient: Sendable {
         openDatabase: @escaping @Sendable () async throws -> AppDatabase,
         dropDatabase: @escaping @Sendable () async throws -> Void,
         installDatabase: @escaping @Sendable (AppDatabase) -> Void,
-        importLegacyData: @escaping @MainActor @Sendable (AppDatabase) async -> LegacyImportReport,
         expirePages: @escaping @Sendable (AppDatabase) async throws -> Void
     ) {
         self.prepareCookies = prepareCookies
         self.openDatabase = openDatabase
         self.dropDatabase = dropDatabase
         self.installDatabase = installDatabase
-        self.importLegacyData = importLegacyData
         self.expirePages = expirePages
     }
 }
@@ -46,24 +42,8 @@ extension LaunchClient: DependencyKey {
             await CookieHousekeeping.run(cookies)
         },
         openDatabase: { try await AppDatabase.open(at: LiveDatabase.defaultURL) },
-        dropDatabase: {
-            try await DatabaseFiles.delete(at: LiveDatabase.defaultURL)
-            // The rebuilt database is empty, so the history import may run again if the old
-            // store is still there.
-            LegacyImportLedger(defaults: .standard).forget(.database)
-        },
+        dropDatabase: { try await DatabaseFiles.delete(at: LiveDatabase.defaultURL) },
         installDatabase: { LiveDatabase.install($0) },
-        importLegacyData: { database in
-            @Dependency(\.settings) var settings
-            @Dependency(\.filterStore) var filters
-            @Dependency(\.userStore) var user
-            let migrator = LegacyMigrator(
-                store: LegacyStore(applicationSupportDirectory: .applicationSupportDirectory),
-                defaults: .standard,
-                importTagTranslations: LiveLegacyTagTranslations.importBlob
-            )
-            return await migrator.run(database: database, settings: settings, filters: filters, user: user)
-        },
         expirePages: { try await $0.deleteExpiredPages(notOpenedWithin: pageLifetime) }
     )
 
@@ -72,17 +52,15 @@ extension LaunchClient: DependencyKey {
         openDatabase: unimplemented("LaunchClient.openDatabase"),
         dropDatabase: unimplemented("LaunchClient.dropDatabase"),
         installDatabase: unimplemented("LaunchClient.installDatabase"),
-        importLegacyData: unimplemented("LaunchClient.importLegacyData", placeholder: .nothingToImport),
         expirePages: unimplemented("LaunchClient.expirePages")
     )
 
-    /// An in-memory database and nothing to import.
+    /// An in-memory database.
     public static let previewValue = LaunchClient(
         prepareCookies: {},
         openDatabase: { try await AppDatabase.inMemory() },
         dropDatabase: {},
         installDatabase: { _ in },
-        importLegacyData: { _ in .nothingToImport },
         expirePages: { _ in }
     )
 }

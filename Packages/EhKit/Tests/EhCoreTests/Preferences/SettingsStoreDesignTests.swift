@@ -163,22 +163,4 @@ import Testing
         store.lastFavoriteFolder = 3
         #expect(store.lastFavoriteFolder == 3)
     }
-
-    @Test func theLegacyImportLeavesTheDesignAtItsDefaults() async {
-        let storage = PreferenceStorage.ephemeral()
-        let settings = SettingsStore(storage: storage)
-        let blobs = LegacyPreferenceBlobs(
-            setting: json(#"{ "listDisplayMode": 1, "prefetchLimit": 18, "readingDirection": 1 }"#),
-            user: nil, searchFilter: nil, globalFilter: nil, watchedFilter: nil
-        )
-        _ = await blobs.apply(to: settings, filters: FilterStore(storage: storage), user: UserStore(storage: storage))
-        #expect(settings.prefetchLimit == 18)
-        #expect(settings.designChoices == DesignChoices(preset: .shelf))
-        #expect(settings.designCustom == nil)
-        #expect(!settings.experienceOfferShown)
-        #expect(settings.wallDensity == .medium && settings.ledgerShowsCovers && settings.lastFavoriteFolder == 0)
-        #expect(settings.lastPlace == nil)
-        let stored = storage.storedSettingKeys
-        #expect(stored.isDisjoint(with: Self.designKeys + [.designCustom, .lastPlace, .experienceOfferShown]))
-    }
 }

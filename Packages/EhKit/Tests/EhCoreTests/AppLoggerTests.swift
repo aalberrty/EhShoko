@@ -27,7 +27,7 @@ import Testing
         #expect(lines[0].hasSuffix(" - info message"))
         #expect(lines[1].contains(" WARNING [App] "))
         #expect(lines[2].hasSuffix(" - multi\\nline"))
-        // Same timestamp layout as the legacy SwiftyBeaver files: "yyyy-MM-dd HH:mm:ss.SSS ".
+        // Each line starts with "yyyy-MM-dd HH:mm:ss.SSS ", which the Logs screen reads.
         #expect(LogRecord.makeTimestampFormatter().date(from: String(lines[0].prefix(23))) != nil)
     }
 
@@ -119,13 +119,12 @@ import Testing
         #expect(total == 10)
     }
 
-    @Test func keepsOnlyTheNewestFilesIncludingLegacyOnes() async throws {
+    @Test func keepsOnlyTheNewestFilesAndLeavesOtherFilesAlone() async throws {
         let directory = TemporaryLogDirectory()
         defer { directory.cleanUp() }
         let old = Date(timeIntervalSinceReferenceDate: 700_000_000)
-        try directory.writeFile(named: "EhGaro.log", contents: "legacy\n", modified: old)
-        try directory.writeFile(named: "EhGaro.log.1", contents: "older legacy\n", modified: old - 60)
         try directory.writeFile(named: "notes.txt", contents: "keep me\n", modified: old)
+        try directory.writeFile(named: "other.log", contents: "keep me too\n", modified: old)
 
         for index in 0..<4 {
             let logger = directory.makeLogger(maxFileCount: 3, launchedAt: launchDate(index))
@@ -137,29 +136,14 @@ import Testing
         #expect(files.map(\.date) == [launchDate(3), launchDate(2), launchDate(1)])
         let remaining = try FileManager.default.contentsOfDirectory(atPath: directory.url.path)
         #expect(remaining.contains("notes.txt"))
-        #expect(!remaining.contains("EhGaro.log"))
-    }
-
-    @Test func listsAndReadsLegacyFiles() async throws {
-        let directory = TemporaryLogDirectory()
-        defer { directory.cleanUp() }
-        let old = Date(timeIntervalSinceReferenceDate: 700_000_000)
-        try directory.writeFile(named: "EhGaro.log", contents: "a\n\nb\n", modified: old)
-        try directory.writeFile(named: "EhGaro.log.1", contents: "c\n", modified: old - 60)
-
-        let logger = directory.makeLogger(launchedAt: launchDate(0))
-        logger.info("new")
-        await logger.flush()
-
-        let files = await logger.logFiles()
-        #expect(files.map(\.name).suffix(2) == ["EhGaro.log", "EhGaro.log.1"])
-        #expect(try await logger.lines(of: files[1]) == ["a", "b"])
+        #expect(remaining.contains("other.log"))
     }
 
     @Test func deletesOneOrAllFilesAndKeepsLogging() async throws {
         let directory = TemporaryLogDirectory()
         defer { directory.cleanUp() }
-        try directory.writeFile(named: "EhGaro.log", contents: "legacy\n", modified: .distantPast)
+        let earlier = "Log-20240102-100000-000.log"
+        try directory.writeFile(named: earlier, contents: "earlier\n", modified: .distantPast)
         let logger = directory.makeLogger()
         logger.info("before")
         await logger.flush()
@@ -167,7 +151,7 @@ import Testing
 
         let current = try #require(await logger.logFiles().first)
         await logger.delete(current)
-        #expect(await logger.logFiles().map(\.name) == ["EhGaro.log"])
+        #expect(await logger.logFiles().map(\.name) == [earlier])
 
         logger.info("after delete")
         await logger.flush()

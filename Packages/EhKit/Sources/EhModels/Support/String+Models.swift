@@ -15,15 +15,6 @@ extension String {
         return match.range.length == utf16.count
     }
 
-    /// `"namespace:key"` → `("namespace", "key")`; anything else → `(nil, self)`.
-    var stringsBesideColon: (String?, String) {
-        let strings = split(separator: ":").map(String.init)
-        if strings.count == 2, !strings[0].isEmpty {
-            return (strings[0], strings[1])
-        }
-        return (nil, self)
-    }
-
     /// Repeatedly removes the first `opening…closing` span.
     func removingSpans(from opening: String, to closing: String) -> String {
         var result = self

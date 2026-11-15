@@ -110,9 +110,9 @@ extension Parser {
         return postedDate
     }
 
-    /// Decodes an EhTagTranslation `db.raw.json` into translations keyed as `TagTranslator`
-    /// stores them. Legacy then converted them to Traditional Chinese for that language;
-    /// that conversion (OpenCC) is left to the caller.
+    /// Decodes an EhTagTranslation `db.raw.json` into translations keyed by namespace and tag
+    /// (`"femalebig breasts"`). Legacy then converted them to Traditional Chinese for that
+    /// language; that conversion (OpenCC) is left to the caller.
     public static func parseTagTranslations(data: Data) throws -> [String: TagTranslation] {
         guard let response = try? JSONDecoder().decode(EhTagTranslationDatabaseResponse.self, from: data)
         else { throw AppError.parseFailed }

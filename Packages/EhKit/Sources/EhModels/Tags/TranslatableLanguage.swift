@@ -1,8 +1,7 @@
 import Foundation
 
 /// The languages the tag translation database is available in.
-/// Persisted in Swift's synthesized enum form, e.g. `{"simplifiedChinese":{}}`.
-public enum TranslatableLanguage: Codable, Sendable, Hashable, CaseIterable {
+public enum TranslatableLanguage: Sendable, Hashable, CaseIterable {
     case english
     case japanese
     case simplifiedChinese

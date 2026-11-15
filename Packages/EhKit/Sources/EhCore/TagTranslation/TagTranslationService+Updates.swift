@@ -59,7 +59,7 @@ extension TagTranslationService {
     }
 }
 
-// MARK: Custom translations and legacy import
+// MARK: Custom translations
 
 extension TagTranslationService {
     /// Imports a database file the user picked (the `db.raw.json` format), replacing every
@@ -100,37 +100,6 @@ extension TagTranslationService {
             }
         }
     }
-
-    /// Stores the tag translator of the legacy Core Data store (its raw JSON blob) with its
-    /// metadata, replacing what is stored. Does nothing for `nil` or a blob that does not
-    /// decode, since trying again could not help.
-    ///
-    /// - Throws: When the translations could not be written, so the caller keeps the legacy
-    ///   store and tries again on the next launch instead of losing them.
-    public func importLegacyTranslator(_ data: Data?) async throws {
-        guard let data else { return }
-        var failure: (any Error)?
-        await serialized {
-            await load()
-            guard let translator = await Self.decodeLegacyTranslator(data) else {
-                logger.warning("Skipped an unreadable legacy tag translator", category: Self.logCategory)
-                return
-            }
-            let prepared = await Self.prepare(translator.translations, traditionalChineseFor: nil)
-            do {
-                try await database().replaceTagTranslations(prepared.rows)
-                translations = prepared.table
-                setMetadata(TagTranslationMetadata(
-                    language: translator.language, updatedDate: translator.updatedDate,
-                    hasCustomTranslations: translator.hasCustomTranslations
-                ))
-            } catch {
-                logger.error("Failed to import legacy tag translations: \(error)", category: Self.logCategory)
-                failure = error
-            }
-        }
-        if let failure { throw failure }
-    }
 }
 
 // MARK: Helpers
@@ -165,11 +134,6 @@ extension TagTranslationService {
         let translations = response.tagTranslations
         guard !translations.isEmpty else { throw TagTranslationError.parseFailed }
         return translations
-    }
-
-    @concurrent
-    nonisolated static func decodeLegacyTranslator(_ data: Data) async -> TagTranslator? {
-        try? JSONDecoder().decode(TagTranslator.self, from: data)
     }
 
     func setMetadata(_ newValue: TagTranslationMetadata) {

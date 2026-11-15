@@ -1,10 +1,7 @@
 import Foundation
 
 /// The app's own preferences.
-///
-/// Decoding is tolerant (see the extension below): any missing or malformed key falls
-/// back to its default, so preferences saved by older versions always load.
-public struct Setting: Codable, Sendable, Equatable {
+public struct Setting: Sendable, Equatable {
     // Account
     public var galleryHost: GalleryHost = .ehentai
     public var showsNewDawnGreeting = false
@@ -74,63 +71,3 @@ public struct Setting: Codable, Sendable, Equatable {
     public init() {}
 }
 
-// MARK: Legacy decoding
-
-extension Setting {
-    /// Ported from the legacy app: every key is optional and a value that fails to decode
-    /// is replaced by its default instead of failing the whole object.
-    public init(from decoder: any Decoder) {
-        let defaults = Setting()
-        let container = try? decoder.container(keyedBy: CodingKeys.self)
-        func value<T: Decodable>(_ key: CodingKeys, _ fallback: T) -> T {
-            (try? container?.decodeIfPresent(T.self, forKey: key)) ?? fallback
-        }
-
-        // Account
-        galleryHost = value(.galleryHost, defaults.galleryHost)
-        showsNewDawnGreeting = value(.showsNewDawnGreeting, defaults.showsNewDawnGreeting)
-        // General
-        enablesTagsExtension = value(.enablesTagsExtension, defaults.enablesTagsExtension)
-        translatesTags = value(.translatesTags, defaults.translatesTags)
-        showsTagsSearchSuggestion = value(.showsTagsSearchSuggestion, defaults.showsTagsSearchSuggestion)
-        showsImagesInTags = value(.showsImagesInTags, defaults.showsImagesInTags)
-        redirectsLinksToSelectedHost = value(.redirectsLinksToSelectedHost, defaults.redirectsLinksToSelectedHost)
-        detectsLinksFromClipboard = value(.detectsLinksFromClipboard, defaults.detectsLinksFromClipboard)
-        backgroundBlurRadius = value(.backgroundBlurRadius, defaults.backgroundBlurRadius)
-        autoLockPolicy = value(.autoLockPolicy, defaults.autoLockPolicy)
-        // Appearance
-        listDisplayMode = value(.listDisplayMode, defaults.listDisplayMode)
-        preferredColorScheme = value(.preferredColorScheme, defaults.preferredColorScheme)
-        accentColor = value(.accentColor, defaults.accentColor)
-        appIconType = value(.appIconType, defaults.appIconType)
-        showsTagsInList = value(.showsTagsInList, defaults.showsTagsInList)
-        listTagsNumberMaximum = value(.listTagsNumberMaximum, defaults.listTagsNumberMaximum)
-        displaysJapaneseTitle = value(.displaysJapaneseTitle, defaults.displaysJapaneseTitle)
-        // Reading
-        readingDirection = value(.readingDirection, defaults.readingDirection)
-        prefetchLimit = value(.prefetchLimit, defaults.prefetchLimit)
-        enablesLandscape = value(.enablesLandscape, defaults.enablesLandscape)
-        enablesDualPageMode = value(.enablesDualPageMode, defaults.enablesDualPageMode)
-        exceptCover = value(.exceptCover, defaults.exceptCover)
-        contentDividerHeight = value(.contentDividerHeight, defaults.contentDividerHeight)
-        maximumScaleFactor = value(.maximumScaleFactor, defaults.maximumScaleFactor)
-        doubleTapScaleFactor = value(.doubleTapScaleFactor, defaults.doubleTapScaleFactor)
-        // Laboratory
-        bypassesSNIFiltering = value(.bypassesSNIFiltering, defaults.bypassesSNIFiltering)
-        // Experience
-        designBar = value(.designBar, defaults.designBar)
-        designStart = value(.designStart, defaults.designStart)
-        designList = value(.designList, defaults.designList)
-        designGallery = value(.designGallery, defaults.designGallery)
-        designReader = value(.designReader, defaults.designReader)
-        designSearch = value(.designSearch, defaults.designSearch)
-        designLibrary = value(.designLibrary, defaults.designLibrary)
-        designLook = value(.designLook, defaults.designLook)
-        designCustom = value(.designCustom, defaults.designCustom)
-        wallDensity = value(.wallDensity, defaults.wallDensity)
-        ledgerShowsCovers = value(.ledgerShowsCovers, defaults.ledgerShowsCovers)
-        lastFavoriteFolder = value(.lastFavoriteFolder, defaults.lastFavoriteFolder)
-        lastPlace = value(.lastPlace, defaults.lastPlace)
-        experienceOfferShown = value(.experienceOfferShown, defaults.experienceOfferShown)
-    }
-}
