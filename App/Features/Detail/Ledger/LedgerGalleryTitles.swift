@@ -36,8 +36,12 @@ nonisolated struct LedgerGalleryTitles: Equatable, Sendable {
     /// matches its names against.
     @concurrent
     static func make(_ source: Source, gallery: Gallery) async -> LedgerGalleryTitles {
-        let parsed = TitleParser.parse(source.preferred)
-        let entry = GalleryEntry(gallery: gallery, title: parsed, languageCode: nil)
+        // The credit's searches name what the header shows, so they come from the preferred
+        // title, which may be the Japanese one rather than the list's.
+        var titled = gallery
+        titled.title = source.preferred
+        let entry = GalleryEntry(gallery: titled)
+        let parsed = entry.title
         var notes = parsed.event.map { [$0] } ?? []
         notes.append(contentsOf: parsed.flags)
         let shortened = parsed.isParsed && parsed.core != source.preferred
