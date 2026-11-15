@@ -44,7 +44,7 @@ extension TipsConfiguration {
     ///   Favourite, as on a fresh install.
     /// - `show` shows the tip whenever its anchor is on screen, whatever its rules say.
     /// - `hide` shows no tip at all, for runs that must not be interrupted by one.
-    enum DebugRequest: String {
+    nonisolated enum DebugRequest: String {
         case reset, show, hide
 
         static var atLaunch: DebugRequest? {
