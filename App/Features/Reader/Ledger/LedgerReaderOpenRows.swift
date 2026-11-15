@@ -12,7 +12,6 @@ import SwiftUI
 struct LedgerOpenRows: View {
     let model: ReaderModel
     let sheet: LedgerSheetState
-    let watch: LedgerPageWatch
     let isReversed: Bool
     /// Whether the sheet has left its resting height.
     let isUncovered: Bool
@@ -33,7 +32,7 @@ struct LedgerOpenRows: View {
             ReaderTranslationSlot(availability: model.translationAvailability) { EmptyView() }
             LedgerReadingGroup(model: model, sheet: sheet)
                 .padding(.top, LedgerReaderMetrics.groupGap)
-            LedgerPagePills(model: model, watch: watch)
+            LedgerPagePills(model: model)
                 .padding(.top, LedgerReaderMetrics.groupGap)
         }
         .padding(.horizontal, LedgerReaderMetrics.sideInset)
@@ -47,7 +46,7 @@ struct LedgerOpenRows: View {
         if isUncovered {
             ReaderThumbnailStrip(
                 model: model, length: 9, isReversed: isReversed,
-                width: 34, currentWidth: 40, outline: tint, spacing: 6
+                width: 34, currentWidth: 40, outline: tint, outlineOffset: 1.5, othersOpacity: 0.7, spacing: 6
             )
             // Nine thumbnails are wider than a narrow sheet, whose edges cut the outer ones.
             .fixedSize()
