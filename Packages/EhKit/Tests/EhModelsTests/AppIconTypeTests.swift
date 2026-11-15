@@ -13,7 +13,7 @@ import Testing
         }
     }
 
-    @Test(arguments: ["AppIcon_Default", "AppIcon_Ukiyoe", ""])
+    @Test(arguments: ["AppIcon_Removed", "Unknown", ""])
     func anAlternateNameNoIconHasIsThePrimaryIcon(name: String) {
         #expect(AppIconType(alternateIconName: name) == .default)
     }
@@ -23,11 +23,10 @@ import Testing
         #expect(AppIconType.allCases.allSatisfy { !(1...4).contains($0.rawValue) })
     }
 
+    /// A removed icon's raw value has no case; `SettingsStore` reads such a stored value as the
+    /// default (`SettingsStoreTests`).
     @Test(arguments: 1...4)
-    func aRemovedIconDecodesAsTheDefault(rawValue: Int) throws {
+    func aRemovedIconHasNoCase(rawValue: Int) {
         #expect(AppIconType(rawValue: rawValue) == nil)
-        let setting = try decodeJSON(Setting.self, #"{ "appIconType": \#(rawValue), "prefetchLimit": 20 }"#)
-        #expect(setting.appIconType == .default)
-        #expect(setting.prefetchLimit == 20)
     }
 }
