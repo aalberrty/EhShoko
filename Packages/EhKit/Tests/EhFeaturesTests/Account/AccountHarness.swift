@@ -105,13 +105,13 @@ extension StubTransport.Matcher {
 enum AccountFixture {
     static let settingsPath = "Parser/Other/EhSetting.html"
 
-    /// The settings page; its profiles are Default Profile (1, selected), EhGaro (2) and
+    /// The settings page; its profiles are Default Profile (1, selected), EhShoko (2) and
     /// FEhViewer (3).
     static var settings: StubTransport.Reply { .fixture(settingsPath) }
 
-    /// The settings page without an "EhGaro" profile.
+    /// The settings page without an "EhShoko" profile.
     static func settingsWithoutAppProfile() throws -> StubTransport.Reply {
-        .html(try Fixture.string(settingsPath).replacingOccurrences(of: ">EhGaro<", with: ">Mobile<"))
+        .html(try Fixture.string(settingsPath).replacingOccurrences(of: ">EhShoko<", with: ">Mobile<"))
     }
 
     static func setCookie(_ header: String) -> StubTransport.Reply {

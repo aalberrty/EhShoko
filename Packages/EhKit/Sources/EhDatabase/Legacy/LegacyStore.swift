@@ -41,7 +41,7 @@ public struct LegacyStore: Sendable {
         // Read-only never touches the user's only copy of their data. SQLite still reads
         // the WAL, creating `-shm` if needed, so writes not yet checkpointed are seen.
         configuration.readonly = true
-        configuration.label = "EhGaro.LegacyStore"
+        configuration.label = "EhShoko.LegacyStore"
         let queue = try DatabaseQueue(path: url.path, configuration: configuration)
         defer { try? queue.close() }
         return try await queue.read { db in

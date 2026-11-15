@@ -48,8 +48,8 @@ internal enum L10n {
       }
       internal enum Contact {
         internal enum Link {
-          /// https://github.com/aalberrty/EhGaro
-          internal static let gitHub = L10n.tr("Constant", "app.contact.link.gitHub", fallback: "https://github.com/aalberrty/EhGaro")
+          /// https://github.com/aalberrty/EhShoko
+          internal static let gitHub = L10n.tr("Constant", "app.contact.link.gitHub", fallback: "https://github.com/aalberrty/EhShoko")
         }
         internal enum Text {
           /// GitHub
@@ -74,7 +74,7 @@ internal enum L10n {
         /// This gallery has been removed or is unavailable.
         internal static let galleryUnavailable = L10n.tr("Constant", "website.response.gallery_unavailable", fallback: "This gallery has been removed or is unavailable.")
         /// Constant.strings
-        ///   EhGaro
+        ///   EhShoko
         internal static let hathClientNotFound = L10n.tr("Constant", "website.response.hath_client_not_found", fallback: "You must have a H@H client assigned to your account to use this feature.")
         /// Your H@H client appears to be offline. Turn it on, then try again.
         internal static let hathClientNotOnline = L10n.tr("Constant", "website.response.hath_client_not_online", fallback: "Your H@H client appears to be offline. Turn it on, then try again.")
@@ -85,10 +85,10 @@ internal enum L10n {
   }
   internal enum InfoPlist {
     /// InfoPlist.strings
-    ///   EhGaro
-    internal static let nsFaceIDUsageDescription = L10n.tr("InfoPlist", "NSFaceIDUsageDescription", fallback: "EhGaro uses Face ID to unlock the app when Auto-Lock is on.")
-    /// EhGaro saves the images you choose to your photo library.
-    internal static let nsPhotoLibraryAddUsageDescription = L10n.tr("InfoPlist", "NSPhotoLibraryAddUsageDescription", fallback: "EhGaro saves the images you choose to your photo library.")
+    ///   EhShoko
+    internal static let nsFaceIDUsageDescription = L10n.tr("InfoPlist", "NSFaceIDUsageDescription", fallback: "EhShoko uses Face ID to unlock the app when Auto-Lock is on.")
+    /// EhShoko saves the images you choose to your photo library.
+    internal static let nsPhotoLibraryAddUsageDescription = L10n.tr("InfoPlist", "NSPhotoLibraryAddUsageDescription", fallback: "EhShoko saves the images you choose to your photo library.")
   }
   internal enum Localizable {
     internal enum AboutView {
@@ -111,8 +111,8 @@ internal enum L10n {
         }
       }
       internal enum Title {
-        /// EhGaro
-        internal static let ehGaro = L10n.tr("Localizable", "about_view.title.ehGaro", fallback: "EhGaro")
+        /// EhShoko
+        internal static let ehShoko = L10n.tr("Localizable", "about_view.title.ehShoko", fallback: "EhShoko")
         /// Version
         internal static let version = L10n.tr("Localizable", "about_view.title.version", fallback: "Version")
       }
@@ -267,9 +267,9 @@ internal enum L10n {
         internal static let clear = L10n.tr("Localizable", "confirmation_dialog.title.clear", fallback: "Clear everything here? This can't be undone.")
         /// Delete this? It can't be undone.
         internal static let delete = L10n.tr("Localizable", "confirmation_dialog.title.delete", fallback: "Delete this? It can't be undone.")
-        /// Everything EhGaro has stored will be erased.
+        /// Everything EhShoko has stored will be erased.
         /// Delete the database?
-        internal static let dropDatabase = L10n.tr("Localizable", "confirmation_dialog.title.drop_database", fallback: "Everything EhGaro has stored will be erased.\nDelete the database?")
+        internal static let dropDatabase = L10n.tr("Localizable", "confirmation_dialog.title.drop_database", fallback: "Everything EhShoko has stored will be erased.\nDelete the database?")
         /// Sign out of your account?
         internal static let logout = L10n.tr("Localizable", "confirmation_dialog.title.logout", fallback: "Sign out of your account?")
         /// Remove the translations you imported?
@@ -584,7 +584,7 @@ internal enum L10n {
       internal enum BanInterval {
         internal enum Description {
           /// Localizable.strings
-          ///   EhGaro
+          ///   EhShoko
           internal static let and = L10n.tr("Localizable", "enum.ban_interval.description.and", fallback: "and")
         }
       }
@@ -1482,8 +1482,8 @@ internal enum L10n {
       }
       internal enum SettingStateRoute {
         internal enum Value {
-          /// About EhGaro
-          internal static let about = L10n.tr("Localizable", "enum.setting_state_route.value.about", fallback: "About EhGaro")
+          /// About EhShoko
+          internal static let about = L10n.tr("Localizable", "enum.setting_state_route.value.about", fallback: "About EhShoko")
           /// Account
           internal static let account = L10n.tr("Localizable", "enum.setting_state_route.value.account", fallback: "Account")
           /// Appearance
@@ -1559,9 +1559,9 @@ internal enum L10n {
         internal static func copyrightClaim(_ p1: Any) -> String {
           return L10n.tr("Localizable", "error_view.title.copyright_claim", String(describing: p1), fallback: "This gallery was taken down after a copyright claim by %@.")
         }
-        /// EhGaro's database is damaged.
+        /// EhShoko's database is damaged.
         /// Please report this on GitHub.
-        internal static let databaseCorrupted = L10n.tr("Localizable", "error_view.title.database_corrupted", fallback: "EhGaro's database is damaged.\nPlease report this on GitHub.")
+        internal static let databaseCorrupted = L10n.tr("Localizable", "error_view.title.database_corrupted", fallback: "EhShoko's database is damaged.\nPlease report this on GitHub.")
         /// ExHentai didn't accept your sign-in. It may have expired, or this account may not have access to ExHentai. Sign in again in Settings › Account, or switch to E-Hentai there.
         internal static let exhentaiAccessDenied = L10n.tr("Localizable", "error_view.title.exhentai_access_denied", fallback: "ExHentai didn't accept your sign-in. It may have expired, or this account may not have access to ExHentai. Sign in again in Settings › Account, or switch to E-Hentai there.")
         /// This gallery was removed or can't be viewed.
@@ -1576,8 +1576,8 @@ internal enum L10n {
         internal static let network = L10n.tr("Localizable", "error_view.title.network", fallback: "Couldn't connect to the site.")
         /// There's nothing here.
         internal static let notFound = L10n.tr("Localizable", "error_view.title.not_found", fallback: "There's nothing here.")
-        /// The site returned a page that EhGaro could not read. The site may have changed, or it may be temporarily unavailable.
-        internal static let parsing = L10n.tr("Localizable", "error_view.title.parsing", fallback: "The site returned a page that EhGaro could not read. The site may have changed, or it may be temporarily unavailable.")
+        /// The site returned a page that EhShoko could not read. The site may have changed, or it may be temporarily unavailable.
+        internal static let parsing = L10n.tr("Localizable", "error_view.title.parsing", fallback: "The site returned a page that EhShoko could not read. The site may have changed, or it may be temporarily unavailable.")
         /// The server answered with error %@ instead of a page. It may be temporarily unavailable.
         internal static func serverError(_ p1: Any) -> String {
           return L10n.tr("Localizable", "error_view.title.server_error", String(describing: p1), fallback: "The server answered with error %@ instead of a page. It may be temporarily unavailable.")
@@ -1827,8 +1827,8 @@ internal enum L10n {
       }
     }
     internal enum LocalAuthorization {
-      /// Unlock EhGaro to continue.
-      internal static let reason = L10n.tr("Localizable", "local_authorization.reason", fallback: "Unlock EhGaro to continue.")
+      /// Unlock EhShoko to continue.
+      internal static let reason = L10n.tr("Localizable", "local_authorization.reason", fallback: "Unlock EhShoko to continue.")
     }
     internal enum LoginView {
       internal enum Title {

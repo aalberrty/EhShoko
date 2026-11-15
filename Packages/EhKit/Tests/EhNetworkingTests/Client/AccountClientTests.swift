@@ -80,11 +80,11 @@ struct AccountClientTests {
         let harness = ClientHarness()
         harness.transport.on(.any, reply: .fixture(ClientFixture.ehSetting))
 
-        let setting = try await harness.client.ehProfile(action: .create, name: "EhGaro")
+        let setting = try await harness.client.ehProfile(action: .create, name: "EhShoko")
 
         let request = try harness.onlyRequest()
         #expect(line(request) == "POST https://e-hentai.org/uconfig.php")
-        #expect(request.httpBody == harness.builder.ehProfile(action: .create, name: "EhGaro").httpBody)
+        #expect(request.httpBody == harness.builder.ehProfile(action: .create, name: "EhShoko").httpBody)
         #expect(setting.ehProfiles.count == 3)
     }
 

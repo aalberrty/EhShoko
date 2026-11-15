@@ -4,7 +4,7 @@ import os
 
 /// The app's logger.
 ///
-/// Every message goes to `os.Logger` (subsystem `app.ehgaro`); messages at ``fileLevel`` and
+/// Every message goes to `os.Logger` (subsystem `app.ehshoko`); messages at ``fileLevel`` and
 /// above are also appended to rotating files that users can attach to bug reports. Calls never
 /// block on I/O and are safe from any actor. Log events, not actions, frames or cells.
 ///
@@ -37,7 +37,7 @@ public struct AppLogger: Sendable {
         }
     }
 
-    public static let subsystem = "app.ehgaro"
+    public static let subsystem = "app.ehshoko"
     public static let defaultCategory = "App"
 
     /// Messages below this level are dropped before their text is built.

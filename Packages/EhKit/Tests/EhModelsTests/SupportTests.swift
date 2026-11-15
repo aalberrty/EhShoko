@@ -55,7 +55,7 @@ import Testing
         let setting = EhSetting(
             ehProfiles: [
                 EhProfile(value: 1, name: "Default", isSelected: false),
-                EhProfile(value: 2, name: "EhGaro", isSelected: true)
+                EhProfile(value: 2, name: "EhShoko", isSelected: true)
             ],
             isCapableOfCreatingNewProfile: false, capableLoadThroughHathSetting: .modernNo,
             capableImageResolution: .x1280, capableSearchResultCount: .fifty,
@@ -85,7 +85,7 @@ import Testing
 
     @Test func ehSettingConstants() {
         #expect(EhSetting.empty.appProfile == nil)
-        #expect(EhSetting.verifyAppProfileName(with: "EhGaro (Default)"))
+        #expect(EhSetting.verifyAppProfileName(with: "EhShoko (Default)"))
         #expect(!EhSetting.verifyAppProfileName(with: nil))
         #expect(EhSetting.categoryNames.first == "doujinshi")
         #expect(EhSetting.categoryNames.contains("artistcg") && EhSetting.categoryNames.count == 10)

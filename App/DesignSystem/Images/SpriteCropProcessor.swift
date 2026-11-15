@@ -34,7 +34,7 @@ nonisolated struct SpriteCropProcessor: ImageProcessor {
         let rect = rect.integral
         self.sheetURL = sheetURL
         self.rect = rect
-        identifier = "app.ehgaro.sprite-crop(\(Int(rect.minX)),\(Int(rect.minY)),\(Int(rect.width)),\(Int(rect.height)))"
+        identifier = "app.ehshoko.sprite-crop(\(Int(rect.minX)),\(Int(rect.minY)),\(Int(rect.width)),\(Int(rect.height)))"
     }
 
     func process(item: ImageProcessItem, options: KingfisherParsedOptionsInfo) -> KFCrossPlatformImage? {

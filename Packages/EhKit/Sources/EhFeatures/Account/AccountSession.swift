@@ -119,7 +119,7 @@ private extension AccountSession {
         }
     }
 
-    /// Legacy `fetchEhProfileIndex`: browse with the "EhGaro" profile, creating it if missing.
+    /// Legacy `fetchEhProfileIndex`: browse with the "EhShoko" profile, creating it if missing.
     func pinAppProfile() async {
         do {
             let response = try await client.verifyEhProfile()
@@ -131,10 +131,10 @@ private extension AccountSession {
                     selectProfile(value)
                 }
             } else {
-                logger.error("Found the EhGaro profile but failed to parse its value.", category: Self.logCategory)
+                logger.error("Found the EhShoko profile but failed to parse its value.", category: Self.logCategory)
             }
         } catch {
-            report(error, "Verifying the EhGaro profile")
+            report(error, "Verifying the EhShoko profile")
         }
     }
 
@@ -153,7 +153,7 @@ private extension AccountSession {
         logger.error("\(step) failed: \(error)", category: Self.logCategory)
     }
 
-    static let profileName = "EhGaro"
+    static let profileName = "EhShoko"
     static let logCategory = "Account"
 }
 

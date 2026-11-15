@@ -9,7 +9,7 @@ private typealias T = RequestTesting
     // MARK: App scheme
 
     @Test func appSchemeBecomesHTTPS() {
-        let url = EhURL.resolvingAppScheme(T.url("ehgaro://e-hentai.org/g/2345678/0a1b2c3d4e/"))
+        let url = EhURL.resolvingAppScheme(T.url("ehshoko://e-hentai.org/g/2345678/0a1b2c3d4e/"))
         #expect(url.absoluteString == "https://e-hentai.org/g/2345678/0a1b2c3d4e/")
     }
 
@@ -42,7 +42,7 @@ private typealias T = RequestTesting
         "https://s.exhentai.org/g/2345678/0a1b2c3d4e/",
         "https://example.com/g/2345678/0a1b2c3d4e/",
         "http://e-hentai.org/g/2345678/0a1b2c3d4e/",
-        "ehgaro://e-hentai.org/g/2345678/0a1b2c3d4e/",
+        "ehshoko://e-hentai.org/g/2345678/0a1b2c3d4e/",
         // Legacy matched the string, so a query mentioning the site passed; not any more.
         "https://example.com/g/2345678/0a1b2c3d4e/?from=https://e-hentai.org/"
     ])

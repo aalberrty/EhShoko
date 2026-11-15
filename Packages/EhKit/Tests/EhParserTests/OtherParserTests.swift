@@ -104,7 +104,7 @@ struct EhSettingParserTests {
 
         let ehProfile2 = profiles[1]
         #expect(ehProfile2.value == 2)
-        #expect(ehProfile2.name == "EhGaro")
+        #expect(ehProfile2.name == "EhShoko")
         #expect(ehProfile2.isSelected == false)
         #expect(ehProfile2.isDefault == false)
         #expect(EhSetting.verifyAppProfileName(with: ehProfile2.name))

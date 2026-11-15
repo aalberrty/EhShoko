@@ -15,7 +15,7 @@ final class LogFileSink: @unchecked Sendable {
     let maxFileCount: Int
     let maxFileSize: Int
     private let now: @Sendable () -> Date
-    private let queue = DispatchQueue(label: "app.ehgaro.log-file-sink", qos: .utility)
+    private let queue = DispatchQueue(label: "app.ehshoko.log-file-sink", qos: .utility)
     private let state = State()
 
     private final class State {

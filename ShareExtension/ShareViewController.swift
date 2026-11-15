@@ -1,7 +1,7 @@
 import UIKit
 import UniformTypeIdentifiers
 
-/// Forwards a shared web link to the main app by rewriting its scheme to `ehgaro://`.
+/// Forwards a shared web link to the main app by rewriting its scheme to `ehshoko://`.
 final class ShareViewController: UIViewController {
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
@@ -31,7 +31,7 @@ final class ShareViewController: UIViewController {
 
     private static func appURL(for link: URL) -> URL? {
         guard var components = URLComponents(url: link, resolvingAgainstBaseURL: false) else { return nil }
-        components.scheme = "ehgaro"
+        components.scheme = "ehshoko"
         return components.url
     }
 

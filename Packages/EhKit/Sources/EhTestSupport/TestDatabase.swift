@@ -19,7 +19,7 @@ public enum TestDatabase {
     /// A new, empty directory under the system temporary directory.
     public static func makeTemporaryDirectory() throws -> URL {
         let directory = FileManager.default.temporaryDirectory
-            .appendingPathComponent("EhGaroTests-\(UUID().uuidString)", isDirectory: true)
+            .appendingPathComponent("EhShokoTests-\(UUID().uuidString)", isDirectory: true)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         return directory
     }

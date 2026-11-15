@@ -38,10 +38,10 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
-		E10000000000000000000F01 /* EhGaro.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = EhGaro.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		E10000000000000000000F01 /* EhShoko.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = EhShoko.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		E10000000000000000000F02 /* ShareExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = ShareExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
-		E10000000000000000000F03 /* EhGaro-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "EhGaro-Info.plist"; sourceTree = "<group>"; };
-		E10000000000000000000F04 /* EhGaro.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = EhGaro.entitlements; sourceTree = "<group>"; };
+		E10000000000000000000F03 /* EhShoko-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "EhShoko-Info.plist"; sourceTree = "<group>"; };
+		E10000000000000000000F04 /* EhShoko.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = EhShoko.entitlements; sourceTree = "<group>"; };
 		E10000000000000000000F05 /* ShareExtension-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "ShareExtension-Info.plist"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -92,7 +92,7 @@
 		E10000000000000000000402 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				E10000000000000000000F01 /* EhGaro.app */,
+				E10000000000000000000F01 /* EhShoko.app */,
 				E10000000000000000000F02 /* ShareExtension.appex */,
 			);
 			name = Products;
@@ -101,8 +101,8 @@
 		E10000000000000000000403 /* Configuration */ = {
 			isa = PBXGroup;
 			children = (
-				E10000000000000000000F03 /* EhGaro-Info.plist */,
-				E10000000000000000000F04 /* EhGaro.entitlements */,
+				E10000000000000000000F03 /* EhShoko-Info.plist */,
+				E10000000000000000000F04 /* EhShoko.entitlements */,
 				E10000000000000000000F05 /* ShareExtension-Info.plist */,
 			);
 			path = Configuration;
@@ -111,9 +111,9 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		E10000000000000000000A01 /* EhGaro */ = {
+		E10000000000000000000A01 /* EhShoko */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = E10000000000000000000902 /* Build configuration list for PBXNativeTarget "EhGaro" */;
+			buildConfigurationList = E10000000000000000000902 /* Build configuration list for PBXNativeTarget "EhShoko" */;
 			buildPhases = (
 				E10000000000000000000E01 /* Sources */,
 				E10000000000000000000E02 /* Frameworks */,
@@ -128,14 +128,14 @@
 			fileSystemSynchronizedGroups = (
 				E10000000000000000000501 /* App */,
 			);
-			name = EhGaro;
+			name = EhShoko;
 			packageProductDependencies = (
 				E10000000000000000000D01 /* EhKit */,
 				E10000000000000000000D02 /* Kingfisher */,
 				E10000000000000000000D03 /* SFSafeSymbols */,
 			);
-			productName = EhGaro;
-			productReference = E10000000000000000000F01 /* EhGaro.app */;
+			productName = EhShoko;
+			productReference = E10000000000000000000F01 /* EhShoko.app */;
 			productType = "com.apple.product-type.application";
 		};
 		E10000000000000000000A02 /* ShareExtension */ = {
@@ -178,7 +178,7 @@
 					};
 				};
 			};
-			buildConfigurationList = E10000000000000000000901 /* Build configuration list for PBXProject "EhGaro" */;
+			buildConfigurationList = E10000000000000000000901 /* Build configuration list for PBXProject "EhShoko" */;
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
@@ -202,7 +202,7 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				E10000000000000000000A01 /* EhGaro */,
+				E10000000000000000000A01 /* EhShoko */,
 				E10000000000000000000A02 /* ShareExtension */,
 			);
 		};
@@ -286,7 +286,7 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
 				DEBUG_INFORMATION_FORMAT = dwarf;
-				APP_BUNDLE_ID = app.ehgaro;
+				APP_BUNDLE_ID = app.ehshoko;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;
@@ -352,7 +352,7 @@
 				COPY_PHASE_STRIP = NO;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				ENABLE_NS_ASSERTIONS = NO;
-				APP_BUNDLE_ID = app.ehgaro;
+				APP_BUNDLE_ID = app.ehshoko;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu17;
@@ -380,14 +380,14 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				CODE_SIGN_ENTITLEMENTS = Configuration/EhGaro.entitlements;
+				CODE_SIGN_ENTITLEMENTS = Configuration/EhShoko.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Manual;
 				CURRENT_PROJECT_VERSION = 158;
 				DEVELOPMENT_TEAM = RYCYM2Y5FL;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = NO;
-				INFOPLIST_FILE = "Configuration/EhGaro-Info.plist";
+				INFOPLIST_FILE = "Configuration/EhShoko-Info.plist";
 				MARKETING_VERSION = 3.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -408,14 +408,14 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				CODE_SIGN_ENTITLEMENTS = Configuration/EhGaro.entitlements;
+				CODE_SIGN_ENTITLEMENTS = Configuration/EhShoko.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Manual;
 				CURRENT_PROJECT_VERSION = 158;
 				DEVELOPMENT_TEAM = RYCYM2Y5FL;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = NO;
-				INFOPLIST_FILE = "Configuration/EhGaro-Info.plist";
+				INFOPLIST_FILE = "Configuration/EhShoko-Info.plist";
 				MARKETING_VERSION = 3.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -490,7 +490,7 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		E10000000000000000000901 /* Build configuration list for PBXProject "EhGaro" */ = {
+		E10000000000000000000901 /* Build configuration list for PBXProject "EhShoko" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				E10000000000000000000801 /* Debug */,
@@ -499,7 +499,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		E10000000000000000000902 /* Build configuration list for PBXNativeTarget "EhGaro" */ = {
+		E10000000000000000000902 /* Build configuration list for PBXNativeTarget "EhShoko" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				E10000000000000000000803 /* Debug */,
