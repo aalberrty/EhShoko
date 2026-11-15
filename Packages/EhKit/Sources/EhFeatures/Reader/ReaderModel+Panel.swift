@@ -144,6 +144,32 @@ extension ReaderModel {
         }
     }
 
+    // MARK: What a control sheet shows
+
+    /// The title without the groups the site's convention puts around it ("Yoake no Hakoniwa"
+    /// of "[Circle (Artist)] Yoake no Hakoniwa [English]"), for a control with little room
+    /// (Ledger's sheet). A title outside the convention is returned whole.
+    public func shortTitle(prefersJapanese: Bool) -> String {
+        TitleParser.parse(title(prefersJapanese: prefersJapanese)).core
+    }
+
+    /// How many pages have failed: those that could not be resolved and those whose image did
+    /// not load. "Retry failed pages" is for these (Ledger's sheet shows the button only while
+    /// there are any).
+    ///
+    /// Not observable, like every page state: a page that fails touches that page's view and
+    /// nothing in SwiftUI. A control that shows it asks again when it appears and while the
+    /// reader moves.
+    public var failedPageCount: Int {
+        var failed = failedImagePages
+        for (page, status) in resolver.statuses {
+            if case .failed = status {
+                failed.insert(page)
+            }
+        }
+        return failed.count
+    }
+
     // MARK: Menu
 
     public func showSettings() {
