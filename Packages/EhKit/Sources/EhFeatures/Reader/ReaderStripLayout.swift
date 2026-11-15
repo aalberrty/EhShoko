@@ -133,7 +133,9 @@ nonisolated public struct ReaderStripLayout: Sendable, Equatable {
     public func isTrailerCurrent(viewportMinY: CGFloat, viewportHeight: CGFloat) -> Bool {
         guard let frame = trailerFrame else { return false }
         if viewportMinY + viewportHeight / 2 >= frame.minY { return true }
-        let isAtEnd = viewportMinY >= maximumOffset(viewportHeight: viewportHeight) - 0.5
+        let maximum = maximumOffset(viewportHeight: viewportHeight)
+        // A strip that fits on screen cannot leave its end: a bounce at its top is not a way back.
+        let isAtEnd = maximum <= 0 || viewportMinY >= maximum - 0.5
         return isAtEnd && viewportMinY + viewportHeight > frame.minY
     }
 

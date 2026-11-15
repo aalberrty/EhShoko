@@ -189,6 +189,21 @@ import Testing
         #expect(on.currentPage(viewportMinY: 0, viewportHeight: 600) == 1)
     }
 
+    /// Such a strip still bounces. Pulled down at its top it is no less at its end.
+    @Test func aStripThatFitsOnScreenStaysAtItsEndWhileItBounces() {
+        let on = Self.makeLayout(pageCount: 1, trailer: 100)
+        for offset in [-200, -40, -0.75, 0, 30] as [CGFloat] {
+            #expect(on.isTrailerCurrent(viewportMinY: offset, viewportHeight: 600))
+        }
+        // One that scrolls is at its end only at its end.
+        let long = Self.makeLayout(pageCount: 4, trailer: 60)
+        #expect(long.maximumOffset(viewportHeight: 180) == 413)
+        #expect(!long.isTrailerCurrent(viewportMinY: -40, viewportHeight: 180))
+        #expect(!long.isTrailerCurrent(viewportMinY: 412, viewportHeight: 180))
+        #expect(long.isTrailerCurrent(viewportMinY: 412.5, viewportHeight: 180))
+        #expect(long.isTrailerCurrent(viewportMinY: 440, viewportHeight: 180))
+    }
+
     @Test func anEmptyStripHasNoTrailer() {
         let on = Self.makeLayout(pageCount: 0, trailer: 126)
         #expect(on.trailerFrame == nil)

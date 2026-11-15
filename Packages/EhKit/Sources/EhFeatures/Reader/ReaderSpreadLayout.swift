@@ -44,13 +44,14 @@ nonisolated public struct ReaderSpreadLayout: Sendable, Equatable {
         return .ownSlot
     }
 
-    /// The places the pager swipes through: the spreads, and one more for a trailer that has a
-    /// slot of its own. Slot `spreadCount` is then the trailer.
+    /// The places the pager swipes through, in reading order: the spreads, and one more for a
+    /// trailer that has a slot of its own. Slot `spreadCount` is then the trailer.
     public var slotCount: Int {
         trailerPlacement == .ownSlot ? spreadCount + 1 : spreadCount
     }
 
-    /// The slot that shows the trailer, or `nil` without one.
+    /// The slot that shows the trailer, counted in reading order like a spread, or `nil`
+    /// without one.
     public var trailerSlot: Int? {
         switch trailerPlacement {
         case .none: nil
