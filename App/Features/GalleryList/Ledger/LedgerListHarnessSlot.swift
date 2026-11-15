@@ -39,16 +39,22 @@ struct LedgerListHarnessSlot: View {
         .environment(settings)
         .environment(userStore)
         .environment(filterStore)
-        .task(id: galleries.count) {
+        // The look the Ledger preset comes with.
+        .environment(\.look, .ledger)
+        .onAppear {
+            // At once, on the main actor, unlike a list's own pages: the scripted scroll starts
+            // a fixed time after the slot appears, and on a loaded machine rows mapped in the
+            // background were not there yet. The measurement starts with the scroll.
             settings.ledgerShowsCovers = showsCovers
-            feed = LedgerHarnessFeed(entries: await Self.entries(for: galleries))
+            if feed == nil {
+                feed = LedgerHarnessFeed(entries: Self.entries(for: galleries))
+            }
         }
     }
 
-    /// Entries as a page maps them, off the main actor. Ages count to just after the newest
-    /// gallery, so the rows read "28m ago" to "1w ago" whatever the day.
-    @concurrent
-    private static func entries(for galleries: [Gallery]) async -> [GalleryEntry] {
+    /// Entries as a page maps them. Ages count to just after the newest gallery, so the rows
+    /// read "28m ago" to "1w ago" whatever the day.
+    private static func entries(for galleries: [Gallery]) -> [GalleryEntry] {
         let now = (galleries.first?.postedDate ?? .now).addingTimeInterval(1_700)
         return galleries.map { GalleryEntry(gallery: $0, now: now) }
     }
