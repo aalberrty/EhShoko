@@ -46,6 +46,10 @@ struct ShelfContinueShelf: View {
                         ShelfContinueCard(item: item)
                     }
                     .buttonStyle(.plain)
+                    // On the button, which is the one element VoiceOver reads for the card.
+                    .accessibilityLabel(item.title.core)
+                    .accessibilityValue(ShelfContinueCard.accessibilityValue(of: item))
+                    .accessibilityHint(L10n.Localizable.Shell.Continue.reading)
                 }
             }
             .scrollTargetLayout()
@@ -104,13 +108,11 @@ struct ShelfContinueCard: View {
         .frame(width: Self.width, height: height, alignment: .topLeading)
         .background(look.surface, in: shape)
         .contentShape(shape)
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel(item.title.core)
-        .accessibilityValue(
-            L10n.Localizable.Shell.Continue.progress(item.page, item.pageCount, Int((item.fraction * 100).rounded()))
-        )
-        .accessibilityHint(L10n.Localizable.Shell.Continue.reading)
-        .accessibilityAddTraits(.isButton)
+    }
+
+    /// "Page 87 of 212 · 41%".
+    static func accessibilityValue(of item: ContinueItem) -> String {
+        L10n.Localizable.Shell.Continue.progress(item.page, item.pageCount, Int((item.fraction * 100).rounded()))
     }
 }
 

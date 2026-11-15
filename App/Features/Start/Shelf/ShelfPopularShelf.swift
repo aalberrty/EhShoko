@@ -57,6 +57,9 @@ struct ShelfPopularShelf: View {
                         ShelfPopularCell(entry: entry)
                     }
                     .buttonStyle(.plain)
+                    // On the button, which is the one element VoiceOver reads for the cover.
+                    .accessibilityLabel(entry.title.core)
+                    .accessibilityValue(ShelfPopularCell.accessibilityValue(of: entry.gallery))
                 }
             }
             .scrollTargetLayout()
@@ -95,12 +98,12 @@ struct ShelfPopularCell: View {
         .lineLimit(1)
         .frame(width: Self.cover.width, alignment: .leading)
         .contentShape(.rect)
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel(entry.title.core)
-        .accessibilityValue(
-            "\(RatingStars.accessibilityValue(for: RatingStars.halfRounded(Double(gallery.rating)))), \(L10n.Localizable.List.pages(gallery.pageCount))"
-        )
-        .accessibilityAddTraits(.isButton)
+    }
+
+    /// "4.5/5, 36 pages".
+    static func accessibilityValue(of gallery: Gallery) -> String {
+        let rating = RatingStars.accessibilityValue(for: RatingStars.halfRounded(Double(gallery.rating)))
+        return [rating, L10n.Localizable.List.pages(gallery.pageCount)].joined(separator: ", ")
     }
 
     private static func rating(_ value: Float) -> String {
