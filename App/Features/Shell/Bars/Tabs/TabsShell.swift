@@ -8,13 +8,14 @@ import SwiftUI
 /// own, and Continue as the bar's accessory.
 ///
 /// The bar itself, its glass and its minimising are the system's. What this folder adds: the
-/// accessory's content and when it is on (`TabsBarAccessoryHost`), the Library tab's switch
-/// (`TabsBarLibraryTab`), where the search tab's scope comes from, and each tab's count of
-/// re-selections for the list at its root (`TabsBarRootReselections`). What the spikes found
-/// and must stay (`spikes/S3.md`, `spikes/S5.md`): one `StackHost` per tab; the bar hidden on
-/// gallery routes from each stack's root, never by the destination; the style chosen from
-/// the settings alone; the accessory and the style never added, removed or changed with an
-/// `if`, which rebuilds every tab.
+/// accessory's content and when it is on (`TabsBarAccessoryHost`), the capsule that stands
+/// in for it on the older systems (`TabsBarLegacyAccessory`), the Library tab's switch
+/// (`TabsBarLibraryTab`), where the search tab's scope comes from, and what the bar does for
+/// each tab's stack (`TabsBarStack`): hiding itself on gallery routes and counting the
+/// re-selections for the list at the root. What the spikes found and must stay
+/// (`spikes/S3.md`, `spikes/S5.md`): one `StackHost` per tab; the bar hidden from the path,
+/// never by the destination; the style chosen from the settings alone; the accessory and the
+/// style never added, removed or changed with an `if`, which rebuilds every tab.
 struct TabsShell: View {
     let model: AppModel
 
@@ -30,35 +31,34 @@ struct TabsShell: View {
         TabView(selection: selection) {
             Tab(L10n.Localizable.TabItem.Title.home, systemImage: "house", value: AppTab.home) {
                 HomeStackHost(router: router.home)
-                    .modifier(TabsBarRootReselections(tab: .home))
+                    .modifier(TabsBarStack(tab: .home))
             }
             Tab(L10n.Localizable.Shell.Tab.watched, systemImage: "eye", value: AppTab.watched) {
                 StackHost(router: router.watched) {
                     GalleryListScreen(context: .place(.watched)).tabsAccountButton()
                 }
-                .modifier(TabsBarRootReselections(tab: .watched))
+                .modifier(TabsBarStack(tab: .watched))
             }
             Tab(L10n.Localizable.Shell.Tab.top, systemImage: "chart.bar", value: AppTab.top) {
                 // No account button: the list's page menu is in that position.
                 StackHost(router: router.top) {
                     GalleryListScreen(context: .top)
                 }
-                .modifier(TabsBarRootReselections(tab: .top))
+                .modifier(TabsBarStack(tab: .top))
             }
             Tab(L10n.Localizable.Shell.Tab.library, systemImage: "books.vertical", value: AppTab.library) {
                 StackHost(router: router.library) {
                     TabsBarLibraryTab().tabsAccountButton()
                 }
-                .modifier(TabsBarRootReselections(tab: .library))
+                .modifier(TabsBarStack(tab: .library))
             }
             Tab(value: AppTab.search, role: .search) {
                 StackHost(router: router.search) {
                     SearchSurface(scope: search.scope)
                 }
-                .modifier(TabsBarRootReselections(tab: .search))
-                // The capsule that stands in for the accessory rides above the keyboard, so
-                // the search surface never shows it.
-                .environment(\.tabsBarKeepsLegacyAccessory, false)
+                .modifier(TabsBarStack(tab: .search))
+                // Continue is not on the search surface, only on the results pushed over it.
+                .environment(\.tabsBarHoldsSearchSurface, true)
             }
         }
         .modifier(TabsBarStyle(hasLeadingColumn: hasLeadingColumn))
