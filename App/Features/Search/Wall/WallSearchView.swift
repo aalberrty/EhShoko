@@ -48,8 +48,7 @@ struct WallSearchView: View {
             }
             .searchSurfaceDrawsClose()
             #if DEBUG || HARNESS
-            // `-HarnessSearchWords YES`: sample quick and recent searches.
-            .task { await SearchSampleWords.addIfRequested(hasQuickSearches: !model.root.quickSearchWords.isEmpty) }
+            .searchDesignHarness(model: model)
             #endif
     }
 

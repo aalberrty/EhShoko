@@ -46,7 +46,7 @@ struct ShelfSearchView: View {
             }
             .hud($notice)
             #if DEBUG || HARNESS
-            .task { await SearchSampleWords.addIfRequested(hasQuickSearches: !model.root.quickSearchWords.isEmpty) }
+            .searchDesignHarness(model: model)
             #endif
     }
 }

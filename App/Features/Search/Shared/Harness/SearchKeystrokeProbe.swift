@@ -1,5 +1,7 @@
 #if DEBUG || HARNESS
+import EhCore
 import EhFeatures
+import EhModels
 import Foundation
 import UIKit
 
@@ -11,15 +13,24 @@ import UIKit
 /// `-HarnessSearchTypeGap` ms (120), after `-HarnessSearchTypeDelay` s (4); the field is
 /// focused first. `-HarnessSearchScript "type:-gla|wait:1500|accept:0|key:artist:|use:…"`
 /// runs steps instead: typing, a pause, taking suggestion n, a key at the caret, a keyword
-/// handed in, putting the keyboard away (`blur:`). The summary goes to `Documents/search-keystrokes.txt`. Keys are sent through
-/// `UIKeyInput.insertText` on the first responder, as the keyboard does, so the same script
-/// types into today's `.searchable` field for a comparison.
+/// handed in, putting the keyboard away (`blur:`) or bringing it up (`focus:`). The summary
+/// goes to `Documents/search-keystrokes.txt`. Keys are sent through `UIKeyInput.insertText` on
+/// the first responder, as the keyboard does, so the same script types into today's
+/// `.searchable` field for a comparison.
+///
+/// For the memory check over several design switches, `design:ledger` switches the search
+/// design (through the settings the design's harness hook hands over) and `heap:<name>`
+/// writes the live per-design objects to `Documents/search-heap-<name>.txt`
+/// (`PartHarnessHeap`), with how many keys-row accessories are alive.
 @MainActor
 final class SearchKeystrokeProbe {
     private var started: UInt64?
     private var samples: [Double] = []
     private var observer: CFRunLoopObserver?
     private static var hasRun = false
+    /// The settings the search surface is drawn from, for `design:` steps; set by
+    /// `searchDesignHarness(model:)`.
+    static weak var settings: SettingsStore?
 
     /// Runs once per launch, in a task of its own: the surface's own tasks end whenever it
     /// leaves the screen. `describe` says what the model holds at the end.
@@ -72,6 +83,17 @@ final class SearchKeystrokeProbe {
             field.use(argument)
         case "blur":
             field.blur()
+        case "focus":
+            field.focus()
+        case "design":
+            if let style = DesignStyle(rawValue: argument) { Self.settings?.designSearch = style }
+        case "heap":
+            // Let what the last step released go first.
+            try? await Task.sleep(for: .seconds(1))
+            let report = PartHarnessHeap.report() + "\nkeys-row accessory views alive: \(SearchAccessoryCensus.live)\n"
+            if let documents = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first {
+                try? report.write(to: documents.appending(path: "search-heap-\(argument).txt"), atomically: true, encoding: .utf8)
+            }
         default:
             break
         }
@@ -136,6 +158,12 @@ final class SearchKeystrokeProbe {
             try? line.write(to: url)
         }
     }
+}
+
+/// How many keys-row accessory views are alive. The view is not generic over the design's
+/// row, so the heap report cannot name it; it counts itself here.
+enum SearchAccessoryCensus {
+    static var live = 0
 }
 
 /// The first responder, found the way UIKit's own actions find their target.

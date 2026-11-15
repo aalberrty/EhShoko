@@ -45,8 +45,7 @@ struct LedgerSearchView: View {
                 SearchFiltersButton(model: model)
             }
             #if DEBUG || HARNESS
-            // Quick and recent searches for the part harness (`-HarnessSearchWords YES`).
-            .task { await SearchSampleWords.addIfRequested(hasQuickSearches: !model.root.quickSearchWords.isEmpty) }
+            .searchDesignHarness(model: model)
             #endif
     }
 }
