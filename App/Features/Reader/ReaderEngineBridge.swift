@@ -46,7 +46,8 @@ final class ReaderEngineBridge: ReaderEngineDataSource, ReaderEngineDelegate {
         model.failureReason(at: page)
     }
 
-    var failedPageCount: Int { model.failedPageCount }
+    /// Outside observation: the engine reads it while SwiftUI makes it (`ReaderPageSummary`).
+    var failedPageCount: Int { model.pageSummary.failedPageCount }
 
     /// Asked once per engine, after the first page and at rest within one page of the end:
     /// only then is the closing page made, and with it, for a reader that no gallery page

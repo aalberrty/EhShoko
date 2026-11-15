@@ -95,8 +95,9 @@ public final class ReaderModel {
     /// How many pages have failed: those that could not be resolved and those whose image did
     /// not load. "Retry failed pages" and a failed page's "Reload all" are for these.
     ///
-    /// Observable, unlike the page states it sums up: it changes when a page fails or
-    /// recovers, not as pages resolve one after another (`ReaderModel+PageSummary.swift`).
+    /// Observable, unlike the page states it sums up, for the controls: it changes when a page
+    /// fails or recovers, not as pages resolve one after another. The engine reads
+    /// `pageSummary` instead (`ReaderModel+PageSummary.swift`).
     public internal(set) var failedPageCount = 0
     /// Whether the current page has its image, which Save, Copy and Share need. On the closing
     /// page, the last page's. It changes when the reader moves and when that page resolves.
@@ -130,6 +131,9 @@ public final class ReaderModel {
     @ObservationIgnored var staleCandidates: Set<Int> = []
     /// Pages whose image failed to download or decode, as the engine reported.
     @ObservationIgnored var failedImagePages: Set<Int> = []
+    /// `failedPageCount` and `currentPageHasImage` outside observation: what the engine reads,
+    /// and what the model compares a new value with before it publishes one.
+    @ObservationIgnored public internal(set) var pageSummary = ReaderPageSummary()
     @ObservationIgnored private var openedAt: ContinuousClock.Instant?
     /// `ReaderOpen`, from `start()` until the first page is shown.
     @ObservationIgnored private var openSignpost: PerformanceInterval?

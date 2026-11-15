@@ -57,6 +57,23 @@ import Testing
         #expect(model.failedPageCount == 1)
     }
 
+    @Test func theEnginesReadOfTheCountIsNotObserved() async throws {
+        let harness = try ReaderModelHarness()
+        let model = await harness.startedModel()
+        let changes = ObservedChanges()
+
+        // The engine reads the count while SwiftUI makes it; an observed read would tie the
+        // engine's updates to every failure.
+        changes.watch { _ = model.pageSummary }
+        harness.site.fail("page:2")
+        model.pagesNeeded([1, 2])
+        await readerEventually { model.pageState(at: 2) == .failed }
+
+        #expect(model.pageSummary.failedPageCount == 1)
+        #expect(model.pageSummary.currentPageHasImage)
+        #expect(changes.count == 0)
+    }
+
     @Test func pagesThatResolveLeaveTheFailedPageCountAlone() async throws {
         let harness = try ReaderModelHarness()
         let model = await harness.startedModel()
