@@ -1,7 +1,7 @@
 import Foundation
 import SwiftUI
 
-/// Settings › About EhGaro (legacy `AboutView`): contacts, credits and acknowledgements.
+/// Settings › About: the project link, the version, thanks and acknowledgements.
 /// Links open outside the app.
 struct AboutScreen: View {
     var body: some View {
