@@ -15,26 +15,22 @@ struct LedgerListHarnessSlot: View {
     /// The harness's own settings, which the list's covers choice is written to.
     let settings: SettingsStore
 
-    @State private var feed: LedgerHarnessFeed?
+    @State private var feed = LedgerHarnessFeed()
     @State private var actions = GalleryActionsModel()
     @Dependency(\.userStore) private var userStore
     @Dependency(\.filterStore) private var filterStore
 
     var body: some View {
-        Group {
-            if let feed {
-                LedgerListView(
-                    input: ListDesignInput(
-                        context: .place(.frontpage), feed: ListFeed(feed),
-                        controls: ListControls(menu: ListMenuControls(find: true, reload: true)),
-                        perform: { _ in }, actions: actions
-                    )
-                ) {
-                    EmptyView()
-                }
-            } else {
-                Color.clear
-            }
+        // The list is there from the first frame, empty until the rows arrive, as a list
+        // waiting for its first page is: the harness's anchor beside it stays where it is.
+        LedgerListView(
+            input: ListDesignInput(
+                context: .place(.frontpage), feed: ListFeed(feed),
+                controls: ListControls(menu: ListMenuControls(find: true, reload: true)),
+                perform: { _ in }, actions: actions
+            )
+        ) {
+            EmptyView()
         }
         .environment(settings)
         .environment(userStore)
@@ -46,8 +42,8 @@ struct LedgerListHarnessSlot: View {
             // a fixed time after the slot appears, and on a loaded machine rows mapped in the
             // background were not there yet. The measurement starts with the scroll.
             settings.ledgerShowsCovers = showsCovers
-            if feed == nil {
-                feed = LedgerHarnessFeed(entries: Self.entries(for: galleries))
+            if feed.isEmpty {
+                feed.fill(Self.entries(for: galleries))
             }
         }
     }
@@ -60,13 +56,15 @@ struct LedgerListHarnessSlot: View {
     }
 }
 
-/// A list that is all there: every row loaded, nothing more to come.
+/// A list that is all there once filled: every row loaded, nothing more to come.
 @Observable
 private final class LedgerHarnessFeed: ListFeedSource {
-    private let entries: [GalleryEntry]
+    private var entries: [GalleryEntry] = []
     var feedFindText = ""
 
-    init(entries: [GalleryEntry]) {
+    var isEmpty: Bool { entries.isEmpty }
+
+    func fill(_ entries: [GalleryEntry]) {
         self.entries = entries
     }
 
