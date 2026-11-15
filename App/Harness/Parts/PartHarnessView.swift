@@ -239,7 +239,7 @@ final class PartHarnessModel {
     @ObservationIgnored let continueModel = ContinueModel()
     @ObservationIgnored let fixtures = PartHarnessFixtures()
 
-    private static let settingsSuite = "app.ehgaro.part-harness"
+    private static let settingsSuite = "app.ehshoko.part-harness"
 
     init(options: PartHarnessOptions) {
         self.options = options
