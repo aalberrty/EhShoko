@@ -31,10 +31,8 @@ struct ExperienceSection: View {
     }
 }
 
-/// Whether the setup wizard can be opened. Its views are the wizard task's
-/// (`Design/Setup/`); until they exist the row that pushes `.designSetup` stays hidden, as the
-/// App icon row does while there is one icon. That task sets this and routes `.designSetup`
-/// in `SettingsDestination`.
+/// Whether the setup wizard can be opened (`Design/Setup/`, routed as `.designSetup` in
+/// `SettingsDestination`).
 enum DesignSetupEntry {
-    static let isAvailable = false
+    static let isAvailable = true
 }
