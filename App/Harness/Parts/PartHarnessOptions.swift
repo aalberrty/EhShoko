@@ -24,6 +24,7 @@ import Foundation
 /// | `-HarnessScheme` | the system's | `light`, `dark` |
 /// | `-HarnessTextSize max` | the system's | the largest Dynamic Type size |
 /// | `-HarnessPanel NO` | YES | hides the panel's button, for screenshots |
+/// | `-HarnessMemoryCheck` | none | `shelf`, `wall`, `ledger`: the scripted memory check. 25 s after launch (time to visit screens) the live per-design objects are written to `Documents/part-harness-heap-1.txt`, the designs switch to this preset, and 10 s later they are written to `part-harness-heap-2.txt` (`PartHarnessHeap`) |
 nonisolated struct PartHarnessOptions: Equatable, Sendable {
     var part = PartHarnessPart.shell
     /// The design of every part. The part under test takes its own; the others are its
@@ -38,6 +39,8 @@ nonisolated struct PartHarnessOptions: Equatable, Sendable {
     var scheme = PartHarnessScheme.system
     var usesLargestText = false
     var showsPanelButton = true
+    /// The preset the scripted memory check switches to; `nil` for no check.
+    var memoryCheckPreset: DesignStyle?
 
     static let `default` = PartHarnessOptions()
 
@@ -67,6 +70,7 @@ nonisolated struct PartHarnessOptions: Equatable, Sendable {
         options.scope = value("HarnessScope") ?? options.scope
         options.scheme = value("HarnessScheme") ?? options.scheme
         options.usesLargestText = defaults.string(forKey: "HarnessTextSize") == "max"
+        options.memoryCheckPreset = value("HarnessMemoryCheck")
         if defaults.object(forKey: "HarnessPanel") != nil {
             options.showsPanelButton = defaults.bool(forKey: "HarnessPanel")
         }
