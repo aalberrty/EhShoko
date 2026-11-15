@@ -19,6 +19,7 @@ extension ReaderModel {
             failedImagePages.remove(page)
             staleCandidates.remove(page)
             resolver.refetch(page)
+            refreshFailedPageCount()
             return
         }
         guard let image = resolver.image(of: page),
