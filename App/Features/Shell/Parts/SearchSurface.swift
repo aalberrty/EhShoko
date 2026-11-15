@@ -40,7 +40,11 @@ struct SearchSurface: View {
     init(scope: SearchScope, keyword: String?) {
         self.scope = scope
         self.keyword = keyword
+        #if DEBUG || HARNESS
+        _model = State(initialValue: SearchSampleSuggestions.model(scope: scope))
+        #else
         _model = State(initialValue: SearchSurfaceModel(scope: scope))
+        #endif
     }
 
     var body: some View {
@@ -63,7 +67,11 @@ struct SearchSurface: View {
             .task { await model.observe() }
             .task { await model.checkForLink() }
             #if DEBUG || HARNESS
-            .task { await SearchKeystrokeProbe.runIfRequested(field: field) }
+            .onAppear {
+                SearchKeystrokeProbe.runIfRequested(field: field, model: model) { [model] in
+                    "keyword \(model.keyword) | tokens \(model.tokens.map(\.term)) | text \(model.text)"
+                }
+            }
             #endif
     }
 

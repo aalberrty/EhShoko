@@ -124,8 +124,9 @@ struct TagSearchAccessoryRoot<Content: View>: View {
 /// icon white whatever the colour (`spikes/S6.md` section 10), so each style keeps to colours
 /// white reads on.
 nonisolated enum SearchTokenStyle: Equatable, Sendable {
-    /// The tint (Shelf, Ledger). Where the tint is too light for white text, as Wall's
-    /// label-coloured tint is in dark mode, a solid grey instead.
+    /// The tint (Shelf, Ledger). Where white text cannot read on the tint at all (under 2:1:
+    /// Wall's label-coloured tint in dark mode, a pale chosen accent), the grey instead.
+    /// Mid-tones stay the tint, as the designs ask: Ledger's dark coral gives 2.7:1.
     case tint
     /// A solid grey (Wall, whose design drew tokens on a fill white text cannot read on).
     case grey
@@ -138,7 +139,7 @@ nonisolated enum SearchTokenStyle: Equatable, Sendable {
         case .tint:
             return UIColor { traits in
                 let resolved = tint.resolvedColor(with: traits)
-                return resolved.contrastWithWhite >= 3 ? resolved : .systemGray
+                return resolved.contrastWithWhite >= 2 ? resolved : .systemGray
             }
         }
     }

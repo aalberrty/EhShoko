@@ -1,4 +1,5 @@
 #if DEBUG || HARNESS
+import EhFeatures
 import Foundation
 import UIKit
 
@@ -8,34 +9,67 @@ import UIKit
 ///
 /// `-HarnessSearchType "<text>"` types `text` into whatever has focus, one character every
 /// `-HarnessSearchTypeGap` ms (120), after `-HarnessSearchTypeDelay` s (4); the field is
-/// focused first. The summary goes to `Documents/search-keystrokes.txt`. The keys are sent
-/// through `UIKeyInput.insertText` on the first responder, as the keyboard does, so the same
-/// script types into today's `.searchable` field for a comparison.
+/// focused first. `-HarnessSearchScript "type:-gla|wait:1500|accept:0|key:artist:|use:…"`
+/// runs steps instead: typing, a pause, taking suggestion n, a key at the caret, a keyword
+/// handed in, putting the keyboard away (`blur:`). The summary goes to `Documents/search-keystrokes.txt`. Keys are sent through
+/// `UIKeyInput.insertText` on the first responder, as the keyboard does, so the same script
+/// types into today's `.searchable` field for a comparison.
 @MainActor
 final class SearchKeystrokeProbe {
     private var started: UInt64?
     private var samples: [Double] = []
     private var observer: CFRunLoopObserver?
+    private static var hasRun = false
 
-    static func runIfRequested(field: TagSearchFieldController?) async {
+    /// Runs once per launch, in a task of its own: the surface's own tasks end whenever it
+    /// leaves the screen. `describe` says what the model holds at the end.
+    static func runIfRequested(
+        field: TagSearchFieldController, model: SearchSurfaceModel, describe: @escaping () -> String
+    ) {
         let defaults = UserDefaults.standard
-        guard let text = defaults.string(forKey: "HarnessSearchType"), !text.isEmpty else { return }
-        let gap = defaults.object(forKey: "HarnessSearchTypeGap") as? Int ?? 120
-        let delay = defaults.object(forKey: "HarnessSearchTypeDelay") as? Int ?? 4
-        do {
-            try await Task.sleep(for: .seconds(delay))
-            field?.focus()
-            try await Task.sleep(for: .seconds(1))
+        let typed = defaults.string(forKey: "HarnessSearchType").map { "type:" + $0 }
+        guard !hasRun, let script = defaults.string(forKey: "HarnessSearchScript") ?? typed, !script.isEmpty
+        else { return }
+        hasRun = true
+        let gap = defaults.integer(forKey: "HarnessSearchTypeGap") > 0 ? defaults.integer(forKey: "HarnessSearchTypeGap") : 120
+        let delay = defaults.integer(forKey: "HarnessSearchTypeDelay") > 0 ? defaults.integer(forKey: "HarnessSearchTypeDelay") : 4
+        Task {
+            try? await Task.sleep(for: .seconds(delay))
+            field.focus()
+            try? await Task.sleep(for: .seconds(1))
             let probe = SearchKeystrokeProbe()
             probe.install()
-            for character in text {
-                probe.begin()
-                FirstResponder.current?.insertText(String(character))
-                try await Task.sleep(for: .milliseconds(gap))
+            for step in script.split(separator: "|") {
+                await probe.run(String(step), field: field, model: model, gap: gap)
             }
-            probe.finish(text: text, gap: gap)
-        } catch {
-            return
+            try? await Task.sleep(for: .seconds(1))
+            probe.finish(text: script, gap: gap, state: describe())
+        }
+    }
+
+    private func run(_ step: String, field: TagSearchFieldController, model: SearchSurfaceModel, gap: Int) async {
+        guard let colon = step.firstIndex(of: ":") else { return }
+        let argument = String(step[step.index(after: colon)...])
+        switch step[..<colon] {
+        case "type":
+            for character in argument {
+                begin()
+                FirstResponder.current?.insertText(String(character))
+                try? await Task.sleep(for: .milliseconds(gap))
+            }
+        case "wait":
+            try? await Task.sleep(for: .milliseconds(Int(argument) ?? 1000))
+        case "accept":
+            let suggestions = model.suggestions.suggestions
+            if let index = Int(argument), suggestions.indices.contains(index) { field.accept(suggestions[index]) }
+        case "key":
+            field.insert(argument)
+        case "use":
+            field.use(argument)
+        case "blur":
+            field.blur()
+        default:
+            break
         }
     }
 
@@ -58,7 +92,7 @@ final class SearchKeystrokeProbe {
         samples.append(Double(DispatchTime.now().uptimeNanoseconds - started) / 1_000_000)
     }
 
-    private func finish(text: String, gap: Int) {
+    private func finish(text: String, gap: Int, state: String) {
         if let observer { CFRunLoopRemoveObserver(CFRunLoopGetMain(), observer, .commonModes) }
         let sorted = samples.sorted()
         func percentile(_ p: Double) -> Double {
@@ -73,7 +107,7 @@ final class SearchKeystrokeProbe {
         )
         guard let documents = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first else { return }
         let url = documents.appending(path: "search-keystrokes.txt")
-        let line = Data((summary + "samples " + samples.map { String(format: "%.1f", $0) }.joined(separator: " ") + "\n").utf8)
+        let line = Data((summary + "state " + state + "\nsamples " + samples.map { String(format: "%.1f", $0) }.joined(separator: " ") + "\n").utf8)
         if let handle = try? FileHandle(forWritingTo: url) {
             handle.seekToEndOfFile()
             handle.write(line)
