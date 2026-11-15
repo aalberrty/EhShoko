@@ -3,8 +3,8 @@ import EhModels
 import SwiftUI
 
 // The pieces only the Index is made of, on a phone and in the iPad column (`ledger.md`
-// section 2). Its title, its lines and its folder cells are shared with Ledger's library
-// (`Library/Shared`). Sizes are the drawing's at the default text size; colours and faces
+// section 2). Its title, its lines, its folder cells and its small capitals are shared with
+// Ledger's other parts (`Library/Shared`). Sizes are the drawing's at the default text size; colours and faces
 // are the look's, so the same layout reads as paper and New York under the Ledger look and
 // as SF on black under Shelf's.
 
@@ -110,7 +110,7 @@ struct LedgerIndexContinueCard: View {
             )
             VStack(alignment: .leading, spacing: 2) {
                 Text(isCompact ? L10n.Localizable.Shell.Continue.title : L10n.Localizable.Shell.Continue.reading)
-                    .ledgerSmallCapitals()
+                    .ledgerSmallCaps()
                 Text(item.title.core)
                     .font(isCompact ? .subheadline.weight(.semibold) : .headline)
                     .lookTitleDesign()
@@ -155,26 +155,5 @@ struct LedgerIndexContinueCard: View {
     /// column, where the accessory is off and the card is that control.
     private var sourceID: ReaderSourceID {
         chrome.bar == .tabs ? .continueBar(gid: item.gallery.gid) : .continueCard(gid: item.gallery.gid)
-    }
-}
-
-extension View {
-    /// Ledger's small capitals: 11 pt bold, uppercase, tracked 0.9, secondary, under every
-    /// look. A layout detail, not the look's section heading. Uppercase is a text case, so
-    /// VoiceOver reads the original string.
-    func ledgerSmallCapitals() -> some View {
-        modifier(LedgerSmallCapitals())
-    }
-}
-
-private struct LedgerSmallCapitals: ViewModifier {
-    @Environment(\.look) private var look
-
-    func body(content: Content) -> some View {
-        content
-            .font(.caption2.bold())
-            .tracking(0.9)
-            .textCase(.uppercase)
-            .foregroundStyle(look.secondaryLabel)
     }
 }
