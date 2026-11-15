@@ -9,7 +9,7 @@ struct ReaderPageRegistry {
     /// An image that did not load: the URL it was at, and why when that is known.
     struct ImageFailure {
         var url: URL
-        var reason: AppError?
+        var reason: ReaderImageFailure?
     }
 
     private var aspectRatios: [CGFloat?] = []
@@ -45,7 +45,7 @@ struct ReaderPageRegistry {
         return failure
     }
 
-    mutating func setFailedImage(_ url: URL, reason: AppError?, forPage page: Int) {
+    mutating func setFailedImage(_ url: URL, reason: ReaderImageFailure?, forPage page: Int) {
         failedImages[page] = ImageFailure(url: url, reason: reason)
     }
 

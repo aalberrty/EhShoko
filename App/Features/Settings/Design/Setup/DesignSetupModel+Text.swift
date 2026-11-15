@@ -7,8 +7,7 @@ import Foundation
 
 extension DesignChoices {
     /// What follows "So far:" in a page's step: "Shelf", "Shelf with Ledger's colours",
-    /// "Custom · 3 pages changed from Shelf", or, for one page, "Lists from Wall": the count
-    /// key has no singular form.
+    /// "Custom · 3 pages changed from Shelf", "Custom · 1 page changed from Shelf".
     var localizedSoFar: String {
         typealias Design = L10n.Localizable.Settings.Design
         switch DesignSetupModel.state(of: self) {
@@ -17,10 +16,9 @@ extension DesignChoices {
         case .presetWithLook(let style, let look):
             return Design.Setup.withColours(style.localizedName, look.localizedName)
         case .custom(let changed, let nearest):
-            guard changed.count == 1, let part = changed.first else {
-                return Design.Setup.customChanged(changed.count, nearest.localizedName)
-            }
-            return Design.from(part.localizedName, self[part].sourceDesign.localizedName)
+            return changed.count == 1
+                ? Design.Setup.CustomChanged.one(nearest.localizedName)
+                : Design.Setup.customChanged(changed.count, nearest.localizedName)
         }
     }
 }

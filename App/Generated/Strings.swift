@@ -196,6 +196,8 @@ internal enum L10n {
       }
     }
     internal enum Common {
+      /// Back
+      internal static let back = L10n.tr("Localizable", "common.back", fallback: "Back")
       /// Cancel
       internal static let cancel = L10n.tr("Localizable", "common.cancel", fallback: "Cancel")
       /// Close
@@ -2322,6 +2324,16 @@ internal enum L10n {
         internal static func reloadFailed(_ p1: Int) -> String {
           return L10n.tr("Localizable", "reader.page.reload_failed", p1, fallback: "Reload all %d failed pages")
         }
+        internal enum Reason {
+          /// The image server answered with error %d.
+          internal static func status(_ p1: Int) -> String {
+            return L10n.tr("Localizable", "reader.page.reason.status", p1, fallback: "The image server answered with error %d.")
+          }
+          /// The image server timed out.
+          internal static let timedOut = L10n.tr("Localizable", "reader.page.reason.timed_out", fallback: "The image server timed out.")
+          /// The image couldn't be read.
+          internal static let unreadable = L10n.tr("Localizable", "reader.page.reason.unreadable", fallback: "The image couldn't be read.")
+        }
       }
       internal enum Pages {
         /// Pages %1$d–%2$d of %3$d
@@ -2698,6 +2710,12 @@ internal enum L10n {
           /// %1$@ with %2$@’s colors
           internal static func withColours(_ p1: Any, _ p2: Any) -> String {
             return L10n.tr("Localizable", "settings.design.setup.with_colours", String(describing: p1), String(describing: p2), fallback: "%1$@ with %2$@’s colors")
+          }
+          internal enum CustomChanged {
+            /// Custom · 1 page changed from %@
+            internal static func one(_ p1: Any) -> String {
+              return L10n.tr("Localizable", "settings.design.setup.custom_changed.one", String(describing: p1), fallback: "Custom · 1 page changed from %@")
+            }
           }
           internal enum Differ {
             /// %1$d pages differ from %2$@: %3$@.

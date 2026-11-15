@@ -43,6 +43,7 @@
 "common.value.records" = "%@ 筆";
 "common.close" = "關閉";
 "common.cancel" = "取消";
+"common.back" = "返回";
 
 // MARK: TabItem
 "tab_item.title.home" = "首頁";
@@ -1051,6 +1052,9 @@
 "reader.page.failed" = "此頁面未能載入";
 "reader.page.reload_failed" = "重新載入全部 %d 個失敗的頁面";
 "reader.page.loading" = "載入中 · %1$@ / %2$@";
+"reader.page.reason.timed_out" = "圖片伺服器逾時。";
+"reader.page.reason.status" = "圖片伺服器傳回了錯誤 %d。";
+"reader.page.reason.unreadable" = "無法讀取圖片。";
 "reader.live_text" = "原況文字";
 "reader.action.save" = "儲存";
 
@@ -1167,6 +1171,7 @@
 "settings.design.setup.so_far" = "目前：%@";
 "settings.design.setup.with_colours" = "%1$@，配色來自 %2$@";
 "settings.design.setup.custom_changed" = "自訂 · 有 %1$d 個頁面與 %2$@ 不同";
+"settings.design.setup.custom_changed.one" = "自訂 · 有 1 個頁面與 %@ 不同";
 "settings.design.setup.current" = "目前";
 "settings.design.setup.next" = "下一步";
 "settings.design.setup.skip" = "略過";

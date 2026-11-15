@@ -43,6 +43,7 @@
 "common.value.records" = "%@ 件";
 "common.close" = "閉じる";
 "common.cancel" = "キャンセル";
+"common.back" = "戻る";
 
 // MARK: TabItem
 "tab_item.title.home" = "ホーム";
@@ -1051,6 +1052,9 @@
 "reader.page.failed" = "このページを読み込めませんでした";
 "reader.page.reload_failed" = "失敗した %d ページをすべて再読み込み";
 "reader.page.loading" = "読み込み中 · %1$@ / %2$@";
+"reader.page.reason.timed_out" = "画像サーバーがタイムアウトしました。";
+"reader.page.reason.status" = "画像サーバーがエラー %d を返しました。";
+"reader.page.reason.unreadable" = "画像を読み取れませんでした。";
 "reader.live_text" = "テキスト認識表示";
 "reader.action.save" = "保存";
 
@@ -1167,6 +1171,7 @@
 "settings.design.setup.so_far" = "現在の内容：%@";
 "settings.design.setup.with_colours" = "%1$@（配色は %2$@）";
 "settings.design.setup.custom_changed" = "カスタム · %2$@ から %1$d ページを変更";
+"settings.design.setup.custom_changed.one" = "カスタム · %@ から 1 ページを変更";
 "settings.design.setup.current" = "現在";
 "settings.design.setup.next" = "次へ";
 "settings.design.setup.skip" = "スキップ";

@@ -43,6 +43,7 @@
 "common.value.records" = "%@ entries";
 "common.close" = "Close";
 "common.cancel" = "Cancel";
+"common.back" = "Back";
 
 // MARK: TabItem
 "tab_item.title.home" = "Home";
@@ -1051,6 +1052,9 @@
 "reader.page.failed" = "This page didn't load";
 "reader.page.reload_failed" = "Reload all %d failed pages";
 "reader.page.loading" = "Loading · %1$@ of %2$@";
+"reader.page.reason.timed_out" = "The image server timed out.";
+"reader.page.reason.status" = "The image server answered with error %d.";
+"reader.page.reason.unreadable" = "The image couldn't be read.";
 "reader.live_text" = "Live Text";
 "reader.action.save" = "Save";
 
@@ -1167,6 +1171,7 @@
 "settings.design.setup.so_far" = "So far: %@";
 "settings.design.setup.with_colours" = "%1$@ with %2$@’s colors";
 "settings.design.setup.custom_changed" = "Custom · %1$d pages changed from %2$@";
+"settings.design.setup.custom_changed.one" = "Custom · 1 page changed from %@";
 "settings.design.setup.current" = "Current";
 "settings.design.setup.next" = "Next";
 "settings.design.setup.skip" = "Skip";
