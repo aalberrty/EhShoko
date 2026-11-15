@@ -42,7 +42,7 @@ struct PreviewHarnessView: View {
 
     init() {
         let defaults = UserDefaults.standard
-        let suite = "app.ehgaro.preview-harness"
+        let suite = "app.ehshoko.preview-harness"
         UserDefaults().removePersistentDomain(forName: suite)
         let store = SettingsStore(defaults: UserDefaults(suiteName: suite) ?? .standard)
         store.accentColor = defaults.string(forKey: "HarnessAccent").flatMap(RGBColor.init(hex:)) ?? .systemBlue
