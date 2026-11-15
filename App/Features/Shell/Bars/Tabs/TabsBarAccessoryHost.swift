@@ -23,11 +23,17 @@ struct TabsBarAccessoryHost: ViewModifier {
     /// bar does not hide its accessory, so a gallery page switches it off here. Off beside a
     /// side gallery, whose dock it would lift, and while the Index column shows, which has
     /// Continue itself (`spikes/S5.md` sections 3.4 and 4.5).
+    ///
+    /// Off on the search surface too, the Search tab's root: its field bar is already a bar
+    /// above the tab bar, and a third row between the two takes the room the suggestions
+    /// have. The capsule of the older systems is never there either. Results pushed over the
+    /// surface are a list like any other and have it.
     private var isEnabled: Bool {
         guard TabAccessoryKind.usesSystemAccessory, continueModel.first != nil else { return false }
         let stack = router.selectedStack
         let showsLeadingColumn = hasLeadingColumn && sizeClass == .regular && router.selectedTab == .home
-        return !stack.hidesBrowseChrome && stack.sideGallery == nil && !showsLeadingColumn
+        let showsSearchSurface = router.selectedTab == .search && stack.isAtRoot
+        return !stack.hidesBrowseChrome && stack.sideGallery == nil && !showsLeadingColumn && !showsSearchSurface
     }
 }
 
