@@ -37,6 +37,8 @@ struct TabsBarLibraryTab: View {
 private struct TabsBarLibraryPicker: View {
     @Bindable var library: TabsBarLibrarySwitch
 
+    private static var maximumWidth: CGFloat { 420 }
+
     var body: some View {
         Picker(L10n.Localizable.Shell.Tab.library, selection: $library.segment) {
             Text(L10n.Localizable.Shell.Library.favorites).tag(TabsBarLibrarySegment.favorites)
@@ -44,7 +46,10 @@ private struct TabsBarLibraryPicker: View {
         }
         .pickerStyle(.segmented)
         .labelsHidden()
+        // Two segments across an iPad's window would be a control a foot wide.
+        .frame(maxWidth: Self.maximumWidth)
         .padding(.horizontal, 16)
         .padding(.vertical, 6)
+        .frame(maxWidth: .infinity)
     }
 }
