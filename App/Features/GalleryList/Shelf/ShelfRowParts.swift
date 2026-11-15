@@ -72,6 +72,9 @@ struct ShelfRowTagLine: View {
                     .padding(.horizontal, 7)
                     .frame(minHeight: ShelfRowMetrics.capsuleHeight)
                     .background(tag.watchedColor?.color ?? look.fill3, in: .rect(cornerRadius: 6, style: .continuous))
+                    // On each chip as well: hidden on the line alone, the chips were still
+                    // separate elements beside the row's (iOS 18.2).
+                    .accessibilityHidden(true)
             }
         }
         .font(ShelfRowFonts.tag)
