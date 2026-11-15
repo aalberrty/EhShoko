@@ -2,7 +2,8 @@ import SwiftUI
 
 /// The app's root, or a harness in its place when the app is launched to measure one.
 ///
-/// In debug builds, launching with `-Harness list`, `-Harness reader`, `-Harness look` or `-Harness dock` shows that harness as
+/// In debug builds, launching with `-Harness list`, `-Harness reader`, `-Harness look`, `-Harness dock` or
+/// `-Harness previews` shows that harness as
 /// the whole app: the shell, its launch sequence and the first screen's requests never start,
 /// so nothing else competes with the run being measured. `Scripts/measure.sh`
 /// launches it this way; `ListHarnessOptions` lists the other arguments.
@@ -20,6 +21,8 @@ struct HarnessGate<Content: View>: View {
             LookHarnessView()
         case .dock:
             DockHarnessView()
+        case .previews:
+            PreviewHarnessView()
         case nil:
             content()
         }
@@ -36,6 +39,7 @@ enum HarnessRequest: String {
     case reader
     case look
     case dock
+    case previews
 
     /// `-Harness <name>`, read once.
     static let atLaunch = UserDefaults.standard.string(forKey: "Harness").flatMap(HarnessRequest.init(rawValue:))
