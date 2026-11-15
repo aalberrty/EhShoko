@@ -19,7 +19,10 @@ struct WallGalleryPreviews: View {
                 ) {
                     model.destination = .previews
                 }
-                WallPreviewStrip(previews: previews, current: model.readingProgress ?? 0, margin: metrics.margin) { page in
+                WallPreviewStrip(
+                    gid: model.gallery.gid, previews: previews, current: model.readingProgress ?? 0,
+                    margin: metrics.margin
+                ) { page in
                     model.openReader(page: page)
                 }
                 .equatable()
@@ -30,7 +33,9 @@ struct WallGalleryPreviews: View {
     }
 }
 
+/// A tap opens the reader, which zooms out of the tapped preview (`readerSource`).
 private struct WallPreviewStrip: View, Equatable {
+    let gid: String
     let previews: [PreviewThumbnail]
     /// The page last read, which the strip opens at; 0 for none.
     let current: Int
@@ -40,7 +45,7 @@ private struct WallPreviewStrip: View, Equatable {
     static let width: CGFloat = 74
 
     static func == (lhs: Self, rhs: Self) -> Bool {
-        lhs.previews == rhs.previews && lhs.current == rhs.current && lhs.margin == rhs.margin
+        lhs.gid == rhs.gid && lhs.previews == rhs.previews && lhs.current == rhs.current && lhs.margin == rhs.margin
     }
 
     var body: some View {
@@ -51,9 +56,10 @@ private struct WallPreviewStrip: View, Equatable {
                         Button {
                             open(preview.index)
                         } label: {
-                            PreviewThumbnailView(thumbnail: preview, width: WallPreviewMetrics.decodeWidth)
+                            PreviewThumbnailView(thumbnail: preview)
                                 .frame(width: Self.width, height: Self.width / Tokens.Aspect.preview)
                                 .clipShape(.rect(cornerRadius: 6, style: .continuous))
+                                .readerSource(.preview(gid: gid, page: preview.index))
                                 .accessibilityElement(children: .ignore)
                                 .accessibilityLabel(L10n.Localizable.Reader.Page.label(preview.index))
                                 .accessibilityAddTraits(preview.index == current ? .isSelected : [])

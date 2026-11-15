@@ -26,17 +26,8 @@ private struct WallGalleryDock: ViewModifier {
 
     func body(content: Content) -> some View {
         content.dock(dock) { action in
+            guard !GalleryDockItems.perform(action, model: model, signIn: signIn) else { return }
             switch action {
-            case .favorite:
-                model.isLoggedIn ? model.quickFavorite() : signIn()
-            case .favoriteIn(let folder):
-                model.favorite(category: folder)
-            case .unfavorite:
-                model.unfavorite()
-            case .read:
-                model.read()
-            case .comments:
-                model.destination = .comments(scrollTo: nil)
             case .galleryInfos:
                 model.destination = .galleryInfos
             case .similarGalleries:
@@ -52,35 +43,17 @@ private struct WallGalleryDock: ViewModifier {
     }
 
     private var dock: DockContent {
-        let isLoggedIn = model.isLoggedIn
-        let isFavorited = model.isFavorited
-        let favorite = DockItem(
-            title: isFavorited ? L10n.Localizable.List.Action.unfavorite : L10n.Localizable.List.Action.favorite,
-            systemImage: isFavorited ? "heart.fill" : "heart",
-            action: isFavorited ? .unfavorite : .favorite,
-            menu: isLoggedIn ? folderMenu(isFavorited: isFavorited) : nil,
-            isDimmed: !isLoggedIn
-        )
         let more = DockTrailing.menu(title: L10n.Localizable.List.Action.more, systemImage: "ellipsis", menu: moreMenu)
-        // The tip teaches the folder menu, which only an account has.
-        return DockContent(leading: favorite, primary: pill, trailing: more, anchorsFavoriteTip: isLoggedIn)
-    }
-
-    /// "23 / 48" after Continue, not "page 23 of 48": the short form is what Wall draws, and
-    /// the long one does not fit the pill of a 372 pt side pane.
-    private var pill: DockItem {
-        switch model.readingStatus {
-        case .unread:
-            DockItem(title: L10n.Localizable.Gallery.read, systemImage: "play.fill", action: .read)
-        case .inProgress(let page):
-            DockItem(
-                title: L10n.Localizable.Gallery.continue,
-                detail: L10n.Localizable.Gallery.Continue.short(page, model.pageCount),
-                systemImage: "play.fill", action: .read
-            )
-        case .finished:
-            DockItem(title: L10n.Localizable.Gallery.readAgain, systemImage: "play.fill", action: .read)
+        // "23 / 48" after Continue, not "page 23 of 48": the short form is what Wall draws,
+        // and the long one does not fit the pill of a 372 pt side pane.
+        let pill = GalleryDockItems.read(model: model, systemImage: "play.fill") { page, count in
+            L10n.Localizable.Gallery.Continue.short(page, count)
         }
+        // The tip teaches the folder menu, which only an account has.
+        return DockContent(
+            leading: GalleryDockItems.favorite(model: model, folderName: userStore.favoriteFolderName),
+            primary: pill, trailing: more, anchorsFavoriteTip: model.isLoggedIn
+        )
     }
 
     /// The page's other actions. What needs the loaded page, an account or a torrent is
@@ -113,22 +86,5 @@ private struct WallGalleryDock: ViewModifier {
                 ),
             ]),
         ])
-    }
-
-    /// The ten folders by their names on the site, then Remove for a favourite.
-    private func folderMenu(isFavorited: Bool) -> DockMenu {
-        let folders = FavoriteReport.folders.map { folder in
-            DockMenuEntry(title: userStore.favoriteFolderName(folder), action: .favoriteIn(folder: folder))
-        }
-        var sections = [DockMenuSection(entries: folders)]
-        if isFavorited {
-            sections.append(DockMenuSection(entries: [
-                DockMenuEntry(
-                    title: L10n.Localizable.List.Action.unfavorite, systemImage: "heart.slash",
-                    action: .unfavorite, isDestructive: true
-                ),
-            ]))
-        }
-        return DockMenu(sections: sections)
     }
 }

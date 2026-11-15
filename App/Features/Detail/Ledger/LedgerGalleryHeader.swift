@@ -7,8 +7,7 @@ import SwiftUI
 /// long press on either title copies it.
 ///
 /// It is drawn in the page's first frame from the list's data (the zoom lands on this cover),
-/// and takes the parsed title once it has been worked out. At accessibility sizes the cover
-/// goes above the text.
+/// with the title the model parsed. At accessibility sizes the cover goes above the text.
 struct LedgerGalleryHeader: View, Equatable {
     let coverURL: URL?
     let category: EhModels.Category
@@ -54,7 +53,7 @@ struct LedgerGalleryHeader: View, Equatable {
                 .lineLimit(4)
                 .fixedSize(horizontal: false, vertical: true)
                 .accessibilityAddTraits(.isHeader)
-                .copiesOnLongPress(titles.source.preferred, copy: copy)
+                .copiesOnLongPress(titles.shown.full, copy: copy)
             credit
             if let other = titles.otherTitle {
                 Text(other)

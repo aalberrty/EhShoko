@@ -111,14 +111,21 @@ extension GalleryDetailModel {
 
     // MARK: Destinations
 
-    /// Opens the reader. With a page, that page also becomes the stored reading progress, as
-    /// legacy did when a preview was tapped.
+    /// Opens the reader from a page's preview, or, without a page, where the stored progress
+    /// says. With a page, that page also becomes the stored reading progress, as legacy did
+    /// when a preview was tapped.
     public func openReader(page: Int? = nil) {
+        openReader(page: page, from: page.map(ReaderOrigin.preview) ?? .readButton)
+    }
+
+    /// Opens the reader at `page` (`nil`: the stored progress) from the control `origin`.
+    func openReader(page: Int?, from origin: ReaderOrigin) {
         if let page {
             let database = database
             let gid = gallery.gid
             Task { try? await database.updateReadingProgress(gid: gid, progress: page) }
         }
+        readerOrigin = origin
         destination = .reader(page: page)
     }
 

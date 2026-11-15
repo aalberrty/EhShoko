@@ -15,9 +15,7 @@ import SwiftUI
 struct ShelfGalleryView: View {
     let model: GalleryDetailModel
 
-    @Environment(AppRouter.self) private var appRouter: AppRouter?
     @Environment(StackRouter.self) private var stack: StackRouter?
-    @Environment(UserStore.self) private var userStore
     @Environment(\.horizontalSizeClass) private var sizeClass
     @Environment(\.look) private var look
     @State private var width: CGFloat?
@@ -40,19 +38,8 @@ struct ShelfGalleryView: View {
         }
         .shelfGalleryDock(model, signIn: signIn)
         .hud($hud)
-        .onChange(of: model.favoriteReport) { _, report in
-            guard let report else { return }
-            hud = .symbol("heart.fill", title: L10n.Localizable.List.Favorited.hud(userStore.favoriteFolderName(report.folder)))
-            FavoriteTip.record(report)
-        }
-        .alert(L10n.Localizable.ErrorView.Headline.loginRequired, isPresented: $asksToSignIn) {
-            Button(L10n.Localizable.NotLoginView.Button.login) {
-                appRouter?.presentSettings([.settings(.account), .settings(.login)])
-            }
-            Button(L10n.Localizable.JumpPageView.Button.cancel, role: .cancel) {}
-        } message: {
-            Text(L10n.Localizable.List.Signin.note)
-        }
+        .galleryFavoriteHUD(model, hud: $hud)
+        .gallerySignInAlert(isPresented: $asksToSignIn)
     }
 
     /// Before the first layout the size class decides, so an iPad opens in two columns.
@@ -106,7 +93,9 @@ private struct ShelfGalleryMain: View {
 
     var body: some View {
         if let failure = model.loadingState.failed, model.detail == nil || !failure.isRetryable {
+            // In the scrolling page: a filled Retry, not glass.
             ErrorStateView(error: failure, retry: failure.isRetryable ? { model.refetch() } : nil)
+                .statusActionForm(.filled)
                 .padding(.top, Tokens.Spacing.xxLarge)
         } else if let detail = model.detail {
             if let failure = model.loadingState.failed {

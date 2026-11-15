@@ -8,16 +8,8 @@ import SwiftUI
 /// the other title is shown in full at the foot of the panel, so nothing the title leaves out
 /// is lost.
 ///
-/// Made once per change of the titles, not per render: the panel keeps the last in a cache.
+/// Made from the model's parsed titles (`GalleryDetailModel.titles`): nothing is parsed here.
 nonisolated struct WallGalleryTitles: Equatable {
-    /// What the titles are made from: the list's title until the page has loaded.
-    struct Source: Equatable {
-        let title: String
-        let japaneseTitle: String?
-        let prefersJapanese: Bool
-    }
-
-    let source: Source
     /// The title the card shows, in full.
     let shown: String
     let parsed: ParsedTitle
@@ -25,20 +17,10 @@ nonisolated struct WallGalleryTitles: Equatable {
     /// own full string when parsing shortened it. `nil` when it would repeat the title.
     let other: String?
 
-    init(_ source: Source) {
-        self.source = source
-        let japanese = source.japaneseTitle.flatMap { $0.isEmpty ? nil : $0 }
-        let shown = source.prefersJapanese ? japanese ?? source.title : source.title
-        self.shown = shown
-        parsed = TitleParser.parse(shown)
-        let counterpart = shown == source.title ? japanese : source.title
-        if let counterpart, counterpart != shown {
-            other = counterpart
-        } else if parsed.core != shown {
-            other = shown
-        } else {
-            other = nil
-        }
+    init(_ title: ShownGalleryTitle) {
+        shown = title.full
+        parsed = title.parsed
+        other = title.other
     }
 
     var heading: String { parsed.core }
@@ -66,18 +48,5 @@ nonisolated struct WallGalleryTitles: Equatable {
         shownGallery.title = shown
         if !tags.isEmpty { shownGallery.tags = tags }
         return GalleryCreditSearch.targets(for: GalleryEntry(gallery: shownGallery))
-    }
-}
-
-/// Keeps the titles made last, so a title is parsed once per change and not once per render.
-/// Not observable: filling it draws nothing again.
-final class WallGalleryTitleCache {
-    private var titles: WallGalleryTitles?
-
-    func titles(for source: WallGalleryTitles.Source) -> WallGalleryTitles {
-        if let titles, titles.source == source { return titles }
-        let made = WallGalleryTitles(source)
-        titles = made
-        return made
     }
 }

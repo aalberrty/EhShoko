@@ -30,7 +30,7 @@ struct LedgerGalleryView: View {
     @Environment(\.look) private var look
     @Dependency(\.clipboardClient) private var clipboard
 
-    @State private var titles: LedgerGalleryTitles?
+    @State private var credit: LedgerCreditSearches?
     @State private var hud: HUDConfiguration?
     @State private var copyCount = 0
     @State private var searchCount = 0
@@ -39,14 +39,17 @@ struct LedgerGalleryView: View {
     private static let factsID = "facts"
 
     var body: some View {
-        let source = LedgerGalleryTitles.source(of: model, prefersJapanese: settings.displaysJapaneseTitle)
+        let shown = model.titles.shown(prefersJapanese: settings.displaysJapaneseTitle)
         ScrollViewReader { proxy in
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
                     LedgerGalleryHeader(
                         coverURL: model.gallery.coverURL ?? model.detail?.coverURL,
                         category: model.detail?.category ?? model.gallery.category,
-                        titles: titles ?? .unparsed(source), search: search, copy: copy
+                        titles: LedgerGalleryTitles(
+                            shown, creditSearches: credit?.title == shown.full ? credit?.searches ?? [] : []
+                        ),
+                        search: search, copy: copy
                     )
                     .equatable()
                     .padding(.top, 6)
@@ -61,13 +64,10 @@ struct LedgerGalleryView: View {
         .background { look.background.ignoresSafeArea() }
         .navigationBarTitleDisplayMode(.inline)
         .hud($hud)
-        .task(id: source) {
-            titles = await LedgerGalleryTitles.make(source, gallery: model.gallery)
-        }
-        .onChange(of: model.favoriteReport) { _, report in
-            guard let report else { return }
-            hud = .symbol("heart.fill", title: L10n.Localizable.List.Favorited.hud(userStore.favoriteFolderName(report.folder)))
-            FavoriteTip.record(report)
+        .galleryFavoriteHUD(model, hud: $hud)
+        .task(id: shown.full) {
+            let searches = await LedgerGalleryTitles.creditSearches(for: shown.full, gallery: model.gallery)
+            credit = LedgerCreditSearches(title: shown.full, searches: searches)
         }
         .sensoryFeedback(.success, trigger: copyCount)
         .sensoryFeedback(.impact(flexibility: .soft), trigger: searchCount)
@@ -78,7 +78,9 @@ struct LedgerGalleryView: View {
     @ViewBuilder
     private var sections: some View {
         if model.detail == nil, let error = model.loadingState.failed {
+            // In the scrolling page: a filled Retry, not glass.
             ErrorStateView(error: error, retry: error.isRetryable ? { model.refetch() } : nil)
+                .statusActionForm(.filled)
                 .frame(maxWidth: .infinity)
                 .padding(.top, 48)
         } else {
@@ -163,21 +165,9 @@ struct LedgerGalleryView: View {
     }
 
     private func perform(_ action: DockAction, rate: () -> Void) {
-        switch action {
-        case .favorite:
-            if model.isLoggedIn { model.quickFavorite() } else { signIn() }
-        case .favoriteIn(let folder):
-            model.favorite(category: folder)
-        case .unfavorite:
-            model.unfavorite()
-        case .read:
-            model.read()
-        case .comments:
-            model.destination = .comments(scrollTo: nil)
-        case .rate:
+        guard !GalleryDockItems.perform(action, model: model, signIn: signIn) else { return }
+        if action == .rate {
             if model.isLoggedIn { rate() } else { signIn() }
-        default:
-            break
         }
     }
 

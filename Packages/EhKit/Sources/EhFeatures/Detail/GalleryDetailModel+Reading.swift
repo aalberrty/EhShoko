@@ -34,8 +34,8 @@ extension GalleryDetailModel {
     /// start on the last page, one swipe from the closing page.)
     public func read() {
         switch readingStatus {
-        case .finished: openReader(page: 1)
-        case .unread, .inProgress: openReader()
+        case .finished: openReader(page: 1, from: .readButton)
+        case .unread, .inProgress: openReader(page: nil, from: .readButton)
         }
     }
 

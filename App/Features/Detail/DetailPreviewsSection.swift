@@ -44,7 +44,7 @@ private struct PreviewsRow: View, Equatable {
                     Button {
                         open(preview.index)
                     } label: {
-                        PreviewThumbnailView(thumbnail: preview, width: width)
+                        PreviewThumbnailView(thumbnail: preview)
                             .frame(width: width)
                     }
                     .buttonStyle(.plain)
@@ -58,11 +58,11 @@ private struct PreviewsRow: View, Equatable {
     }
 }
 
-/// One page preview: a tile cut from a sprite sheet, a standalone image, or a placeholder.
+/// One page preview: a tile cut from a sprite sheet, a standalone image, or a placeholder. It
+/// fills the proposed width. Either kind is decoded once, at the size the site sends it, so
+/// every screen that shows a page draws the same bitmap.
 struct PreviewThumbnailView: View, Equatable {
     let thumbnail: PreviewThumbnail?
-    /// The widest the cell can be, for decoding standalone images.
-    let width: CGFloat
     /// The preview could not be had; tapping the cell asks for it again (the reader's retry symbol).
     var failed = false
 
@@ -71,7 +71,7 @@ struct PreviewThumbnailView: View, Equatable {
         case .sprite(let sheetURL, let x, let tileWidth, let height):
             SpriteThumbnail(sheetURL: sheetURL, cropRect: CGRect(x: x, y: 0, width: tileWidth, height: height))
         case .image(let url):
-            RemoteImage(url: url, width: width, aspectRatio: Tokens.Aspect.preview)
+            StandalonePreview(url: url)
         case nil where failed:
             ImagePlaceholder(aspectRatio: Tokens.Aspect.preview, style: .plain)
                 .overlay {

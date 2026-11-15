@@ -40,7 +40,7 @@ struct ShelfPreviewsScreen: View {
                     } label: {
                         ShelfPreviewGridCell(
                             index: index, thumbnail: model.preview(at: index), failed: model.hasFailed(at: index),
-                            width: widths.upperBound, isCurrent: index == lastRead
+                            isCurrent: index == lastRead
                         )
                         .readerSource(.preview(gid: gid, page: index))
                     }
@@ -64,6 +64,7 @@ struct ShelfPreviewsScreen: View {
         .sensoryFeedback(.impact(weight: .light), trigger: model.readerDestination) { _, destination in
             destination != nil
         }
+        .previewsZoomScope()
     }
 
     /// The page last read when the grid opened.
@@ -103,19 +104,18 @@ private struct ShelfPreviewGridCell: View, Equatable {
     let index: Int
     let thumbnail: PreviewThumbnail?
     let failed: Bool
-    let width: CGFloat
     let isCurrent: Bool
 
     @Environment(\.look) private var look
 
     static func == (lhs: Self, rhs: Self) -> Bool {
         lhs.index == rhs.index && lhs.thumbnail == rhs.thumbnail && lhs.failed == rhs.failed
-            && lhs.width == rhs.width && lhs.isCurrent == rhs.isCurrent
+            && lhs.isCurrent == rhs.isCurrent
     }
 
     var body: some View {
         VStack(spacing: Tokens.Spacing.xSmall) {
-            PreviewThumbnailView(thumbnail: thumbnail, width: width, failed: failed)
+            PreviewThumbnailView(thumbnail: thumbnail, failed: failed)
                 .clipShape(.rect(cornerRadius: 6, style: .continuous))
                 .overlay {
                     if isCurrent {

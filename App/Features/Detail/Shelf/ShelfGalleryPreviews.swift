@@ -18,7 +18,7 @@ struct ShelfGalleryPreviews: View {
                 ) {
                     model.destination = .previews
                 }
-                ShelfPreviewStrip(previews: previews, current: model.readingProgress ?? 0) { page in
+                ShelfPreviewStrip(gid: model.gallery.gid, previews: previews, current: model.readingProgress ?? 0) { page in
                     model.openReader(page: page)
                 }
                 .equatable()
@@ -28,7 +28,9 @@ struct ShelfGalleryPreviews: View {
     }
 }
 
+/// A tap opens the reader, which zooms out of the tapped preview (`readerSource`).
 private struct ShelfPreviewStrip: View, Equatable {
+    let gid: String
     let previews: [PreviewThumbnail]
     /// The page last read, outlined; 0 for none.
     let current: Int
@@ -37,7 +39,7 @@ private struct ShelfPreviewStrip: View, Equatable {
     static let width: CGFloat = 74
 
     static func == (lhs: Self, rhs: Self) -> Bool {
-        lhs.previews == rhs.previews && lhs.current == rhs.current
+        lhs.gid == rhs.gid && lhs.previews == rhs.previews && lhs.current == rhs.current
     }
 
     var body: some View {
@@ -49,6 +51,7 @@ private struct ShelfPreviewStrip: View, Equatable {
                             open(preview.index)
                         } label: {
                             ShelfPreviewCell(preview: preview, isCurrent: preview.index == current)
+                                .readerSource(.preview(gid: gid, page: preview.index))
                         }
                         .buttonStyle(.plain)
                         .id(preview.index)
@@ -76,7 +79,7 @@ private struct ShelfPreviewCell: View {
 
     var body: some View {
         let shape = RoundedRectangle(cornerRadius: 6, style: .continuous)
-        PreviewThumbnailView(thumbnail: preview, width: ShelfPreviewStrip.width)
+        PreviewThumbnailView(thumbnail: preview)
             .frame(width: ShelfPreviewStrip.width, height: ShelfPreviewStrip.width / Tokens.Aspect.preview)
             .clipShape(shape)
             .overlay(alignment: .bottomLeading) {

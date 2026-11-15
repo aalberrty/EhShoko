@@ -131,7 +131,7 @@ struct WallCommentsView: View {
 
     /// The uploader's comment first, the rest in the site's order.
     private static func ordered(_ comments: [CommentItem]) -> [CommentItem] {
-        guard let index = comments.firstIndex(where: WallCommentBlock.isUploader), index > 0 else { return comments }
+        guard let index = comments.firstIndex(where: \.isUploaderComment), index > 0 else { return comments }
         var ordered = comments
         ordered.insert(ordered.remove(at: index), at: 0)
         return ordered
@@ -150,11 +150,6 @@ private struct WallCommentBlock: View, Equatable {
 
     static func == (lhs: Self, rhs: Self) -> Bool {
         lhs.item == rhs.item && lhs.fill == rhs.fill
-    }
-
-    /// The site gives the uploader's comment the id 0 and no score.
-    static func isUploader(_ item: CommentItem) -> Bool {
-        item.comment.commentID == "0"
     }
 
     var body: some View {
@@ -188,7 +183,7 @@ private struct WallCommentBlock: View, Equatable {
             Text(item.author)
                 .font(.subheadline.weight(.semibold))
                 .foregroundStyle(look.label)
-            if Self.isUploader(item) {
+            if item.isUploaderComment {
                 Text(L10n.Localizable.Gallery.Comments.uploader)
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(.tint)

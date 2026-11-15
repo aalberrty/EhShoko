@@ -23,54 +23,12 @@ enum LedgerGalleryDock {
             )
             trailing.insert(rate, at: 0)
         }
+        let pill = GalleryDockItems.read(model: model) { page, count in
+            L10n.Localizable.Gallery.Continue.page(page, count)
+        }
         return DockContent(
-            leading: favorite(model: model, folderName: folderName), primary: read(model),
+            leading: GalleryDockItems.favorite(model: model, folderName: folderName), primary: pill,
             trailing: .buttons(trailing), anchorsFavoriteTip: isLoggedIn
         )
-    }
-
-    /// A tap saves to the folder used last, or removes a favourite; a long press chooses the
-    /// folder. Signed out it is dimmed, and a tap asks the user to sign in.
-    @MainActor
-    private static func favorite(model: GalleryDetailModel, folderName: (Int) -> String) -> DockItem {
-        let isFavorited = model.isFavorited
-        var menu: DockMenu?
-        if model.isLoggedIn {
-            var sections = [DockMenuSection(entries: FavoriteReport.folders.map { folder in
-                DockMenuEntry(title: folderName(folder), action: .favoriteIn(folder: folder))
-            })]
-            if isFavorited {
-                sections.append(DockMenuSection(entries: [
-                    DockMenuEntry(
-                        title: L10n.Localizable.List.Action.unfavorite, systemImage: "heart.slash",
-                        action: .unfavorite, isDestructive: true
-                    ),
-                ]))
-            }
-            menu = DockMenu(sections: sections)
-        }
-        return DockItem(
-            title: isFavorited ? L10n.Localizable.List.Action.unfavorite : L10n.Localizable.List.Action.favorite,
-            systemImage: isFavorited ? "heart.fill" : "heart",
-            action: isFavorited ? .unfavorite : .favorite,
-            menu: menu, isDimmed: !model.isLoggedIn
-        )
-    }
-
-    /// "Read" for an unread gallery, "Continue page 23 of 48" for one in progress, "Read again"
-    /// for a finished one.
-    @MainActor
-    private static func read(_ model: GalleryDetailModel) -> DockItem {
-        switch model.readingStatus {
-        case .unread:
-            DockItem(title: L10n.Localizable.Gallery.read, action: .read)
-        case .inProgress(let page):
-            DockItem(
-                title: L10n.Localizable.Gallery.continue,
-                detail: L10n.Localizable.Gallery.Continue.page(page, model.pageCount), action: .read
-            )
-        case .finished:
-            DockItem(title: L10n.Localizable.Gallery.readAgain, action: .read)
-        }
     }
 }

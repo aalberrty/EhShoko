@@ -7,15 +7,8 @@ import SwiftUI
 /// and there is one), with the event and the credit that title names; the other title is
 /// shown in full beneath, so nothing the heading leaves out is lost.
 ///
-/// Made once per change of the titles, not per render: the header keeps it in its state.
+/// Made from the model's parsed titles (`GalleryDetailModel.titles`): nothing is parsed here.
 nonisolated struct ShelfGalleryTitles: Equatable {
-    /// What the titles are made from: the list's title until the page has loaded.
-    struct Source: Equatable {
-        let title: String
-        let japaneseTitle: String?
-        let prefersJapanese: Bool
-    }
-
     /// The title the heading shows, in full.
     let shown: String
     let parsed: ParsedTitle
@@ -23,19 +16,10 @@ nonisolated struct ShelfGalleryTitles: Equatable {
     /// own full string when parsing shortened it. `nil` when it would repeat the heading.
     let other: String?
 
-    init(_ source: Source) {
-        let japanese = source.japaneseTitle.flatMap { $0.isEmpty ? nil : $0 }
-        let shown = source.prefersJapanese ? japanese ?? source.title : source.title
-        self.shown = shown
-        parsed = TitleParser.parse(shown)
-        let counterpart = shown == source.title ? japanese : source.title
-        if let counterpart, counterpart != shown {
-            other = counterpart
-        } else if parsed.core != shown {
-            other = shown
-        } else {
-            other = nil
-        }
+    init(_ title: ShownGalleryTitle) {
+        shown = title.full
+        parsed = title.parsed
+        other = title.other
     }
 
     var heading: String { parsed.core }
