@@ -1,4 +1,5 @@
 #if DEBUG
+import EhCore
 import EhFeatures
 import EhModels
 import SwiftUI
@@ -114,6 +115,7 @@ private struct DockHarnessRow: View, Equatable {
 struct DockHarnessChrome: View {
     @Binding var setup: DockHarnessSetup
     @Namespace private var glass
+    @Environment(SettingsStore.self) private var settings
 
     var body: some View {
         GlassGroup(spacing: ActionDock.spacing) {
@@ -135,8 +137,13 @@ struct DockHarnessChrome: View {
     private func perform(_ action: DockAction) {
         withAnimation(.smooth(duration: 0.3)) {
             switch action {
-            case .favorite, .favoriteIn:
+            case .favorite:
                 setup.isFavorite = true
+                report(folder: settings.lastFavoriteFolder, kind: .quick)
+            case .favoriteIn(let folder):
+                setup.isFavorite = true
+                settings.lastFavoriteFolder = folder
+                report(folder: folder, kind: .chosen)
             case .unfavorite:
                 setup.isFavorite = false
             case .read:
@@ -151,6 +158,12 @@ struct DockHarnessChrome: View {
                 break
             }
         }
+    }
+
+    /// What `GalleryDetailModel` reports once the site has accepted a favourite.
+    private func report(folder: Int, kind: FavoriteReport.Kind) {
+        setup.reportCount += 1
+        FavoriteTip.record(FavoriteReport(id: setup.reportCount, gid: "harness", folder: folder, kind: kind))
     }
 }
 

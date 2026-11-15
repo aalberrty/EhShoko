@@ -11,8 +11,9 @@ import SwiftUI
 /// iOS 26 the round buttons are interactive glass and the pill the prominent glass in the
 /// tint; on iOS 18, material circles and a pill filled with the tint.
 ///
-/// Nothing here observes anything: the dock changes only when its content value does, so it
-/// adds no work while the screen under it scrolls. Menus build their entries when opened.
+/// Nothing here observes anything but the Favourite tip's anchor, which reads the folder a tap
+/// saves to: the dock changes only when its content value does, so it adds no work while the
+/// screen under it scrolls. Menus build their entries when opened.
 struct ActionDock: View {
     /// The dock's height, the command bar's: the morph keeps the shapes on one line.
     static let height: CGFloat = 52
@@ -99,9 +100,10 @@ extension View {
     }
 
     /// The button the Favourite tip points at (`README.md` section 5.4): the tip's
-    /// `popoverTip` is attached here when `isAnchor`.
+    /// `popoverTip` is attached here when `isAnchor` (`FavoriteTip`).
     fileprivate func favoriteTipAnchor(_ isAnchor: Bool) -> some View {
         accessibilityIdentifier(isAnchor ? "dock.favorite.tip-anchor" : "dock.favorite")
+            .favoriteTip(isAnchor: isAnchor)
     }
 }
 

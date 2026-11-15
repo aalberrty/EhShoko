@@ -21,6 +21,11 @@ import SwiftUI
 /// | `-HarnessVariant shelf\|wall\|ledger\|comments\|bar` | the look's | What the dock holds; `bar` shows three bar shapes in the same slots, to see the morph. |
 /// | `-HarnessFind YES` | NO | The find bar is open. |
 /// | `-HarnessSheet YES` | NO | The dock is also shown in a sheet, where the pill's tint is checked. |
+/// | `-Tips reset\|show\|hide` | none | The Favourite tip (`TipsConfiguration`): earned again by the next one-tap Favourite, shown at once, or never. |
+///
+/// The dock's Favourite reports what the gallery page's model reports once the site accepts
+/// it (a tap: a quick favourite into the folder used last; a folder from the long press: a
+/// chosen one), so the Favourite tip is earned and settled here as on a gallery page.
 struct DockHarnessView: View {
     @State private var setup = DockHarnessSetup.atLaunch
     @State private var entries: [GalleryEntry] = []
@@ -28,6 +33,8 @@ struct DockHarnessView: View {
     @State private var stack = StackRouter()
     @State private var appRouter = AppRouter()
     @State private var userStore = UserStore(defaults: UserDefaults(suiteName: "app.ehshoko.dock-harness") ?? .standard)
+    /// The folder a one-tap Favourite uses, which the tip names; the harness's own, apart from the app's.
+    @State private var settings = SettingsStore(defaults: UserDefaults(suiteName: "app.ehshoko.dock-harness") ?? .standard)
     /// Signed in with made-up cookies, so the menus show their favourite entries; nothing it
     /// sends reaches the site with them.
     @State private var actions = withDependencies {
@@ -64,12 +71,15 @@ struct DockHarnessView: View {
         .environment(stack)
         .environment(appRouter)
         .environment(userStore)
+        .environment(settings)
         .lookEnvironment(setup.look, accent: .systemBlue)
         .preferredColorScheme(setup.scheme)
         .task {
             ListHarnessURLProtocol.install()
             entries = await DockHarnessEntries.make()
         }
+        // As the shell will: after the first frame, off the main actor.
+        .task { await TipsConfiguration.configure() }
     }
 
     private var visibleEntries: [GalleryEntry] {
@@ -97,6 +107,8 @@ struct DockHarnessSetup: Equatable {
     var showsSheet: Bool
     var isFavorite = false
     var progress: Int?
+    /// The favourites the dock reported, numbered as a model numbers its reports.
+    var reportCount = 0
 
     static var atLaunch: DockHarnessSetup {
         let defaults = UserDefaults.standard
