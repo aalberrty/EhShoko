@@ -4,7 +4,8 @@ import EhModels
 import SwiftUI
 import UIKit
 
-/// Settings › Appearance › App icon (legacy `AppIconView`).
+/// Settings › General › App icon (legacy `AppIconView`). General hides its row while the app
+/// has one icon (`AppIconModel.offersChoice`).
 struct AppIconScreen: View {
     @State private var model = AppIconModel()
     @Environment(SettingsStore.self) private var settings
@@ -21,7 +22,9 @@ struct AppIconScreen: View {
                     .buttonStyle(.plain)
                 }
             }
+            .settingsRow()
         }
+        .settingsFormStyle()
         .navigationTitle(L10n.Localizable.AppIconView.Title.appIcon)
         .sensoryFeedback(.selection, trigger: settings.appIconType)
         .task { model.syncWithSystem() }

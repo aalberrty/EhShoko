@@ -6,6 +6,7 @@ import SwiftUI
 /// The lines of one log file, numbered (legacy `LogView`), with the file shareable.
 struct LogDetailScreen: View {
     @State private var model: LogDetailModel
+    @Environment(\.look) private var look
 
     init(file: LogFile) {
         _model = State(initialValue: LogDetailModel(file: file))
@@ -13,6 +14,8 @@ struct LogDetailScreen: View {
 
     var body: some View {
         content
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(look.surface)
             .navigationTitle(model.file.name)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -38,9 +41,12 @@ struct LogDetailScreen: View {
             List(model.lines.indices, id: \.self) { index in
                 Text(verbatim: "\(index + 1). \(model.lines[index])")
                     .font(.caption.weight(.medium))
+                    .foregroundStyle(look.label)
                     .textSelection(.enabled)
                     .padding(.vertical, Tokens.Spacing.xSmall)
+                    .settingsRow()
             }
+            .settingsFormStyle()
         }
     }
 }

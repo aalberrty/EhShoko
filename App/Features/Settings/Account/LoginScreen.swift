@@ -1,15 +1,19 @@
 import EhFeatures
 import SwiftUI
 
-/// Settings › Account › Login: username / password over a wave background, plus the web login.
+/// Settings › Sign in: username / password over a wave background, plus the web login, on the
+/// look's colours. The fields are filled cards (content, not glass); the button that signs in
+/// is the one control on glass.
 struct LoginScreen: View {
     @State private var model = LoginModel()
     @State private var loginTask: Task<Void, Never>?
     @FocusState private var focusedField: LoginModel.Field?
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.look) private var look
 
     var body: some View {
         ZStack {
+            look.surface.ignoresSafeArea()
             LoginBackground()
             VStack(spacing: Tokens.Spacing.large) {
                 LoginField(
@@ -75,11 +79,13 @@ struct LoginScreen: View {
 }
 
 private struct LoginBackground: View {
+    @Environment(\.look) private var look
+
     var body: some View {
         GeometryReader { proxy in
             ZStack {
-                WaveForm(color: Color(.systemGray2).opacity(0.2), amplitude: 100, isReversed: true)
-                WaveForm(color: Color(.systemGray).opacity(0.2), amplitude: 120)
+                WaveForm(color: look.fill2, amplitude: 100, isReversed: true)
+                WaveForm(color: look.fill, amplitude: 120)
             }
             .offset(y: proxy.size.height * 0.3)
             .drawingGroup()
@@ -95,13 +101,15 @@ private struct LoginField: View {
     let field: LoginModel.Field
     var focusedField: FocusState<LoginModel.Field?>.Binding
 
+    @Environment(\.look) private var look
+
     private var isPassword: Bool { field == .password }
 
     var body: some View {
         VStack(alignment: .leading, spacing: Tokens.Spacing.small) {
             Text(title)
                 .font(.caption)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(look.secondaryLabel)
                 .accessibilityHidden(true)
             Group {
                 if isPassword {
@@ -116,8 +124,12 @@ private struct LoginField: View {
             .submitLabel(isPassword ? .done : .next)
             .textInputAutocapitalization(.never)
             .autocorrectionDisabled()
+            .foregroundStyle(look.label)
             .padding(Tokens.Spacing.medium)
-            .glassSurface(in: .rect(cornerRadius: Tokens.Radius.field), isInteractive: true)
+            .background(look.raised, in: .rect(cornerRadius: Tokens.Radius.field))
+            .overlay {
+                RoundedRectangle(cornerRadius: Tokens.Radius.field).strokeBorder(look.separator, lineWidth: 1)
+            }
         }
     }
 }

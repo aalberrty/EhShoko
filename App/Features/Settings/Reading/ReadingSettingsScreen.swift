@@ -8,11 +8,13 @@ import UIKit
 struct ReadingSettingsScreen: View {
     var body: some View {
         ReadingSettingsForm()
+            .settingsFormStyle()
             .navigationTitle(L10n.Localizable.ReadingSettingView.Title.reading)
     }
 }
 
-/// The reading options. The reader shows the same form in its settings sheet.
+/// The reading options. The reader shows the same form in its settings sheet, where the
+/// sheet's own ground shows behind the rows; Settings gives it the look's ground.
 ///
 /// Dual-page mode and "except the cover" are only edited from the reader's panel, as in legacy.
 struct ReadingSettingsForm: View {
@@ -43,7 +45,8 @@ struct ReadingSettingsForm: View {
                     )
                 }
             }
-            Section(L10n.Localizable.ReadingSettingView.Section.Title.appearance) {
+            .settingsRow()
+            Section {
                 Picker(
                     L10n.Localizable.ReadingSettingView.Title.separatorHeight,
                     selection: $settings.contentDividerHeight
@@ -65,7 +68,10 @@ struct ReadingSettingsForm: View {
                     value: $settings.doubleTapScaleFactor,
                     range: 1.5...5
                 )
+            } header: {
+                Text(L10n.Localizable.ReadingSettingView.Section.Title.appearance).settingsSectionHeader()
             }
+            .settingsRow()
         }
     }
 }

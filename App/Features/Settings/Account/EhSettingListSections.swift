@@ -62,7 +62,7 @@ struct FrontPageSection: View, Equatable {
         } footer: {
             Text(L10n.Localizable.EhSettingView.Description.displayMode)
         }
-        Section(L10n.Localizable.EhSettingView.Section.Title.showSearchRangeIndicator) {
+        EhSettingSection(title: L10n.Localizable.EhSettingView.Section.Title.showSearchRangeIndicator) {
             Toggle(
                 L10n.Localizable.EhSettingView.Title.showSearchRangeIndicator,
                 isOn: editor.binding(\.showSearchRangeIndicator, showsRangeIndicator)
