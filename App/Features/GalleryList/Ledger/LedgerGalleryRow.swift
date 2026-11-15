@@ -161,6 +161,10 @@ struct LedgerSkeletonRow: View {
 
 /// A day's or a page's heading between the rows: small capitals, not pinned (spike S1: pinned
 /// section headers cost every frame of scrolling).
+///
+/// The row keeps the list’s standard minimum height of 44 (a smaller `defaultMinListRowHeight` made
+/// the `List` estimate its content too short to scroll), so the text sits at the row's foot,
+/// next to the day's first gallery.
 struct LedgerHeadingRow: View {
     let title: String
     let look: Look
@@ -172,9 +176,9 @@ struct LedgerHeadingRow: View {
             .textCase(.uppercase)
             .foregroundStyle(look.secondaryLabel)
             .lineLimit(1)
-            .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.top, 14)
             .padding(.bottom, 4)
+            .frame(maxWidth: .infinity, minHeight: 44, alignment: .bottomLeading)
             .accessibilityAddTraits(.isHeader)
     }
 }

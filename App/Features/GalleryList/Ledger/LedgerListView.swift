@@ -182,8 +182,6 @@ private struct LedgerListContent<Header: View>: View {
         .listStyle(.plain)
         .scrollContentBackground(.hidden)
         .background { style.look.background.ignoresSafeArea() }
-        // Headings and the row after the last gallery are shorter than a standard row.
-        .environment(\.defaultMinListRowHeight, 1)
         .refreshable { await feed.refresh() }
         .ledgerRowDialogs($dialog, actions: input.actions)
         .onDisappear { prefetcher.stop() }
