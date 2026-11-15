@@ -6,9 +6,10 @@ import SwiftUI
 /// it"): the cover, "THE END · 48 PAGES", the title and the credit, the rating, the three tiles
 /// and "More by …".
 ///
-/// Its height does not depend on the height it is given, and does not change when the detail
-/// arrives: the title keeps two lines, the credit one, and every placeholder is the size of
-/// what replaces it, so the vertical strip measures it once (spike S7, rule 3).
+/// Its height does not depend on the height it is given (spike S7, rule 3), and changes only
+/// when the "More by" line comes or goes: the title keeps two lines, the credit one, and every
+/// placeholder is the size of what replaces it. The page tells the vertical strip about that
+/// one change (`ReaderClosingSizeReporter`).
 struct ReaderClosingColumn: View {
     let gallery: Gallery
     let pageCount: Int
@@ -65,7 +66,10 @@ struct ReaderClosingColumn: View {
         .frame(maxWidth: Self.maximumWidth)
         .padding(.horizontal, 24)
         .frame(maxWidth: .infinity)
+        // The task starts again each time the engine puts the page back into the window; a
+        // title already parsed is kept.
         .task(id: source) {
+            guard titles?.source != source else { return }
             titles = await ReaderClosingTitles.make(title: source, gallery: gallery)
         }
     }

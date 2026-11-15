@@ -2,7 +2,6 @@ import Dependencies
 import EhCore
 import EhFeatures
 import EhModels
-import QuartzCore
 import SwiftUI
 import UIKit
 
@@ -11,18 +10,21 @@ import UIKit
 /// on. It sits in the reading engine's trailing slot, so it is not a page: it has no number,
 /// and nothing indexed by page sees it.
 ///
-/// The engine asks for it once, through `makeController(gallery:pageCount:)`, when it is about
-/// to be shown, and keeps it for the life of the reader. Until then nothing of it exists. Its
-/// data is the presenting gallery page's model, or a model of its own made when it first
-/// appears, which then makes the one detail request (`ReaderClosingContext`).
+/// The engine asks for it once, through `makeController(gallery:pageCount:makeDetail:)`, after
+/// the first page and at rest within one page of the end, and keeps it for the life of the
+/// reader. Until then nothing of it exists. Its data is the presenting gallery page's model,
+/// or a model of its own made when it first appears, which then makes the one detail request
+/// (`ReaderClosingContext`).
 ///
 /// It is content in the look's colours, never glass, with no gesture on its background, so
 /// the engine's tap zones work on every empty part of it (spike S7).
 struct ReaderClosingPage: View {
     let gallery: Gallery
     let pageCount: Int
-    /// Tells the engine that the column's height changed, for the vertical strip.
+    /// Tells the engine that the content's height changed, for the vertical strip.
     let sizeReporter: ReaderClosingSizeReporter
+    /// Makes the page's own detail model, when no gallery page presented the reader.
+    let makeDetail: @MainActor (Gallery) -> GalleryDetailModel
 
     @Environment(\.readerClosingContext) private var context
     /// The look and accent the reader hands its engine's views (`ReaderScreen`).
@@ -34,13 +36,27 @@ struct ReaderClosingPage: View {
     /// The detail model made here when no gallery page presented the reader.
     @State private var ownDetail: GalleryDetailModel?
 
+    /// The room, above the bottom safe area, that the column keeps clear for the reader's
+    /// controls when they rest at the bottom: Shelf's panel reaches 172 pt above it (E1),
+    /// Ledger's resting sheet 151 pt (spike S4). A reader design whose controls rest higher
+    /// covers the column. In the vertical strip the closing block is this much taller than
+    /// the column, so the column clears the controls when the strip rests at its end.
+    static let bottomReserve: CGFloat = 176
+
     /// The hosting controller the engine puts in its trailing slot.
-    static func makeController(gallery: Gallery, pageCount: Int) -> UIViewController {
+    ///
+    /// - Parameter makeDetail: makes the page's own detail model; the reader harness makes one
+    ///   on stand-in dependencies.
+    static func makeController(
+        gallery: Gallery, pageCount: Int,
+        makeDetail: @escaping @MainActor (Gallery) -> GalleryDetailModel = { GalleryDetailModel(gallery: $0) }
+    ) -> UIViewController {
         ReaderClosingProbe.asked()
         let reporter = ReaderClosingSizeReporter()
-        let controller = UIHostingController(
-            rootView: ReaderClosingPage(gallery: gallery, pageCount: pageCount, sizeReporter: reporter)
+        let page = ReaderClosingPage(
+            gallery: gallery, pageCount: pageCount, sizeReporter: reporter, makeDetail: makeDetail
         )
+        let controller = UIHostingController(rootView: page)
         // The page draws the reader's background itself; the hosting view adds nothing.
         controller.view.backgroundColor = .clear
         reporter.controller = controller
@@ -58,7 +74,10 @@ struct ReaderClosingPage: View {
                 )
                 .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { height in
                     ReaderClosingProbe.laidOut(height: height)
-                    sizeReporter.columnHeightDidChange(height)
+                }
+                .padding(.bottom, Self.bottomReserve)
+                .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { height in
+                    sizeReporter.contentHeightDidChange(height)
                 }
             }
             .scrollBounceBehavior(.basedOnSize)
@@ -68,32 +87,38 @@ struct ReaderClosingPage: View {
         // `nil` is the look's own tint, which the default accent gives.
         .lookEnvironment(style.look, accent: style.accent ?? .systemBlue)
         .environment(userStore)
-        .task { await makeOwnDetailIfNeeded() }
+        .task { await loadDetail() }
     }
 
-    /// The first time the page appears, and only when no gallery page presented the reader:
-    /// a detail model of its own, and its one request.
-    private func makeOwnDetailIfNeeded() async {
-        guard ownDetail == nil else { return }
+    /// Runs each time the page comes into the window: the engine takes its view out when its
+    /// place is no longer tiled and puts it back, and `.task` starts again. Only the first
+    /// time, and only when no gallery page presented the reader, is a model made; its load
+    /// runs once and outlives this task, and a later call only refreshes the sign-in state.
+    private func loadDetail() async {
         guard context?.detail == nil else {
-            ReaderClosingProbe.record("shown with the presenting gallery page's model")
+            ReaderClosingProbe.presenterModelShown()
             return
         }
-        let model = GalleryDetailModel(gallery: gallery)
-        ownDetail = model
-        ReaderClosingProbe.record("own detail model made, loading")
+        let model: GalleryDetailModel
+        if let ownDetail {
+            model = ownDetail
+        } else {
+            model = makeDetail(gallery)
+            ownDetail = model
+            ReaderClosingProbe.detailMade()
+        }
         await model.load()
     }
 }
 
-/// Lets the engine's vertical strip measure the page again when its column's height changes
+/// Lets the engine's vertical strip measure the page again when its content's height changes
 /// (the "More by" line arrives with the parsed title, text sizes change). The strip measures
 /// with `sizeThatFits` and does so again when the controller's preferred size changes.
 final class ReaderClosingSizeReporter {
     weak var controller: UIViewController?
     private var height: CGFloat = 0
 
-    func columnHeightDidChange(_ newHeight: CGFloat) {
+    func contentHeightDidChange(_ newHeight: CGFloat) {
         guard abs(newHeight - height) >= 0.5, let controller else { return }
         height = newHeight
         // The strip measures again and changes nothing when the height is the one it has.
@@ -114,38 +139,5 @@ private struct ReaderClosingFeedback: ViewModifier {
             .onChange(of: detail?.favoriteReport) { _, report in
                 if let report { FavoriteTip.record(report) }
             }
-    }
-}
-
-/// Proves that the closing page makes nothing and requests nothing before the reader reaches
-/// it, and times its making: a log line when the engine asks for it, when its column is first
-/// laid out, and when it makes its own detail model, which is the request. Once per reader,
-/// in debug and harness builds only.
-enum ReaderClosingProbe {
-    #if DEBUG || HARNESS
-    private static var askedAt: Double?
-    #endif
-
-    static func record(_ event: String) {
-        #if DEBUG || HARNESS
-        @Dependency(\.appLogger) var logger
-        logger.info("Closing page: \(event)", category: "Reader")
-        #endif
-    }
-
-    static func asked() {
-        #if DEBUG || HARNESS
-        askedAt = CACurrentMediaTime()
-        record("asked for by the engine")
-        #endif
-    }
-
-    static func laidOut(height: CGFloat) {
-        #if DEBUG || HARNESS
-        guard let askedAt else { return }
-        self.askedAt = nil
-        let milliseconds = (CACurrentMediaTime() - askedAt) * 1000
-        record("column laid out \(Int(height.rounded())) pt tall, \(Int(milliseconds.rounded())) ms after it was asked for")
-        #endif
     }
 }

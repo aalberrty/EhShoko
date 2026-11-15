@@ -37,8 +37,9 @@ final class ReaderEngineBridge: ReaderEngineDataSource, ReaderEngineDelegate {
         model.aspectRatio(at: page)
     }
 
-    /// Asked once, when the closing page is about to be shown: only then is it made, and with
-    /// it, for a reader that no gallery page presented, its detail model and request.
+    /// Asked once per engine, after the first page and at rest within one page of the end:
+    /// only then is the closing page made, and with it, for a reader that no gallery page
+    /// presented, its detail model and request.
     func makeTrailerViewController() -> UIViewController? {
         ReaderClosingPage.makeController(gallery: model.gallery, pageCount: model.pageCount)
     }

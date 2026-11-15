@@ -6,6 +6,8 @@ import EhModels
 /// and 6). They come from the list's title, so they are there at once, and from the detail's
 /// preferred title once it is known.
 nonisolated struct ReaderClosingTitles: Equatable, Sendable {
+    /// The title these were worked out from.
+    let source: String
     /// The title as the reader shows it: the parsed core, or the whole title when it does not
     /// follow the site's convention.
     let title: String
@@ -21,7 +23,7 @@ nonisolated struct ReaderClosingTitles: Equatable, Sendable {
 
     /// Before the title has been parsed: the title as it is.
     static func unparsed(_ title: String) -> ReaderClosingTitles {
-        ReaderClosingTitles(title: title, credit: nil, moreBy: nil)
+        ReaderClosingTitles(source: title, title: title, credit: nil, moreBy: nil)
     }
 
     @concurrent
@@ -31,6 +33,7 @@ nonisolated struct ReaderClosingTitles: Equatable, Sendable {
         let entry = GalleryEntry(gallery: titled)
         let search = GalleryCreditSearch.targets(for: entry).first
         return ReaderClosingTitles(
+            source: title,
             title: entry.title.core,
             credit: entry.credit,
             moreBy: search.map { Search(name: $0.name, keyword: $0.keyword) }
