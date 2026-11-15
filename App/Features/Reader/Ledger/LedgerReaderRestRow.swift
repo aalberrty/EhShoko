@@ -23,7 +23,9 @@ struct LedgerRestRow: View {
             } label: {
                 LedgerRoundLabel(symbol: "slider.horizontal.3")
             }
-            .accessibilityLabel(L10n.Localizable.ReadingView.ToolbarItem.Button.readingSetting)
+            .ledgerControlName(
+                L10n.Localizable.ReadingView.ToolbarItem.Button.readingSetting, symbol: "slider.horizontal.3"
+            )
         }
         .buttonStyle(.plain)
         .padding(.horizontal, 14)
@@ -71,7 +73,10 @@ private struct LedgerRetryFailedButton: View {
             } label: {
                 LedgerRoundLabel(symbol: "exclamationmark.arrow.triangle.2.circlepath")
             }
-            .accessibilityLabel(L10n.Localizable.ReadingView.ToolbarItem.Button.retryAllFailedImages)
+            .ledgerControlName(
+                L10n.Localizable.ReadingView.ToolbarItem.Button.retryAllFailedImages,
+                symbol: "exclamationmark.arrow.triangle.2.circlepath"
+            )
             .transition(.opacity)
         }
     }
@@ -98,7 +103,7 @@ private struct LedgerAutoPlayButton: View {
         } label: {
             LedgerRoundLabel(symbol: "timer", isOn: policy != .off)
         }
-        .accessibilityLabel(L10n.Localizable.Reader.autoplay)
+        .ledgerControlName(L10n.Localizable.Reader.autoplay, symbol: "timer")
         .accessibilityValue(policy.seconds.map { L10n.Localizable.Reader.Autoplay.every($0) } ?? policy.localizedName)
     }
 
@@ -125,5 +130,16 @@ struct LedgerRoundLabel: View {
             .background { Circle().fill(isOn ? tint : look.fill3) }
             .contentShape(.circle)
             .accessibilityAddTraits(isOn ? .isSelected : [])
+    }
+}
+
+extension View {
+    /// Names a control that shows a symbol alone: for VoiceOver, and in the large content
+    /// viewer at the accessibility text sizes, where the sheet's own text stops growing.
+    func ledgerControlName(_ title: String, symbol: String) -> some View {
+        accessibilityLabel(title)
+            .accessibilityShowsLargeContentViewer {
+                Label(title, systemImage: symbol)
+            }
     }
 }

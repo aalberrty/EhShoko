@@ -112,6 +112,10 @@ private struct LedgerSheetRows: View {
         }
         .padding(.top, LedgerReaderMetrics.topInset)
         .padding(.bottom, LedgerReaderMetrics.bottomInset)
+        // The sheet is a bar of controls of fixed sizes over the page, so its text grows as
+        // far as the largest standard size, like the system's bars; beyond that the buttons
+        // without a name show theirs in the large content viewer.
+        .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
     }
 }
 

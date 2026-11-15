@@ -143,7 +143,7 @@ private struct LedgerGroupRow<Trailing: View>: View {
         HStack(spacing: 10) {
             Image(systemName: symbol)
                 .font(.body)
-                .frame(width: 24)
+                .frame(minWidth: 24)
             Text(title)
                 .font(.callout)
                 .lineLimit(2)
@@ -203,6 +203,8 @@ private struct LedgerAutoPlayRow: View {
                 Text(Self.name(of: shown))
                     .font(.subheadline)
                     .monospacedDigit()
+                    .lineLimit(1)
+                    .fixedSize()
                     .foregroundStyle(look.secondaryLabel)
                     .frame(minHeight: LedgerReaderMetrics.rowHeight)
                     .contentShape(.rect)

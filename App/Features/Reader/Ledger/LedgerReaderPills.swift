@@ -29,7 +29,7 @@ struct LedgerPagePills: View {
                 } label: {
                     LedgerPillLabel(title: action.localizedName, symbol: action.symbolName, showsTitle: showsTitles)
                 }
-                .accessibilityLabel(action.localizedName)
+                .ledgerControlName(action.localizedName, symbol: action.symbolName)
                 .disabled(!hasImage)
             }
             LedgerReloadPill(model: model, watch: watch, showsTitle: showsTitles)
@@ -62,7 +62,7 @@ private struct LedgerReloadPill: View {
             model.perform(reload, page: model.currentPage)
             watch.lookAgain()
         }
-        .accessibilityLabel(reload.localizedName)
+        .ledgerControlName(reload.localizedName, symbol: reload.symbolName)
     }
 }
 
