@@ -16,7 +16,7 @@ struct WallGalleryPanel: View {
 
     @Environment(SettingsStore.self) private var settings
     @Environment(\.look) private var look
-    @State private var titles: WallGalleryTitles?
+    @State private var titleCache = WallGalleryTitleCache()
 
     var body: some View {
         let source = WallGalleryTitles.Source(
@@ -24,7 +24,7 @@ struct WallGalleryPanel: View {
             prefersJapanese: settings.displaysJapaneseTitle
         )
         // Made in the first frame, before it is drawn, and again only when a title changes.
-        let titles = titles.flatMap { $0.source == source ? $0 : nil } ?? WallGalleryTitles(source)
+        let titles = titleCache.titles(for: source)
         VStack(alignment: .leading, spacing: 0) {
             if metrics.showsGrabber {
                 Capsule()
@@ -51,9 +51,6 @@ struct WallGalleryPanel: View {
                 topLeadingRadius: metrics.panelCorner, topTrailingRadius: metrics.panelCorner, style: .continuous
             )
         )
-        .onChange(of: source, initial: true) { _, source in
-            self.titles = WallGalleryTitles(source)
-        }
     }
 }
 

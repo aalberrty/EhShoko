@@ -8,7 +8,7 @@ import SwiftUI
 /// the other title is shown in full at the foot of the panel, so nothing the title leaves out
 /// is lost.
 ///
-/// Made once per change of the titles, not per render: the heading keeps it in its state.
+/// Made once per change of the titles, not per render: the panel keeps the last in a cache.
 nonisolated struct WallGalleryTitles: Equatable {
     /// What the titles are made from: the list's title until the page has loaded.
     struct Source: Equatable {
@@ -66,5 +66,18 @@ nonisolated struct WallGalleryTitles: Equatable {
         shownGallery.title = shown
         if !tags.isEmpty { shownGallery.tags = tags }
         return GalleryCreditSearch.targets(for: GalleryEntry(gallery: shownGallery))
+    }
+}
+
+/// Keeps the titles made last, so a title is parsed once per change and not once per render.
+/// Not observable: filling it draws nothing again.
+final class WallGalleryTitleCache {
+    private var titles: WallGalleryTitles?
+
+    func titles(for source: WallGalleryTitles.Source) -> WallGalleryTitles {
+        if let titles, titles.source == source { return titles }
+        let made = WallGalleryTitles(source)
+        titles = made
+        return made
     }
 }

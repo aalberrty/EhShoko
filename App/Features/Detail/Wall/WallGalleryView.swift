@@ -29,11 +29,9 @@ struct WallGalleryView: View {
     @Environment(\.verticalSizeClass) private var verticalSizeClass
     @Dependency(\.clipboardClient) private var clipboard
 
-    /// The cover's colours, taken once and kept while the page exists.
-    @State private var palette: CoverPalette?
-    /// The panel has scrolled over the whole cover. It changes when the panel's top passes the
-    /// cover's, not while the page scrolls.
-    @State private var coverIsCovered = false
+    /// Whether the panel has scrolled over the whole cover. Only the cover reads it, so
+    /// crossing that line draws the cover again and nothing else.
+    @State private var coverage = WallCoverCoverage()
     @State private var hud: HUDConfiguration?
     @State private var asksToSignIn = false
     @State private var searchCount = 0
@@ -43,15 +41,11 @@ struct WallGalleryView: View {
         let metrics = WallGalleryMetrics(isPane: chrome.isSidePane, isShort: verticalSizeClass == .compact)
         let coverURL = model.gallery.coverURL ?? model.detail?.coverURL
         ZStack(alignment: .top) {
-            WallGalleryBackdrop(palette: palette, height: metrics.backdropHeight, ground: metrics.ground(look))
-                .equatable()
+            WallGalleryBackdropLayer(coverURL: coverURL, height: metrics.backdropHeight, ground: metrics.ground(look))
             // Inside the safe area, so its top is the top bar's bottom edge: the cover stands
             // beside the bar's buttons.
-            WallGalleryCover(url: coverURL, size: metrics.coverSize)
+            WallGalleryCoverLayer(url: coverURL, size: metrics.coverSize, coverage: coverage)
                 .offset(y: -metrics.coverLift)
-                // Under the top bar iOS 26 fades what scrolls there, the panel with it, and
-                // the cover behind would show through the panel that covers it.
-                .opacity(coverIsCovered ? 0 : 1)
             ScrollView {
                 VStack(spacing: 0) {
                     // Clear, so the cover shows until the panel has scrolled over it.
@@ -64,7 +58,7 @@ struct WallGalleryView: View {
             .onScrollGeometryChange(for: Bool.self) { geometry in
                 geometry.contentOffset.y + geometry.contentInsets.top >= metrics.panelInset + metrics.coverLift
             } action: { _, isCovered in
-                withAnimation(.easeOut(duration: 0.15)) { coverIsCovered = isCovered }
+                withAnimation(.easeOut(duration: 0.15)) { coverage.isCovered = isCovered }
             }
         }
         .navigationBarTitleDisplayMode(.inline)
@@ -72,11 +66,6 @@ struct WallGalleryView: View {
         .toolbar { toolbar }
         .wallGalleryDock(model, signIn: signIn, search: search)
         .hud($hud)
-        .task(id: coverURL) {
-            // Once: the task runs again whenever the page comes back from a child screen.
-            guard palette == nil, let coverURL else { return }
-            palette = await WallCoverPalette.load(coverURL)
-        }
         .onChange(of: model.favoriteReport) { _, report in
             guard let report else { return }
             hud = .symbol("heart.fill", title: L10n.Localizable.List.Favorited.hud(userStore.favoriteFolderName(report.folder)))

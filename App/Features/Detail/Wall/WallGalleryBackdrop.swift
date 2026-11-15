@@ -51,6 +51,47 @@ struct WallGalleryBackdrop: View, Equatable {
     }
 }
 
+/// The backdrop with its colours: it takes the cover's palette once, away from the main
+/// actor, and keeps it in its state while the page exists. A view of its own, so the colours'
+/// arrival draws the backdrop and not the page.
+struct WallGalleryBackdropLayer: View {
+    let coverURL: URL?
+    let height: CGFloat
+    let ground: Color
+
+    @State private var palette: CoverPalette?
+
+    var body: some View {
+        WallGalleryBackdrop(palette: palette, height: height, ground: ground)
+            .equatable()
+            .task(id: coverURL) {
+                // Once: the task runs again whenever the page comes back from a child screen.
+                guard palette == nil, let coverURL else { return }
+                palette = await WallCoverPalette.load(coverURL)
+            }
+    }
+}
+
+/// Whether the panel has scrolled over the whole cover. The page writes it when the panel's
+/// top passes the cover's, not while the page scrolls; only the cover reads it.
+@Observable
+final class WallCoverCoverage {
+    var isCovered = false
+}
+
+/// The cover, gone once the panel has covered it: under the top bar iOS 26 fades what scrolls
+/// there, the panel with it, and a cover behind would show through the panel over it.
+struct WallGalleryCoverLayer: View {
+    let url: URL?
+    let size: CGSize
+    let coverage: WallCoverCoverage
+
+    var body: some View {
+        WallGalleryCover(url: url, size: size)
+            .opacity(coverage.isCovered ? 0 : 1)
+    }
+}
+
 /// The cover on the backdrop, with a shadow under it. The bitmap is the one the list decoded,
 /// so the zoom from the list's cover lands on it.
 struct WallGalleryCover: View {
