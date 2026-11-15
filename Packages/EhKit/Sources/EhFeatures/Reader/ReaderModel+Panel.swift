@@ -25,6 +25,22 @@ extension ReaderModel {
         }
     }
 
+    /// Ends a scrub without going anywhere: the strip comes down and the slider returns to
+    /// the page being read.
+    ///
+    /// Wall's capsule scrubs from a touch anywhere on it, so a touch that lifts where it
+    /// landed has chosen no page: letting go as usual would leave the closing page for the
+    /// last page on a mere tap. It also serves a touch the system took away.
+    public func cancelSliderEditing() {
+        guard showsSliderPreview else { return }
+        showsSliderPreview = false
+        previewDebounce?.cancel()
+        previewDebounce = nil
+        if sliderPage != currentPage {
+            sliderPage = currentPage
+        }
+    }
+
     /// The slider moved. Without the strip (an accessibility adjustment, for example) the
     /// reader follows at once.
     public func setSliderPage(_ page: Int) {
