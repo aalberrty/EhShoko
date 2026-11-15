@@ -1,4 +1,4 @@
-#if DEBUG
+#if DEBUG || HARNESS
 import ImageIO
 import UIKit
 import UniformTypeIdentifiers

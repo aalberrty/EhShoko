@@ -1,6 +1,6 @@
 import Kingfisher
 import UIKit
-#if DEBUG
+#if DEBUG || HARNESS
 import Synchronization
 #endif
 
@@ -26,7 +26,7 @@ nonisolated struct CoverProcessor: ImageProcessor {
         case .image(let image):
             ImageDecoding.uprightCGImage(of: image).flatMap(redraw(image:))
         }
-        #if DEBUG
+        #if DEBUG || HARNESS
         if result != nil {
             CoverDecodeCounter.increment()
         }
@@ -67,7 +67,7 @@ nonisolated struct CoverProcessor: ImageProcessor {
     }
 }
 
-#if DEBUG
+#if DEBUG || HARNESS
 /// How many covers `CoverProcessor` has decoded since launch, for the list harness's check that
 /// each cover is decoded once.
 nonisolated enum CoverDecodeCounter {

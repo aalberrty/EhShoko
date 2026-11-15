@@ -1,4 +1,4 @@
-#if DEBUG
+#if DEBUG || HARNESS
 import EhFeatures
 import Observation
 import UIKit
