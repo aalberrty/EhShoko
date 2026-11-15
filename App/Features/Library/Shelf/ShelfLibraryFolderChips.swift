@@ -40,8 +40,8 @@ struct ShelfLibraryFolderChips: View {
                 withAnimation { proxy.scrollTo(selection, anchor: .center) }
             }
         }
-        .padding(.top, 7)
-        .padding(.bottom, 2)
+        // With the chips' own 5 pt above, 12 pt under the Library tab's switch, as drawn.
+        .padding(.top, 1)
     }
 }
 
