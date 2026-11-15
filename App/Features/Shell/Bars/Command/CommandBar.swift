@@ -7,8 +7,10 @@ import SwiftUI
 /// shapes in the bottom chrome's container (`wall.md` section 1). Each shape is tagged with
 /// its slot, which is what lets it turn into the dock's shape in the same slot.
 ///
-/// A first working form, for task A2: plain, without the sideways swipe between places, the
-/// sliding label or the symbol-only form for large text.
+/// The bar draws the shapes and moves between places; the bottom chrome places it, keeps it
+/// across pushes and decides when it gives way to a gallery's dock. It reads the router only
+/// for the place and the top route, so it is drawn again when the user navigates and never
+/// while a list scrolls under it.
 struct CommandBar: View {
     let router: AppRouter
     /// What the top screen put in the trailing circle, if anything.
@@ -16,174 +18,86 @@ struct CommandBar: View {
     let perform: (BarAction) -> Void
     let openSearch: (SearchScope) -> Void
 
+    /// The sideways travel of a swipe in progress along the bar. It goes back to zero when
+    /// the finger lifts, and when the system takes the touch away.
+    @GestureState(resetTransaction: Transaction(animation: .snappy(duration: 0.25))) private var pull: CGFloat = 0
+    /// Counts the places changed by a swipe, for the tick that confirms each.
+    @State private var steps = 0
+
     @Environment(SettingsStore.self) private var settings
-    @Environment(\.look) private var look
     @Environment(\.horizontalSizeClass) private var sizeClass
+    @Environment(\.dynamicTypeSize) private var typeSize
+    @Environment(\.layoutDirection) private var layoutDirection
 
     var body: some View {
-        let start = StartStructure.style(settings)
-        let place = router.place
-        let search = CommandBarPlaces.search(top: router.home.path.last, place: place, start: start)
+        let places = CommandBarPlaces(
+            start: StartStructure.style(settings),
+            hasLeadingColumn: StartStructure.hasLeadingColumn(settings) && sizeClass == .regular
+        )
+        let top = router.home.path.last
+        let place = places.shown(router.place)
+        let field = places.field(top: top, place: router.place)
+        let showsMenu = places.showsMenu(isAtRoot: top == nil)
         HStack(spacing: ActionDock.spacing) {
-            // On Ledger's Index the menu is not shown: the Index is the menu.
-            if !(start == .ledger && place == .start && sizeClass != .regular) {
-                placeMenu(place: place, start: start)
+            if showsMenu {
+                CommandBarPlaceMenu(
+                    places: places, place: place, offset: labelOffset(in: places, at: place),
+                    // Under very large text the capsule shows its symbol only.
+                    showsName: !typeSize.isAccessibilitySize,
+                    choose: { go(to: $0, in: places) }, openSettings: { router.presentSettings() }
+                )
+                // The place's name is offered what the field can spare before the field
+                // takes the rest: it is shown whole or not at all, never squeezed.
+                .layoutPriority(1)
             }
-            Button { openSearch(search.scope) } label: {
-                HStack(spacing: 8) {
-                    Image(systemName: "magnifyingglass")
-                    Text(search.text)
-                        .lineLimit(1)
-                    Spacer(minLength: 0)
-                }
-                .font(.body)
-                .foregroundStyle(look.secondaryLabel)
-                .padding(.horizontal, 16)
-                .frame(maxWidth: .infinity, minHeight: ActionDock.height)
-                .contentShape(.capsule)
+            CommandBarSearchField(field: field) { openSearch(field.scope) }
+            if let control {
+                CommandBarTrailingControl(control: control, perform: perform)
             }
-            .buttonStyle(.plain)
-            .chromeShape(.centre, in: .capsule)
-            trailing
         }
         .frame(height: ActionDock.height)
+        // The bar keeps its height, as the system's bars do: its text stops growing here, and
+        // a long press shows any of the three in the large content viewer.
+        .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
+        // The gaps between the shapes belong to the bar too, so a swipe may start on them.
+        .contentShape(.rect)
+        // High priority: as a plain gesture the field's tap wins and the swipe never
+        // starts; as a simultaneous one a swipe on the field also opens search.
+        .highPriorityGesture(swipe(in: places, from: place))
+        // The menu comes and goes with Ledger's Index, a navigation later than the bottom
+        // chrome's own change of the trailing control, and in step with it.
+        .animation(.smooth(duration: 0.4), value: showsMenu)
+        .sensoryFeedback(.selection, trigger: steps)
         .accessibilityElement(children: .contain)
         .accessibilityLabel(L10n.Localizable.Shell.Bar.accessibility)
     }
 
-    private func placeMenu(place: Place, start: DesignStyle) -> some View {
-        Menu {
-            Section {
-                ForEach(CommandBarPlaces.entries(for: start), id: \.self) { entry in
-                    Toggle(isOn: Binding(get: { entry == place }, set: { _ in router.go(to: entry, start: start) })) {
-                        Label(entry.title(start: start), systemImage: entry.systemImage(start: start))
-                    }
-                }
-            }
-            Section {
-                Button(L10n.Localizable.SettingView.Title.setting, systemImage: "gearshape") {
-                    router.presentSettings()
-                }
-            }
-        } label: {
-            HStack(spacing: 6) {
-                Image(systemName: place.systemImage(start: start))
-                    .font(.title3)
-                Text(place.title(start: start))
-                    .font(.callout.weight(.semibold))
-                    .lineLimit(1)
-                Image(systemName: "chevron.up.chevron.down")
-                    .font(.caption2.weight(.bold))
-                    .foregroundStyle(look.tertiaryLabel)
-            }
-            .foregroundStyle(look.label)
-            // The field takes the width that is left, so the place's name keeps its own.
-            .fixedSize()
-            .padding(.horizontal, 14)
-            .frame(height: ActionDock.height)
-            .contentShape(.capsule)
-        }
-        .buttonStyle(.plain)
-        .chromeShape(.leading, in: .capsule)
+    // MARK: Moving between places
+
+    private func go(to entry: Place, in places: CommandBarPlaces) {
+        router.go(to: places.destination(for: entry, from: router.place), start: places.start)
     }
 
-    @ViewBuilder
-    private var trailing: some View {
-        switch control {
-        case .button(let systemImage, let title, let showsDot):
-            Button { perform(.primary) } label: {
-                symbol(systemImage)
-                    .overlay(alignment: .topTrailing) {
-                        if showsDot {
-                            Circle()
-                                .fill(.orange)
-                                .frame(width: 8, height: 8)
-                                .offset(x: -13, y: 13)
-                        }
-                    }
+    private var isRightToLeft: Bool { layoutDirection == .rightToLeft }
+
+    private func swipe(in places: CommandBarPlaces, from place: Place) -> some Gesture {
+        DragGesture(minimumDistance: CommandBarSwipe.minimumDistance)
+            .updating($pull) { value, pull, _ in
+                pull = CommandBarSwipe.pull(value.translation)
             }
-            .buttonStyle(.plain)
-            .chromeShape(.trailing, in: .circle)
-            .accessibilityLabel(title)
-        case .menu(let systemImage, let title, let controls):
-            Menu {
-                ListMenuEntries(controls: controls) { perform(.menu($0)) }
-            } label: {
-                symbol(systemImage)
+            .onEnded { value in
+                guard
+                    let step = CommandBarSwipe.step(predictedEnd: value.predictedEndTranslation, isRightToLeft: isRightToLeft),
+                    let next = places.neighbour(of: place, by: step)
+                else { return }
+                steps += 1
+                go(to: next, in: places)
             }
-            .buttonStyle(.plain)
-            .chromeShape(.trailing, in: .circle)
-            .accessibilityLabel(title)
-        case nil:
-            EmptyView()
-        }
     }
 
-    private func symbol(_ systemImage: String) -> some View {
-        Image(systemName: systemImage)
-            .font(.title3)
-            .foregroundStyle(look.label)
-            .frame(width: ActionDock.height, height: ActionDock.height)
-            .contentShape(.circle)
-    }
-}
-
-/// What the place menu lists, and what the field says, for each first screen
-/// (`README.md` section 5.1).
-enum CommandBarPlaces {
-    /// The menu's entries, in order. Wall's root is itself a list, so its first entry, Front
-    /// Page, is `.start`; Shelf's and Ledger's is their first screen.
-    static func entries(for start: DesignStyle) -> [Place] {
-        let lists: [Place] = [.list(.popular), .list(.watched), .list(.toplists), .list(.history), .list(.favorites)]
-        switch start {
-        case .wall, .shelf: return [.start] + lists
-        case .ledger: return [.start, .list(.frontpage)] + lists
-        }
-    }
-
-    /// The scope the field opens the search surface on and what it reads: the keyword on a
-    /// list of results, else the prompt for the scope of where the user is.
-    static func search(top: Route?, place: Place, start: DesignStyle) -> (scope: SearchScope, text: String) {
-        switch top {
-        case .typedSearch(let keyword), .search(let keyword):
-            return (.everywhere, keyword)
-        case .listSearch(let scope, let keyword):
-            return (scope, keyword)
-        case .galleryList(.watched):
-            return (.watched, L10n.Localizable.Shell.Search.Prompt.watched)
-        case .galleryList(.favorites), .favoritesFolder:
-            return (.favorites, L10n.Localizable.Shell.Search.Prompt.favorites)
-        case .galleryList, .detail, .detailChild, .settings:
-            return (.everywhere, L10n.Localizable.Shell.Search.prompt)
-        case nil:
-            switch place {
-            case .list(.watched): return (.watched, L10n.Localizable.Shell.Search.Prompt.watched)
-            case .list(.favorites): return (.favorites, L10n.Localizable.Shell.Search.Prompt.favorites)
-            case .start where start == .ledger: return (.everywhere, L10n.Localizable.Shell.Search.Prompt.link)
-            case .start, .list: return (.everywhere, L10n.Localizable.Shell.Search.prompt)
-            }
-        }
-    }
-}
-
-extension Place {
-    /// The place's name under the first screen `start`: the first screen has its own.
-    func title(start: DesignStyle) -> String {
-        switch self {
-        case .list(let kind): kind.title
-        case .start:
-            switch start {
-            case .shelf: L10n.Localizable.Shell.Place.home
-            case .wall: GalleryListKind.frontpage.title
-            case .ledger: L10n.Localizable.Shell.Place.index
-            }
-        }
-    }
-
-    func systemImage(start: DesignStyle) -> String {
-        switch self {
-        case .list(let kind): kind.systemImage
-        case .start: start == .ledger ? "list.bullet" : "house"
-        }
+    private func labelOffset(in places: CommandBarPlaces, at place: Place) -> CGFloat {
+        guard pull != 0 else { return 0 }
+        let heading = CommandBarSwipe.heading(pull: pull, isRightToLeft: isRightToLeft)
+        return CommandBarSwipe.labelOffset(pull: pull, hasNeighbour: places.neighbour(of: place, by: heading) != nil)
     }
 }
