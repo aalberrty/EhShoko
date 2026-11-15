@@ -41,6 +41,9 @@ struct ShelfSearchView: View {
                 ShelfSearchClearButton(model: model, isTyping: isTyping)
             }
             .hud($notice)
+            #if DEBUG || HARNESS
+            .task { await ShelfSearchSampleWords.addIfRequested(hasQuickSearches: !model.root.quickSearchWords.isEmpty) }
+            #endif
     }
 }
 

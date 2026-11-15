@@ -52,13 +52,13 @@ private struct ShelfSearchHint: View {
 
 /// A group's label: small capitals in the secondary colour, with a link in the tint
 /// trailing ("Edit", "Clear"). The line is 44 pt high when it has a link, the link's target.
-struct ShelfSearchHeading<Link: View>: View {
+struct ShelfSearchHeading<Trailing: View>: View {
     let title: String
-    @ViewBuilder var link: Link
+    @ViewBuilder var link: Trailing
 
     @Environment(\.look) private var look
 
-    private var hasLink: Bool { Link.self != EmptyView.self }
+    private var hasLink: Bool { Trailing.self != EmptyView.self }
 
     var body: some View {
         HStack(alignment: .firstTextBaseline, spacing: 8) {
@@ -81,7 +81,7 @@ struct ShelfSearchHeading<Link: View>: View {
     }
 }
 
-extension ShelfSearchHeading where Link == EmptyView {
+extension ShelfSearchHeading where Trailing == EmptyView {
     init(title: String) {
         self.init(title: title) { EmptyView() }
     }
@@ -94,13 +94,29 @@ nonisolated enum ShelfSearchMetrics {
     static let shelfMargin: CGFloat = 20
 }
 
+/// Where a row of Shelf's search list has a separator. The list hides the line between two
+/// rows when either of them hides its edge, so a row in a group sets only its bottom edge and
+/// leaves the line above it to the row before.
+nonisolated enum ShelfSearchRowSeparator {
+    /// A heading, a shelf or the hint: no line above or below.
+    case none
+    /// A row with another row of its group below it.
+    case below
+    /// The last row of a group: the line above it, none below.
+    case last
+
+    static func row(isLast: Bool) -> Self { isLast ? .last : .below }
+}
+
 extension View {
-    /// A row of Shelf's search list: on the look's ground, with a separator under it only when
-    /// `separator` says so (between rows of one group, never under a group's last row).
-    func shelfSearchRow(insets: EdgeInsets = ShelfSearchMetrics.rowInsets, separator: Bool = false) -> some View {
+    /// A row of Shelf's search list: on the look's ground, with lines only between the rows of
+    /// one group.
+    func shelfSearchRow(
+        insets: EdgeInsets = ShelfSearchMetrics.rowInsets, separator: ShelfSearchRowSeparator = .none
+    ) -> some View {
         listRowInsets(insets)
             .listRowBackground(Color.clear)
-            .listRowSeparator(.hidden, edges: .top)
-            .listRowSeparator(separator ? .automatic : .hidden, edges: .bottom)
+            .listRowSeparator(separator == .none ? .hidden : .automatic, edges: .top)
+            .listRowSeparator(separator == .below ? .automatic : .hidden, edges: .bottom)
     }
 }

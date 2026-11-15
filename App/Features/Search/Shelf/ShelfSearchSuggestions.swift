@@ -17,12 +17,12 @@ struct ShelfSearchSuggestions: View {
         ShelfSearchHeading(title: L10n.Localizable.Search.suggestions)
         SearchTitlesButton(model: model)
             .labelStyle(ShelfSearchTitlesLabelStyle())
-            .shelfSearchRow(separator: !rows.isEmpty)
+            .shelfSearchRow(separator: .row(isLast: rows.isEmpty))
         ForEach(rows) { row in
             Button { field.accept(row.item) } label: {
                 ShelfTagSuggestionRow(row: row)
             }
-            .shelfSearchRow(separator: row.id != rows.last?.id)
+            .shelfSearchRow(separator: .row(isLast: row.id == rows.last?.id))
         }
     }
 }

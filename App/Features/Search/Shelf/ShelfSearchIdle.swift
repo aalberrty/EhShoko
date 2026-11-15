@@ -105,7 +105,7 @@ struct ShelfRecentSearches: View {
                 Button { field.search(keyword) } label: {
                     ShelfRecentSearchRow(keyword: keyword)
                 }
-                .shelfSearchRow(separator: keyword != keywords.last)
+                .shelfSearchRow(separator: .row(isLast: keyword == keywords.last))
             }
             .onDelete { offsets in
                 let removed = offsets.map { keywords[$0] }
