@@ -31,13 +31,16 @@ struct ShelfRowCapsules: View {
         let category = texts.category(entry.gallery.category)
         let look = texts.look
         HStack(spacing: 6) {
+            // Whole, so that on a narrow row the line truncates from its end, the page count.
             Text(category.name)
                 .foregroundStyle(category.color)
                 .shelfRowCapsule(category.tint, padding: 8)
+                .fixedSize()
             if let code = entry.languageCode {
                 Text(code)
                     .foregroundStyle(look.secondaryLabel)
                     .shelfRowCapsule(look.fill3)
+                    .fixedSize()
             }
             Text(texts.pages(entry.gallery.pageCount))
                 .foregroundStyle(look.secondaryLabel)

@@ -142,8 +142,11 @@ struct ShelfListHeaderLine: View {
                         }
                     }
                 } label: {
-                    Label(L10n.Localizable.List.sort, systemImage: "arrow.up.arrow.down")
-                        .font(.subheadline.weight(.medium))
+                    HStack(spacing: 4) {
+                        Image(systemName: "arrow.up.arrow.down")
+                        Text(L10n.Localizable.List.sort)
+                    }
+                    .font(.subheadline.weight(.medium))
                 }
                 .menuStyle(.button)
                 .buttonStyle(.borderless)

@@ -79,10 +79,13 @@ struct ShelfListView<Header: View>: View {
     }
 
     /// The filter pill or the sort line, where the bar does not hold them and no first screen
-    /// draws the list's heading.
+    /// draws the list's heading; not over a list that cannot be shown (signed out, failed).
     private var headerLine: ListPrimaryControl? {
         guard !input.context.embedsInStart, !chrome.barHoldsPrimaryControl else { return nil }
-        return input.controls.primary
+        switch input.feed.phase {
+        case .signedOut, .failed: return nil
+        case .loading, .empty, .content: return input.controls.primary
+        }
     }
 
     private var style: ShelfRowStyle {

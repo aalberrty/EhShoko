@@ -193,7 +193,9 @@ struct ShelfRowMetrics: Equatable {
         )
         ranked = max(ShelfGalleryRow.rankedCover.height, text)
         let caption2 = UIFontMetrics(forTextStyle: .caption2)
-        starPointSize = caption2.scaledValue(for: 11, compatibleWith: traits)
+        // Held at the largest standard size: at accessibility sizes five stars would take the
+        // line and leave no room for the rating they stand for.
+        starPointSize = min(caption2.scaledValue(for: 11, compatibleWith: traits), 15)
         chipWidth = caption2.scaledValue(for: 56, compatibleWith: traits)
     }
 
