@@ -33,7 +33,7 @@ struct ShellRoot: View {
     var body: some View {
         let router = model.router
         bars
-            .modifier(ShellPresentations(model: model))
+            .modifier(ShellPresentations(model: model, bar: settings.designBar))
             .modifier(ShellPlaceMemory(router: router))
             .onChange(of: settings.designBar) { router.resetNavigation() }
             .onChange(of: StartStructure.style(settings)) { router.resetNavigation() }

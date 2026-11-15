@@ -85,7 +85,7 @@ struct ListFeed {
     /// What the list area shows.
     enum Phase: Equatable {
         /// The list needs an account and nobody is signed in: the shared sign-in state.
-        case signedOut(ListSignInKind)
+        case signedOut(ListSignInState.Kind)
         /// The first page is on its way: the design's placeholders.
         case loading
         /// Loaded, and nothing is there.
@@ -106,9 +106,9 @@ struct ListFeed {
     }
 
     let source: any ListFeedSource
-    let signIn: ListSignInKind?
+    let signIn: ListSignInState.Kind?
 
-    init(_ source: any ListFeedSource, signIn: ListSignInKind? = nil) {
+    init(_ source: any ListFeedSource, signIn: ListSignInState.Kind? = nil) {
         self.source = source
         self.signIn = signIn
     }
@@ -145,13 +145,18 @@ struct ListFeed {
 
     /// Clears the list and loads it again.
     func reload() { source.feedReload() }
+
+    /// Reads the rows' reading progress again, in one query. Rows read it when their page is
+    /// mapped and do not follow it; the shared wrapper calls this when a reader it presented
+    /// over the list closes.
+    func refreshReadingProgress() async { await source.feedRefreshReadingProgress() }
 }
 
 /// What backs a `ListFeed`: `GalleryListModel` and `HistoryModel`, and the part harness's
 /// fixture list. A list design never sees it.
 protocol ListFeedSource: AnyObject {
     var feedEntries: [GalleryEntry] { get }
-    func feedPhase(signIn: ListSignInKind?) -> ListFeed.Phase
+    func feedPhase(signIn: ListSignInState.Kind?) -> ListFeed.Phase
     var feedStaleError: AppError? { get }
     var feedFooter: ListFeed.Footer { get }
     var feedPageStarts: [PageStart] { get }
@@ -166,6 +171,7 @@ protocol ListFeedSource: AnyObject {
     func feedRetry()
     func feedRetryNextPage()
     func feedReload()
+    func feedRefreshReadingProgress() async
 }
 
 enum ListFeedTrigger: Hashable {
@@ -178,7 +184,7 @@ enum ListFeedTrigger: Hashable {
 extension GalleryListModel: ListFeedSource {
     var feedEntries: [GalleryEntry] { visibleEntries }
 
-    func feedPhase(signIn: ListSignInKind?) -> ListFeed.Phase {
+    func feedPhase(signIn: ListSignInState.Kind?) -> ListFeed.Phase {
         if needsLogin { return .signedOut(signIn ?? .favorites) }
         if !entries.isEmpty { return .content }
         switch loadingState {
@@ -214,12 +220,13 @@ extension GalleryListModel: ListFeedSource {
     func feedRetry() { retry() }
     func feedRetryNextPage() { retryLoadMore() }
     func feedReload() { reload() }
+    func feedRefreshReadingProgress() async { await refreshReadingProgress() }
 }
 
 extension HistoryModel: ListFeedSource {
     var feedEntries: [GalleryEntry] { entries }
 
-    func feedPhase(signIn: ListSignInKind?) -> ListFeed.Phase {
+    func feedPhase(signIn: ListSignInState.Kind?) -> ListFeed.Phase {
         switch loadingState {
         case .loading: .loading
         case .failed(let error): .failed(error)
@@ -245,6 +252,8 @@ extension HistoryModel: ListFeedSource {
     func feedRetry() {}
     func feedRetryNextPage() {}
     func feedReload() {}
+    /// History follows the database, the progress with it.
+    func feedRefreshReadingProgress() async {}
 }
 
 extension View {

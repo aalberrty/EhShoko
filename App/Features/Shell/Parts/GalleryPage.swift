@@ -55,13 +55,11 @@ private struct GalleryPageHost: ViewModifier {
             .sheet(item: $model.sheetDestination) { destination in
                 GalleryChildScreen(sheet: destination, model: model)
             }
-            // `readerCover(destination:of:)` replaces this line when the reader's shared
-            // layer is merged.
-            .fullScreenCover(item: $model.fullScreenDestination) { destination in
-                if case .reader(let page) = destination {
-                    ReaderScreen(gallery: model.gallery, initialPage: page)
-                }
-            }
+            // The reader zooms out of the dock's pill, where the dock marked it.
+            .readerCover(
+                destination: $model.fullScreenDestination, of: model,
+                source: .dock(gid: model.gallery.gid), onExit: leaveReader
+            )
             .sensoryFeedback(trigger: model.feedback) { _, feedback in
                 feedback.map { $0.isSuccess ? .success : .error }
             }
@@ -73,5 +71,19 @@ private struct GalleryPageHost: ViewModifier {
                 appRouter.presentedGreeting = greeting
                 model.greetingAnnounced()
             }
+    }
+
+    /// Where the reader's closing page leads, once the reader has closed over this page.
+    private func leaveReader(_ exit: ReaderExit) {
+        switch exit {
+        case .gallery:
+            break
+        case .comments:
+            model.destination = .comments(scrollTo: nil)
+        case .search(let keyword):
+            stack?.push(.search(keyword: keyword))
+        case .signIn:
+            appRouter?.presentSettings([.settings(.account), .settings(.login)])
+        }
     }
 }

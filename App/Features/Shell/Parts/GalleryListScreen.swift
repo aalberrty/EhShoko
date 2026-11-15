@@ -128,7 +128,11 @@ struct ListHost<Header: View>: View {
     @State private var actions = GalleryActionsModel()
     @State private var sheet: ListSheet?
     @State private var isFinding = false
+    /// The gallery of the reader last opened from a row, for where its closing page leads.
+    @State private var lastRead: Gallery?
     @Environment(StackRouter.self) private var stack
+    @Environment(AppRouter.self) private var appRouter
+    @Environment(\.openGallery) private var openGallery
 
     private enum ListSheet: Identifiable {
         case filters(FilterRange)
@@ -166,16 +170,36 @@ struct ListHost<Header: View>: View {
                 }
             }
         }
-        // The reader opened from a row's long-press menu. `readerCover` replaces this line
-        // when the reader's shared layer is merged.
-        .fullScreenCover(item: readingRequest) { request in
-            ReaderScreen(gallery: request.gallery, initialPage: request.page)
+        // The reader opened from a row's long-press menu zooms out of that row's cover, where
+        // the design marked it with `readerSource(.row(gid:))`.
+        .readerCover(
+            item: readingRequest, source: { .row(gid: $0.gallery.gid) }, onExit: leaveReader,
+            onDismiss: { Task { await feed.refreshReadingProgress() } }
+        )
+        // The HUD that names the folder of a favourite made from a row, and the haptics.
+        .galleryActionsFeedback(actions)
+        .onChange(of: actions.readingRequest) { _, request in
+            if let request { lastRead = request.gallery }
         }
         .sensoryFeedback(.impact(weight: .light), trigger: sheet?.id) { _, sheet in sheet != nil }
     }
 
     private var readingRequest: Binding<ReadingRequest?> {
         Binding(get: { actions.readingRequest }, set: { actions.readingRequest = $0 })
+    }
+
+    /// Where the reader's closing page leads, once the reader has closed.
+    private func leaveReader(_ exit: ReaderExit) {
+        switch exit {
+        case .gallery:
+            if let lastRead { openGallery(lastRead) }
+        case .comments:
+            if let lastRead { openGallery(lastRead, intent: .comments(scrollTo: nil)) }
+        case .search(let keyword):
+            stack.push(.search(keyword: keyword))
+        case .signIn:
+            appRouter.presentSettings([.settings(.account), .settings(.login)])
+        }
     }
 
     private func perform(_ action: ListMenuAction) {

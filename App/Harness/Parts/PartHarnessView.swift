@@ -135,7 +135,7 @@ private struct PartHarnessStage: View {
             }
         }
         .environment(\.chrome, ChromeContext(bar: options.choices.bar))
-        .modifier(ShellPresentations(model: model.app))
+        .modifier(ShellPresentations(model: model.app, bar: options.choices.bar))
         .onAppear { model.open(search: $search) }
     }
 

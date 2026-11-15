@@ -39,7 +39,7 @@ final class PartHarnessList: ListFeedSource {
             ? Array(rows) : rows.filter { $0.gallery.title.localizedCaseInsensitiveContains(feedFindText) }
     }
 
-    func feedPhase(signIn: ListSignInKind?) -> ListFeed.Phase {
+    func feedPhase(signIn: ListSignInState.Kind?) -> ListFeed.Phase {
         switch state {
         case .loading: .loading
         case .empty: .empty
@@ -84,6 +84,7 @@ final class PartHarnessList: ListFeedSource {
     func feedRetry() { state = .content }
     func feedRetryNextPage() { state = .content }
     func feedReload() { loaded = min(Self.pageSize, all.count) }
+    func feedRefreshReadingProgress() async {}
 }
 
 /// The fixture data of one harness: synthetic galleries with covers from the list harness's

@@ -88,6 +88,8 @@ private struct V3ListRows<Header: View>: View {
 
     @Environment(\.openGallery) private var openGallery
 
+    private var offersMove: Bool { input.context.signInKind == .favorites }
+
     var body: some View {
         List {
             header
@@ -103,6 +105,7 @@ private struct V3ListRows<Header: View>: View {
                             .zoomSource(entry.id)
                     }
                     .foregroundStyle(.primary)
+                    .galleryContextMenu(entry, actions: input.actions, offersMove: offersMove)
                 }
                 V3ListFooter(feed: input.feed)
                     .listRowSeparator(.hidden)
@@ -124,6 +127,8 @@ private struct V3ListGrid<Header: View>: View {
 
     /// Legacy grid spacing.
     private static var spacing: CGFloat { 15 }
+
+    private var offersMove: Bool { input.context.signInKind == .favorites }
 
     /// Two columns in compact width; as many as fit in regular width.
     private var columns: [GridItem] {
@@ -149,6 +154,7 @@ private struct V3ListGrid<Header: View>: View {
                                     .zoomSource(entry.id)
                             }
                             .buttonStyle(.plain)
+                            .galleryContextMenu(entry, actions: input.actions, offersMove: offersMove)
                         }
                     } footer: {
                         V3ListFooter(feed: input.feed)

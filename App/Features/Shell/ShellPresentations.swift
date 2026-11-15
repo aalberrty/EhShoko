@@ -12,6 +12,11 @@ import SwiftUI
 /// is up: a link's gallery over Settings, the greeting over either.
 struct ShellPresentations: ViewModifier {
     let model: AppModel
+    /// The bar in use, which says where Continue is and so what the reader zooms out of.
+    let bar: BarStyle
+
+    /// The gallery of the reader last opened from Continue.
+    @State private var lastRead: Gallery?
 
     func body(content: Content) -> some View {
         let router = model.router
@@ -25,10 +30,17 @@ struct ShellPresentations: ViewModifier {
             .newDawnSheet(
                 router: router, isTopmost: router.presentedGallery == nil && !router.isSettingsPresented
             )
-            // Continue, from the tab bar's accessory or a first screen. `readerCover` replaces
-            // this line when the reader's shared layer is merged.
-            .fullScreenCover(item: reading) { request in
-                ReaderScreen(gallery: request.gallery, initialPage: request.page)
+            // Continue: under `tabs` the reader zooms out of the bar's accessory, under
+            // `command` out of the first screen's card or banner.
+            .readerCover(
+                item: reading,
+                source: { request in
+                    bar == .tabs ? .continueBar(gid: request.gallery.gid) : .continueCard(gid: request.gallery.gid)
+                },
+                onExit: leaveReader
+            )
+            .onChange(of: router.reading) { _, request in
+                if let request { lastRead = request.gallery }
             }
             .sheet(isPresented: offer) {
                 ExperienceOfferSlot(router: router)
@@ -37,6 +49,22 @@ struct ShellPresentations: ViewModifier {
             .sensoryFeedback(.impact(weight: .light), trigger: router.presentedGallery?.gid) { _, new in new != nil }
             .task(id: model.links.request) { await model.links.handleRequest() }
             .task(id: model.activationRequest) { await model.performActivationWork() }
+    }
+
+    /// Where the reader's closing page leads, once the reader opened from Continue has
+    /// closed: onto the stack the user is on.
+    private func leaveReader(_ exit: ReaderExit) {
+        let router = model.router
+        switch exit {
+        case .gallery:
+            if let lastRead { router.selectedStack.push(.detail(lastRead)) }
+        case .comments:
+            if let lastRead { router.selectedStack.push(.detail(lastRead, intent: .comments(scrollTo: nil))) }
+        case .search(let keyword):
+            router.selectedStack.push(.search(keyword: keyword))
+        case .signIn:
+            router.presentSettings([.settings(.account), .settings(.login)])
+        }
     }
 
     private var isSettingsPresented: Binding<Bool> {

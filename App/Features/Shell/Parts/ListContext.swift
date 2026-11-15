@@ -62,8 +62,9 @@ extension ListContext {
         rankedChoices: RankedChoice.popularAndPeriods
     )
 
-    /// The account a signed-out list asks for, or `nil` for a list anyone can load.
-    var signInKind: ListSignInKind? {
+    /// The account a signed-out list asks for (the shared sign-in state names both), or `nil`
+    /// for a list anyone can load.
+    var signInKind: ListSignInState.Kind? {
         switch kind {
         case .place(.watched), .scopedSearch(.watched, _): .watched
         case .folder, .scopedSearch(.favorites, _): .favorites
@@ -80,12 +81,6 @@ extension ListContext {
         default: .everywhere
         }
     }
-}
-
-/// Which signed-out state a list shows (the shared sign-in pieces name both).
-nonisolated enum ListSignInKind: Hashable, Sendable {
-    case watched
-    case favorites
 }
 
 extension GalleryListKind {

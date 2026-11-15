@@ -35,6 +35,9 @@ struct TabsBarAccessory: View {
                 .padding(.horizontal, 12)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .contentShape(.rect)
+                // On the content, inside the accessory's glass: a marker around glass does
+                // nothing (`spikes/S4.md`).
+                .readerSource(.continueBar(gid: item.gallery.gid))
             }
             .buttonStyle(.plain)
             .accessibilityLabel(L10n.Localizable.Shell.Continue.reading)
