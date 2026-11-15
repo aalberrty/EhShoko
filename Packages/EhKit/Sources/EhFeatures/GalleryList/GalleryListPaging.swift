@@ -75,15 +75,12 @@ nonisolated enum GalleryListPaging {
     }
 
     /// `entries` with the stored reading progress of their galleries. An entry whose progress
-    /// is unchanged is kept as it is; the others are copied without parsing their title again.
+    /// is unchanged is kept as it is; the others are copied with everything else they show,
+    /// ages included, so nothing is parsed or counted again.
     static func withReadingProgress(_ entries: [GalleryEntry], _ progress: [String: Int]) -> [GalleryEntry] {
         entries.map { entry in
             let value = progress[entry.id]
-            guard entry.readingProgress != value else { return entry }
-            return GalleryEntry(
-                gallery: entry.gallery, title: entry.title, languageCode: entry.languageCode,
-                favorite: entry.favorite, readingProgress: value
-            )
+            return entry.readingProgress == value ? entry : entry.with(readingProgress: value)
         }
     }
 
