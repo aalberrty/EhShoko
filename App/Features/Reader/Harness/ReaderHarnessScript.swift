@@ -17,19 +17,25 @@ final class ReaderHarnessScript {
     var isLandscape = false
 
     @ObservationIgnored private let pairs: [ReaderHarnessPair]
+    @ObservationIgnored private let pose: ReaderHarnessRun?
     @ObservationIgnored private var run = ReaderHarnessRun(name: "", hasClosingPage: false)
     @ObservationIgnored private let meter = ReaderHarnessFrameMeter()
     @ObservationIgnored private var summary: [String] = []
     @ObservationIgnored private var hasStarted = false
 
-    init(pairs: [ReaderHarnessPair]) {
+    init(pairs: [ReaderHarnessPair], pose: ReaderHarnessRun? = nil) {
         self.pairs = pairs
+        self.pose = pose
     }
 
     func start() async {
         guard !hasStarted else { return }
         hasStarted = true
         ReaderHarnessLog.removeAll()
+        if let pose {
+            await show(pose)
+            return
+        }
         ReaderHarnessLog.line("matrix: begin, \(pairs.count) pairs, iOS \(UIDevice.current.systemVersion)")
         for (index, pair) in pairs.enumerated() {
             status = "\(index + 1)/\(pairs.count) \(pair.name)"
@@ -50,6 +56,26 @@ final class ReaderHarnessScript {
         ReaderHarnessLog.write(summary.joined(separator: "\n") + "\n", to: "summary.txt")
         status = "done"
         ReaderHarnessLog.line("matrix: done")
+    }
+
+    /// Opens the pose's reader, steps onto the closing page and leaves it there.
+    private func show(_ run: ReaderHarnessRun) async {
+        self.run = run
+        await rotate(toLandscape: run.isLandscape)
+        let recorder = ReaderHarnessRecorder()
+        let model = ReaderHarnessModel(run: run, recorder: recorder)
+        model.isPanelVisible = true
+        self.model = model
+        for _ in 0..<200 where engine(of: model)?.harnessContent == nil {
+            try? await Task.sleep(for: .milliseconds(50))
+        }
+        await settle(model, recorder)
+        if !model.isAtEnd {
+            _ = engine(of: model)?.harnessStep(by: 1, animated: true)
+            await settle(model, recorder)
+        }
+        status = run.name
+        ReaderHarnessLog.line("pose \(run.name): on the closing page=\(model.isAtEnd), page \(model.currentPage)")
     }
 
     // MARK: One run
@@ -98,6 +124,10 @@ final class ReaderHarnessScript {
         await settle(model, recorder)
         outcome.firstPage = model.firstPageShownAfter.map { String(format: "%.0f", $0) } ?? "?"
         outcome.footprintAtOpen = Self.footprint()
+        if let mark = model.trailerMadeAfter {
+            // Opened next to it: made after the first image, while the reader opened.
+            outcome.trailerNote = "closing page made while opening (\(mark))"
+        }
         recorder.add("M open")
         for _ in 0..<min(6, count - 1) {
             _ = await step(model, recorder, by: 1, "advance", &outcome)
@@ -228,8 +258,8 @@ final class ReaderHarnessScript {
 struct ReaderHarnessScriptView: View {
     @State private var script: ReaderHarnessScript
 
-    init(pairs: [ReaderHarnessPair]) {
-        _script = State(initialValue: ReaderHarnessScript(pairs: pairs))
+    init(pairs: [ReaderHarnessPair], pose: ReaderHarnessRun? = nil) {
+        _script = State(initialValue: ReaderHarnessScript(pairs: pairs, pose: pose))
     }
 
     var body: some View {

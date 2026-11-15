@@ -114,6 +114,27 @@ extension ReaderHarnessRun {
         .slot("three-pages-dual", with { $0.pageCount = 3; $0.allowsDualPage = true; $0.isLandscape = true })
     ]
 
+    /// `-ReaderHarnessPose alone|beside|vertical`: a reader on the closing page's stand-in, left
+    /// on screen to look at and to touch. `beside` is the two-page layout in landscape, where
+    /// the stand-in shares the screen with the last page.
+    static var poseAtLaunch: ReaderHarnessRun? {
+        switch UserDefaults.standard.string(forKey: "ReaderHarnessPose") {
+        case "alone": with { $0.name = "pose-alone"; $0.hasClosingPage = true; $0.startPage = 60 }
+        case "vertical":
+            with { $0.name = "pose-vertical"; $0.hasClosingPage = true; $0.direction = .vertical; $0.startPage = 60 }
+        case "beside":
+            with {
+                $0.name = "pose-beside"
+                $0.hasClosingPage = true
+                $0.allowsDualPage = true
+                $0.exceptCover = true
+                $0.isLandscape = true
+                $0.startPage = 60
+            }
+        default: nil
+        }
+    }
+
     /// The pairs the launch arguments ask for, or `nil` when they ask for no scripted run.
     static var requestedAtLaunch: [ReaderHarnessPair]? {
         guard let name = UserDefaults.standard.string(forKey: "ReaderHarnessScript"), !name.isEmpty else {
