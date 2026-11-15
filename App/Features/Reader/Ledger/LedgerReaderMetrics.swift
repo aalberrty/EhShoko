@@ -43,6 +43,8 @@ nonisolated enum LedgerReaderMetrics {
     static let pageAnimation: Animation = .snappy(duration: 0.35)
     /// The rows changing between the sheet's two heights.
     static let rowsAnimation: Animation = .snappy(duration: 0.3)
+    /// How long after the sheet is shown its open rows are built: after it has come to rest.
+    static let openRowsDelay: Duration = .milliseconds(700)
 }
 
 /// Which rows the sheet shows, from the height it stands at. It follows the sheet under a

@@ -5,27 +5,27 @@ import SwiftUI
 
 /// What pulling the sheet up uncovers: the strip of thumbnails, the reading group and the
 /// page's actions. A gallery of one page has no strip.
+///
+/// While the sheet rests they are under its edge: not drawn, closed to touches and to
+/// VoiceOver, and without the strip, whose thumbnails follow the reader and would load for
+/// nobody.
 struct LedgerOpenRows: View {
     let model: ReaderModel
     let sheet: LedgerSheetState
     let watch: LedgerPageWatch
     let isReversed: Bool
+    /// Whether the sheet has left its resting height.
+    let isUncovered: Bool
 
     @Environment(\.lookTint) private var tint
 
     var body: some View {
         VStack(spacing: 0) {
             if model.pageCount > 1 {
-                ReaderThumbnailStrip(
-                    model: model, length: 9, isReversed: isReversed,
-                    width: 34, currentWidth: 40, outline: tint, spacing: 6
-                )
-                // Nine thumbnails are wider than a narrow sheet, whose edges cut the outer ones.
-                .fixedSize()
-                .frame(maxWidth: .infinity)
-                .frame(height: LedgerReaderMetrics.stripHeight)
-                .clipped()
-                .background { LedgerStripThumbnailLoader(model: model) }
+                strip
+                    .frame(maxWidth: .infinity)
+                    .frame(height: LedgerReaderMetrics.stripHeight)
+                    .clipped()
             }
             // "TRANSLATION · ON THIS IPHONE", its switch and Original, Translated, Side by
             // side: a group above this one once translation exists. Not in the hierarchy
@@ -37,6 +37,25 @@ struct LedgerOpenRows: View {
                 .padding(.top, LedgerReaderMetrics.groupGap)
         }
         .padding(.horizontal, LedgerReaderMetrics.sideInset)
+        .opacity(isUncovered ? 1 : 0)
+        .allowsHitTesting(isUncovered)
+        .accessibilityHidden(!isUncovered)
+    }
+
+    @ViewBuilder
+    private var strip: some View {
+        if isUncovered {
+            ReaderThumbnailStrip(
+                model: model, length: 9, isReversed: isReversed,
+                width: 34, currentWidth: 40, outline: tint, spacing: 6
+            )
+            // Nine thumbnails are wider than a narrow sheet, whose edges cut the outer ones.
+            .fixedSize()
+            .background { LedgerStripThumbnailLoader(model: model) }
+        } else {
+            // The strip's place, so nothing under it moves when it comes.
+            Color.clear
+        }
     }
 }
 

@@ -15,6 +15,8 @@ struct LedgerReaderSheet: View {
     @Environment(SettingsStore.self) private var settings
     @Environment(\.look) private var look
     @State private var stage: LedgerSheetStage
+    /// Whether the open rows have been built while the sheet rests.
+    @State private var hasOpenRows = false
     @State private var watch = LedgerPageWatch()
 
     init(model: ReaderModel, sheet: LedgerSheetState) {
@@ -29,7 +31,7 @@ struct LedgerReaderSheet: View {
         // The rows scroll where the sheet cannot be as tall as they are: at the largest text
         // sizes, and in landscape.
         ScrollView {
-            LedgerSheetRows(model: model, sheet: sheet, watch: watch, stage: stage)
+            LedgerSheetRows(model: model, sheet: sheet, watch: watch, stage: stage, hasOpenRows: hasOpenRows)
                 .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { height in
                     if stage == .open {
                         sheet.openRowsDidLayOut(height: height)
@@ -37,6 +39,15 @@ struct LedgerReaderSheet: View {
                 }
         }
         .scrollBounceBehavior(.basedOnSize)
+        // The open rows are built once the sheet has come to rest, not with it and not under
+        // the finger that pulls it up: built at the start of a pull, they cost it its first
+        // frames.
+        .task {
+            try? await Task.sleep(for: LedgerReaderMetrics.openRowsDelay)
+            if !Task.isCancelled {
+                hasOpenRows = true
+            }
+        }
         // The sheet's own height, which follows a finger: a size, reported when the stage it
         // gives changes and not on every frame.
         .onGeometryChange(for: LedgerSheetStage.self) { heights.stage(at: $0.size.height) } action: { stage in
@@ -65,12 +76,13 @@ struct LedgerReaderSheet: View {
 
 /// The rows, top down. The slider keeps its place in both arrangements: at rest the page and
 /// the round buttons are under it; open, the header is above it and the strip, the group and
-/// the pills under it.
+/// the pills under it. While the sheet rests the open rows wait under its edge, unseen.
 private struct LedgerSheetRows: View {
     let model: ReaderModel
     let sheet: LedgerSheetState
     let watch: LedgerPageWatch
     let stage: LedgerSheetStage
+    let hasOpenRows: Bool
 
     @Environment(SettingsStore.self) private var settings
 
@@ -92,9 +104,10 @@ private struct LedgerSheetRows: View {
                 LedgerRestRow(model: model, sheet: sheet, watch: watch)
                     .transition(.opacity)
             }
-            if stage != .rest {
-                LedgerOpenRows(model: model, sheet: sheet, watch: watch, isReversed: isReversed)
-                    .transition(.opacity)
+            if hasOpenRows || stage != .rest {
+                LedgerOpenRows(
+                    model: model, sheet: sheet, watch: watch, isReversed: isReversed, isUncovered: stage != .rest
+                )
             }
         }
         .padding(.top, LedgerReaderMetrics.topInset)

@@ -60,17 +60,28 @@ final class LedgerSheetState {
     /// size, the two-page rows in landscape), up to the height that was drawn.
     private(set) var openHeight: CGFloat
     /// Whether the reader's screen is wider than tall. The sheet cannot see that itself.
-    var isLandscape = false
+    private(set) var isLandscape = false
     /// Auto-play's interval while it is off: the switch turns it on at this.
     private(set) var autoPlayInterval: ReaderAutoPlayPolicy = .fiveSeconds
 
+    private let defaultOpenHeight: CGFloat
     private let minimumOpenHeight: CGFloat
 
     init(hasPages: Bool) {
         let heights = LedgerSheetHeights(hasPages: hasPages)
         openHeight = heights.open
+        defaultOpenHeight = heights.open
         // Always a pull above the resting height, so the two never meet.
         minimumOpenHeight = heights.rest + LedgerReaderMetrics.minimumPull
+    }
+
+    /// The reader's screen turned. The open rows differ between the two (landscape adds the
+    /// two-page rows), so the open height starts over from what portrait needs and follows the
+    /// rows from there.
+    func screenDidTurn(isLandscape: Bool) {
+        guard isLandscape != self.isLandscape else { return }
+        self.isLandscape = isLandscape
+        openHeight = defaultOpenHeight
     }
 
     /// The open rows were laid out `height` tall.
@@ -147,7 +158,7 @@ private struct LedgerPageInsetDriver: View {
             .accessibilityHidden(true)
             .onGeometryChange(for: LedgerScreenShape.self) { LedgerScreenShape($0) } action: { shape in
                 screen = shape
-                sheet.isLandscape = shape.isLandscape
+                sheet.screenDidTurn(isLandscape: shape.isLandscape)
             }
             .onChange(of: inset, initial: true) { _, inset in
                 set(inset)
