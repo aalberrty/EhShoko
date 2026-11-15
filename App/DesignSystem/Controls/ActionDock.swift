@@ -177,6 +177,9 @@ private struct DockSymbol: View {
 /// The tinted pill, taking the width the round buttons leave and never more: when the title
 /// and the detail do not fit (a 372 pt side pane), it shows the title alone, and VoiceOver
 /// still reads both. A design that wants a shorter detail there passes one ("23 / 48").
+///
+/// A pill that opens a reader marks its label as where the reader zooms out of; the marker
+/// goes inside the glass, where it takes effect (`spikes/S4.md`).
 private struct DockPill: View {
     let item: DockItem
     let perform: (DockAction) -> Void
@@ -185,19 +188,31 @@ private struct DockPill: View {
     /// The label's height inside the prominent style's padding at the large control size
     /// (measured: about 27 pt in all), so that the pill is as tall as the round buttons.
     private static let labelHeight: CGFloat = ActionDock.height - 27
+    /// A dimmed pill's tint and label. Glass ignores `opacity` on the button, so the pill is
+    /// dimmed through its tint, which the glass and iOS 18's filled pill both follow.
+    private static let dimmedTint = 0.4
+    private static let dimmedLabel = 0.75
 
     var body: some View {
-        Button { perform(item.action) } label: { label }
+        Button { perform(item.action) } label: { markedLabel }
             .glassProminentButtonStyle()
             .buttonBorderShape(.capsule)
             .controlSize(.large)
             // The concrete colour, not the inherited accent, which turns grey in an
             // inspector shown as a sheet on iOS 26.
-            .tint(tint)
+            .tint(item.isDimmed ? tint.opacity(Self.dimmedTint) : tint)
             .accessibilityLabel([item.title, item.detail].compactMap(\.self).joined(separator: ", "))
             .disabled(!item.isEnabled)
-            .opacity(item.isDimmed ? 0.6 : 1)
             .chromeMorph(.centre)
+    }
+
+    @ViewBuilder
+    private var markedLabel: some View {
+        if let gid = item.readerGalleryID {
+            label.readerSource(.dock(gid: gid))
+        } else {
+            label
+        }
     }
 
     private var label: some View {
@@ -207,6 +222,7 @@ private struct DockPill: View {
         }
         .font(.body)
         .lineLimit(1)
+        .opacity(item.isDimmed ? Self.dimmedLabel : 1)
         .padding(.horizontal, Tokens.Spacing.xSmall)
         .frame(maxWidth: .infinity, minHeight: Self.labelHeight)
         .contentTransition(.interpolate)
