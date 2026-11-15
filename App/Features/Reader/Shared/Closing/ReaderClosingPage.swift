@@ -62,7 +62,6 @@ struct ReaderClosingPage: View {
                 }
             }
             .scrollBounceBehavior(.basedOnSize)
-            .scrollIndicators(.automatic)
         }
         .background { Color(uiColor: .readerBackground).ignoresSafeArea() }
         .modifier(ReaderClosingFeedback(detail: ownDetail))
