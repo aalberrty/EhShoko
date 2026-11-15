@@ -46,14 +46,15 @@ struct PartHarnessView: View {
                 ProgressView()
             }
         }
-        .overlay(alignment: .topTrailing) {
+        // At the top centre, clear of the top bar's buttons at both ends.
+        .overlay(alignment: .top) {
             if options.showsPanelButton {
                 Button { showsPanel = true } label: {
                     Image(systemName: "slider.horizontal.3")
-                        .padding(10)
+                        .font(.footnote)
+                        .padding(8)
                         .glassSurface(in: .circle, isInteractive: true)
                 }
-                .padding(.trailing, 12)
                 .accessibilityLabel(Text(verbatim: "Harness options"))
             }
         }
@@ -304,6 +305,7 @@ final class PartHarnessModel {
 private struct PartHarnessPanel: View {
     @Bindable var model: PartHarnessModel
     let close: (() -> Void)?
+    @State private var heap: String?
 
     var body: some View {
         NavigationStack {
@@ -344,6 +346,18 @@ private struct PartHarnessPanel: View {
                     picker("Search scope", $model.options.scope, SearchScope.allCases) { $0.rawValue }
                 } header: {
                     Text(verbatim: "Gallery and search")
+                }
+                Section {
+                    Button { heap = PartHarnessHeap.writeReport() } label: {
+                        Text(verbatim: "List per-design objects in memory")
+                    }
+                    if let heap {
+                        Text(verbatim: heap)
+                            .font(.caption.monospaced())
+                            .textSelection(.enabled)
+                    }
+                } header: {
+                    Text(verbatim: "Memory")
                 }
                 if let close {
                     Section {
