@@ -48,8 +48,8 @@ struct ShelfReaderControls: View {
 
     /// Two pages side by side, as the engine decides it (`ReaderConfiguration.usesDualPage`):
     /// in a paged direction, with the setting on, on a screen wider than tall.
-    private var spreads: ShelfReaderSpreads {
-        ShelfReaderSpreads(
+    private var spreads: ReaderSpreads {
+        ReaderSpreads(
             offersDualPage: frame.isLandscape && settings.readingDirection != .vertical,
             enablesDualPage: settings.enablesDualPageMode,
             exceptCover: settings.exceptCover

@@ -53,6 +53,10 @@ enum ReaderMetrics {
 /// Close, on a glass circle. The symbol carries the system's localized "Close" label.
 /// Closing is the presenter's dismissal, so it works the same whoever presented the reader;
 /// under Ledger it needs nothing taken down first (spike S4).
+///
+/// The circle keeps its size, so the symbol grows with the text size only as far as the
+/// largest standard size, where it still fits; beyond that the large content viewer shows it,
+/// as for the system's bar buttons.
 struct ReaderCloseControl: View {
     @Environment(\.dismiss) private var dismiss
     @State private var dismissals = 0
@@ -64,10 +68,12 @@ struct ReaderCloseControl: View {
         } label: {
             Image(systemName: "xmark")
                 .font(.title3.weight(.semibold))
+                .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
                 .frame(width: ReaderMetrics.closeSize, height: ReaderMetrics.closeSize)
                 .contentShape(.circle)
         }
         .buttonStyle(.plain)
+        .accessibilityShowsLargeContentViewer()
         .glassSurface(in: .circle, isInteractive: true)
         .sensoryFeedback(.impact(weight: .light), trigger: dismissals)
     }

@@ -37,7 +37,7 @@ private struct ShelfReaderPanel: View {
             if hasStrip {
                 ReaderThumbnailStrip(
                     model: model, length: 9, isReversed: isReversed,
-                    width: 36, currentWidth: 45, outline: tint, spacing: 6
+                    width: 36, currentWidth: 45, outline: tint, outlineOffset: 1.5, othersOpacity: 0.72, spacing: 6
                 )
                 // Nine thumbnails are wider than a phone's panel: the strip runs under the
                 // panel's padding to its edges, which cut the outer ones.

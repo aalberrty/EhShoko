@@ -1,12 +1,19 @@
 import CoreGraphics
+import EhModels
 import Foundation
 
 /// What the engine remembers about pages between the moments their views exist: aspect
 /// ratios, image failures and which image sizes the host has already been told about.
 /// A few numbers per page, so a thousand pages cost next to nothing.
 struct ReaderPageRegistry {
+    /// An image that did not load: the URL it was at, and why when that is known.
+    struct ImageFailure {
+        var url: URL
+        var reason: AppError?
+    }
+
     private var aspectRatios: [CGFloat?] = []
-    private var failedImages: [Int: URL] = [:]
+    private var failedImages: [Int: ImageFailure] = [:]
     private var reportedPixelSizes: [Int: CGSize] = [:]
 
     /// Ratios this close are the same shape; the difference is rounding in a downsampled decode.
@@ -32,12 +39,18 @@ struct ReaderPageRegistry {
         return true
     }
 
-    func hasFailedImage(page: Int, url: URL) -> Bool {
-        failedImages[page] == url
+    /// The failure of the page's image at `url`, or `nil` when that image did not fail.
+    func imageFailure(page: Int, url: URL) -> ImageFailure? {
+        guard let failure = failedImages[page], failure.url == url else { return nil }
+        return failure
     }
 
-    mutating func setFailedImage(_ url: URL?, forPage page: Int) {
-        failedImages[page] = url
+    mutating func setFailedImage(_ url: URL, reason: AppError?, forPage page: Int) {
+        failedImages[page] = ImageFailure(url: url, reason: reason)
+    }
+
+    mutating func clearFailedImage(forPage page: Int) {
+        failedImages[page] = nil
     }
 
     /// Whether a loaded image's size is news to the host: the first time, and when it changes.
