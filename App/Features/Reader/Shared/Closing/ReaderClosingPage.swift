@@ -23,8 +23,8 @@ struct ReaderClosingPage: View {
     let pageCount: Int
     /// Tells the engine that the content's height changed, for the vertical strip.
     let sizeReporter: ReaderClosingSizeReporter
-    /// Makes the page's own detail model, when no gallery page presented the reader.
-    let makeDetail: @MainActor (Gallery) -> GalleryDetailModel
+    /// The detail model of its own, when no gallery page presented the reader.
+    let ownDetail: ReaderClosingOwnDetail
 
     @Environment(\.readerClosingContext) private var context
     /// The look and accent the reader hands its engine's views (`ReaderScreen`).
@@ -32,9 +32,6 @@ struct ReaderClosingPage: View {
     // The engine is UIKit, so the stores the shell puts in the environment do not reach here.
     @Dependency(\.settings) private var settings
     @Dependency(\.userStore) private var userStore
-
-    /// The detail model made here when no gallery page presented the reader.
-    @State private var ownDetail: GalleryDetailModel?
 
     /// The room, above the bottom safe area, that the column keeps clear for the reader's
     /// controls when they rest at the bottom: Shelf's panel reaches 172 pt above it (E1),
@@ -54,7 +51,8 @@ struct ReaderClosingPage: View {
         ReaderClosingProbe.asked()
         let reporter = ReaderClosingSizeReporter()
         let page = ReaderClosingPage(
-            gallery: gallery, pageCount: pageCount, sizeReporter: reporter, makeDetail: makeDetail
+            gallery: gallery, pageCount: pageCount, sizeReporter: reporter,
+            ownDetail: ReaderClosingOwnDetail(make: makeDetail)
         )
         let controller = UIHostingController(rootView: page)
         // The page draws the reader's background itself; the hosting view adds nothing.
@@ -64,7 +62,7 @@ struct ReaderClosingPage: View {
     }
 
     var body: some View {
-        let detail = context?.detail ?? ownDetail
+        let detail = context?.detail ?? ownDetail.model
         ReaderClosingSlotLayout {
             ScrollView(.vertical) {
                 ReaderClosingColumn(
@@ -83,7 +81,7 @@ struct ReaderClosingPage: View {
             .scrollBounceBehavior(.basedOnSize)
         }
         .background { Color(uiColor: .readerBackground).ignoresSafeArea() }
-        .modifier(ReaderClosingFeedback(detail: ownDetail))
+        .modifier(ReaderClosingFeedback(detail: ownDetail.model))
         // `nil` is the look's own tint, which the default accent gives.
         .lookEnvironment(style.look, accent: style.accent ?? .systemBlue)
         .environment(userStore)
@@ -99,15 +97,28 @@ struct ReaderClosingPage: View {
             ReaderClosingProbe.presenterModelShown()
             return
         }
-        let model: GalleryDetailModel
-        if let ownDetail {
-            model = ownDetail
-        } else {
-            model = makeDetail(gallery)
-            ownDetail = model
-            ReaderClosingProbe.detailMade()
-        }
-        await model.load()
+        await ownDetail.model(for: gallery).load()
+    }
+}
+
+/// The page's own detail model, made the first time it is asked for. The controller the
+/// engine keeps owns it, not the view's state, so the page makes one model, and sends one
+/// request, however often its view leaves the window and comes back.
+@Observable
+final class ReaderClosingOwnDetail {
+    private(set) var model: GalleryDetailModel?
+    @ObservationIgnored private let make: @MainActor (Gallery) -> GalleryDetailModel
+
+    init(make: @escaping @MainActor (Gallery) -> GalleryDetailModel) {
+        self.make = make
+    }
+
+    func model(for gallery: Gallery) -> GalleryDetailModel {
+        if let model { return model }
+        let made = make(gallery)
+        model = made
+        ReaderClosingProbe.detailMade()
+        return made
     }
 }
 
