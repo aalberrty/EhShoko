@@ -1,5 +1,8 @@
 name: Test
-on: [push, workflow_dispatch]
+on:
+  # The repository is private, where a run on a Mac counts ten times against the
+  # account's minutes, so runs are started by hand: gh workflow run Test --ref <branch>
+  workflow_dispatch:
 env:
    SCHEME_NAME: 'EhGaro'
    DEVELOPER_DIR: /Applications/Xcode_26.6.app
