@@ -26,8 +26,15 @@ extension PreferenceStorage {
     }
 }
 
+extension SettingKey {
+    /// Settings with only one possible value, which `Setting.nonDefault` cannot change: the
+    /// app icon while there is only one.
+    static let singleValued: Set<SettingKey> = AppIconType.allCases.count > 1 ? [] : [.appIconType]
+}
+
 extension Setting {
-    /// Every field differs from `Setting()` and every coupling rule is satisfied.
+    /// Every field but those of `SettingKey.singleValued` differs from `Setting()`, and every
+    /// coupling rule is satisfied.
     static let nonDefault: Setting = {
         var setting = Setting()
         setting.galleryHost = .exhentai
@@ -43,7 +50,8 @@ extension Setting {
         setting.listDisplayMode = .thumbnail
         setting.preferredColorScheme = .dark
         setting.accentColor = RGBColor(red: 0.1, green: 0.25, blue: 0.3)
-        setting.appIconType = .ukiyoe
+        // The default while there is one icon (see `SettingKey.singleValued`).
+        setting.appIconType = AppIconType.allCases.last ?? .default
         setting.showsTagsInList = true
         setting.listTagsNumberMaximum = 15
         setting.displaysJapaneseTitle = false

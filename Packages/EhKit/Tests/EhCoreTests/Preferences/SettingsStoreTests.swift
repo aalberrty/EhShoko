@@ -16,11 +16,11 @@ import Testing
         let store = SettingsStore(storage: storage)
         store.apply(.nonDefault)
         #expect(store.setting == .nonDefault)
-        #expect(storage.storedSettingKeys == Set(SettingKey.allCases))
+        #expect(storage.storedSettingKeys == Set(SettingKey.allCases).subtracting(SettingKey.singleValued))
         #expect(SettingsStore(storage: storage).setting == .nonDefault)
     }
 
-    @Test(arguments: SettingKey.allCases)
+    @Test(arguments: SettingKey.allCases.filter { !SettingKey.singleValued.contains($0) })
     func eachPropertyWritesOnlyItsOwnKey(key: SettingKey) throws {
         let storage = PreferenceStorage.ephemeral()
         let store = SettingsStore(storage: storage)
@@ -119,6 +119,13 @@ import Testing
         #expect(store.readingDirection == .vertical)
         #expect(store.accentColor == .systemBlue)
         #expect(store.listTagsNumberMaximum == 7)
+    }
+
+    @Test(arguments: 1...4)
+    func aRemovedAppIconReadsAsTheDefault(rawValue: Int) {
+        let storage = PreferenceStorage.ephemeral()
+        storage.defaults.set(rawValue, forKey: "settings.appIconType")
+        #expect(SettingsStore(storage: storage).appIconType == .default)
     }
 
     // MARK: Gallery host

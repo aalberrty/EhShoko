@@ -30,7 +30,7 @@ import Testing
         #expect(setting.listDisplayMode == .thumbnail)
         #expect(setting.preferredColorScheme == .dark)
         #expect(setting.accentColor == RGBColor(red: 0.2, green: 0.4, blue: 0.6))
-        #expect(setting.appIconType == .notMyPresidnet)
+        #expect(setting.appIconType == .default) // That icon has been removed.
         #expect(setting.showsTagsInList)
         #expect(setting.listTagsNumberMaximum == 7)
         #expect(!setting.displaysJapaneseTitle)
@@ -117,7 +117,6 @@ import Testing
         setting.enablesTagsExtension = true
         setting.translatesTags = true
         setting.accentColor = RGBColor(red: 1, green: 0.5, blue: 0)
-        setting.appIconType = .ukiyoe
         setting.autoLockPolicy = .min30
         setting.designList = .ledger
         setting.designCustom = DesignChoices(preset: .wall)

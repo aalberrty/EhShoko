@@ -63,7 +63,8 @@ import Testing
         #expect(settings.translatesTags && !settings.showsTagsSearchSuggestion && settings.showsImagesInTags)
         #expect(settings.autoLockPolicy == .min1 && settings.backgroundBlurRadius == 20)
         #expect(settings.accentColor == RGBColor(red: 1, green: 0.5, blue: 0))
-        #expect(settings.preferredColorScheme == .dark && settings.appIconType == .ukiyoe)
+        // The imported icon has since been removed.
+        #expect(settings.preferredColorScheme == .dark && settings.appIconType == .default)
         #expect(settings.readingDirection == .rightToLeft && settings.prefetchLimit == 18)
         #expect(settings.maximumScaleFactor == 4 && settings.doubleTapScaleFactor == 3)
 
