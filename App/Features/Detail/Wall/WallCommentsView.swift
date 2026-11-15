@@ -188,15 +188,16 @@ private struct WallCommentBlock: View, Equatable {
             Text(item.author)
                 .font(.subheadline.weight(.semibold))
                 .foregroundStyle(look.label)
-                .layoutPriority(1)
             if Self.isUploader(item) {
                 Text(L10n.Localizable.Gallery.Comments.uploader)
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(.tint)
             }
+            // A long name gives way to the date and the score, not the other way round.
             Text(item.comment.formattedDateString)
                 .font(.caption)
                 .foregroundStyle(look.secondaryLabel)
+                .layoutPriority(1)
             if !typeSize.isAccessibilitySize {
                 Spacer(minLength: Tokens.Spacing.small)
             }
@@ -211,6 +212,7 @@ private struct WallCommentBlock: View, Equatable {
                     .font(.footnote.weight(.semibold))
                     .monospacedDigit()
                     .foregroundStyle(look.secondaryLabel)
+                    .layoutPriority(2)
             }
         }
         .lineLimit(1)

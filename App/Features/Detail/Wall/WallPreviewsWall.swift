@@ -126,14 +126,17 @@ struct WallPreviewsWall: View {
         guard dense != isDense, width > 0 else { return }
         let old = WallPreviewsLayout(isDense: isDense, width: width, numberHeight: numberHeight)
         let new = WallPreviewsLayout(isDense: dense, width: width, numberHeight: numberHeight)
-        // The first page of the row nearest the top edge.
+        // The row nearest the top edge, and the row its first page is in afterwards. Every row
+        // of a layout is one height, so the offset is worked out, not looked up: scrolling to
+        // the page by its identity landed a row early once the grid had been laid out anew.
         let row = Int((max(scroll.offset, 0) / old.pitch).rounded())
-        let anchor = min(row * old.columns + 1, max(model.pageCount, 1))
+        let anchor = min(row * old.columns, max(model.pageCount - 1, 0))
+        let offset = CGFloat(anchor / new.columns) * new.pitch
         var transaction = Transaction(animation: nil)
         transaction.disablesAnimations = true
         withTransaction(transaction) {
             isDense = dense
-            position.scrollTo(id: anchor, anchor: .top)
+            position.scrollTo(y: offset)
             cue = WallPreviewsCue(scale: min(max(old.pitch / new.pitch, 0.94), 1.06), opacity: 0.55)
         }
         Task { withAnimation(.snappy(duration: 0.25)) { cue = .rest } }
