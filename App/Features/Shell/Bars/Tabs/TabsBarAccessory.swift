@@ -12,6 +12,8 @@ struct TabsBarAccessory: View {
     @Environment(AppRouter.self) private var appRouter
     @Environment(\.look) private var look
 
+    private static var height: CGFloat { 48 }
+
     var body: some View {
         if let item = continueModel.first {
             Button {
@@ -33,7 +35,10 @@ struct TabsBarAccessory: View {
                         .foregroundStyle(look.label)
                 }
                 .padding(.horizontal, 12)
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                // The slot's height on every system (`spikes/S3.md`, question 4). Never an
+                // unlimited height: in the capsule's bottom inset that would take the screen.
+                .frame(maxWidth: .infinity)
+                .frame(height: Self.height)
                 .contentShape(.rect)
                 // On the content, inside the accessory's glass: a marker around glass does
                 // nothing (`spikes/S4.md`).
