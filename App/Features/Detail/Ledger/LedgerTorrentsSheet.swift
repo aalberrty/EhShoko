@@ -58,7 +58,9 @@ struct LedgerTorrentsSheet: View {
             .listStyle(.plain)
             .scrollContentBackground(.hidden)
         } else if let error = model.loadingState.failed {
+            // On the sheet's glass: a filled Retry, not glass on glass.
             ErrorStateView(error: error, retry: model.retry)
+                .statusActionForm(.filled)
         } else {
             LoadingStateView()
         }

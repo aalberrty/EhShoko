@@ -93,7 +93,9 @@ private struct ShelfGalleryMain: View {
 
     var body: some View {
         if let failure = model.loadingState.failed, model.detail == nil || !failure.isRetryable {
+            // In the scrolling page: a filled Retry, not glass.
             ErrorStateView(error: failure, retry: failure.isRetryable ? { model.refetch() } : nil)
+                .statusActionForm(.filled)
                 .padding(.top, Tokens.Spacing.xxLarge)
         } else if let detail = model.detail {
             if let failure = model.loadingState.failed {

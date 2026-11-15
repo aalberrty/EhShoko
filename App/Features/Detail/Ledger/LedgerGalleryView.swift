@@ -78,7 +78,9 @@ struct LedgerGalleryView: View {
     @ViewBuilder
     private var sections: some View {
         if model.detail == nil, let error = model.loadingState.failed {
+            // In the scrolling page: a filled Retry, not glass.
             ErrorStateView(error: error, retry: error.isRetryable ? { model.refetch() } : nil)
+                .statusActionForm(.filled)
                 .frame(maxWidth: .infinity)
                 .padding(.top, 48)
         } else {
