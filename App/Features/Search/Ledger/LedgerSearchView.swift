@@ -45,10 +45,8 @@ struct LedgerSearchView: View {
                 SearchFiltersButton(model: model)
             }
             #if DEBUG || HARNESS
-            // Quick and recent searches for the part harness (`-HarnessSearchWords YES`). The
-            // seeder is G1's and is to move to `Search/Shared/Harness` (F27); it is shared
-            // here rather than copied.
-            .task { await ShelfSearchSampleWords.addIfRequested(hasQuickSearches: !model.root.quickSearchWords.isEmpty) }
+            // Quick and recent searches for the part harness (`-HarnessSearchWords YES`).
+            .task { await SearchSampleWords.addIfRequested(hasQuickSearches: !model.root.quickSearchWords.isEmpty) }
             #endif
     }
 }

@@ -48,9 +48,8 @@ struct WallSearchView: View {
             }
             .searchSurfaceDrawsClose()
             #if DEBUG || HARNESS
-            // `-HarnessSearchWords YES`: G1's sample quick and recent searches, until they move
-            // to `Search/Shared/Harness`.
-            .task { await ShelfSearchSampleWords.addIfRequested(hasQuickSearches: !model.root.quickSearchWords.isEmpty) }
+            // `-HarnessSearchWords YES`: sample quick and recent searches.
+            .task { await SearchSampleWords.addIfRequested(hasQuickSearches: !model.root.quickSearchWords.isEmpty) }
             #endif
     }
 
