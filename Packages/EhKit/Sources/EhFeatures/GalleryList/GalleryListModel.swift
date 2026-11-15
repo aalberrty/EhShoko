@@ -58,7 +58,7 @@ public final class GalleryListModel {
 
     public private(set) var source: GalleryListSource
     /// The rows loaded so far, built off the main actor as each page arrives.
-    public private(set) var entries: [GalleryEntry] = [] {
+    public internal(set) var entries: [GalleryEntry] = [] {
         didSet { updateVisibleEntries() }
     }
     /// `entries` whose raw title contains `titleFilter` (legacy local "Filter" search field).
@@ -70,7 +70,7 @@ public final class GalleryListModel {
     }
     /// Where each loaded page starts in `entries`, for numbered lists (Toplists): the
     /// "Page 2" dividers. Empty for every other list.
-    public private(set) var pageStarts: [PageStart] = []
+    public internal(set) var pageStarts: [PageStart] = []
     public private(set) var pageNumber = PageNumber()
     /// State of the first page (and of refreshes).
     public private(set) var loadingState: LoadingState = .idle
@@ -88,6 +88,8 @@ public final class GalleryListModel {
     @ObservationIgnored private var needsLoad = true
     /// Bumped by every load that replaces the list; results of older loads are dropped.
     @ObservationIgnored private var generation = 0
+    /// Every gallery loaded in this generation, also those dropped since, so that a later page
+    /// does not bring one back.
     @ObservationIgnored private var entryIDs = Set<String>()
     @ObservationIgnored private let tasks = ModelTasks()
     /// The first-page and next-page loads in flight. Each is cleared by its own completion, or
