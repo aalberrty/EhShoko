@@ -97,10 +97,14 @@ struct GalleryContextMenu: View {
 }
 
 /// The menu's preview: the cover beside the full title, the credit and the tags, which is how
-/// a one-line caption is read in full.
+/// a one-line caption is read in full. Tags are translated while tag translation is on, as the
+/// rows translate theirs: a lookup in the translations table, made when the menu opens.
 private struct GalleryMenuPreview: View {
     let entry: GalleryEntry
     @Environment(\.look) private var look
+    // Read by the preview's body, which runs when the menu opens, never while the list scrolls.
+    @Environment(SettingsStore.self) private var settings
+    @Environment(TagTranslationService.self) private var tagTranslations: TagTranslationService?
 
     private static let coverSize = CGSize(width: 104, height: 149)
 
@@ -122,11 +126,16 @@ private struct GalleryMenuPreview: View {
                     }
                 }
             }
+            let translations = settings.translatesTags ? tagTranslations : nil
             ForEach(entry.gallery.tags.prefix(6)) { tag in
                 TagText(
                     namespace: tag.namespace?.localizedName ?? tag.rawNamespace,
                     color: tag.namespace?.markColor ?? look.secondaryLabel,
-                    tags: tag.contents.map { TagText.Tag($0.text, isWeak: $0.isWeak) }
+                    tags: tag.contents.map { content in
+                        // Without emoji, as a row's tag line shows it.
+                        let translation = translations?.display(forKey: content.id)
+                        return TagText.Tag(content.chipText(translation: translation, showsImages: false), isWeak: content.isWeak)
+                    }
                 )
             }
         }
