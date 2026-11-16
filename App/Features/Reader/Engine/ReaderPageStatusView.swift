@@ -87,6 +87,9 @@ final class ReaderPageStatusView: UIView {
         symbolView.preferredSymbolConfiguration = UIImage.SymbolConfiguration(textStyle: .title2)
         symbolView.contentMode = .center
         symbolView.isHidden = true
+        // The title says the page failed; VoiceOver need not read "Warning" first.
+        symbolView.isAccessibilityElement = false
+        symbolView.accessibilityElementsHidden = true
         addSubview(symbolView)
 
         messageLabel.text = L10n.Localizable.Reader.Page.failed
