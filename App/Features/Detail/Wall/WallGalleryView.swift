@@ -138,6 +138,7 @@ private struct WallGalleryClose: ViewModifier {
                         } label: {
                             Image(systemName: "chevron.down")
                         }
+                        .accessibilityLabel(L10n.Localizable.Common.close)
                     }
                 }
             }

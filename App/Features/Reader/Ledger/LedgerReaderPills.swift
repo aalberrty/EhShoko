@@ -26,7 +26,9 @@ struct LedgerPagePills: View {
                     // The page at the moment of the tap; on the closing page, the last page.
                     model.perform(action, page: model.currentPage)
                 } label: {
-                    LedgerPillLabel(title: action.localizedName, symbol: action.symbolName, showsTitle: showsTitles)
+                    // "Save" for "Save to Photos", which leaves no room for the others' names.
+                    let title = action == .save ? L10n.Localizable.Reader.Action.save : action.localizedName
+                    LedgerPillLabel(title: title, symbol: action.symbolName, showsTitle: showsTitles)
                 }
                 .ledgerControlName(action.localizedName, symbol: action.symbolName)
                 .disabled(!hasImage)

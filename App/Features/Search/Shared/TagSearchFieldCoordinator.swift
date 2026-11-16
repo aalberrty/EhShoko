@@ -12,6 +12,8 @@ final class TagSearchFieldCoordinator: NSObject, UISearchTextFieldDelegate {
     weak var controller: TagSearchFieldController?
     /// What the field held when it last reported, so an unchanged field reports nothing.
     private var lastReported: TagSearchFieldEdit?
+    /// The model's `revision` the field last showed the content of.
+    private(set) var appliedRevision: Int?
 
     init(model: SearchSurfaceModel) {
         self.model = model
@@ -84,7 +86,7 @@ final class TagSearchFieldCoordinator: NSObject, UISearchTextFieldDelegate {
     func insertAtCaret(_ key: String) {
         guard let field else { return }
         if !field.isFirstResponder { focus() }
-        let space = TagSearchFieldRules.needsSpace(beforeKey: key, after: characterBeforeCaret(in: field))
+        let space = SearchTokens.needsSpace(beforeKey: key, after: characterBeforeCaret(in: field))
         field.insertText(space ? " " + key : key)
         reportIfChanged()
     }
@@ -94,7 +96,7 @@ final class TagSearchFieldCoordinator: NSObject, UISearchTextFieldDelegate {
         let caret = field.selectedTextRange?.start ?? field.textualRange.end
         let before = text(from: field.textualRange.start, to: caret, in: field)
         let keyword = suggestion.tag.searchKeyword
-        let replacement = TagSearchFieldRules.replacement(
+        let replacement = SearchTokens.replacement(
             for: suggestion.originalKeyword, keyword: keyword, beforeCaret: before
         )
         let start = replacement.flatMap { field.position(from: caret, offset: -$0.length) } ?? caret
@@ -104,11 +106,13 @@ final class TagSearchFieldCoordinator: NSObject, UISearchTextFieldDelegate {
         reportIfChanged()
     }
 
-    /// New content from the model: the only time the field is written from outside.
-    func apply(tokens: [SearchToken], text: String) {
+    /// The model's content, after it replaced it (`replaceKeyword`): the only time the field
+    /// is written from outside.
+    func apply(_ model: SearchSurfaceModel) {
         guard let field else { return }
-        field.tokens = tokens.map { $0.makeFieldToken() }
-        field.text = text
+        appliedRevision = model.revision
+        field.tokens = model.tokens.map { $0.makeFieldToken() }
+        field.text = model.text
         lastReported = currentEdit()
     }
 
@@ -118,7 +122,7 @@ final class TagSearchFieldCoordinator: NSObject, UISearchTextFieldDelegate {
         let edit = currentEdit()
         guard edit != lastReported else { return }
         lastReported = edit
-        if let model { TagSearchFieldMirror.fieldDidEdit(edit, model: model) }
+        model?.fieldDidEdit(edit)
     }
 
     private func currentEdit() -> TagSearchFieldEdit {
@@ -138,7 +142,7 @@ final class TagSearchFieldCoordinator: NSObject, UISearchTextFieldDelegate {
         guard let field, let caret = field.selectedTextRange?.start, field.compare(caret, to: field.textualRange.start) == .orderedDescending
         else { return }
         let before = text(from: field.textualRange.start, to: caret, in: field)
-        guard let term = TagSearchFieldRules.completedTerm(beforeCaret: before), let token = SearchToken(term: term),
+        guard let term = SearchTokens.completedTerm(beforeCaret: before), let token = SearchToken(term: term),
               let start = field.position(from: caret, offset: -((term as NSString).length + 1)),
               let range = field.textRange(from: start, to: caret) else { return }
         replace(range, with: token, in: field)

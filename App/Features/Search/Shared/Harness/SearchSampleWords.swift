@@ -5,10 +5,11 @@ import EhDatabase
 import EhModels
 import Foundation
 
-/// Quick searches and recent searches for trying Shelf's search where the database has none
+/// Quick searches and recent searches for trying a search design where the database has none
 /// (the part harness's is seeded with galleries only): `-HarnessSearchWords YES` adds four of
-/// each once per launch, when there are no quick searches yet.
-enum ShelfSearchSampleWords {
+/// each once per launch, when there are no quick searches yet. Each search design calls it
+/// from its view under DEBUG.
+enum SearchSampleWords {
     private static var isRequested: Bool { UserDefaults.standard.bool(forKey: "HarnessSearchWords") }
     @MainActor private static var hasRun = false
 

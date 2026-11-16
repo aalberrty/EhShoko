@@ -111,8 +111,7 @@ private struct ReaderToolGroup: View {
             } label: {
                 Image(systemName: model.isLiveTextEnabled ? "viewfinder.circle.fill" : "viewfinder.circle")
             }
-            // There is no localized name for it yet; "Live Text" is the system's own term.
-            .accessibilityLabel(Text(verbatim: "Live Text"))
+            .accessibilityLabel(L10n.Localizable.Reader.liveText)
             .accessibilityAddTraits(model.isLiveTextEnabled ? .isSelected : [])
             // The system analyzer is missing on some devices and in the simulator.
             .disabled(!ReaderLiveText.isSupported)

@@ -136,42 +136,6 @@ private struct GalleryMenuPreview: View {
     }
 }
 
-/// The circle and the artists a parsed title names, each as a search.
-nonisolated struct GalleryCreditSearch: Identifiable, Equatable {
-    let name: String
-    let keyword: String
-    let systemImage: String
-
-    var id: String { keyword }
-
-    /// At most the circle and three artists. A name that matches one of the gallery's tags in
-    /// the same namespace searches that tag exactly; otherwise the name in quotes.
-    static func targets(for entry: GalleryEntry) -> [GalleryCreditSearch] {
-        let title = entry.title
-        let tags = entry.gallery.tags
-        var targets: [GalleryCreditSearch] = []
-        if let circle = title.circle, !circle.isEmpty {
-            targets.append(target(circle, namespace: .group, systemImage: "person.2", tags: tags))
-        }
-        for artist in title.artists.prefix(3) where !artist.isEmpty {
-            targets.append(target(artist, namespace: .artist, systemImage: "paintbrush.pointed", tags: tags))
-        }
-        // A circle named after its one artist would otherwise appear twice.
-        var seen = Set<String>()
-        return targets.filter { seen.insert($0.keyword).inserted }
-    }
-
-    private static func target(
-        _ name: String, namespace: TagNamespace, systemImage: String, tags: [GalleryTag]
-    ) -> GalleryCreditSearch {
-        let lowered = name.lowercased()
-        let match = tags.first { $0.namespace == namespace }.flatMap { tag in
-            tag.contents.first { $0.text.lowercased() == lowered }.map { $0.searchKeyword(tag: tag) }
-        }
-        return GalleryCreditSearch(name: name, keyword: match ?? "\"\(name)\"", systemImage: systemImage)
-    }
-}
-
 extension ParsedTitle {
     /// "Circle (Artist, Artist)", as the title writes it; `nil` when it names neither.
     var credit: String? {

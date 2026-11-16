@@ -41,6 +41,9 @@
 "common.value.second" = "%@ 秒";
 "common.value.seconds" = "%@ 秒";
 "common.value.records" = "%@ 件";
+"common.close" = "閉じる";
+"common.cancel" = "キャンセル";
+"common.back" = "戻る";
 
 // MARK: TabItem
 "tab_item.title.home" = "ホーム";
@@ -963,6 +966,8 @@
 "list.page.jump" = "ページへ移動…";
 "list.find" = "このリスト内を検索";
 "list.empty" = "ギャラリーがありません";
+"list.galleries" = "%d 件のギャラリー";
+"list.gallery" = "%d 件のギャラリー";
 "list.empty.ledger" = "まだ何もありません";
 "list.more.failed" = "続きを読み込めませんでした";
 "list.offline.title" = "オフラインです";
@@ -1014,7 +1019,9 @@
 "gallery.figure.size" = "サイズ";
 "gallery.figure.favorited" = "お気に入り";
 "gallery.figure.people" = "人";
+"gallery.figure.person" = "人";
 "gallery.figure.votes" = "%d 票";
+"gallery.figure.vote" = "%d 票";
 "gallery.figure.posted" = "投稿日";
 "gallery.figure.uploader" = "アップローダー";
 "gallery.figure.parody" = "原作";
@@ -1025,6 +1032,7 @@
 "gallery.action.info" = "情報";
 "gallery.action.similar" = "類似ギャラリー";
 "gallery.previews" = "プレビュー";
+"gallery.previews.columns" = "列数";
 "gallery.tags" = "タグ";
 "gallery.tags.count" = "タグ · %d";
 "gallery.all" = "すべて %d";
@@ -1044,6 +1052,11 @@
 "reader.page.failed" = "このページを読み込めませんでした";
 "reader.page.reload_failed" = "失敗した %d ページをすべて再読み込み";
 "reader.page.loading" = "読み込み中 · %1$@ / %2$@";
+"reader.page.reason.timed_out" = "画像サーバーがタイムアウトしました。";
+"reader.page.reason.status" = "画像サーバーがエラー %d を返しました。";
+"reader.page.reason.unreadable" = "画像を読み取れませんでした。";
+"reader.live_text" = "テキスト認識表示";
+"reader.action.save" = "保存";
 
 // MARK: Selectable designs: search
 "search.scope.everywhere" = "すべて";
@@ -1059,6 +1072,11 @@
 "search.link.open" = "開く";
 "search.hint" = "タイトルまたはタグで検索";
 "search.scope.signin" = "ここを検索するにはログイン";
+"search.scope" = "検索範囲";
+"search.token.excluded" = "%@ を除く";
+"search.key.insert" = "%@ を入力";
+"search.key.exclude" = "除外";
+"search.key.exact" = "完全一致";
 
 // MARK: Selectable designs: library
 "library.all" = "すべて";
@@ -1153,6 +1171,7 @@
 "settings.design.setup.so_far" = "現在の内容：%@";
 "settings.design.setup.with_colours" = "%1$@（配色は %2$@）";
 "settings.design.setup.custom_changed" = "カスタム · %2$@ から %1$d ページを変更";
+"settings.design.setup.custom_changed.one" = "カスタム · %@ から 1 ページを変更";
 "settings.design.setup.current" = "現在";
 "settings.design.setup.next" = "次へ";
 "settings.design.setup.skip" = "スキップ";

@@ -111,7 +111,8 @@ struct LedgerGalleryFacts: View, Equatable {
         let detail = values.detail
         switch fact {
         case .favorited:
-            value(detail.favoritedCount.formatted(), detail: Figure.people)
+            let people = detail.favoritedCount == 1 ? Figure.person : Figure.people
+            value(detail.favoritedCount.formatted(), detail: people)
         case .pages:
             value(
                 detail.pageCount.formatted(),
@@ -144,7 +145,8 @@ struct LedgerGalleryFacts: View, Equatable {
     private func ratingValue(_ detail: GalleryDetail) -> some View {
         let star = Text(Image(systemName: "star.fill")).foregroundStyle(look.rating)
         let average = Double(detail.rating).formatted(.number.precision(.fractionLength(2)))
-        let votes = Text(" · " + L10n.Localizable.Gallery.Figure.votes(detail.ratingCount))
+        let count = detail.ratingCount
+        let votes = Text(" · " + (count == 1 ? Figure.vote(count) : Figure.votes(count)))
             .fontWeight(.regular)
             .foregroundStyle(look.secondaryLabel)
         return Text("\(star) \(average)\(votes)")

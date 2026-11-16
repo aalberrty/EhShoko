@@ -26,13 +26,13 @@ extension SearchToken {
         return prefix + name + ":" + tag
     }
 
-    /// "Female glasses": what VoiceOver says for the token, the namespace in the user's
-    /// language. An excluded tag starts with a minus sign, which VoiceOver reads as "minus".
+    /// "Female glasses", "Not female glasses": what VoiceOver says for the token, the
+    /// namespace in the user's language.
     var spokenText: String {
         let tag = namespace == nil ? Self.withoutAlternativeMark(tag) : tag
         let name = tagNamespace?.localizedName ?? namespace.map(Self.withoutAlternativeMark)
         let words = [name, tag].compactMap(\.self).joined(separator: " ")
-        return isExcluded ? "\u{2212}" + words : words
+        return isExcluded ? L10n.Localizable.Search.Token.excluded(words) : words
     }
 
     /// The token the field draws for this term; it carries the term back as its represented

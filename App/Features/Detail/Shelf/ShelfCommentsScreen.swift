@@ -74,7 +74,7 @@ struct ShelfCommentsScreen: View {
             Button(L10n.Localizable.NotLoginView.Button.login) {
                 appRouter?.presentSettings([.settings(.account), .settings(.login)])
             }
-            Button(L10n.Localizable.JumpPageView.Button.cancel, role: .cancel) {}
+            Button(L10n.Localizable.Common.cancel, role: .cancel) {}
         } message: {
             Text(L10n.Localizable.List.Signin.note)
         }

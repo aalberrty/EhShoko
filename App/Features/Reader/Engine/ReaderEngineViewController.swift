@@ -341,7 +341,7 @@ extension ReaderEngineViewController: ReaderPageViewDelegate {
         firstPageDidSettle()
     }
 
-    func pageView(_ pageView: ReaderPageView, didFailToLoadImageFor reason: AppError?) {
+    func pageView(_ pageView: ReaderPageView, didFailToLoadImageFor reason: ReaderImageFailure?) {
         let page = pageView.page
         guard page >= 1, page <= pageCount else { return }
         // Remembered, so the page still shows the retry button when it scrolls back in.

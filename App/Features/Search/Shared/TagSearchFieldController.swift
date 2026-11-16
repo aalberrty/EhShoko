@@ -1,5 +1,4 @@
 import EhFeatures
-import EhNetworking
 import SwiftUI
 
 /// The handle a search design uses to act on the field and the surface (`spikes/S6.md`
@@ -11,9 +10,9 @@ import SwiftUI
 /// changes, and calling it from a button costs a view nothing.
 ///
 /// **The field leads; the model follows.** What the user types goes from the field to the
-/// model, never back. New content reaches the field only through this controller (`use`,
-/// `clear`, `accept`, `insert`): the model's own editing methods (`use`, `clear`, `accept`,
-/// `removeToken`) change the model and not the field, so a design does not call them.
+/// model (`fieldDidEdit`), never back. New content goes in through this controller (`use`,
+/// `clear`, `accept`, `insert`), which acts on the field at once; a design does not call the
+/// model's `fieldDidEdit` or `replaceKeyword` itself.
 @MainActor
 final class TagSearchFieldController {
     private weak var coordinator: TagSearchFieldCoordinator?
@@ -87,18 +86,16 @@ final class TagSearchFieldController {
     // MARK: New content
 
     /// Puts `keyword` in the field (a recent search, a quick search, the keyword of the
-    /// results the surface was opened from): its tags as tokens, the rest as text.
+    /// results the surface was opened from): its tags as tokens, the rest as text. The field
+    /// shows it at once, so a search right after it submits it.
     func use(_ keyword: String) {
         guard let model else { return }
-        model.use(keyword)
-        // Suggestions are for typing; a keyword handed in shows none until the next keystroke.
-        model.suggestions.textDidChange("")
-        coordinator?.apply(tokens: model.tokens, text: model.text)
+        model.replaceKeyword(keyword)
+        coordinator?.apply(model)
     }
 
     func clear() {
-        model?.clear()
-        coordinator?.apply(tokens: [], text: "")
+        use("")
     }
 
     // MARK: Submitting and closing
@@ -127,27 +124,15 @@ final class TagSearchFieldController {
     }
 
     /// The copied-link offer's "Open": reads the link (the system may ask to paste) and opens
-    /// it as a shared link opens, in the gallery sheet. Does nothing when it is not a link to
-    /// a gallery.
-    func openCopiedLink() {
-        guard let url = model?.openLink(), let link = SearchCopiedLink.appLink(for: url) else { return }
+    /// it as a shared link opens, in the gallery sheet. Returns whether it did: `false` when
+    /// the clipboard held no link to a gallery (the offer is withdrawn either way), which a
+    /// design may say.
+    @discardableResult
+    func openCopiedLink() -> Bool {
+        guard let link = model?.openLink() else { return false }
         blur()
         openURL?(link)
-    }
-}
-
-/// Turns a link read from the clipboard into the app's own link, which the shell opens the
-/// way it opens a shared one (as Ledger's Index does with a pasted link).
-nonisolated enum SearchCopiedLink {
-    /// The scheme the share extension rewrites links to; `EhURL.resolvingAppScheme` turns it
-    /// back.
-    private static let appScheme = "ehshoko"
-
-    static func appLink(for url: URL) -> URL? {
-        guard EhURL.isHandleable(url), var components = URLComponents(url: url, resolvingAgainstBaseURL: false)
-        else { return nil }
-        components.scheme = appScheme
-        return components.url
+        return true
     }
 }
 

@@ -109,9 +109,15 @@ public final class SearchRootModel {
     }
 
     public func sheetDismissed(on stack: StackRouter) {
-        guard let pendingSearch else { return }
-        self.pendingSearch = nil
+        guard let pendingSearch = takePendingSearch() else { return }
         search(pendingSearch, on: stack)
+    }
+
+    /// The word picked in the Quick Search sheet, once: the search surface searches it in its
+    /// own scope when the sheet has gone. `nil` when the sheet closed without a pick.
+    public func takePendingSearch() -> String? {
+        defer { pendingSearch = nil }
+        return pendingSearch
     }
 
     /// The Search tab was tapped while already showing this root: reload the lists.
