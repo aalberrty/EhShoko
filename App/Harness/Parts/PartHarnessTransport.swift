@@ -10,6 +10,7 @@ import Synchronization
 /// - Signed in, every favourites page; with `-HarnessNetwork`, every list as well.
 /// - Signed out, with `-HarnessNetwork`, the lists that need no account, and the site's login
 ///   prompt for those that do; without it, nothing.
+/// - Signed in, a favourite added, moved or removed is accepted.
 /// - Gallery pages and everything else: offline, so a gallery shows its stored page.
 nonisolated struct PartHarnessTransport: HTTPTransport {
     let account: PartHarnessAccount
@@ -38,6 +39,11 @@ nonisolated struct PartHarnessTransport: HTTPTransport {
     }
 
     private func answer(to url: URL) async -> Answer {
+        // Favourites added, moved or removed while signed in: accepted (the client reads no
+        // body), so a one-tap Favourite earns the Favourite tip here as on the site.
+        if url.path == "/gallerypopups.php", cookies.didLogin {
+            return Answer(body: "<html></html>", outcome: "accepted")
+        }
         guard let page = PartHarnessSite.Page(url: url) else { return Answer(body: nil, outcome: "offline") }
         let isSignedIn = cookies.didLogin
         switch page {
