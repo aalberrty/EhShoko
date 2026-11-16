@@ -15,6 +15,8 @@ import SwiftUI
 /// place. "Find in this list" shows the find field under the bar.
 struct LedgerListChrome: ViewModifier {
     let input: ListDesignInput
+    /// A favourites folder on a screen of its own: its title is a menu of the folders.
+    let ownFolder: Int?
     @Binding var showsCovers: Bool
 
     @Environment(\.look) private var look
@@ -22,7 +24,7 @@ struct LedgerListChrome: ViewModifier {
 
     func body(content: Content) -> some View {
         content
-            .modifier(LedgerListTitleItems(input: input, isShown: !input.context.embedsInStart))
+            .modifier(LedgerListTitleItems(input: input, ownFolder: ownFolder, isShown: !input.context.embedsInStart))
             .toolbar {
                 ToolbarItemGroup(placement: .topBarTrailing) {
                     Button { showsCovers.toggle() } label: {
@@ -65,6 +67,7 @@ struct LedgerListChrome: ViewModifier {
 /// The title and subtitle, as the bar's principal item, when the list has its own screen.
 private struct LedgerListTitleItems: ViewModifier {
     let input: ListDesignInput
+    let ownFolder: Int?
     let isShown: Bool
 
     @Environment(\.chrome) private var chrome
@@ -80,7 +83,8 @@ private struct LedgerListTitleItems: ViewModifier {
                     ToolbarItem(placement: .principal) {
                         LedgerListTitle(
                             title: input.context.title, controls: input.controls, subtitle: subtitle,
-                            barHoldsPrimaryControl: chrome.barHoldsPrimaryControl, perform: input.perform
+                            ownFolder: ownFolder, barHoldsPrimaryControl: chrome.barHoldsPrimaryControl,
+                            perform: input.perform
                         )
                     }
                 }
@@ -126,12 +130,14 @@ private struct LedgerListTitleItems: ViewModifier {
     }
 }
 
-/// The principal item: the title, or Toplists' period menu, over the subtitle, the page menu,
-/// or under `tabs` the primary control.
+/// The principal item: the title, Toplists' period menu or a folder's menu of folders, over the
+/// subtitle, the page menu, or under `tabs` the primary control. The bar's own title menu
+/// would not show beside a principal item, so the folders are a menu on the title here.
 private struct LedgerListTitle: View {
     let title: String
     let controls: ListControls
     let subtitle: String?
+    let ownFolder: Int?
     let barHoldsPrimaryControl: Bool
     let perform: (ListMenuAction) -> Void
 
@@ -156,6 +162,20 @@ private struct LedgerListTitle: View {
             } label: {
                 HStack(spacing: 4) {
                     Text(Self.joined(title, period.selectedTitle))
+                    Image(systemName: "chevron.down")
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(look.secondaryLabel)
+                }
+                .font(.headline)
+                .fontDesign(look.titleDesign)
+                .foregroundStyle(look.label)
+            }
+        } else if let ownFolder {
+            Menu {
+                ListFolderMenu(current: ownFolder)
+            } label: {
+                HStack(spacing: 4) {
+                    Text(title)
                     Image(systemName: "chevron.down")
                         .font(.caption.weight(.bold))
                         .foregroundStyle(look.secondaryLabel)

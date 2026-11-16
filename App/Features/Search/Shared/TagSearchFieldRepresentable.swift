@@ -6,10 +6,11 @@ import UIKit
 /// section 5.6): a `UISearchTextField`, so accepted tags are tokens before the text
 /// (`spikes/S6.md`).
 ///
-/// It leads and the model follows: each edit the user makes is reported to `model`, and the
-/// field is never written back on a keystroke. New content comes in through the controller in
-/// the environment (`\.searchFieldController`), which is also how a design focuses the field,
-/// inserts a key at the caret, takes a suggestion or submits.
+/// It leads and the model follows: each edit the user makes is reported to `model`
+/// (`fieldDidEdit`), and the field is never written back on a keystroke. It shows the model's
+/// content again only when the model replaced it (`revision`). New content comes in through
+/// the controller in the environment (`\.searchFieldController`), which is also how a design
+/// focuses the field, inserts a key at the caret, takes a suggestion or submits.
 ///
 /// Nothing that draws the field reads the model's text: a keystroke redraws only the views
 /// that read it themselves. The field is one line; with three tokens or more the earlier
@@ -18,22 +19,29 @@ import UIKit
 /// - Parameters:
 ///   - prompt: what the empty field says; the scope's `localizedPrompt`.
 ///   - tokenStyle: the colour behind every token. The system draws token text white.
+///   - showsClearButton: whether the field draws its own clear button while editing; off
+///     where the design has a clear control of its own (Shelf's clear circle).
 ///   - accessory: a row shown on top of the keyboard while the field has focus (Ledger's
 ///     keys), or none.
 struct TagSearchField<Accessory: View>: UIViewRepresentable {
     let model: SearchSurfaceModel
     let prompt: String
     let tokenStyle: SearchTokenStyle
+    var showsClearButton = true
     let accessory: Accessory?
 
     @Environment(\.searchFieldController) private var controller
     @Environment(\.lookTint) private var tint
     @Environment(\.look) private var look
 
-    init(model: SearchSurfaceModel, prompt: String, tokenStyle: SearchTokenStyle, @ViewBuilder accessory: () -> Accessory) {
+    init(
+        model: SearchSurfaceModel, prompt: String, tokenStyle: SearchTokenStyle, showsClearButton: Bool = true,
+        @ViewBuilder accessory: () -> Accessory
+    ) {
         self.model = model
         self.prompt = prompt
         self.tokenStyle = tokenStyle
+        self.showsClearButton = showsClearButton
         self.accessory = accessory()
     }
 
@@ -49,9 +57,9 @@ struct TagSearchField<Accessory: View>: UIViewRepresentable {
         coordinator.field = field
         // What the model already holds: a design switched while the surface was open, or the
         // surface came back to the screen.
-        coordinator.apply(tokens: model.tokens, text: model.text)
+        coordinator.apply(model)
         if let accessory {
-            field.inputAccessoryView = TagSearchAccessoryView(content: accessoryContent(accessory))
+            field.inputAccessoryView = TagSearchAccessoryView(host: UIHostingController(rootView: accessoryContent(accessory)))
         }
         controller.register(coordinator)
         return field
@@ -62,20 +70,32 @@ struct TagSearchField<Accessory: View>: UIViewRepresentable {
         coordinator.model = model
         coordinator.controller = controller
         controller.register(coordinator)
+        // Content the model replaced since the field last showed it: a keyword handed in from
+        // somewhere other than the controller, which applies its own at once.
+        if coordinator.appliedRevision != model.revision {
+            coordinator.apply(model)
+        }
         if field.placeholder != prompt {
             field.placeholder = prompt
             field.accessibilityLabel = prompt
         }
+        let clearButtonMode: UITextField.ViewMode = showsClearButton ? .whileEditing : .never
+        if field.clearButtonMode != clearButtonMode { field.clearButtonMode = clearButtonMode }
         let background = tokenStyle.background(tint: UIColor(tint))
         if field.tokenBackgroundColor != background { field.tokenBackgroundColor = background }
         if field.textColor != look.uiLabel { field.textColor = look.uiLabel }
-        if let accessory, let view = field.inputAccessoryView as? TagSearchAccessoryView<AccessoryContent> {
-            view.update(accessoryContent(accessory))
+        if let accessory, let view = field.inputAccessoryView as? TagSearchAccessoryView,
+           let host = view.host as? UIHostingController<AccessoryContent> {
+            host.rootView = accessoryContent(accessory)
         }
     }
 
     static func dismantleUIView(_ field: TagSearchTextField, coordinator: TagSearchFieldCoordinator) {
         coordinator.fieldWillGo()
+        // Whatever may still hold the accessory once the field has gone, the row, its host and
+        // what the row holds (the look, the controller) go with the design that drew them.
+        (field.inputAccessoryView as? TagSearchAccessoryView)?.releaseHost()
+        field.inputAccessoryView = nil
     }
 
     func sizeThatFits(_ proposal: ProposedViewSize, uiView field: TagSearchTextField, context: Context) -> CGSize? {
@@ -96,10 +116,11 @@ struct TagSearchField<Accessory: View>: UIViewRepresentable {
 }
 
 extension TagSearchField where Accessory == EmptyView {
-    init(model: SearchSurfaceModel, prompt: String, tokenStyle: SearchTokenStyle) {
+    init(model: SearchSurfaceModel, prompt: String, tokenStyle: SearchTokenStyle, showsClearButton: Bool = true) {
         self.model = model
         self.prompt = prompt
         self.tokenStyle = tokenStyle
+        self.showsClearButton = showsClearButton
         accessory = nil
     }
 }

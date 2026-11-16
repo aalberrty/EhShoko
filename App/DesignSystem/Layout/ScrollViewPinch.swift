@@ -1,19 +1,19 @@
 import SwiftUI
 import UIKit
 
-/// The pinch that changes the wall's density (`wall.md` section 3): a UIKit pinch recognizer
-/// on the grid's own scroll view, added by a view in the grid's background that looks up its
-/// ancestors for the `UIScrollView`.
+/// A pinch that changes a wall's density, one step per pinch: a UIKit pinch recognizer on the
+/// scroll view itself, added by a view placed in the scrolling content's background, which
+/// looks up its ancestors for the `UIScrollView` (Wall's lists, Wall's previews).
 ///
 /// It is the one arrangement that works (`spikes/S1.md`). At that level UIKit's default
 /// holds: the pinch and the scroll view's pan never run together, so whichever recognises
 /// first owns the touches. A pinch does not scroll, a two-finger scroll does not change the
 /// density, and when the pinch recognises UIKit cancels the touches in the content, so the
-/// covers under the fingers are not opened. That also needs the cells to take a tap gesture
+/// cells under the fingers are not opened. That also needs the cells to take a tap gesture
 /// and not be `Button`s. A SwiftUI `MagnifyGesture`, however attached, opened galleries or
 /// scrolled while pinching.
-struct WallListPinch: UIViewRepresentable {
-    /// `+1` for larger covers (fingers apart), `-1` for smaller.
+struct ScrollViewPinch: UIViewRepresentable {
+    /// `+1` for larger cells (fingers apart), `-1` for smaller.
     let onStep: (Int) -> Void
 
     /// How far the fingers move apart, or together, before the density changes.
@@ -67,10 +67,10 @@ struct WallListPinch: UIViewRepresentable {
             case .began:
                 hasStepped = false
             case .changed where !hasStepped:
-                if recognizer.scale >= WallListPinch.apart {
+                if recognizer.scale >= ScrollViewPinch.apart {
                     hasStepped = true
                     onStep?(1)
-                } else if recognizer.scale <= WallListPinch.together {
+                } else if recognizer.scale <= ScrollViewPinch.together {
                     hasStepped = true
                     onStep?(-1)
                 }
@@ -80,6 +80,7 @@ struct WallListPinch: UIViewRepresentable {
         }
     }
 
+    /// Finds the scroll view once it is in a window, and lets go of it when it leaves.
     final class AnchorView: UIView {
         weak var coordinator: Coordinator?
 

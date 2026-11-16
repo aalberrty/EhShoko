@@ -29,9 +29,7 @@ struct LedgerSearchView: View {
                 // the keyboard goes away with a drag of the list or with Search.
                 if presentation.canClose {
                     ToolbarItem(placement: .topBarTrailing) {
-                        // The app has no generic "Cancel" yet; the jump-to-page alert's is the
-                        // same word in every language.
-                        Button(L10n.Localizable.JumpPageView.Button.cancel) { field.close() }
+                        Button(L10n.Localizable.Common.cancel) { field.close() }
                     }
                 }
             }
@@ -47,10 +45,7 @@ struct LedgerSearchView: View {
                 SearchFiltersButton(model: model)
             }
             #if DEBUG || HARNESS
-            // Quick and recent searches for the part harness (`-HarnessSearchWords YES`). The
-            // seeder is G1's and is to move to `Search/Shared/Harness` (F27); it is shared
-            // here rather than copied.
-            .task { await ShelfSearchSampleWords.addIfRequested(hasQuickSearches: !model.root.quickSearchWords.isEmpty) }
+            .searchDesignHarness(model: model)
             #endif
     }
 }

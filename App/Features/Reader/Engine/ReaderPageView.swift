@@ -13,7 +13,7 @@ enum ReaderPageContent: Equatable {
     case resolutionFailed(AppError?)
     case image(URL)
     /// The image at the URL could not be loaded.
-    case imageFailed(AppError?)
+    case imageFailed(ReaderImageFailure?)
 
     var isFailure: Bool {
         switch self {
@@ -29,7 +29,7 @@ enum ReaderPageContent: Equatable {
 
 protocol ReaderPageViewDelegate: AnyObject {
     func pageView(_ pageView: ReaderPageView, didLoadImageWithPixelSize pixelSize: CGSize)
-    func pageView(_ pageView: ReaderPageView, didFailToLoadImageFor reason: AppError?)
+    func pageView(_ pageView: ReaderPageView, didFailToLoadImageFor reason: ReaderImageFailure?)
     func pageViewDidRequestRetry(_ pageView: ReaderPageView)
     /// "Reload all N failed pages" on the page's failure card.
     func pageViewDidRequestRetryAllFailed(_ pageView: ReaderPageView)
@@ -119,8 +119,11 @@ final class ReaderPageView: UIView, UIContextMenuInteractionDelegate {
         switch content {
         case .pending:
             showStatus(.resolving)
-        case .resolutionFailed(let reason), .imageFailed(let reason):
-            statusView.setFailureReason(reason)
+        case .resolutionFailed(let reason):
+            statusView.setFailureReason(reason?.readerPageReason)
+            showStatus(.failed)
+        case .imageFailed(let reason):
+            statusView.setFailureReason(reason?.text)
             showStatus(.failed)
         case .image(let url):
             show(url, request: request)
@@ -243,7 +246,7 @@ final class ReaderPageView: UIView, UIContextMenuInteractionDelegate {
                 self?.finish(load, with: image)
             } catch {
                 guard !Task.isCancelled else { return }
-                self?.fail(load, reason: ReaderImageFailure.reason(for: error))
+                self?.fail(load, reason: ReaderImageFailure(error))
             }
         }
     }
@@ -268,14 +271,14 @@ final class ReaderPageView: UIView, UIContextMenuInteractionDelegate {
         reportLoaded(load)
     }
 
-    private func fail(_ load: Load, reason: AppError?) {
+    private func fail(_ load: Load, reason: ReaderImageFailure?) {
         guard loading == load else { return }
         loading = nil
         loadTask = nil
         // A failed upgrade leaves the image that is already there.
         guard shown == nil else { return }
         content = .imageFailed(reason)
-        statusView.setFailureReason(reason)
+        statusView.setFailureReason(reason?.text)
         showStatus(.failed)
         delegate?.pageView(self, didFailToLoadImageFor: reason)
     }

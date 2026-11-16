@@ -16,6 +16,9 @@ struct GalleryThumbnailCell: View {
     static let maximumWidth: CGFloat = 260
 
     var body: some View {
+        #if DEBUG || HARNESS
+        let _ = ListHarnessCells.note()
+        #endif
         VStack(alignment: .leading, spacing: 0) {
             RemoteImage(url: gallery.coverURL, width: Self.maximumWidth, aspectRatio: Tokens.Aspect.cover, cornerRadius: 0)
                 .overlay(alignment: .topTrailing) {

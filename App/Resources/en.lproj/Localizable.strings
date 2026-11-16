@@ -41,6 +41,9 @@
 "common.value.second" = "%@ second";
 "common.value.seconds" = "%@ seconds";
 "common.value.records" = "%@ entries";
+"common.close" = "Close";
+"common.cancel" = "Cancel";
+"common.back" = "Back";
 
 // MARK: TabItem
 "tab_item.title.home" = "Home";
@@ -963,6 +966,8 @@
 "list.page.jump" = "Go to page…";
 "list.find" = "Find in this list";
 "list.empty" = "No galleries";
+"list.galleries" = "%d galleries";
+"list.gallery" = "%d gallery";
 "list.empty.ledger" = "Nothing here yet";
 "list.more.failed" = "Couldn't load more";
 "list.offline.title" = "You're offline";
@@ -1014,7 +1019,9 @@
 "gallery.figure.size" = "Size";
 "gallery.figure.favorited" = "Favorited";
 "gallery.figure.people" = "people";
+"gallery.figure.person" = "person";
 "gallery.figure.votes" = "%d votes";
+"gallery.figure.vote" = "%d vote";
 "gallery.figure.posted" = "Posted";
 "gallery.figure.uploader" = "Uploader";
 "gallery.figure.parody" = "Parody";
@@ -1025,6 +1032,7 @@
 "gallery.action.info" = "Info";
 "gallery.action.similar" = "Similar galleries";
 "gallery.previews" = "Previews";
+"gallery.previews.columns" = "Columns";
 "gallery.tags" = "Tags";
 "gallery.tags.count" = "Tags · %d";
 "gallery.all" = "All %d";
@@ -1044,6 +1052,11 @@
 "reader.page.failed" = "This page didn't load";
 "reader.page.reload_failed" = "Reload all %d failed pages";
 "reader.page.loading" = "Loading · %1$@ of %2$@";
+"reader.page.reason.timed_out" = "The image server timed out.";
+"reader.page.reason.status" = "The image server answered with error %d.";
+"reader.page.reason.unreadable" = "The image couldn't be read.";
+"reader.live_text" = "Live Text";
+"reader.action.save" = "Save";
 
 // MARK: Selectable designs: search
 "search.scope.everywhere" = "Everywhere";
@@ -1059,6 +1072,11 @@
 "search.link.open" = "Open";
 "search.hint" = "Search by title or tag";
 "search.scope.signin" = "Sign in to search here";
+"search.scope" = "Scope";
+"search.token.excluded" = "Not %@";
+"search.key.insert" = "Insert %@";
+"search.key.exclude" = "Exclude";
+"search.key.exact" = "Exact match";
 
 // MARK: Selectable designs: library
 "library.all" = "All";
@@ -1153,6 +1171,7 @@
 "settings.design.setup.so_far" = "So far: %@";
 "settings.design.setup.with_colours" = "%1$@ with %2$@’s colors";
 "settings.design.setup.custom_changed" = "Custom · %1$d pages changed from %2$@";
+"settings.design.setup.custom_changed.one" = "Custom · 1 page changed from %@";
 "settings.design.setup.current" = "Current";
 "settings.design.setup.next" = "Next";
 "settings.design.setup.skip" = "Skip";

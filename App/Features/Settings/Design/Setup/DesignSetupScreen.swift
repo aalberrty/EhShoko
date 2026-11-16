@@ -201,11 +201,11 @@ private struct DesignSetupControls: ToolbarContent {
         }
     }
 
-    /// The symbol carries the system's localized "Back" label for VoiceOver.
     private var back: some View {
         Button { move(.back) } label: {
             Image(systemName: "chevron.backward")
         }
+        .accessibilityLabel(L10n.Localizable.Common.back)
     }
 
     /// The prominent, tinted button.

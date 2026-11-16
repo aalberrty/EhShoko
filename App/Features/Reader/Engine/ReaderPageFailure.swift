@@ -2,29 +2,50 @@ import EhModels
 import Kingfisher
 import UIKit
 
-/// Why an image did not load, told in the terms the site's requests use (`AppError`), so a
-/// page that failed either way says why in the same words.
-nonisolated enum ReaderImageFailure {
+/// Why an image did not load. Images come from the image server, not the site's pages, so
+/// the card says so in its own words; a page whose image URL could not be resolved says why
+/// in the site's (`AppError.readerPageReason`).
+nonisolated enum ReaderImageFailure: Equatable, Sendable {
+    case timedOut
+    case unreachable
+    /// The server answered with this HTTP status instead of the image.
+    case status(Int)
+    /// The bytes arrived but are not an image the system can read.
+    case unreadable
+
     /// The reason for an error of `ImagePipeline.image(for:…)`; `nil` when it says nothing
     /// a reader could act on.
-    static func reason(for error: any Error) -> AppError? {
+    init?(_ error: any Error) {
         switch error {
         case is ImagePipelineError:
-            // The bytes arrived but are not an image the system can read.
-            return .parseFailed
+            self = .unreadable
         case let error as KingfisherError:
             switch error {
             case .responseError(reason: .invalidHTTPStatusCode(let response)):
-                return .serverError(response.statusCode)
+                self = .status(response.statusCode)
             case .responseError(reason: .URLSessionError(let underlying)):
-                return reason(for: underlying)
+                guard let reason = Self(underlying) else { return nil }
+                self = reason
             default:
                 return nil
             }
-        case is URLError:
-            return .networkingFailed
+        case let error as URLError:
+            self = error.code == .timedOut ? .timedOut : .unreachable
         default:
             return nil
+        }
+    }
+}
+
+@MainActor
+extension ReaderImageFailure {
+    /// The line under "This page didn't load".
+    var text: String {
+        switch self {
+        case .timedOut: L10n.Localizable.Reader.Page.Reason.timedOut
+        case .unreachable: L10n.Localizable.ErrorView.Title.network
+        case .status(let status): L10n.Localizable.Reader.Page.Reason.status(status)
+        case .unreadable: L10n.Localizable.Reader.Page.Reason.unreadable
         }
     }
 }

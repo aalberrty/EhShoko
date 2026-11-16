@@ -16,7 +16,9 @@ import Foundation
 /// | `-HarnessBar` | the preset's | `tabs`, `command` |
 /// | `-HarnessStart`, `-HarnessList`, `-HarnessGallery`, `-HarnessReader`, `-HarnessSearch`, `-HarnessLibrary`, `-HarnessLook` | the preset's | `shelf`, `wall`, `ledger`: one part's design |
 /// | `-HarnessWidth` | 0 | the container's width in points; 0 is the window's (320, 430, 1000) |
-/// | `-HarnessHeader YES` | NO | a list gets a tall header instead of an empty one |
+/// | `-HarnessHeader` | `none` | `none`: a list of its own, with no header (its states take the screen); `empty`: an empty header, as a first screen with nothing above the rows passes; `YES` or `tall`: a tall header |
+/// | `-HarnessTags YES` | NO | lists show their tag line (`showsTagsInList`) |
+/// | `-HarnessDensity` | `medium` | `large`, `medium`, `small`: Wall's density |
 /// | `-HarnessKind` | `frontpage` | `frontpage`, `popular`, `watched`, `toplists`, `history`, `folder`, `search`, `scoped` |
 /// | `-HarnessState` | `content` | `content`, `loading`, `empty`, `failed`, `signedOut`, `stale`, `nextLoading`, `nextFailed`, `end` |
 /// | `-HarnessPresentation` | `pushed` | `pushed`, `pane`, `sheet`: how the gallery opens |
@@ -31,7 +33,9 @@ nonisolated struct PartHarnessOptions: Equatable, Sendable {
     /// surroundings.
     var choices = DesignChoices(preset: .shelf)
     var width = 0
-    var hasTallHeader = false
+    var header = PartHarnessHeaderMode.absent
+    var showsTags = false
+    var density = WallDensity.medium
     var kind = PartHarnessListKind.frontpage
     var state = PartHarnessListState.content
     var presentation = PartHarnessPresentation.pushed
@@ -63,7 +67,9 @@ nonisolated struct PartHarnessOptions: Equatable, Sendable {
         options.choices.library = value("HarnessLibrary") ?? options.choices.library
         options.choices.look = value("HarnessLook") ?? options.choices.look
         options.width = max(defaults.integer(forKey: "HarnessWidth"), 0)
-        options.hasTallHeader = defaults.bool(forKey: "HarnessHeader")
+        options.header = PartHarnessHeaderMode(argument: defaults.string(forKey: "HarnessHeader"))
+        options.showsTags = defaults.bool(forKey: "HarnessTags")
+        options.density = value("HarnessDensity") ?? options.density
         options.kind = value("HarnessKind") ?? options.kind
         options.state = value("HarnessState") ?? options.state
         options.presentation = value("HarnessPresentation") ?? options.presentation
@@ -82,6 +88,26 @@ nonisolated enum PartHarnessPart: String, CaseIterable, Identifiable, Sendable {
     case shell, list, gallery, start, search, library
 
     var id: String { rawValue }
+}
+
+/// What a list in the part harness has above its rows.
+nonisolated enum PartHarnessHeaderMode: String, CaseIterable, Identifiable, Sendable {
+    /// No header: a list of its own, whose states take the screen.
+    case absent = "none"
+    /// A header with nothing in it: the list keeps its states under it, as rows.
+    case empty
+    /// Two shelves' worth of blocks, so the rows start below the fold on a small phone.
+    case tall
+
+    var id: String { rawValue }
+
+    init(argument: String?) {
+        switch argument?.lowercased() {
+        case "yes", "tall", "true", "1": self = .tall
+        case "empty": self = .empty
+        default: self = .absent
+        }
+    }
 }
 
 nonisolated enum PartHarnessListKind: String, CaseIterable, Identifiable, Sendable {

@@ -191,8 +191,7 @@ final class ReaderPageStatusView: UIView {
     }
 
     /// Why the page failed, the line under "This page didn't load"; none when it is not known.
-    func setFailureReason(_ reason: AppError?) {
-        let text = reason?.readerPageReason
+    func setFailureReason(_ text: String?) {
         guard text != reasonLabel.text else { return }
         reasonLabel.text = text
         reasonLabel.isHidden = mode != .failed || text == nil

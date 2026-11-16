@@ -228,7 +228,7 @@ private struct WallGalleryFacts: View, Equatable {
             if let count = facts.ratingCount {
                 Text(verbatim: "(\(count.formatted()))")
                     .monospacedDigit()
-                    .accessibilityLabel(L10n.Localizable.Gallery.Figure.votes(count))
+                    .accessibilityLabel(Self.votes(count))
             }
         }
         .accessibilityElement(children: .combine)
@@ -239,7 +239,12 @@ private struct WallGalleryFacts: View, Equatable {
     private var ratingValue: String {
         let value = facts.rating.formatted(.number.precision(.fractionLength(2)))
         guard let count = facts.ratingCount else { return value }
-        return value + ", " + L10n.Localizable.Gallery.Figure.votes(count)
+        return value + ", " + Self.votes(count)
+    }
+
+    /// "1 vote", "318 votes".
+    private static func votes(_ count: Int) -> String {
+        count == 1 ? L10n.Localizable.Gallery.Figure.vote(count) : L10n.Localizable.Gallery.Figure.votes(count)
     }
 }
 

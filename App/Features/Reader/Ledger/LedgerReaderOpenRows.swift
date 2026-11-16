@@ -110,8 +110,9 @@ private struct LedgerReadingGroup: View {
 
             LedgerAutoPlayRow(model: model, sheet: sheet)
 
-            // No localized name exists; "Live Text" is the system's own term, as in v3.
-            LedgerSwitchRow(title: "Live Text", symbol: "text.viewfinder", isOn: $model.isLiveTextEnabled)
+            LedgerSwitchRow(
+                title: L10n.Localizable.Reader.liveText, symbol: "text.viewfinder", isOn: $model.isLiveTextEnabled
+            )
                 // The system analyzer is missing on some devices and in the simulator.
                 .disabled(!ReaderLiveText.isSupported)
 

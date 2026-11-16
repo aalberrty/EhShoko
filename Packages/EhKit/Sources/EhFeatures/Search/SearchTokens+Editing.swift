@@ -1,26 +1,31 @@
-import EhFeatures
 import Foundation
 
-/// What the field holds after an edit: its tokens and text, and the text from the start of
-/// its textual part to the caret, which is what tag suggestions are looked up for.
-nonisolated struct TagSearchFieldEdit: Equatable, Sendable {
-    var tokens: [SearchToken]
-    var text: String
-    var beforeCaret: String
+/// What the search field holds after an edit: its tokens and text, and the text from the
+/// start of its textual part to the caret, which is what tag suggestions are looked up for.
+nonisolated public struct TagSearchFieldEdit: Equatable, Sendable {
+    public var tokens: [SearchToken]
+    public var text: String
+    public var beforeCaret: String
 
-    static let empty = TagSearchFieldEdit(tokens: [], text: "", beforeCaret: "")
+    public init(tokens: [SearchToken], text: String, beforeCaret: String) {
+        self.tokens = tokens
+        self.text = text
+        self.beforeCaret = beforeCaret
+    }
+
+    public static let empty = TagSearchFieldEdit(tokens: [], text: "", beforeCaret: "")
 }
 
-/// The field's small text rules (`spikes/S6.md` sections 2 to 4), apart from UIKit so they
-/// read as rules.
-nonisolated enum TagSearchFieldRules {
+/// The search field's small text rules (`spikes/S6.md` sections 2 to 4), kept apart from
+/// UIKit so they read, and are tested, as rules.
+nonisolated extension SearchTokens {
     /// The marks a term may start with: `-` leaves the tag out, `~` makes it one of several.
-    static let marks: Set<Character> = ["-", "~"]
+    public static let marks: Set<Character> = ["-", "~"]
 
     /// The text to look tag suggestions up for: the text before the caret, with the last
     /// word's `-` or `~` dropped, because the dictionary has no `-glasses`. The token that a
     /// suggestion becomes gets the mark back (`replacement(for:keyword:beforeCaret:)`).
-    static func lookupText(beforeCaret text: String) -> String {
+    public static func lookupText(beforeCaret text: String) -> String {
         guard let mark = lastWordMark(in: text) else { return text }
         var text = text
         text.remove(at: mark)
@@ -36,7 +41,7 @@ nonisolated enum TagSearchFieldRules {
     /// A namespace key (`artist:`) typed right after a word starts a new term, so it gets a
     /// space before it; after a space, a mark or at the start it goes in as it is. `-` and `$`
     /// always go in as they are.
-    static func needsSpace(beforeKey key: String, after previous: Character?) -> Bool {
+    public static func needsSpace(beforeKey key: String, after previous: Character?) -> Bool {
         guard key.hasSuffix(":"), let previous else { return false }
         return !previous.isWhitespace && !marks.contains(previous)
     }
@@ -44,7 +49,7 @@ nonisolated enum TagSearchFieldRules {
     /// The complete term just before a space typed at the caret, which becomes a token:
     /// `f:kimono$ ` gives `f:kimono$`. `nil` when the text before the caret does not end with
     /// a space after a complete term.
-    static func completedTerm(beforeCaret text: String) -> String? {
+    public static func completedTerm(beforeCaret text: String) -> String? {
         guard text.last == " " else { return nil }
         let body = text.dropLast()
         let start = body.lastIndex(where: \.isWhitespace).map(body.index(after:)) ?? body.startIndex
@@ -70,7 +75,7 @@ nonisolated enum TagSearchFieldRules {
     /// units step back over the fragment it matched (and over the mark the lookup dropped),
     /// and `term` is the token's term, with that mark. `nil` when the text no longer ends with
     /// the fragment, for example after the caret moved.
-    static func replacement(
+    public static func replacement(
         for fragment: String, keyword: String, beforeCaret text: String
     ) -> (length: Int, term: String)? {
         let lookup = lookupText(beforeCaret: text)

@@ -124,6 +124,21 @@ import Testing
         #expect(stack.isAtRoot)
     }
 
+    @Test func aQuickSearchPickIsTakenOnceForTheSurface() {
+        let model = SearchRootModel()
+        model.showQuickSearch()
+        model.selectQuickSearchWord("f:glasses$")
+        #expect(model.sheet == nil)
+
+        #expect(model.takePendingSearch() == "f:glasses$")
+        #expect(model.takePendingSearch() == nil)
+
+        // The editor closed without a pick.
+        model.showQuickSearch()
+        model.sheet = nil
+        #expect(model.takePendingSearch() == nil)
+    }
+
     @Test func rootReselectionReloads() {
         let model = SearchRootModel()
         model.rootReselected()

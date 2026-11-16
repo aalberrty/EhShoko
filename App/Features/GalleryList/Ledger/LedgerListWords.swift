@@ -3,14 +3,13 @@ import EhModels
 import SwiftUI
 
 /// The words a Ledger list shows, looked up instead of formatted while it scrolls
-/// (`ledger.md` section 3). An entry carries its ages as a count and a unit and its page
-/// count as a number; this turns them into "2h ago", "added 2d ago", "48 p", once per value,
-/// and keeps each row's line of facts until the values in it change.
+/// (`ledger.md` section 3): each row's line of facts, kept until the values in it change, and
+/// the day headings. The words in a line ("2h ago", "added 2d ago", "48 p") are the ones every
+/// list makes once per value (`ListRowWords`).
 ///
 /// One per list screen, held as `@State` of `LedgerListView`, so it goes with the screen and
 /// no other design pays for it. It is a plain class: filling it while the list builds rows
-/// invalidates nothing. Nothing here would differ between the three lists but the line's
-/// layout, so the age and page texts could move to a shared place later.
+/// invalidates nothing.
 final class LedgerListWords {
     /// Which age a row's line ends with.
     nonisolated enum AgeKind: Hashable {
@@ -37,20 +36,11 @@ final class LedgerListWords {
         let rank: Int?
     }
 
-    private var ages: [AgeKey: String] = [:]
-    private var pages: [Int: String] = [:]
-    private var categories: [Category: String] = [:]
+    private let words = ListRowWords()
     private var facts: [String: (key: FactsKey, line: AttributedString)] = [:]
     private var dayTitles: [Date: String] = [:]
     /// The day "Today" meant when `dayTitles` was filled.
     private var today: Date?
-
-    private lazy var relativeFormatter: RelativeDateTimeFormatter = {
-        let formatter = RelativeDateTimeFormatter()
-        formatter.unitsStyle = .abbreviated
-        formatter.dateTimeStyle = .numeric
-        return formatter
-    }()
 
     private lazy var dayFormatter: DateFormatter = {
         let formatter = DateFormatter()
@@ -116,14 +106,14 @@ final class LedgerListWords {
         if let rank = key.rank {
             parts.append(L10n.Localizable.List.rank(rank))
         }
-        var name = AttributedString(categoryName(key.category))
+        var name = AttributedString(words.categoryName(key.category))
         name.swiftUI.foregroundColor = key.category.markColor
         name.swiftUI.font = LedgerGalleryRow.factsEmphasisFont
         var rest = [String]()
         if let language = key.language {
             rest.append(language)
         }
-        rest.append(pageText(key.pages))
+        rest.append(words.shortPages(key.pages))
         rest.append("★ " + key.rating)
         rest.append(ageText(key.age))
         let separator = " · "
@@ -133,42 +123,11 @@ final class LedgerListWords {
         return line
     }
 
-    private func categoryName(_ category: Category) -> String {
-        if let name = categories[category] { return name }
-        let name = category.localizedName
-        categories[category] = name
-        return name
-    }
-
-    private func pageText(_ count: Int) -> String {
-        if let text = pages[count] { return text }
-        let text = L10n.Localizable.List.Pages.short(count)
-        pages[count] = text
-        return text
-    }
-
     private func ageText(_ key: AgeKey) -> String {
-        if let text = ages[key] { return text }
-        let relative = relativeFormatter.localizedString(from: Self.past(key.age))
-        let text = switch key.kind {
-        case .posted: relative
-        case .added: L10n.Localizable.List.added(relative)
-        case .opened: L10n.Localizable.List.opened(relative)
-        }
-        ages[key] = text
-        return text
-    }
-
-    /// The age as components counting back from now, which the relative formatter words as
-    /// "… ago".
-    private static func past(_ age: GalleryEntry.Age) -> DateComponents {
-        switch age.unit {
-        case .minute: DateComponents(minute: -age.count)
-        case .hour: DateComponents(hour: -age.count)
-        case .day: DateComponents(day: -age.count)
-        case .week: DateComponents(weekOfMonth: -age.count)
-        case .month: DateComponents(month: -age.count)
-        case .year: DateComponents(year: -age.count)
+        switch key.kind {
+        case .posted: words.ago(key.age)
+        case .added: words.added(key.age)
+        case .opened: words.opened(key.age)
         }
     }
 }

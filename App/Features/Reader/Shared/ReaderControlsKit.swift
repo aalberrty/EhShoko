@@ -73,7 +73,10 @@ struct ReaderCloseControl: View {
                 .contentShape(.circle)
         }
         .buttonStyle(.plain)
-        .accessibilityShowsLargeContentViewer()
+        .accessibilityLabel(L10n.Localizable.Common.close)
+        .accessibilityShowsLargeContentViewer {
+            Label(L10n.Localizable.Common.close, systemImage: "xmark")
+        }
         .glassSurface(in: .circle, isInteractive: true)
         .sensoryFeedback(.impact(weight: .light), trigger: dismissals)
     }

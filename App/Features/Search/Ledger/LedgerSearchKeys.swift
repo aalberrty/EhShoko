@@ -67,21 +67,17 @@ private struct LedgerSearchKeyButton: View {
         }
         .buttonStyle(.plain)
         .glassSurface(in: .capsule, isInteractive: true)
-        .modifier(LedgerSearchKeyLabel(key: key))
+        .accessibilityLabel(key.spokenName)
     }
 }
 
-/// What VoiceOver says for a key. The words "Insert %@", "Exclude" and "Exact match" are not
-/// in the app's strings yet (F27): a namespace key says the namespace's name, and `-` and `$`
-/// are read as the characters they are.
-private struct LedgerSearchKeyLabel: ViewModifier {
-    let key: LedgerSearchKey
-
-    func body(content: Content) -> some View {
-        if let namespace = key.namespace {
-            content.accessibilityLabel(namespace.localizedName)
-        } else {
-            content
+extension LedgerSearchKey {
+    /// What VoiceOver says for the key: "Insert artist:", "Exclude", "Exact match".
+    var spokenName: String {
+        switch self {
+        case .exclude: L10n.Localizable.Search.Key.exclude
+        case .exact: L10n.Localizable.Search.Key.exact
+        default: L10n.Localizable.Search.Key.insert(text)
         }
     }
 }

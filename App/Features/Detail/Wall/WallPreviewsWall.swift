@@ -152,6 +152,8 @@ struct WallPreviewsWall: View {
         } label: {
             Label(L10n.Localizable.List.Density.columns(columns), systemImage: "square.grid.2x2")
         }
+        .accessibilityLabel(L10n.Localizable.Gallery.Previews.columns)
+        .accessibilityValue(L10n.Localizable.List.Density.columns(columns))
     }
 
     /// Changes the width of the thumbnails at once, keeping the row at the top where it is.
