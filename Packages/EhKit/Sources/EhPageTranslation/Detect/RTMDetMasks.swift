@@ -22,13 +22,13 @@ extension RTMDetDecoder {
                 let cellY = window.y0 + y
                 let relativeY = (prior.y - Float(cellY) * featureStride) / (prior.z * 8)
                 for x in 0..<window.width {
-                    let cellX = window.x0 + x, cell = y * window.width + x
-                    input[cell] = (prior.x - Float(cellX) * featureStride) / (prior.z * 8)
+                    let cell = y * window.width + x
+                    input[cell] = (prior.x - Float(window.x0 + x) * featureStride) / (prior.z * 8)
                     input[count + cell] = relativeY
-                    for channel in 0..<8 {
-                        input[(2 + channel) * count + cell] = features.at(channel, cellY, cellX)
-                    }
                 }
+            }
+            for channel in 0..<8 {
+                input.replaceSubrange(((2 + channel) * count)..<((3 + channel) * count), with: features.window(channel: channel, window))
             }
             return Self.convolve(parameters, input: input, count: count)
         }

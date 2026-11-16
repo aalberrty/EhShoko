@@ -53,16 +53,7 @@ struct KoharuLayoutDecoder: Sendable {
     /// Masks from the (1, Q, M, M) mask logits, set above 0, within 4 input pixels of the box.
     static func masks(_ masks: TensorView, letterbox: Letterbox) -> MaskSampler {
         MaskSampler(letterbox: letterbox, gridSide: masks.shape[3], threshold: 0, inclusive: false, margin: 4) {
-            detection, window in
-            var values = [Float](repeating: 0, count: window.width * window.height)
-            let base = detection.anchor * masks.strides[1]
-            for y in 0..<window.height {
-                let row = base + (window.y0 + y) * masks.strides[2]
-                for x in 0..<window.width {
-                    values[y * window.width + x] = masks.value(row + (window.x0 + x) * masks.strides[3])
-                }
-            }
-            return values
+            detection, window in masks.window(channel: detection.anchor, window)
         }
     }
 }

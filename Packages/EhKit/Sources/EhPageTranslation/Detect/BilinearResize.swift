@@ -9,20 +9,22 @@ enum BilinearResize {
     static let weightBits = 11
     static let weightScale = 1 << weightBits
 
-    /// For one output position: the first source index and the two weights, summing to
-    /// `weightScale`.
+    /// For one output position: the first source index and the two weights.
     struct Tap: Equatable {
         var index: Int
         var weight0: Int32
         var weight1: Int32
     }
 
+    /// OpenCV's taps exactly: the scale as the inverse of the inverse scale, the fraction in
+    /// single precision, and each weight rounded on its own, so the two may sum to one more or
+    /// one less than `weightScale`.
     static func taps(source: Int, destination: Int) -> [Tap] {
-        let scale = Double(source) / Double(destination)
+        let scale = 1 / (Double(destination) / Double(source))
         return (0..<destination).map { position in
-            var fraction = (Double(position) + 0.5) * scale - 0.5
+            var fraction = Float((Double(position) + 0.5) * scale - 0.5)
             var index = Int(fraction.rounded(.down))
-            fraction -= Double(index)
+            fraction -= Float(index)
             if index < 0 {
                 index = 0
                 fraction = 0
@@ -31,8 +33,11 @@ enum BilinearResize {
                 index = source - 1
                 fraction = 0
             }
-            let weight0 = Int32(((1 - fraction) * Double(weightScale)).rounded())
-            return Tap(index: index, weight0: weight0, weight1: Int32(weightScale) - weight0)
+            let unit = Float(weightScale)
+            return Tap(
+                index: index, weight0: Int32(((1 - fraction) * unit).rounded(.toNearestOrEven)),
+                weight1: Int32((fraction * unit).rounded(.toNearestOrEven))
+            )
         }
     }
 

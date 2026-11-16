@@ -35,7 +35,9 @@ extension RTMDetDetector: RunnableDetector {}
         var reference: @Sendable (String) throws -> [ReferenceBox]
         /// A run's boxes in the reference's coordinates.
         var found: @Sendable (DetectorRun, PageBitmap) -> [ReferenceBox]
-        var load: @Sendable (URL) async throws -> any RunnableDetector
+        var load: @Sendable (URL, MLComputeUnits) async throws -> any RunnableDetector
+        /// Where the fp16 model runs on this Mac.
+        var fp16Units: MLComputeUnits = .cpuOnly
     }
 
     static let root = "models/det-phone"
@@ -58,7 +60,7 @@ extension RTMDetDetector: RunnableDetector {}
             return try #require(pages[name] as? [[Any]]).compactMap(ReferenceBox.init)
         },
         found: { run, page in normalised(run, page) { $0.score >= KoharuLayoutDecoder.threshold(for: $0.label) } },
-        load: { try await KoharuLayoutDetector.load(compiledModel: $0, computeUnits: .cpuOnly) }
+        load: { try await KoharuLayoutDetector.load(compiledModel: $0, computeUnits: $1) }
     )
 
     static let yolo26s = Case(
@@ -73,7 +75,7 @@ extension RTMDetDetector: RunnableDetector {}
             }
         },
         found: { run, _ in inInput(run) },
-        load: { try await KoharuYOLODetector.load(compiledModel: $0, computeUnits: .cpuOnly) }
+        load: { try await KoharuYOLODetector.load(compiledModel: $0, computeUnits: $1) }
     )
 
     static let v4s = Case(
@@ -85,7 +87,10 @@ extension RTMDetDetector: RunnableDetector {}
             return try #require(page["ort_float"] as? [[Any]]).compactMap(ReferenceBox.init)
         },
         found: { run, page in normalised(run, page) { _ in true } },
-        load: { try await OgkaluDetector.load(compiledModel: $0, computeUnits: .cpuOnly) }
+        load: { try await OgkaluDetector.load(compiledModel: $0, computeUnits: $1) },
+        // On this Intel Mac's CPU the fp16 package gives a score above the threshold to every
+        // query; on its GPU, and on the phone's CPU (the research), it is right.
+        fp16Units: .cpuAndGPU
     )
 
     static let rtmdet2 = Case(
@@ -97,7 +102,7 @@ extension RTMDetDetector: RunnableDetector {}
             return try #require(page["ort"] as? [[Any]]).compactMap(ReferenceBox.init)
         },
         found: { run, _ in inInput(run) },
-        load: { try await RTMDetDetector.load(compiledModel: $0, computeUnits: .cpuOnly) }
+        load: { try await RTMDetDetector.load(compiledModel: $0, computeUnits: $1) }
     )
 
     /// The research's own inputs, each fed as the page: the model sees exactly what it saw.
@@ -168,12 +173,12 @@ extension RTMDetDetector: RunnableDetector {}
 
     static func check(_ test: Case, macRate: Double, fp16InputRate: Double, pageRate: Double) async throws {
         try inputIsDrawnUnchanged(test)
-        let fp32 = try await test.load(ReferenceSupport.compiledModel(test.fp32))
+        let fp32 = try await test.load(ReferenceSupport.compiledModel(test.fp32), .cpuOnly)
         let parity = try await onResearchInputs(fp32, test)
         ReferenceSupport.report("\(test.name) fp32, research inputs: \(parity)")
         #expect(parity.share >= macRate, "\(test.name) fp32: \(parity)")
 
-        let fp16 = try await test.load(ReferenceSupport.compiledModel(test.fp16))
+        let fp16 = try await test.load(ReferenceSupport.compiledModel(test.fp16), test.fp16Units)
         let shipped = try await onResearchInputs(fp16, test)
         ReferenceSupport.report("\(test.name) fp16, research inputs: \(shipped)")
         #expect(shipped.share >= fp16InputRate, "\(test.name) fp16: \(shipped)")

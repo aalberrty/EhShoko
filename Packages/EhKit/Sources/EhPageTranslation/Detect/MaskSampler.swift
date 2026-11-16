@@ -82,36 +82,52 @@ struct MaskSampler {
         guard values.count == grid.width * grid.height else { return RegionMask(rect: rect) }
 
         let width = rect.width
+        // A value passes `> t` exactly when it passes `>= t.nextUp`: one comparison for both.
+        let lowest = inclusive ? threshold : threshold.nextUp
         var bits = [UInt8](repeating: 0, count: rect.area)
         // Each grid row the mask reads, interpolated along x once.
         var filtered = [Float](repeating: 0, count: grid.height * width)
         var isFiltered = [Bool](repeating: false, count: grid.height)
+        let firstIndex = columns.map { $0.index0 - grid.x0 }, secondIndex = columns.map { $0.index1 - grid.x0 }
+        let secondWeight = columns.map(\.weight), firstWeight = secondWeight.map { 1 - $0 }
         values.withUnsafeBufferPointer { values in
             filtered.withUnsafeMutableBufferPointer { filtered in
+                guard let values = values.baseAddress, let filtered = filtered.baseAddress else { return }
                 func filter(_ row: Int) {
                     guard !isFiltered[row] else { return }
                     isFiltered[row] = true
-                    let source = row * grid.width, target = row * width
-                    for (x, column) in columns.enumerated() {
-                        let a = values[source + column.index0 - grid.x0], b = values[source + column.index1 - grid.x0]
-                        filtered[target + x] = a * (1 - column.weight) + b * column.weight
+                    let source = values + row * grid.width, target = filtered + row * width
+                    for x in 0..<width {
+                        target[x] = source[firstIndex[x]] * firstWeight[x] + source[secondIndex[x]] * secondWeight[x]
                     }
                 }
                 bits.withUnsafeMutableBufferPointer { bits in
+                    guard let bits = bits.baseAddress else { return }
                     for (y, row) in rows.enumerated() {
                         let upper = row.index0 - grid.y0, lower = row.index1 - grid.y0
                         filter(upper)
                         filter(lower)
-                        let a = upper * width, b = lower * width, out = y * width
-                        let weight = row.weight
-                        for x in 0..<width {
-                            let value = filtered[a + x] * (1 - weight) + filtered[b + x] * weight
-                            bits[out + x] = isSet(value) ? 1 : 0
-                        }
+                        Self.blend(
+                            filtered + upper * width, filtered + lower * width, weight: row.weight, lowest: lowest,
+                            into: bits + y * width, count: width
+                        )
                     }
                 }
             }
         }
         return RegionMask(rect: rect, bits: bits)
+    }
+
+    /// One row of the mask: the two filtered grid rows mixed by `weight`, set at `lowest` and
+    /// above. A plain loop over pointers, which the compiler vectorises.
+    @inline(__always)
+    private static func blend(
+        _ upper: UnsafePointer<Float>, _ lower: UnsafePointer<Float>, weight: Float, lowest: Float,
+        into bits: UnsafeMutablePointer<UInt8>, count: Int
+    ) {
+        let keep = 1 - weight
+        for x in 0..<count {
+            bits[x] = upper[x] * keep + lower[x] * weight >= lowest ? 1 : 0
+        }
     }
 }

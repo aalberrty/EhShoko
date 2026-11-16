@@ -103,7 +103,10 @@ struct BilinearResizeTests {
         #expect(taps.first == BilinearResize.Tap(index: 0, weight0: 2048, weight1: 0))
         #expect(taps[1] == BilinearResize.Tap(index: 0, weight0: 1536, weight1: 512))
         #expect(taps.last == BilinearResize.Tap(index: 3, weight0: 2048, weight1: 0))
-        #expect(taps.allSatisfy { $0.weight0 + $0.weight1 == 2048 })
+        #expect(taps.allSatisfy { abs($0.weight0 + $0.weight1 - 2048) <= 1 })
+        // OpenCV computes the fraction in single precision: in double precision these weights
+        // would be 1055 and 993, and a 1280-pixel row resized to 671 would differ in 43 places.
+        #expect(BilinearResize.taps(source: 1280, destination: 671)[162] == BilinearResize.Tap(index: 309, weight0: 1054, weight1: 994))
     }
 
     @Test func aPageRegionIsLetterboxedIntoTheBufferOnGrey() throws {

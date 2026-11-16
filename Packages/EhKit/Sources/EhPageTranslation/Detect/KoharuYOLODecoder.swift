@@ -82,18 +82,16 @@ struct KoharuYOLODecoder: Sendable {
         let side = prototypes.shape[3], channels = prototypes.shape[1]
         return MaskSampler(letterbox: letterbox, gridSide: side, threshold: 0.5, inclusive: false, margin: 4) {
             detection, window in
-            var weights = [Float](repeating: 0, count: channels)
-            for channel in 0..<channels { weights[channel] = coefficients.at(channel, detection.anchor) }
-            var values = [Float](repeating: 0, count: window.width * window.height)
-            for y in 0..<window.height {
-                for x in 0..<window.width {
-                    var sum: Float = 0
-                    for channel in 0..<channels {
-                        sum += weights[channel] * prototypes.at(channel, window.y0 + y, window.x0 + x)
-                    }
-                    values[y * window.width + x] = 1 / (1 + exp(-sum))
-                }
+            let count = window.width * window.height
+            var sums = [Float](repeating: 0, count: count)
+            // Channel by channel, each a bulk read of the window, summed in the same order as a
+            // dot product for each cell.
+            for channel in 0..<channels {
+                let weight = coefficients.at(channel, detection.anchor)
+                let plane = prototypes.window(channel: channel, window)
+                for index in 0..<count { sums[index] += weight * plane[index] }
             }
+            let values = sums.map { 1 / (1 + exp(-$0)) }
             return values
         }
     }
