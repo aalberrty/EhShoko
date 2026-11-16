@@ -141,9 +141,10 @@ struct Screens {
             .in(choices.bar == .tabs ? .tabBar : .container("Navigation"))
         // A gallery in the side pane (regular width) is closed with the pane's Close: with it
         // open, the bar's Search did not open search on the iPad after F23's chrome changes.
-        let paneClose = Target(matches: [.label("Close")], type: .button).in(.navigationBar)
+        // iOS 18's Close is the "xmark" fallback (`SheetButtons.swift`).
+        let paneClose = Target(matches: [.label("Close"), .identifier("xmark")], type: .button).in(.navigationBar)
         return [
-            .ifPresent(search, within: 2, then: [.tapIfPresent(paneClose, within: 1)], else: [.back]),
+            .ifPresent(search, within: 2, then: [.tapIfPresent(paneClose, within: 3)], else: [.back]),
             .pause(seconds: 1),
         ]
     }
@@ -263,7 +264,15 @@ struct Screens {
         let open: [Step] = switch choices.bar {
         // The account button is on a tab's root: Wall's and Ledger's libraries push the folder
         // the walk opened, so it is taken from Home.
-        case .tabs: Self.openTab("Home") + [.pause(seconds: 1), .tap(Self.accountButton)]
+        // Beside Ledger's Index on an iPad, Home's account button is in the Index: shown again
+        // with the sidebar button if the walk dismissed it.
+        case .tabs: Self.openTab("Home") + [
+            .pause(seconds: 1),
+            .ifPresent(Self.accountButton, within: 2, then: [], else: [
+                .tapIfPresent(Target.button("Show Sidebar"), within: 2), .pause(seconds: 1),
+            ]),
+            .tap(Self.accountButton),
+        ]
         case .command: choosePlace("Settings")
         }
         let change = settingsChange

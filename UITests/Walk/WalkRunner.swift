@@ -339,7 +339,9 @@ final class WalkRunner {
             .map(\.frame.minX).max() ?? 0
         let start = app.coordinate(withNormalizedOffset: CGVector(dx: (max(leadingEdge, 0) + 2) / width, dy: 0.5))
         let end = app.coordinate(withNormalizedOffset: CGVector(dx: reach, dy: 0.5))
-        start.press(forDuration: 0.05, thenDragTo: end, withVelocity: 250, thenHoldForDuration: 0.3)
+        // Slowly, and held before letting go, so the finger has no speed left that would finish
+        // the pop by itself.
+        start.press(forDuration: 0.05, thenDragTo: end, withVelocity: 80, thenHoldForDuration: 0.6)
         Thread.sleep(forTimeInterval: 1.2)
     }
 
