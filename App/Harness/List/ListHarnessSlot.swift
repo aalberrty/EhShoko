@@ -9,13 +9,6 @@ import SwiftUI
 /// `ListHarnessFeed`); nothing else in the harness changes. The raw value is the name
 /// `-HarnessSlot` and `measure.sh` use.
 nonisolated enum ListHarnessSlot: String, CaseIterable, Identifiable, Sendable {
-    /// v3's list rows (`GalleryDetailRow` in a `List`), the "Detail" display mode.
-    case v3Rows = "v3-rows"
-    /// v3's grid of cards (`GalleryThumbnailCell` in a `LazyVGrid`), the "Thumbnail" display mode.
-    case v3Grid = "v3-grid"
-    /// v3's list rows with the cover drawn by `CoverImage` (one decode per cover, at the site's
-    /// size) instead of `RemoteImage` (one decode per display size).
-    case v3RowsCover = "v3-rows-cover"
     /// Shelf's list as Front Page (`-HarnessTags YES` for its tag line), and as Toplists, with
     /// ranks.
     case shelf
@@ -47,9 +40,8 @@ nonisolated enum ListHarnessSlot: String, CaseIterable, Identifiable, Sendable {
 struct ListHarnessSlotView: View {
     let slot: ListHarnessSlot
     let galleries: [Gallery]
-    /// v3's cells read the display mode and the tag settings from the environment, and the list
-    /// designs their own form settings, so the harness gives them a store of its own rather
-    /// than the user's.
+    /// The list designs read their own form settings from the environment, so the harness gives
+    /// them a store of its own rather than the user's.
     let settings: SettingsStore
 
     @Dependency(\.userStore) private var userStore
@@ -65,10 +57,6 @@ struct ListHarnessSlotView: View {
     @ViewBuilder
     private var content: some View {
         switch slot {
-        case .v3Rows, .v3Grid:
-            GalleryCollection(galleries: galleries)
-        case .v3RowsCover:
-            ListHarnessCoverRows(galleries: galleries)
         case .shelf, .shelfRanked:
             ShelfListHarnessSlot(feed: ListHarnessFeed.feed(for: galleries), isRanked: slot == .shelfRanked)
         case .shelfHome:

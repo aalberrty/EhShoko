@@ -6,7 +6,7 @@
 #                              run three times: for hitches, under Time Profiler and under
 #                              Allocations. Prints the hitch time ratio, the worst hitch, the long
 #                              hitches, the footprint, and the main thread's busy time and where it
-#                              went. Slots: v3-rows (default), v3-grid; see ListHarnessSlot.
+#                              went. Slots: shelf (default), wall-medium, ledger, …; see ListHarnessSlot.
 #                              Hitches: on a device, Instruments' Animation Hitches as well as the
 #                              harness's own count; on a simulator, where Instruments cannot record
 #                              hitches, the harness's count from its display link only. On a
@@ -57,7 +57,7 @@
 # to the Release xcodebuild command that builds the app for the device.
 #
 # Example, from the repository root, with a Debug build installed on the iOS 26 simulator:
-#   Scripts/measure.sh --device 37B2537D-E570-4030-B731-E2857E827B7E list v3-rows
+#   Scripts/measure.sh --device 37B2537D-E570-4030-B731-E2857E827B7E list shelf
 set -euo pipefail
 
 export DEVELOPER_DIR="${DEVELOPER_DIR:-/Applications/Xcode.app/Contents/Developer}"
@@ -234,7 +234,7 @@ fetch_file() {
 
 case "$run" in
   list)
-    slot="${1:-v3-rows}"
+    slot="${1:-shelf}"
     harness_args=(-Harness list -HarnessSlot "$slot" -HarnessCount "$count" -HarnessSpeed "$speed"
       -HarnessTags "$tags" -HarnessCoverLatency "$latency" -HarnessAutoRun YES -HarnessExitWhenDone YES)
     printf '%s\n' "slot=$slot" "speed=$speed" "count=$count" "tags=$tags" "latency=$latency" \

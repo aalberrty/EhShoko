@@ -6,7 +6,7 @@ import Foundation
 ///
 /// | Argument | Default | Meaning |
 /// |---|---|---|
-/// | `-HarnessSlot <name>` | `v3-rows` | The list view under test (`ListHarnessSlot`). |
+/// | `-HarnessSlot <name>` | `shelf` | The list view under test (`ListHarnessSlot`). |
 /// | `-HarnessCount <n>` | 500 | Synthetic galleries. |
 /// | `-HarnessTags YES` | NO | Rows show their tags (the slots that have a tag line). |
 /// | `-HarnessDock YES` | NO | A gallery dock (`ActionDock`) floats over the list, as the shell places it. |
@@ -16,7 +16,7 @@ import Foundation
 /// | `-HarnessAutoRun YES` | NO | Start the scripted scroll once the first screen has settled. |
 /// | `-HarnessExitWhenDone YES` | NO | Quit after writing the result, which ends an `xctrace` recording. |
 nonisolated struct ListHarnessOptions: Equatable, Sendable {
-    var slot = ListHarnessSlot.v3Rows
+    var slot = ListHarnessSlot.shelf
     var galleryCount = 500
     var showsTags = false
     var showsDock = false
