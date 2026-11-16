@@ -163,14 +163,4 @@ import Testing
 
         try await eventually { model.historyKeywords == ["b", "a"] }
     }
-
-    @Test func keywordColumnsFollowTheWidth() {
-        let items = Array(0..<25)
-
-        #expect(SearchRootModel.columns(items, isRegularWidth: false) == [Array(0..<10)])
-        #expect(SearchRootModel.columns(items, isRegularWidth: true) == [
-            Array(stride(from: 0, to: 20, by: 2)), Array(stride(from: 1, to: 20, by: 2))
-        ])
-        #expect(SearchRootModel.columns([1], isRegularWidth: true) == [[1], []])
-    }
 }

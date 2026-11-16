@@ -92,22 +92,12 @@ internal enum L10n {
   }
   internal enum Localizable {
     internal enum AboutView {
-      internal enum Button {
-        /// AltStore source
-        internal static let altStoreSource = L10n.tr("Localizable", "about_view.button.altStore_source", fallback: "AltStore source")
-        /// Website
-        internal static let website = L10n.tr("Localizable", "about_view.button.website", fallback: "Website")
-      }
       internal enum Section {
         internal enum Title {
           /// Open-source software
           internal static let acknowledgements = L10n.tr("Localizable", "about_view.section.title.acknowledgements", fallback: "Open-source software")
-          /// Code contributors
-          internal static let codeLevelContributors = L10n.tr("Localizable", "about_view.section.title.code_level_contributors", fallback: "Code contributors")
           /// Thanks to
           internal static let specialThanks = L10n.tr("Localizable", "about_view.section.title.special_thanks", fallback: "Thanks to")
-          /// Translators
-          internal static let translationContributors = L10n.tr("Localizable", "about_view.section.title.translation_contributors", fallback: "Translators")
         }
       }
       internal enum Title {
@@ -131,8 +121,6 @@ internal enum L10n {
         internal static let tagsManagement = L10n.tr("Localizable", "account_setting_view.button.tags_management", fallback: "Edit My Tags")
       }
       internal enum Title {
-        /// Account
-        internal static let account = L10n.tr("Localizable", "account_setting_view.title.account", fallback: "Account")
         /// Show the daily reward
         internal static let showsNewDawnGreeting = L10n.tr("Localizable", "account_setting_view.title.shows_new_dawn_greeting", fallback: "Show the daily reward")
       }
@@ -154,19 +142,7 @@ internal enum L10n {
           internal static let infite = L10n.tr("Localizable", "appearance_setting_view.menu.title.infite", fallback: "No limit")
         }
       }
-      internal enum Section {
-        internal enum Title {
-          /// Gallery
-          internal static let gallery = L10n.tr("Localizable", "appearance_setting_view.section.title.gallery", fallback: "Gallery")
-          /// Lists
-          internal static let list = L10n.tr("Localizable", "appearance_setting_view.section.title.list", fallback: "Lists")
-        }
-      }
       internal enum Title {
-        /// Appearance
-        internal static let appearance = L10n.tr("Localizable", "appearance_setting_view.title.appearance", fallback: "Appearance")
-        /// Layout
-        internal static let displayMode = L10n.tr("Localizable", "appearance_setting_view.title.display_mode", fallback: "Layout")
         /// Prefer Japanese titles
         internal static let displaysJapaneseTitle = L10n.tr("Localizable", "appearance_setting_view.title.displays_japanese_title", fallback: "Prefer Japanese titles")
         /// Tags to show
@@ -175,8 +151,6 @@ internal enum L10n {
         internal static let showsTagsInList = L10n.tr("Localizable", "appearance_setting_view.title.shows_tags_in_list", fallback: "Show tags in lists")
         /// Theme
         internal static let theme = L10n.tr("Localizable", "appearance_setting_view.title.theme", fallback: "Theme")
-        /// Accent color
-        internal static let tintColor = L10n.tr("Localizable", "appearance_setting_view.title.tint_color", fallback: "Accent color")
       }
     }
     internal enum ArchivesView {
@@ -289,15 +263,7 @@ internal enum L10n {
         internal enum Button {
           /// Rate
           internal static let giveARating = L10n.tr("Localizable", "detail_view.action_section.button.give_a_rating", fallback: "Rate")
-          /// Similar galleries
-          internal static let similarGallery = L10n.tr("Localizable", "detail_view.action_section.button.similar_gallery", fallback: "Similar galleries")
         }
-      }
-      internal enum Button {
-        /// Write a comment
-        internal static let postComment = L10n.tr("Localizable", "detail_view.button.post_comment", fallback: "Write a comment")
-        /// Read
-        internal static let read = L10n.tr("Localizable", "detail_view.button.read", fallback: "Read")
       }
       internal enum ContextMenu {
         internal enum Button {
@@ -311,44 +277,16 @@ internal enum L10n {
           internal static let withdrawVote = L10n.tr("Localizable", "detail_view.context_menu.button.withdraw_vote", fallback: "Remove vote")
         }
       }
-      internal enum DescriptionSection {
-        internal enum Description {
-          /// times
-          internal static let favorited = L10n.tr("Localizable", "detail_view.description_section.description.favorited", fallback: "times")
-          /// pages
-          internal static let pageCount = L10n.tr("Localizable", "detail_view.description_section.description.page_count", fallback: "pages")
-        }
-        internal enum Title {
-          /// Favorited
-          internal static let favorited = L10n.tr("Localizable", "detail_view.description_section.title.favorited", fallback: "Favorited")
-          /// Size
-          internal static let fileSize = L10n.tr("Localizable", "detail_view.description_section.title.file_size", fallback: "Size")
-          /// Language
-          internal static let language = L10n.tr("Localizable", "detail_view.description_section.title.language", fallback: "Language")
-          /// Length
-          internal static let pageCount = L10n.tr("Localizable", "detail_view.description_section.title.page_count", fallback: "Length")
-          /// %@ ratings
-          internal static func ratings(_ p1: Any) -> String {
-            return L10n.tr("Localizable", "detail_view.description_section.title.ratings", String(describing: p1), fallback: "%@ ratings")
-          }
-        }
-      }
       internal enum Section {
         internal enum Title {
           /// Comments
           internal static let comments = L10n.tr("Localizable", "detail_view.section.title.comments", fallback: "Comments")
-          /// Previews
-          internal static let previews = L10n.tr("Localizable", "detail_view.section.title.previews", fallback: "Previews")
         }
       }
       internal enum ToolbarItem {
         internal enum Button {
-          /// Archive
-          internal static let archives = L10n.tr("Localizable", "detail_view.toolbar_item.button.archives", fallback: "Archive")
           /// Share
           internal static let share = L10n.tr("Localizable", "detail_view.toolbar_item.button.share", fallback: "Share")
-          /// Torrents
-          internal static let torrents = L10n.tr("Localizable", "detail_view.toolbar_item.button.torrents", fallback: "Torrents")
         }
       }
     }
@@ -1312,16 +1250,6 @@ internal enum L10n {
           }
         }
       }
-      internal enum HomeMiscGridType {
-        internal enum Title {
-          /// History
-          internal static let history = L10n.tr("Localizable", "enum.home_misc_grid_type.title.history", fallback: "History")
-          /// Popular
-          internal static let popular = L10n.tr("Localizable", "enum.home_misc_grid_type.title.popular", fallback: "Popular")
-          /// Watched
-          internal static let watched = L10n.tr("Localizable", "enum.home_misc_grid_type.title.watched", fallback: "Watched")
-        }
-      }
       internal enum Language {
         internal enum Value {
           /// Afrikaans
@@ -1458,14 +1386,6 @@ internal enum L10n {
           internal static let zulu = L10n.tr("Localizable", "enum.language.value.zulu", fallback: "Zulu")
         }
       }
-      internal enum ListDisplayMode {
-        internal enum Value {
-          /// Detailed
-          internal static let detail = L10n.tr("Localizable", "enum.list_display_mode.value.detail", fallback: "Detailed")
-          /// Covers
-          internal static let thumbnail = L10n.tr("Localizable", "enum.list_display_mode.value.thumbnail", fallback: "Covers")
-        }
-      }
       internal enum PreferredColorScheme {
         internal enum Value {
           /// Automatic
@@ -1490,10 +1410,6 @@ internal enum L10n {
         internal enum Value {
           /// About EhShoko
           internal static let about = L10n.tr("Localizable", "enum.setting_state_route.value.about", fallback: "About EhShoko")
-          /// Account
-          internal static let account = L10n.tr("Localizable", "enum.setting_state_route.value.account", fallback: "Account")
-          /// Appearance
-          internal static let appearance = L10n.tr("Localizable", "enum.setting_state_route.value.appearance", fallback: "Appearance")
           /// General
           internal static let general = L10n.tr("Localizable", "enum.setting_state_route.value.general", fallback: "General")
           /// Laboratory
@@ -1594,17 +1510,7 @@ internal enum L10n {
         internal static let unknown = L10n.tr("Localizable", "error_view.title.unknown", fallback: "Something went wrong.")
       }
     }
-    internal enum FavoritesView {
-      internal enum Title {
-        /// Favorites
-        internal static let favorites = L10n.tr("Localizable", "favorites_view.title.favorites", fallback: "Favorites")
-      }
-    }
     internal enum FiltersView {
-      internal enum Button {
-        /// Reset filters
-        internal static let resetFilters = L10n.tr("Localizable", "filters_view.button.reset_filters", fallback: "Reset filters")
-      }
       internal enum Section {
         internal enum Title {
           /// Advanced
@@ -1628,8 +1534,6 @@ internal enum L10n {
         internal static let minimumRating = L10n.tr("Localizable", "filters_view.title.minimum_rating", fallback: "Minimum rating")
         /// Only galleries with torrents
         internal static let onlyShowGalleriesWithTorrents = L10n.tr("Localizable", "filters_view.title.only_show_galleries_with_torrents", fallback: "Only galleries with torrents")
-        /// Page range
-        internal static let pagesRange = L10n.tr("Localizable", "filters_view.title.pages_range", fallback: "Page range")
         /// Include downvoted tags
         internal static let searchDownvotedTags = L10n.tr("Localizable", "filters_view.title.search_downvoted_tags", fallback: "Include downvoted tags")
         /// Include expunged galleries
@@ -1881,16 +1785,6 @@ internal enum L10n {
       }
     }
     internal enum HomeView {
-      internal enum Section {
-        internal enum Title {
-          /// Frontpage
-          internal static let frontpage = L10n.tr("Localizable", "home_view.section.title.frontpage", fallback: "Frontpage")
-          /// More
-          internal static let other = L10n.tr("Localizable", "home_view.section.title.other", fallback: "More")
-          /// Toplists
-          internal static let toplists = L10n.tr("Localizable", "home_view.section.title.toplists", fallback: "Toplists")
-        }
-      }
       internal enum Title {
         /// Home
         internal static let home = L10n.tr("Localizable", "home_view.title.home", fallback: "Home")
@@ -2391,8 +2285,6 @@ internal enum L10n {
           internal static let retryAllFailedImages = L10n.tr("Localizable", "reading_view.toolbar_item.button.retry_all_failed_images", fallback: "Retry failed pages")
         }
         internal enum Title {
-          /// Auto-play
-          internal static let autoPlay = L10n.tr("Localizable", "reading_view.toolbar_item.title.auto_play", fallback: "Auto-play")
           /// Two pages side by side
           internal static let dualPageMode = L10n.tr("Localizable", "reading_view.toolbar_item.title.dual_page_mode", fallback: "Two pages side by side")
           /// Cover on its own
@@ -2459,8 +2351,6 @@ internal enum L10n {
         internal enum Title {
           /// Quick search
           internal static let quickSearch = L10n.tr("Localizable", "search_view.section.title.quick_search", fallback: "Quick search")
-          /// Recent searches
-          internal static let recentlySearched = L10n.tr("Localizable", "search_view.section.title.recently_searched", fallback: "Recent searches")
           /// Recently viewed
           internal static let recentlySeen = L10n.tr("Localizable", "search_view.section.title.recently_seen", fallback: "Recently viewed")
         }
@@ -2474,12 +2364,6 @@ internal enum L10n {
       internal enum Prompt {
         /// Filter titles
         internal static let filter = L10n.tr("Localizable", "searchable.prompt.filter", fallback: "Filter titles")
-      }
-      internal enum Title {
-        /// %d matches
-        internal static func matchesCount(_ p1: Int) -> String {
-          return L10n.tr("Localizable", "searchable.title.matches_count", p1, fallback: "%d matches")
-        }
       }
     }
     internal enum SettingView {
@@ -2925,8 +2809,6 @@ internal enum L10n {
       }
       internal enum User {
         internal enum FavoriteCategory {
-          /// All
-          internal static let all = L10n.tr("Localizable", "struct.user.favorite_category.all", fallback: "All")
           /// Favorites %@
           internal static func `default`(_ p1: Any) -> String {
             return L10n.tr("Localizable", "struct.user.favorite_category.default", String(describing: p1), fallback: "Favorites %@")
@@ -2946,8 +2828,6 @@ internal enum L10n {
         internal static let favorites = L10n.tr("Localizable", "tab_item.title.favorites", fallback: "Favorites")
         /// Home
         internal static let home = L10n.tr("Localizable", "tab_item.title.home", fallback: "Home")
-        /// Search
-        internal static let search = L10n.tr("Localizable", "tab_item.title.search", fallback: "Search")
         /// Settings
         internal static let setting = L10n.tr("Localizable", "tab_item.title.setting", fallback: "Settings")
       }
@@ -2976,8 +2856,6 @@ internal enum L10n {
       internal enum Button {
         /// Filters
         internal static let filters = L10n.tr("Localizable", "toolbar_item.button.filters", fallback: "Filters")
-        /// Go to page
-        internal static let jumpPage = L10n.tr("Localizable", "toolbar_item.button.jump_page", fallback: "Go to page")
         /// Quick search
         internal static let quickSearch = L10n.tr("Localizable", "toolbar_item.button.quick_search", fallback: "Quick search")
       }

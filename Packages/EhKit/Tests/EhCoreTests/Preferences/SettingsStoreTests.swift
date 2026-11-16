@@ -167,41 +167,6 @@ import Testing
         #expect(store.setting == Setting())
     }
 
-    // MARK: Device default list display mode
-
-    @Test func defaultListDisplayModeAppliesOnceOnAFreshInstall() {
-        let storage = PreferenceStorage.ephemeral()
-        let store = SettingsStore(storage: storage)
-        store.registerDefaultListDisplayMode(.thumbnail)
-        #expect(store.listDisplayMode == .thumbnail)
-        store.registerDefaultListDisplayMode(.detail)
-        #expect(store.listDisplayMode == .thumbnail)
-        #expect(SettingsStore(storage: storage).listDisplayMode == .thumbnail)
-    }
-
-    @Test func defaultListDisplayModeIsStoredEvenWhenItEqualsTheBuiltInDefault() {
-        let storage = PreferenceStorage.ephemeral()
-        let store = SettingsStore(storage: storage)
-        store.registerDefaultListDisplayMode(.detail)
-        store.registerDefaultListDisplayMode(.thumbnail)
-        #expect(store.listDisplayMode == .detail)
-    }
-
-    @Test func defaultListDisplayModeDoesNotOverrideAStoredValue() {
-        let storage = PreferenceStorage.ephemeral()
-        storage.defaults.set(ListDisplayMode.detail.rawValue, forKey: "settings.listDisplayMode")
-        let store = SettingsStore(storage: storage)
-        store.registerDefaultListDisplayMode(.thumbnail)
-        #expect(store.listDisplayMode == .detail)
-    }
-
-    @Test func defaultListDisplayModeDoesNotOverrideAUserChoice() {
-        let store = SettingsStore(storage: .ephemeral())
-        store.listDisplayMode = .thumbnail
-        store.registerDefaultListDisplayMode(.detail)
-        #expect(store.listDisplayMode == .thumbnail)
-    }
-
     // MARK: Observation
 
     @Test func observationFiresForTheChangedPropertyOnly() {

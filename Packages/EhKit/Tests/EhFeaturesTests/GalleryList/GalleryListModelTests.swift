@@ -346,28 +346,19 @@ import Testing
     @Test func resetSwitchesSourceAndLoadsAgain() async throws {
         let env = try ListTestEnvironment()
         env.transport.on(.any, reply: .fixture(ListFixture.watched))
-        let model = env.make { WatchedModel() }
-        await model.list.loadIfNeeded()
-        let request = model.list.loadRequest
+        let model = env.make { GalleryListModel(source: .watched(keyword: "")) }
+        await model.loadIfNeeded()
+        let request = model.loadRequest
 
-        model.keyword = "language:english"
-        model.submitKeyword()
-        #expect(model.list.entries.galleries.isEmpty)
-        #expect(model.list.loadRequest != request)
-        await model.list.loadIfNeeded()
+        model.reset(to: .watched(keyword: "language:english"))
+        #expect(model.entries.galleries.isEmpty)
+        #expect(model.loadRequest != request)
+        await model.loadIfNeeded()
 
         #expect(env.query("f_search", ofRequest: 1) == "language:english")
-        #expect(model.list.phase == .content)
-        await model.list.loadMore()
+        #expect(model.phase == .content)
+        await model.loadMore()
         #expect(env.query("next", ofRequest: 2) == ListFixture.watchedLastID)
         #expect(env.query("f_search", ofRequest: 2) == "language:english")
-    }
-
-    @Test func quickSearchReplacesTheKeyword() async throws {
-        let env = try ListTestEnvironment()
-        let model = env.make { WatchedModel() }
-        model.quickSearch("artist:a")
-        #expect(model.keyword == "artist:a")
-        #expect(model.list.source == .watched(keyword: "artist:a"))
     }
 }

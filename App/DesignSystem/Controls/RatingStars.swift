@@ -7,8 +7,8 @@ import UIKit
 /// common case: `.caption`, `.footnote`, `.body`, …), the stars are one image (`StarStrip`),
 /// drawn as the symbols would be in that style at the environment's text size, weight and
 /// image scale; otherwise, and in the `symbols` form, they are five symbols. The colour is the
-/// look's rating colour with `tint: .look`, which the designs use; v3's screens pass
-/// `.inherited` (the default) and set it with `foregroundStyle`. VoiceOver reads it as one
+/// look's rating colour with `tint: .look`, which the designs use; with `.inherited` (the
+/// default) the caller sets it with `foregroundStyle`. VoiceOver reads it as one
 /// element, e.g. "Average rating, 3.5/5".
 struct RatingStars: View {
     enum Tint {

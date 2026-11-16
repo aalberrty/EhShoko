@@ -48,12 +48,10 @@
 // MARK: TabItem
 "tab_item.title.home" = "主页";
 "tab_item.title.favorites" = "收藏";
-"tab_item.title.search" = "搜索";
 "tab_item.title.setting" = "设置";
 
 // MARK: ToolbarItem
 "toolbar_item.button.filters" = "筛选";
-"toolbar_item.button.jump_page" = "前往页面";
 "toolbar_item.button.quick_search" = "快速搜索";
 
 // MARK: JumpPage
@@ -113,13 +111,7 @@
 
 // MARK: HomeView
 "home_view.title.home" = "主页";
-"home_view.section.title.frontpage" = "最新";
-"home_view.section.title.toplists" = "排行榜";
-"home_view.section.title.other" = "更多";
 // HomeMiscGridType
-"enum.home_misc_grid_type.title.popular" = "热门";
-"enum.home_misc_grid_type.title.watched" = "订阅";
-"enum.home_misc_grid_type.title.history" = "历史记录";
 
 // MARK: FrontpageView
 "frontpage_view.title.frontpage" = "最新";
@@ -137,19 +129,15 @@
 "history_view.title.history" = "历史记录";
 
 // MARK: FavoritesView
-"favorites_view.title.favorites" = "收藏";
 // FavoriteCategory
 "struct.user.favorite_category.default" = "收藏夹 %@";
-"struct.user.favorite_category.all" = "全部";
 
 // MARK: SearchView
 "search_view.title.search" = "搜索";
-"search_view.section.title.recently_searched" = "最近搜索";
 "search_view.section.title.recently_seen" = "最近浏览";
 "search_view.section.title.quick_search" = "快速搜索";
 // Searchable
 "searchable.prompt.filter" = "按标题筛选";
-"searchable.title.matches_count" = "%d 个匹配项";
 
 // MARK: QuickSearchView
 "quick_search_view.title.quick_search" = "快速搜索";
@@ -162,15 +150,12 @@
 // MARK: SettingView
 "setting_view.title.setting" = "设置";
 // SettingStateRoute
-"enum.setting_state_route.value.account" = "账户";
 "enum.setting_state_route.value.general" = "通用";
-"enum.setting_state_route.value.appearance" = "外观";
 "enum.setting_state_route.value.reading" = "阅读";
 "enum.setting_state_route.value.laboratory" = "实验室";
 "enum.setting_state_route.value.about" = "关于 EhShoko";
 
 // MARK: AccountSettingView
-"account_setting_view.title.account" = "账户";
 "account_setting_view.title.shows_new_dawn_greeting" = "显示每日奖励";
 "account_setting_view.button.login" = "登录";
 "account_setting_view.button.logout" = "退出登录";
@@ -216,17 +201,12 @@
 "logs_view.title.latest" = "当前";
 
 // MARK: AppearanceSettingView
-"appearance_setting_view.title.appearance" = "外观";
 "appearance_setting_view.title.theme" = "主题";
-"appearance_setting_view.title.tint_color" = "强调色";
-"appearance_setting_view.title.display_mode" = "布局";
 "appearance_setting_view.title.shows_tags_in_list" = "列表中显示标签";
 "appearance_setting_view.title.maximum_number_of_tags" = "显示的标签数";
 "appearance_setting_view.title.displays_japanese_title" = "优先显示日文标题";
 "appearance_setting_view.button.app_icon" = "App 图标";
 "appearance_setting_view.menu.title.infite" = "不限";
-"appearance_setting_view.section.title.list" = "列表";
-"appearance_setting_view.section.title.gallery" = "画廊";
 // PreferredColorScheme
 "enum.preferred_color_scheme.value.automatic" = "自动";
 "enum.preferred_color_scheme.value.light" = "浅色";
@@ -238,8 +218,6 @@
 "enum.app_icon_type.value.stand_with_ukraine_2022" = "声援乌克兰（2022）";
 "enum.app_icon_type.value.not_my_president" = "NOT MY PRESIDENT";
 // ListDisplayMode
-"enum.list_display_mode.value.detail" = "详细";
-"enum.list_display_mode.value.thumbnail" = "封面";
 
 // MARK: AppIconView
 "app_icon_view.title.app_icon" = "App 图标";
@@ -264,34 +242,17 @@
 
 // MARK: AboutView
 "about_view.title.ehShoko" = "EhShoko";
-"about_view.button.website" = "网站";
-"about_view.button.altStore_source" = "AltStore 源";
 "about_view.title.version" = "版本";
 "about_view.section.title.special_thanks" = "鸣谢";
-"about_view.section.title.code_level_contributors" = "代码贡献者";
-"about_view.section.title.translation_contributors" = "译者";
 "about_view.section.title.acknowledgements" = "开源软件";
 
 // MARK: DetailView
-"detail_view.button.read" = "阅读";
-"detail_view.button.post_comment" = "写评论";
-"detail_view.toolbar_item.button.archives" = "归档";
-"detail_view.toolbar_item.button.torrents" = "种子";
 "detail_view.toolbar_item.button.share" = "共享";
 "detail_view.context_menu.button.detail" = "标签详情";
 "detail_view.context_menu.button.withdraw_vote" = "撤回投票";
 "detail_view.context_menu.button.vote_up" = "投赞成票";
 "detail_view.context_menu.button.vote_down" = "投反对票";
-"detail_view.description_section.title.favorited" = "收藏数";
-"detail_view.description_section.title.language" = "语言";
-"detail_view.description_section.title.ratings" = "%@ 人评分";
-"detail_view.description_section.title.page_count" = "篇幅";
-"detail_view.description_section.title.file_size" = "大小";
-"detail_view.description_section.description.favorited" = "次";
-"detail_view.description_section.description.page_count" = "页";
 "detail_view.action_section.button.give_a_rating" = "评分";
-"detail_view.action_section.button.similar_gallery" = "相似画廊";
-"detail_view.section.title.previews" = "预览";
 "detail_view.section.title.comments" = "评论";
 
 // MARK: ArchivesView
@@ -358,7 +319,6 @@
 "reading_view.context_menu.button.save" = "存储到“照片”";
 "reading_view.context_menu.button.save_original" = "存储原图";
 "reading_view.context_menu.button.share" = "共享";
-"reading_view.toolbar_item.title.auto_play" = "自动播放";
 "reading_view.toolbar_item.title.dual_page_mode" = "双页并排";
 "reading_view.toolbar_item.title.except_the_cover" = "封面单独显示";
 "reading_view.toolbar_item.button.retry_all_failed_images" = "重试失败的页面";
@@ -381,11 +341,9 @@
 "filters_view.title.set_minimum_rating" = "按评分限制";
 "filters_view.title.minimum_rating" = "最低评分";
 "filters_view.title.set_pages_range" = "按页数限制";
-"filters_view.title.pages_range" = "页数范围";
 "filters_view.title.disable_language_filter" = "忽略语言过滤";
 "filters_view.title.disable_uploader_filter" = "忽略上传者过滤";
 "filters_view.title.disable_tags_filter" = "忽略标签过滤";
-"filters_view.button.reset_filters" = "重置筛选条件";
 "filters_view.section.title.advanced" = "高级";
 "filters_view.section.title.default_filter" = "你的默认过滤";
 // FilterRange

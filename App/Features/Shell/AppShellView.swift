@@ -19,7 +19,6 @@ struct AppShellView: View {
     }()
 
     @Environment(\.scenePhase) private var scenePhase
-    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
 
     // The settings decide the first frame's colours. The other shared services are injected
     // by `ShellRoot`: the launch creates them off the main actor before the shell appears.
@@ -57,7 +56,7 @@ struct AppShellView: View {
             model.scenePhaseChanged(to: AppModel.ScenePhase(phase))
         }
         .task(id: model.launchAttempt) {
-            await model.launch(isRegularWidth: horizontalSizeClass == .regular)
+            await model.launch()
         }
         .task { await model.followDomainFrontingSetting() }
     }

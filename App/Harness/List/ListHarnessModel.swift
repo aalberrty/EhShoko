@@ -24,7 +24,7 @@ final class ListHarnessModel {
     private(set) var galleries: [Gallery] = []
     private(set) var phase = Phase.preparing
 
-    /// The settings v3's cells read, kept apart from the user's.
+    /// The settings the list designs read, kept apart from the user's.
     @ObservationIgnored let settings: SettingsStore
     @ObservationIgnored let scroller = ListHarnessScroller()
     /// New cover URLs on every launch of the harness, so covers are downloaded and decoded.
@@ -97,7 +97,6 @@ final class ListHarnessModel {
 
     /// Before the slot is built, so a list lays itself out once in the form measured.
     private func applySettings() {
-        settings.listDisplayMode = options.slot == .v3Grid ? .thumbnail : .detail
         settings.showsTagsInList = options.showsTags
         settings.wallDensity = options.slot.wallDensity ?? .medium
         settings.ledgerShowsCovers = options.slot != .ledgerTitles

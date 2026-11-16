@@ -48,12 +48,10 @@
 // MARK: TabItem
 "tab_item.title.home" = "ホーム";
 "tab_item.title.favorites" = "お気に入り";
-"tab_item.title.search" = "検索";
 "tab_item.title.setting" = "設定";
 
 // MARK: ToolbarItem
 "toolbar_item.button.filters" = "フィルタ";
-"toolbar_item.button.jump_page" = "ページへ移動";
 "toolbar_item.button.quick_search" = "クイック検索";
 
 // MARK: JumpPage
@@ -113,13 +111,7 @@
 
 // MARK: HomeView
 "home_view.title.home" = "ホーム";
-"home_view.section.title.frontpage" = "新着";
-"home_view.section.title.toplists" = "ランキング";
-"home_view.section.title.other" = "その他";
 // HomeMiscGridType
-"enum.home_misc_grid_type.title.popular" = "人気";
-"enum.home_misc_grid_type.title.watched" = "フォロー中";
-"enum.home_misc_grid_type.title.history" = "履歴";
 
 // MARK: FrontpageView
 "frontpage_view.title.frontpage" = "新着";
@@ -137,19 +129,15 @@
 "history_view.title.history" = "履歴";
 
 // MARK: FavoritesView
-"favorites_view.title.favorites" = "お気に入り";
 // FavoriteCategory
 "struct.user.favorite_category.default" = "お気に入り %@";
-"struct.user.favorite_category.all" = "すべて";
 
 // MARK: SearchView
 "search_view.title.search" = "検索";
-"search_view.section.title.recently_searched" = "最近の検索";
 "search_view.section.title.recently_seen" = "最近見たもの";
 "search_view.section.title.quick_search" = "クイック検索";
 // Searchable
 "searchable.prompt.filter" = "タイトルで絞り込む";
-"searchable.title.matches_count" = "%d 件一致";
 
 // MARK: QuickSearchView
 "quick_search_view.title.quick_search" = "クイック検索";
@@ -162,15 +150,12 @@
 // MARK: SettingView
 "setting_view.title.setting" = "設定";
 // SettingStateRoute
-"enum.setting_state_route.value.account" = "アカウント";
 "enum.setting_state_route.value.general" = "一般";
-"enum.setting_state_route.value.appearance" = "外観";
 "enum.setting_state_route.value.reading" = "リーダー";
 "enum.setting_state_route.value.laboratory" = "ラボ";
 "enum.setting_state_route.value.about" = "EhShoko について";
 
 // MARK: AccountSettingView
-"account_setting_view.title.account" = "アカウント";
 "account_setting_view.title.shows_new_dawn_greeting" = "毎日の報酬を表示";
 "account_setting_view.button.login" = "ログイン";
 "account_setting_view.button.logout" = "ログアウト";
@@ -216,17 +201,12 @@
 "logs_view.title.latest" = "現在";
 
 // MARK: AppearanceSettingView
-"appearance_setting_view.title.appearance" = "外観";
 "appearance_setting_view.title.theme" = "テーマ";
-"appearance_setting_view.title.tint_color" = "アクセントカラー";
-"appearance_setting_view.title.display_mode" = "レイアウト";
 "appearance_setting_view.title.shows_tags_in_list" = "リストにタグを表示";
 "appearance_setting_view.title.maximum_number_of_tags" = "表示するタグの数";
 "appearance_setting_view.title.displays_japanese_title" = "日本語のタイトルを優先";
 "appearance_setting_view.button.app_icon" = "Appアイコン";
 "appearance_setting_view.menu.title.infite" = "制限なし";
-"appearance_setting_view.section.title.list" = "リスト";
-"appearance_setting_view.section.title.gallery" = "ギャラリー";
 // PreferredColorScheme
 "enum.preferred_color_scheme.value.automatic" = "自動";
 "enum.preferred_color_scheme.value.light" = "ライト";
@@ -238,8 +218,6 @@
 "enum.app_icon_type.value.stand_with_ukraine_2022" = "ウクライナと連帯（2022）";
 "enum.app_icon_type.value.not_my_president" = "NOT MY PRESIDENT";
 // ListDisplayMode
-"enum.list_display_mode.value.detail" = "詳細";
-"enum.list_display_mode.value.thumbnail" = "表紙";
 
 // MARK: AppIconView
 "app_icon_view.title.app_icon" = "Appアイコン";
@@ -264,34 +242,17 @@
 
 // MARK: AboutView
 "about_view.title.ehShoko" = "EhShoko";
-"about_view.button.website" = "ウェブサイト";
-"about_view.button.altStore_source" = "AltStore ソース";
 "about_view.title.version" = "バージョン";
 "about_view.section.title.special_thanks" = "協力";
-"about_view.section.title.code_level_contributors" = "コードの貢献者";
-"about_view.section.title.translation_contributors" = "翻訳者";
 "about_view.section.title.acknowledgements" = "オープンソースソフトウェア";
 
 // MARK: DetailView
-"detail_view.button.read" = "読む";
-"detail_view.button.post_comment" = "コメントを書く";
-"detail_view.toolbar_item.button.archives" = "アーカイブ";
-"detail_view.toolbar_item.button.torrents" = "トレント";
 "detail_view.toolbar_item.button.share" = "共有";
 "detail_view.context_menu.button.detail" = "タグの詳細";
 "detail_view.context_menu.button.withdraw_vote" = "投票を取り消す";
 "detail_view.context_menu.button.vote_up" = "賛成票";
 "detail_view.context_menu.button.vote_down" = "反対票";
-"detail_view.description_section.title.favorited" = "お気に入り登録";
-"detail_view.description_section.title.language" = "言語";
-"detail_view.description_section.title.ratings" = "評価 %@ 件";
-"detail_view.description_section.title.page_count" = "長さ";
-"detail_view.description_section.title.file_size" = "サイズ";
-"detail_view.description_section.description.favorited" = "回";
-"detail_view.description_section.description.page_count" = "ページ";
 "detail_view.action_section.button.give_a_rating" = "評価する";
-"detail_view.action_section.button.similar_gallery" = "類似ギャラリー";
-"detail_view.section.title.previews" = "プレビュー";
 "detail_view.section.title.comments" = "コメント";
 
 // MARK: ArchivesView
@@ -358,7 +319,6 @@
 "reading_view.context_menu.button.save" = "写真に保存";
 "reading_view.context_menu.button.save_original" = "オリジナルを保存";
 "reading_view.context_menu.button.share" = "共有";
-"reading_view.toolbar_item.title.auto_play" = "自動再生";
 "reading_view.toolbar_item.title.dual_page_mode" = "見開き表示";
 "reading_view.toolbar_item.title.except_the_cover" = "表紙は単独で表示";
 "reading_view.toolbar_item.button.retry_all_failed_images" = "失敗したページを再試行";
@@ -381,11 +341,9 @@
 "filters_view.title.set_minimum_rating" = "評価で絞り込む";
 "filters_view.title.minimum_rating" = "最低評価";
 "filters_view.title.set_pages_range" = "ページ数で絞り込む";
-"filters_view.title.pages_range" = "ページ数の範囲";
 "filters_view.title.disable_language_filter" = "言語フィルタを無視";
 "filters_view.title.disable_uploader_filter" = "アップローダーフィルタを無視";
 "filters_view.title.disable_tags_filter" = "タグフィルタを無視";
-"filters_view.button.reset_filters" = "フィルタをリセット";
 "filters_view.section.title.advanced" = "詳細";
 "filters_view.section.title.default_filter" = "デフォルトのフィルタ";
 // FilterRange
