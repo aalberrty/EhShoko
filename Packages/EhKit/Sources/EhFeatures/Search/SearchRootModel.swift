@@ -125,19 +125,6 @@ public final class SearchRootModel {
     public func rootReselected() {
         reloadID += 1
     }
-
-    // MARK: Layout
-
-    /// Splits `items` into keyword columns: one column of at most 10 in compact width, two
-    /// alternating columns of at most 20 in total in regular width (legacy iPhone / iPad).
-    nonisolated public static func columns<Item>(_ items: [Item], isRegularWidth: Bool) -> [[Item]] {
-        guard isRegularWidth else { return [Array(items.prefix(10))] }
-        let limited = items.prefix(20).enumerated()
-        return [
-            limited.filter { $0.offset.isMultiple(of: 2) }.map(\.element),
-            limited.filter { !$0.offset.isMultiple(of: 2) }.map(\.element)
-        ]
-    }
 }
 
 /// A search keyword and the text shown for it.
