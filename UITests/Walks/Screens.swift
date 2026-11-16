@@ -129,7 +129,13 @@ struct Screens {
     var leaveGallery: [Step] {
         let search = Target(matches: [.label("Search")], type: .button)
             .in(choices.bar == .tabs ? .tabBar : .container("Navigation"))
-        return [.ifPresent(search, within: 2, then: [], else: [.back, .pause(seconds: 1)])]
+        // A gallery in the side pane (regular width) is closed with the pane's Close: with it
+        // open, the bar's Search did not open search on the iPad after F23's chrome changes.
+        let paneClose = Target(matches: [.label("Close")], type: .button).in(.navigationBar)
+        return [
+            .ifPresent(search, within: 2, then: [.tapIfPresent(paneClose, within: 1)], else: [.back]),
+            .pause(seconds: 1),
+        ]
     }
 
     // MARK: The gallery

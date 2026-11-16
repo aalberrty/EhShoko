@@ -208,30 +208,26 @@ final class WalkRunner {
         return element
     }
 
-    /// Taps the first element of the target whose frame is on screen, at its middle.
+    /// Taps the first element of the target that has a frame on screen.
     ///
-    /// Not through `isHittable`: when XCTest cannot work out an element's hittability (a menu
-    /// item still appearing, a twin with an empty frame) it ends the test on the spot, which
-    /// `continueAfterFailure` does not prevent. An element that exists only off screen is
-    /// tapped by XCTest itself, which scrolls it into view.
+    /// Elements with an empty frame are skipped before XCTest sees them: when it cannot work
+    /// out an element's hittability (a menu item's twin with no frame) it ends the test on the
+    /// spot, which `continueAfterFailure` does not prevent. The tap itself is XCTest's, which
+    /// finds the element's hit point and scrolls it into view (a row clipped by an iPad's form
+    /// sheet has an on-screen frame but must not be tapped at its middle).
     private func tap(_ target: Target) throws {
-        let window = app.frame
         // A short settle: a control that has just appeared may still be moving.
         Thread.sleep(forTimeInterval: 0.3)
-        var candidates = target.query(in: app).allElementsBoundByIndex
-        if target.picksLast { candidates.reverse() }
-        let onScreen = candidates.first { element in
+        let window = app.frame
+        var candidates = target.query(in: app).allElementsBoundByIndex.filter { element in
             let frame = element.frame
-            return !frame.isEmpty && frame.width >= 1 && frame.height >= 1 && window.intersects(frame)
+            return frame.width >= 1 && frame.height >= 1
         }
-        if let element = onScreen {
-            let frame = element.frame.intersection(window)
-            app.coordinate(withNormalizedOffset: .zero).withOffset(CGVector(dx: frame.midX, dy: frame.midY)).tap()
-        } else if let element = candidates.first {
-            element.tap()
-        } else {
-            throw WalkFailure(step: currentStep, reason: "\(target) is gone")
+        if target.picksLast { candidates.reverse() }
+        guard let element = candidates.first(where: { window.intersects($0.frame) }) ?? candidates.first else {
+            throw WalkFailure(step: currentStep, reason: "\(target) has no element with a frame")
         }
+        element.tap()
     }
 
     private func scroll(_ direction: Step.Direction, screens: Double, on element: XCUIElement) throws {
