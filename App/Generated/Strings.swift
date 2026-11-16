@@ -1511,10 +1511,6 @@ internal enum L10n {
       }
     }
     internal enum FiltersView {
-      internal enum Button {
-        /// Reset filters
-        internal static let resetFilters = L10n.tr("Localizable", "filters_view.button.reset_filters", fallback: "Reset filters")
-      }
       internal enum Section {
         internal enum Title {
           /// Advanced
@@ -1538,8 +1534,6 @@ internal enum L10n {
         internal static let minimumRating = L10n.tr("Localizable", "filters_view.title.minimum_rating", fallback: "Minimum rating")
         /// Only galleries with torrents
         internal static let onlyShowGalleriesWithTorrents = L10n.tr("Localizable", "filters_view.title.only_show_galleries_with_torrents", fallback: "Only galleries with torrents")
-        /// Page range
-        internal static let pagesRange = L10n.tr("Localizable", "filters_view.title.pages_range", fallback: "Page range")
         /// Include downvoted tags
         internal static let searchDownvotedTags = L10n.tr("Localizable", "filters_view.title.search_downvoted_tags", fallback: "Include downvoted tags")
         /// Include expunged galleries

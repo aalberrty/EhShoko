@@ -341,11 +341,9 @@
 "filters_view.title.set_minimum_rating" = "Limit by rating";
 "filters_view.title.minimum_rating" = "Minimum rating";
 "filters_view.title.set_pages_range" = "Limit by length";
-"filters_view.title.pages_range" = "Page range";
 "filters_view.title.disable_language_filter" = "Ignore language filter";
 "filters_view.title.disable_uploader_filter" = "Ignore uploader filter";
 "filters_view.title.disable_tags_filter" = "Ignore tag filter";
-"filters_view.button.reset_filters" = "Reset filters";
 "filters_view.section.title.advanced" = "Advanced";
 "filters_view.section.title.default_filter" = "Your default filters";
 // FilterRange

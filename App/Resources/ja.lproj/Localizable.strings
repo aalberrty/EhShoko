@@ -341,11 +341,9 @@
 "filters_view.title.set_minimum_rating" = "評価で絞り込む";
 "filters_view.title.minimum_rating" = "最低評価";
 "filters_view.title.set_pages_range" = "ページ数で絞り込む";
-"filters_view.title.pages_range" = "ページ数の範囲";
 "filters_view.title.disable_language_filter" = "言語フィルタを無視";
 "filters_view.title.disable_uploader_filter" = "アップローダーフィルタを無視";
 "filters_view.title.disable_tags_filter" = "タグフィルタを無視";
-"filters_view.button.reset_filters" = "フィルタをリセット";
 "filters_view.section.title.advanced" = "詳細";
 "filters_view.section.title.default_filter" = "デフォルトのフィルタ";
 // FilterRange

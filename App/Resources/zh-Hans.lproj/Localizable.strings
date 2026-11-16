@@ -341,11 +341,9 @@
 "filters_view.title.set_minimum_rating" = "按评分限制";
 "filters_view.title.minimum_rating" = "最低评分";
 "filters_view.title.set_pages_range" = "按页数限制";
-"filters_view.title.pages_range" = "页数范围";
 "filters_view.title.disable_language_filter" = "忽略语言过滤";
 "filters_view.title.disable_uploader_filter" = "忽略上传者过滤";
 "filters_view.title.disable_tags_filter" = "忽略标签过滤";
-"filters_view.button.reset_filters" = "重置筛选条件";
 "filters_view.section.title.advanced" = "高级";
 "filters_view.section.title.default_filter" = "你的默认过滤";
 // FilterRange
