@@ -32,6 +32,10 @@ struct RoutedStack<Root: View>: View {
 /// The router's path is the same in both, so nothing is converted when the width changes.
 struct PlaceRootedStack<Fallback: View>: View {
     let router: StackRouter
+    /// Told the column's width by each of its screens as it is laid out. The split view hosts
+    /// pushed screens outside the stack, so the stack itself is not laid out again when the
+    /// column changes width under them.
+    let columnWidth: (CGFloat) -> Void
     /// The root while no place is on the path: the list to open on.
     @ViewBuilder var fallback: Fallback
 
@@ -49,9 +53,11 @@ struct PlaceRootedStack<Fallback: View>: View {
                         .stackScreen(nil, on: router)
                 }
             }
+            .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { columnWidth($0) }
             .navigationDestination(for: Route.self) { route in
                 RouteDestination(route: route)
                     .stackScreen(route, on: router)
+                    .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { columnWidth($0) }
             }
             .hidesTabBarOnGalleries(router)
         }

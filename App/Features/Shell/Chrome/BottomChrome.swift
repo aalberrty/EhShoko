@@ -127,6 +127,9 @@ struct BottomChrome<Content: View, Bar: View>: View {
         .frame(height: ActionDock.height)
         .padding(.horizontal, 12)
         .padding(.leading, leadingInset)
+        // The inset follows columns that have already moved; animated, a second change of it
+        // while the first runs left the pill's label where the first put it.
+        .animation(nil, value: leadingInset)
         // 26 pt above the screen's edge where there is a home indicator; 8 pt above the edge
         // where the bottom safe area is zero.
         .padding(.bottom, bottomSafeArea > 0 ? -8 : 8)

@@ -22,9 +22,12 @@ struct LedgerIndexView: View {
     @Environment(AppRouter.self) private var appRouter
     @Environment(StackRouter.self) private var stack
     @Environment(\.openURL) private var openURL
+    @Environment(\.openContinueReader) private var openContinueReader
 
     var body: some View {
-        let navigation = LedgerIndexNavigation(appRouter: appRouter, stack: stack)
+        let navigation = LedgerIndexNavigation(
+            appRouter: appRouter, stack: stack, openContinueReader: openContinueReader
+        )
         Group {
             if chrome.isLeadingColumn {
                 LedgerIndexColumn(model: model, navigation: navigation) { editsQuickSearches = true }
