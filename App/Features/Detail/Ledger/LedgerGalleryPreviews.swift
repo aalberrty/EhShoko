@@ -13,9 +13,14 @@ struct LedgerGalleryPreviews: View {
             VStack(alignment: .leading, spacing: 10) {
                 LedgerSectionHeading(title: L10n.Localizable.Gallery.previews) {
                     if model.showsAllPreviews {
-                        Button(L10n.Localizable.Gallery.all(model.pageCount)) { model.destination = .previews }
-                            .buttonStyle(.plain)
-                            .foregroundStyle(.tint)
+                        Button {
+                            model.destination = .previews
+                        } label: {
+                            Text(L10n.Localizable.Gallery.all(model.pageCount)).hitAreaOutset()
+                        }
+                        .buttonStyle(.plain)
+                        .foregroundStyle(.tint)
+                        .hitAreaOutsetReturned()
                     }
                 }
                 LedgerPreviewStrip(

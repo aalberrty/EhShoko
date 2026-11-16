@@ -316,9 +316,10 @@ struct WallGallerySectionHeading: View {
                     }
                     .font(.footnote.weight(.semibold))
                     .foregroundStyle(look.label)
-                    .contentShape(.rect)
+                    .hitAreaOutset()
                 }
                 .buttonStyle(.plain)
+                .hitAreaOutsetReturned()
             }
         }
         .padding(.top, 18)

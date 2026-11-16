@@ -24,9 +24,10 @@ struct ShelfGallerySectionHeading: View {
                     }
                     .font(.subheadline.weight(.medium))
                     .foregroundStyle(.tint)
-                    .contentShape(.rect)
+                    .hitAreaOutset()
                 }
                 .buttonStyle(.plain)
+                .hitAreaOutsetReturned()
             }
         }
         .padding(.leading, ShelfGalleryLayout.leading)
