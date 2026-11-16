@@ -7,9 +7,8 @@ extension View {
     /// background on iOS 18.
     ///
     /// The bar draws no surface of its own: glass shapes inside it (`glassSurface`,
-    /// `GlassGroup`) are the controls. Not for a screen inside a tab whose iOS 18 accessory
-    /// capsule sits in the same inset (`legacyTabAccessory`). A screen that does not stand on
-    /// the look's background turns the iOS 18 gradient off with `legacyBottomBarFade(.hidden)`.
+    /// `GlassGroup`) are the controls. A screen that does not stand on the look's background
+    /// turns the iOS 18 gradient off with `legacyBottomBarFade(.hidden)`.
     func bottomBar(spacing: CGFloat? = nil, @ViewBuilder content: () -> some View) -> some View {
         modifier(BottomBar(spacing: spacing, bar: content()))
     }

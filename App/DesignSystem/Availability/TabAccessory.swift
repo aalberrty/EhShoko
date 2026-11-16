@@ -5,9 +5,11 @@ import SwiftUI
 // - 26.1 and later: the system accessory, `tabViewBottomAccessory(isEnabled:)`, always applied
 //   and switched with `isEnabled`. Adding or removing the modifier with an `if` rebuilds every
 //   tab, so it never happens.
-// - 26.0 and iOS 18: a capsule in a bottom inset on each screen (never on the stack, where it
-//   covers the screen's own inset, and never on the search surface, where it rides above the
-//   keyboard). 26.0 can add or remove the system accessory only by rebuilding every tab.
+// - 26.0 and iOS 18: a capsule, which 26.0 needs because it can add or remove the system
+//   accessory only by rebuilding every tab. Like the bottom chrome (`spikes/S2.md` section 1.5)
+//   it is an overlay on each tab's stack, above the tab bar, and each screen keeps its height
+//   free inside the stack: an inset on the stack itself would not reach the screens' scroll
+//   views. It is never on the search surface, and never above a keyboard.
 
 enum TabAccessoryKind {
     /// Whether the system accessory is used: 26.1 and later.
@@ -69,12 +71,22 @@ extension View {
         modifier(TabBarMinimizesOnScroll())
     }
 
-    /// On each screen inside a tab's stack that keeps the bar, outside the screen's own insets.
-    /// 26.0 and iOS 18: `content` in a capsule of glass (26.0) or regular material (iOS 18)
-    /// in a bottom inset above the tab bar, while `isVisible`. 26.1 and later: nothing.
-    func legacyTabAccessory(isVisible: Bool, @ViewBuilder content: () -> some View) -> some View {
-        modifier(LegacyTabAccessory(isVisible: isVisible, accessory: content()))
+    /// The accessory's content in the capsule that stands in for it on 26.0 and iOS 18: glass
+    /// (26.0) or regular material (iOS 18), as high as the system's slot and as far from the
+    /// sides, with the gap it keeps above the tab bar. 26.1 and later have the system's
+    /// accessory and never draw this.
+    func legacyTabAccessoryCapsule() -> some View {
+        modifier(LegacyTabAccessoryCapsule())
     }
+}
+
+enum LegacyTabAccessoryMetrics {
+    /// The system's expanded slot on a 402 pt phone is 360 × 48 (S3, question 4).
+    static var height: CGFloat { 48 }
+    static var sideMargin: CGFloat { 21 }
+    static var gap: CGFloat { 6 }
+    /// What a screen keeps free at its bottom while the capsule is over it.
+    static var room: CGFloat { height + gap }
 }
 
 private struct TabAccessory<Accessory: View>: ViewModifier {
@@ -100,31 +112,13 @@ private struct TabBarMinimizesOnScroll: ViewModifier {
     }
 }
 
-private struct LegacyTabAccessory<Accessory: View>: ViewModifier {
-    let isVisible: Bool
-    let accessory: Accessory
-
-    /// The system's expanded slot on a 402 pt phone is 360 × 48 (S3, question 4).
-    private static var height: CGFloat { 48 }
-    private static var sideMargin: CGFloat { 21 }
-
+private struct LegacyTabAccessoryCapsule: ViewModifier {
     func body(content: Content) -> some View {
-        if TabAccessoryKind.usesSystemAccessory {
-            content
-        } else {
-            // The inset is always present and its content switches, so showing or hiding the
-            // capsule never changes the screen's structure.
-            content.safeAreaInset(edge: .bottom, spacing: 0) {
-                if isVisible {
-                    accessory
-                        .frame(maxWidth: .infinity, minHeight: Self.height)
-                        .contentShape(.capsule)
-                        .glassSurface(in: .capsule, isInteractive: true)
-                        .padding(.horizontal, Self.sideMargin)
-                        .padding(.bottom, 6)
-                        .transition(.opacity)
-                }
-            }
-        }
+        content
+            .frame(maxWidth: .infinity, minHeight: LegacyTabAccessoryMetrics.height)
+            .contentShape(.capsule)
+            .glassSurface(in: .capsule, isInteractive: true)
+            .padding(.horizontal, LegacyTabAccessoryMetrics.sideMargin)
+            .padding(.bottom, LegacyTabAccessoryMetrics.gap)
     }
 }

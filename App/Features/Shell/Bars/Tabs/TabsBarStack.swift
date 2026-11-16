@@ -14,8 +14,8 @@ extension EnvironmentValues {
 ///
 /// - It hands the tab's screens its count of re-selections at the root.
 /// - On iOS 26.0 it hides the tab bar on gallery routes (`TabsBarHiding`).
-/// - On the systems without the accessory it tells the tab's screens what the capsule needs
-///   to know of the bottom edge (`TabsBarLegacyEdge`).
+/// - On the systems without the accessory it draws the capsule that stands in for it, and
+///   tells the tab's screens what they need to know of the bottom edge (`TabsBarLegacyEdge`).
 struct TabsBarStack: ViewModifier {
     let tab: AppTab
 
@@ -25,7 +25,7 @@ struct TabsBarStack: ViewModifier {
         content
             .environment(\.tabsBarRootReselections, appRouter.rootReselectionCount(for: tab))
             .modifier(TabsBarHiding(tab: tab))
-            .modifier(TabsBarLegacyEdgeReader())
+            .modifier(TabsBarLegacyEdgeReader(tab: tab))
     }
 }
 
