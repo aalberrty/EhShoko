@@ -83,7 +83,7 @@ private struct ShelfListTitle: ViewModifier {
         } else {
             content
                 .navigationTitle(context.title)
-                .toolbarTitleDisplayMode(.inlineLarge)
+                .leadingLargeTitle()
         }
     }
 }

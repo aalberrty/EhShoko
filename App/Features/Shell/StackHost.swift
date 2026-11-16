@@ -93,6 +93,10 @@ private struct LeadingColumnHost<Bar: View>: View {
         )
         .opensGalleries(on: router)
         .environment(\.chrome, columnChrome(isLeadingColumn: false))
+        .onChange(of: visibility == .detailOnly, initial: true) { _, isHidden in
+            router.isLeadingColumnHidden = isHidden
+        }
+        .onDisappear { router.isLeadingColumnHidden = false }
     }
 
     private var columns: some View {
@@ -110,7 +114,11 @@ private struct LeadingColumnHost<Bar: View>: View {
         } detail: {
             // Widths, not positions: the system moves a column without a new layout of what is
             // in it, but a column that changes width lays out its top screen again.
-            PlaceRootedStack(router: router, columnWidth: { apply(layout.measured(list: $0)) }) {
+            PlaceRootedStack(
+                router: router,
+                rootBesideSidebarButton: chrome.bar == .tabs && visibility == .detailOnly,
+                columnWidth: { apply(layout.measured(list: $0)) }
+            ) {
                 GalleryListScreen(context: .place(.frontpage))
             }
         }
@@ -141,9 +149,11 @@ private struct LeadingColumnHost<Bar: View>: View {
         )
     }
 
-    /// The tab bar's accessory is off while the column shows, so the column keeps Continue.
+    /// The column keeps Continue while it shows; while it is hidden, the tab bar's Continue is
+    /// on for the list beside it, as for any other first screen.
     private func columnChrome(isLeadingColumn: Bool) -> ChromeContext {
-        ChromeContext(bar: chrome.bar, continueIsInChrome: false, isLeadingColumn: isLeadingColumn)
+        let continueIsInChrome = !isLeadingColumn && chrome.bar == .tabs && visibility == .detailOnly
+        return ChromeContext(bar: chrome.bar, continueIsInChrome: continueIsInChrome, isLeadingColumn: isLeadingColumn)
     }
 }
 
