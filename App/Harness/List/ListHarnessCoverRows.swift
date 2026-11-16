@@ -32,6 +32,9 @@ private struct ListHarnessCoverRow: View {
     @Environment(SettingsStore.self) private var settings
 
     var body: some View {
+        #if DEBUG || HARNESS
+        let _ = ListHarnessCells.note()
+        #endif
         HStack(alignment: .top, spacing: Tokens.Spacing.medium) {
             CoverImage(url: gallery.coverURL, size: Tokens.ImageSize.row, contentMode: .fit)
             VStack(alignment: .leading, spacing: 5) {

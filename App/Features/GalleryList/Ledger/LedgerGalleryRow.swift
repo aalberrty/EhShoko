@@ -50,6 +50,9 @@ struct LedgerGalleryRow: View, Equatable {
     }
 
     var body: some View {
+        #if DEBUG || HARNESS
+        let _ = ListHarnessCells.note()
+        #endif
         if style.showsCover {
             withCover
         } else {

@@ -13,6 +13,8 @@ import SwiftUI
 struct WallListChrome: ViewModifier {
     let input: ListDesignInput
     let density: WallDensity
+    /// A favourites folder on a screen of its own: its title is a menu of the folders.
+    let ownFolder: Int?
     let setDensity: (WallDensity) -> Void
 
     func body(content: Content) -> some View {
@@ -25,7 +27,7 @@ struct WallListChrome: ViewModifier {
                     }
                 }
             }
-            .modifier(WallListTitle(context: input.context))
+            .modifier(WallListTitle(context: input.context, ownFolder: ownFolder))
     }
 
     private var isFinding: Binding<Bool> {
@@ -49,6 +51,7 @@ struct WallListChrome: ViewModifier {
 /// collapsed until the list is scrolled, so the same list had two looks.
 private struct WallListTitle: ViewModifier {
     let context: ListContext
+    let ownFolder: Int?
 
     func body(content: Content) -> some View {
         if context.embedsInStart {
@@ -57,6 +60,7 @@ private struct WallListTitle: ViewModifier {
             content
                 .navigationTitle(context.title)
                 .toolbarTitleDisplayMode(.inline)
+                .listFolderTitleMenu(ownFolder)
         }
     }
 }

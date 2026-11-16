@@ -10,6 +10,9 @@ struct GalleryDetailRow: View {
     @Environment(SettingsStore.self) private var settings
 
     var body: some View {
+        #if DEBUG || HARNESS
+        let _ = ListHarnessCells.note()
+        #endif
         HStack(alignment: .top, spacing: Tokens.Spacing.medium) {
             RemoteImage(url: gallery.coverURL, size: Tokens.ImageSize.row)
             VStack(alignment: .leading, spacing: 5) {

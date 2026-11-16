@@ -64,6 +64,9 @@ struct WallCoverCell: View, Equatable {
     let style: WallCellStyle
 
     var body: some View {
+        #if DEBUG || HARNESS
+        let _ = ListHarnessCells.note()
+        #endif
         let texts = style.texts
         let category = texts.category(entry.gallery.category)
         VStack(alignment: .leading, spacing: 0) {
@@ -118,8 +121,13 @@ private struct WallCellCover: View {
             .frame(maxWidth: .infinity)
             .frame(height: style.coverHeight)
             .overlay {
-                WallCoverImage(url: entry.gallery.coverURL, look: texts.look)
-                    .opacity(style.isDimmed ? 0.5 : 1)
+                // No placeholder of its own, so the tile shows through while the image is on
+                // its way.
+                CoverImage(
+                    url: entry.gallery.coverURL, fillingCornerRadius: WallCellMetrics.coverRadius,
+                    placeholder: .clear, failureCaption: texts.coverMissing
+                )
+                .opacity(style.isDimmed ? 0.5 : 1)
             }
             .clipShape(shape)
             // The hairline edge, or the outline of the gallery open beside the wall.

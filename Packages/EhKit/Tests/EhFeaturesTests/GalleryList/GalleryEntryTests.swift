@@ -77,26 +77,35 @@ import Testing
     // MARK: Cost
 
     /// A page of entries and 1,000 titles cost little enough to build when a page arrives.
-    /// Both run off the main actor in the app; the best of several runs is timed, so a busy
-    /// machine does not fail the test.
+    /// Both run off the main actor in the app. The budgets are the plan's, set on the
+    /// development Mac in a debug build: 20 ms for 100 entries, 200 ms for 1,000 titles.
+    ///
+    /// Timed as the best of ten runs after one that warms the caches, so a moment of load does
+    /// not fail the test. On a CI runner (`CI` is set, as GitHub's runners set it) the limits
+    /// are half as long again: those are shared virtual machines, slower than that Mac and
+    /// slower on some runs than on others, where the best of five once took 20.8 ms against
+    /// the 20 ms limit and passed when run again.
     @Test func buildingEntriesIsCheap() async throws {
         let galleries = try Self.fixtureGalleries()
         let page = Array(galleries.prefix(100))
         let titles = Array((0..<1000).map { galleries[$0 % galleries.count].title })
         #expect(page.count == 100)
+        let slack = ProcessInfo.processInfo.environment["CI"] == nil ? 1.0 : 1.5
 
         let (pageTime, titlesTime) = await Self.measure(page: page, titles: titles)
 
-        #expect(pageTime < .milliseconds(20), "100 entries took \(pageTime)")
-        #expect(titlesTime < .milliseconds(200), "1,000 titles took \(titlesTime)")
+        #expect(pageTime < .milliseconds(20) * slack, "100 entries took \(pageTime)")
+        #expect(titlesTime < .milliseconds(200) * slack, "1,000 titles took \(titlesTime)")
     }
 
     @concurrent
     nonisolated private static func measure(page: [Gallery], titles: [String]) async -> (Duration, Duration) {
         let clock = ContinuousClock()
+        // Warms what the first run pays for alone (regular expressions, formatters).
+        _ = GalleryEntry.entries(for: page)
         var pageTime = Duration.seconds(60)
         var titlesTime = Duration.seconds(60)
-        for _ in 0..<5 {
+        for _ in 0..<10 {
             pageTime = min(pageTime, clock.measure { _ = GalleryEntry.entries(for: page) })
             titlesTime = min(titlesTime, clock.measure { for title in titles { _ = TitleParser.parse(title) } })
         }

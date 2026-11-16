@@ -17,7 +17,7 @@ struct ShelfListView<Header: View>: View {
     @ViewBuilder var header: Header
 
     @State private var texts = ShelfRowTexts()
-    @State private var prefetcher = ShelfListPrefetcher()
+    @State private var prefetcher = ListCoverPrefetcher()
     /// The container's width, for the columns and the tags that fit; 0 until it is known.
     @State private var width: CGFloat = 0
     @State private var hasAppeared = false
@@ -35,7 +35,7 @@ struct ShelfListView<Header: View>: View {
 
     var body: some View {
         content
-            .modifier(ShelfListChrome(input: input, width: width))
+            .modifier(ShelfListChrome(input: input, width: width, ownFolder: input.ownFolder(hasHeader: hasHeader)))
             .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { width = $0 }
             .onAppear {
                 // Back from a gallery page pushed over the list, or from a reader it presented:
@@ -46,6 +46,7 @@ struct ShelfListView<Header: View>: View {
                 hasAppeared = true
             }
             .onDisappear { prefetcher.stop() }
+            .followsFavoriteChanges(of: input)
     }
 
     @ViewBuilder
@@ -143,8 +144,6 @@ enum ShelfListLayout {
     /// A state under a header takes at least this much of the list.
     static let stateHeight: CGFloat = 360
     static let gridSpacing: CGFloat = 12
-    /// Toplists' pages, when fewer than two are loaded to measure one by.
-    static let rankedPageSize = 50
 
     static func insets(isRanked: Bool) -> EdgeInsets {
         isRanked ? rankedInsets : rowInsets
