@@ -28,7 +28,15 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
         completionHandler: @escaping () -> Void
     ) {
         @Dependency(\.pageTranslationModelStore) var modelStore
-        modelStore.handleBackgroundSessionEvents(identifier: identifier) { completionHandler() }
+        // The system suspends the app as soon as the session has delivered its events,
+        // whenever the handler is called (iOS 18.2: half a second after this call).
+        // Putting the files together, checking and compiling them takes longer, so the
+        // app asks for that time itself.
+        let time = BackgroundTime(named: "PageTranslationModels")
+        modelStore.handleBackgroundSessionEvents(identifier: identifier) {
+            completionHandler()
+            time.end()
+        }
     }
 
     static func setOrientationLock(_ lock: OrientationLock) {
@@ -45,5 +53,23 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
                 scene.requestGeometryUpdate(.iOS(interfaceOrientations: .portrait))
             }
         }
+    }
+}
+
+/// Time the app asks the system for while it is in the background: about half a minute.
+/// It is given back when the work is done, or when the system says the time is up.
+private final class BackgroundTime {
+    private var identifier = UIBackgroundTaskIdentifier.invalid
+
+    init(named name: String) {
+        identifier = UIApplication.shared.beginBackgroundTask(withName: name) { [weak self] in
+            self?.end()
+        }
+    }
+
+    func end() {
+        guard identifier != .invalid else { return }
+        UIApplication.shared.endBackgroundTask(identifier)
+        identifier = .invalid
     }
 }

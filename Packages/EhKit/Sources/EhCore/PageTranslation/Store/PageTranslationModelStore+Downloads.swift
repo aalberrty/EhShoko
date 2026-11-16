@@ -206,8 +206,10 @@ extension PageTranslationModelStore {
     /// the system's handler.
     ///
     /// What arrived is collected, put together, checked and compiled within the time the
-    /// system allows. First loads are left for the foreground: they use the GPU and the
-    /// Neural Engine, which a background app may not.
+    /// system allows. The caller has to ask the system for that time: the wake-up itself
+    /// ends as soon as the session has delivered its events (on iOS 18.2 the app is
+    /// suspended half a second after this call otherwise). First loads are left for the
+    /// foreground: they use the GPU and the Neural Engine, which a background app may not.
     public func handleBackgroundSessionEvents(identifier: String, completion: @escaping @MainActor () -> Void) {
         let (events, eventsDelivered) = AsyncStream<Void>.makeStream()
         let isOurs = environment.transport.handleBackgroundEvents(identifier: identifier) { eventsDelivered.finish() }
@@ -236,6 +238,8 @@ extension PageTranslationModelStore {
         }
     }
 
-    /// The system gives a woken app about half a minute.
-    static let backgroundAllowance: Duration = .seconds(20)
+    /// How long a wake-up may last before the system's handler is called whatever the
+    /// state. The app asks for background time when it is woken, and the system gives
+    /// about half a minute; this ends a little before that.
+    static let backgroundAllowance: Duration = .seconds(25)
 }
