@@ -1,6 +1,7 @@
 import EhCore
 import EhFeatures
 import EhModels
+import EhNetworking
 import SwiftUI
 
 /// What the shell presents over the browsing UI, under either bar: the Settings sheet, the
@@ -9,7 +10,13 @@ import SwiftUI
 /// switch, so none of them goes away when the bar or a design changes behind it.
 ///
 /// Only the topmost presenter can present, so each sheet attaches what may arrive while it
-/// is up: a link's gallery over Settings, the greeting over either.
+/// is up: a link's gallery over Settings, Settings over a link's gallery (opened from its
+/// page), the greeting over either. Whichever came second is above (`ShellSheetOrder`).
+///
+/// It also gives every screen below it two openers: `\.openContinueReader`, and `\.openURL`
+/// for the app's own links (`ehshoko://`, which the Index's paste button and the search
+/// surface's copied-link offer hand it), opened here as a shared link is, without a trip
+/// through the system.
 struct ShellPresentations: ViewModifier {
     let model: AppModel
     /// The bar in use, which says where Continue is and so what the reader zooms out of.
@@ -17,28 +24,26 @@ struct ShellPresentations: ViewModifier {
 
     /// The gallery of the reader last opened from Continue.
     @State private var lastRead: Gallery?
+    /// The Continue control that opened that reader, when it said.
+    @State private var continueOrigin = ContinueReaderOrigin()
+    /// Which of Settings and the gallery sheet was above the other at the last update.
+    @State private var sheetOrder = ShellSheetOrder()
 
     func body(content: Content) -> some View {
         let router = model.router
+        let order = sheetOrder.next(isSettingsUp: router.isSettingsPresented, isGalleryUp: router.presentedGallery != nil)
         content
-            .sheet(isPresented: isSettingsPresented) {
+            .sheet(isPresented: settings(isAtRoot: order.settingsAtRoot)) {
                 SettingsSheet(router: router)
                     .modifier(GallerySheet(router: router, isActive: true))
                     .newDawnSheet(router: router, isTopmost: router.presentedGallery == nil)
             }
-            .modifier(GallerySheet(router: router, isActive: !router.isSettingsPresented))
+            .modifier(GallerySheet(router: router, isActive: order.galleryAtRoot, holdsSettings: order.settingsOverGallery))
             .newDawnSheet(
                 router: router, isTopmost: router.presentedGallery == nil && !router.isSettingsPresented
             )
-            // Continue: under `tabs` the reader zooms out of the bar's accessory, under
-            // `command` out of the first screen's card or banner.
-            .readerCover(
-                item: reading,
-                source: { request in
-                    bar == .tabs ? .continueBar(gid: request.gallery.gid) : .continueCard(gid: request.gallery.gid)
-                },
-                onExit: leaveReader
-            )
+            .onChange(of: order) { _, order in sheetOrder = order }
+            .readerCover(item: reading, source: continueSource, onExit: leaveReader, onDismiss: continueOrigin.clear)
             .onChange(of: router.reading) { _, request in
                 if let request { lastRead = request.gallery }
             }
@@ -47,6 +52,24 @@ struct ShellPresentations: ViewModifier {
             .sensoryFeedback(.impact(weight: .light), trigger: router.presentedGallery?.gid) { _, new in new != nil }
             .task(id: model.links.request) { await model.links.handleRequest() }
             .task(id: model.activationRequest) { await model.performActivationWork() }
+            // Outside the sheets, so the screens in them have both too.
+            .environment(\.openContinueReader, ContinueReaderOpener(router: router, origin: continueOrigin))
+            .environment(\.openURL, OpenURLAction { [links = model.links] url in
+                guard url.scheme == EhURL.appScheme else { return .systemAction }
+                links.open(url)
+                return .handled
+            })
+    }
+
+    /// What the reader opened from Continue zooms out of: the control that said it opened it
+    /// (`\.openContinueReader`), else under `tabs` the bar's accessory and under `command` the
+    /// first screen's card or banner.
+    private func continueSource(_ request: ReadingRequest) -> ReaderSourceID {
+        let gid = request.gallery.gid
+        switch continueOrigin.control(for: gid) ?? (bar == .tabs ? .bar : .card) {
+        case .bar: return .continueBar(gid: gid)
+        case .card: return .continueCard(gid: gid)
+        }
     }
 
     /// Where the reader's closing page leads, once the reader opened from Continue has
@@ -65,10 +88,11 @@ struct ShellPresentations: ViewModifier {
         }
     }
 
-    private var isSettingsPresented: Binding<Bool> {
+    /// Settings presented by the root: up, and not over the gallery sheet.
+    private func settings(isAtRoot: Bool) -> Binding<Bool> {
         Binding(
-            get: { model.router.isSettingsPresented },
-            set: { if !$0 { model.router.dismissSettings() } }
+            get: { isAtRoot },
+            set: { if !$0, isAtRoot { model.router.dismissSettings() } }
         )
     }
 
@@ -94,7 +118,7 @@ struct ShellPresentations: ViewModifier {
 /// Settings: a sheet with its own stack, opened from the account button, the place menu and
 /// the sign-in prompts (`AppRouter.presentSettings`, `presentSignIn`). Done, the system's
 /// confirm button at the top trailing corner, closes it.
-private struct SettingsSheet: View {
+struct SettingsSheet: View {
     let router: AppRouter
 
     var body: some View {
@@ -116,41 +140,5 @@ extension AppRouter {
     /// asking first, as the old app's Login did.
     func presentSignIn() {
         presentSettings([.settings(.login)])
-    }
-}
-
-/// The gallery opened from a deep link, a clipboard link or the share extension: always a
-/// sheet with its own stack and its own chrome host for the page's dock, never a side pane.
-private struct GallerySheet: ViewModifier {
-    let router: AppRouter
-    /// Whether this is the topmost presenter.
-    let isActive: Bool
-
-    @Environment(\.chrome) private var chrome
-
-    func body(content: Content) -> some View {
-        content.sheet(item: presentedGallery) { gallery in
-            BottomChrome(router: router.presented) {
-                RoutedStack(router: router.presented) {
-                    // The link's target (an image page or a comment) is honoured once.
-                    GalleryPage(
-                        gallery: gallery,
-                        intent: router.takePresentedGalleryTarget(for: gallery.gid).map(DetailIntent.init)
-                    )
-                }
-            }
-            .pushesGalleries(on: router.presented)
-            .environment(\.chrome, chrome.presented(isSheet: true))
-            // The page in this sheet may receive the greeting; only the topmost presenter
-            // can show it.
-            .newDawnSheet(router: router, isTopmost: true)
-        }
-    }
-
-    private var presentedGallery: Binding<Gallery?> {
-        Binding(
-            get: { isActive ? router.presentedGallery : nil },
-            set: { if $0 == nil, isActive { router.dismissPresentedGallery() } }
-        )
     }
 }
