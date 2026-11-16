@@ -77,15 +77,17 @@ private struct LeadingColumnHost<Bar: View>: View {
     let bar: (BarControl?, @escaping (BarAction) -> Void) -> Bar
 
     @State private var visibility = NavigationSplitViewVisibility.all
-    /// The split view's width and its list column's, which says where the list starts.
-    @State private var widths = ColumnWidths()
+    /// Where the list column starts, and the column's visibility when the list loses the room
+    /// beside it.
+    @State private var layout = LeadingColumnLayout()
     @Environment(\.chrome) private var chrome
 
     var body: some View {
         BottomChrome(
             router: router, hasBar: hasBar,
-            leadingInset: widths.columnInset,
-            isCovered: isCovered || indexIsOverList,
+            leadingInset: layout.listInset,
+            // The column lies over the list, and the list's chrome would show through its glass.
+            isCovered: isCovered || layout.isColumnOverList,
             content: { columns },
             bar: bar
         )
@@ -93,16 +95,8 @@ private struct LeadingColumnHost<Bar: View>: View {
         .environment(\.chrome, columnChrome(isLeadingColumn: false))
     }
 
-    /// The Index is shown but the list did not make room for it: it lies over the list (in
-    /// portrait beside a side pane, and on iOS 18 in portrait), and the list's chrome would
-    /// show through the column's glass. The split view keeps reporting `.all` while it is
-    /// collapsed, which this host never is: it exists only on regular width.
-    private var indexIsOverList: Bool {
-        (visibility == .all || visibility == .doubleColumn) && widths.columnInset == 0
-    }
-
     private var columns: some View {
-        NavigationSplitView(columnVisibility: $visibility) {
+        NavigationSplitView(columnVisibility: userVisibility) {
             StartScreen()
                 .tabsAccountButton()
                 .environment(\.chrome, columnChrome(isLeadingColumn: true))
@@ -116,9 +110,30 @@ private struct LeadingColumnHost<Bar: View>: View {
             PlaceRootedStack(router: router) {
                 GalleryListScreen(context: .place(.frontpage))
             }
-            .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { widths.list = $0 }
+            // Where the list starts and how wide the split view is, in one measurement, so
+            // the two always come from the same layout. The list column ends where the split
+            // view does.
+            .onGeometryChange(for: ListColumnFrame.self) { proxy in
+                let frame = proxy.frame(in: .named(LeadingColumnLayout.space))
+                return ListColumnFrame(minX: frame.minX, splitWidth: frame.maxX)
+            } action: { frame in
+                if let change = layout.measured(frame) { visibility = change }
+            }
         }
-        .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { widths.split = $0 }
+        .coordinateSpace(.named(LeadingColumnLayout.space))
+    }
+
+    /// The column's visibility, as the user changes it with the sidebar button or by
+    /// dismissing the column laid over the list.
+    private var userVisibility: Binding<NavigationSplitViewVisibility> {
+        Binding(
+            get: { visibility },
+            set: { new in
+                guard new != visibility else { return }
+                visibility = new
+                layout.userChose(isShown: new == .all || new == .doubleColumn)
+            }
+        )
     }
 
     /// The tab bar's accessory is off while the column shows, so the column keeps Continue.
@@ -127,20 +142,72 @@ private struct LeadingColumnHost<Bar: View>: View {
     }
 }
 
-/// Where the list column of Ledger's split view starts, taken from the widths rather than from
-/// the column's visibility, which says `.all` both when the Index is beside the list and when
-/// it lies over it.
-nonisolated private struct ColumnWidths: Equatable {
-    var split: CGFloat = 0
-    var list: CGFloat = 0
+nonisolated private struct ListColumnFrame: Equatable {
+    let minX: CGFloat
+    let splitWidth: CGFloat
+}
 
-    /// How far the list column starts from the split view's leading edge: the Index column's
-    /// width while it is beside the list, zero while it is hidden or over the list.
-    var columnInset: CGFloat {
-        guard list > 0 else { return 0 }
-        let inset = split - list
-        // The two are measured in separate layouts and may differ by a fraction.
-        return inset > 1 ? inset : 0
+/// Where the list column of Ledger's split view starts, from its frame rather than from the
+/// column's visibility, which says `.all` both when the Index is beside the list and when it
+/// lies over it.
+///
+/// When the list loses the room beside the Index without a size transition (a side pane
+/// opening in portrait), the system lays the Index over the list and keeps the visibility at
+/// `.all`, so the list's chrome stays covered until the Index is dismissed. The host hides the
+/// Index instead, as the system does itself on a rotation, and shows it again when the split
+/// view is wide enough: as wide as the Index has been beside the list in, or wide enough for a
+/// list as wide as the Index (where the system has been seen to tile them: a 355 pt list beside
+/// the iPad mini's 280 pt Index, never a 248 pt one beside the 13-inch's 330). If the system
+/// lays it over the list all the same, it is hidden again. A choice the user makes with the
+/// column's button stays as they made it.
+nonisolated private struct LeadingColumnLayout: Equatable {
+    /// The split view's coordinate space, which the list column is measured in.
+    static let space = "leadingColumnSplit"
+
+    /// How far the list column starts from the split view's leading edge: the Index's width
+    /// while it is beside the list, zero while it is hidden or over the list.
+    private(set) var listInset: CGFloat = 0
+    private var isShown = true
+    private var isMeasured = false
+    /// The narrowest split view the Index has been beside the list in, and its width there.
+    private var narrowestBeside = CGFloat.infinity
+    private var columnWidth: CGFloat = 0
+    /// The split view's width when the host hid the Index for want of room, until it shows it
+    /// again or the user changes the column.
+    private var hiddenAt: CGFloat?
+    /// The host has just shown the Index again, and it is coming in beside the list.
+    private var isReturning = false
+
+    /// The Index is shown but lies over the list.
+    var isColumnOverList: Bool { isShown && isMeasured && listInset == 0 && !isReturning }
+
+    /// The list column was laid out. Returns the visibility the host sets, if it changes it.
+    mutating func measured(_ frame: ListColumnFrame) -> NavigationSplitViewVisibility? {
+        let wasBeside = isMeasured && listInset > 0
+        let wasReturning = isReturning
+        isMeasured = true
+        isReturning = false
+        listInset = frame.minX > 1 ? frame.minX : 0
+        let width = frame.splitWidth
+        if listInset > 0 {
+            narrowestBeside = min(narrowestBeside, width)
+            columnWidth = listInset
+        } else if isShown, wasBeside || wasReturning {
+            isShown = false
+            hiddenAt = width
+            return .detailOnly
+        } else if let hiddenAt, !isShown, width > hiddenAt, width >= min(narrowestBeside, 2 * columnWidth) {
+            self.hiddenAt = nil
+            isShown = true
+            isReturning = true
+            return .all
+        }
+        return nil
+    }
+
+    mutating func userChose(isShown: Bool) {
+        self.isShown = isShown
+        hiddenAt = nil
     }
 }
 
