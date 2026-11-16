@@ -102,7 +102,7 @@ private struct ShelfPreviewCell: View {
                 }
             }
             .accessibilityElement(children: .ignore)
-            .accessibilityLabel(Text(preview.index, format: .number))
+            .accessibilityLabel(L10n.Localizable.Reader.Page.label(preview.index))
             .accessibilityAddTraits(isCurrent ? .isSelected : [])
     }
 }

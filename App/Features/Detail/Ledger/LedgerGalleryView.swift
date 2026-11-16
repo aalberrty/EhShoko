@@ -213,6 +213,7 @@ private struct LedgerGalleryBanner: View {
         HStack(spacing: 10) {
             Image(systemName: error == .networkingFailed ? "wifi.exclamationmark" : "exclamationmark.triangle")
                 .foregroundStyle(look.secondaryLabel)
+                .accessibilityHidden(true)
             Text(error == .networkingFailed ? L10n.Localizable.Gallery.offline : error.alertText)
                 .font(.footnote)
                 .foregroundStyle(look.secondaryLabel)

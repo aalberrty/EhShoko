@@ -146,7 +146,8 @@ struct LedgerGalleryFacts: View, Equatable {
         let star = Text(Image(systemName: "star.fill")).foregroundStyle(look.rating)
         let average = Double(detail.rating).formatted(.number.precision(.fractionLength(2)))
         let count = detail.ratingCount
-        let votes = Text(" · " + (count == 1 ? Figure.vote(count) : Figure.votes(count)))
+        let votesText = " · " + (count == 1 ? Figure.vote(count) : Figure.votes(count))
+        let votes = Text(votesText)
             .fontWeight(.regular)
             .foregroundStyle(look.secondaryLabel)
         return Text("\(star) \(average)\(votes)")
@@ -155,6 +156,8 @@ struct LedgerGalleryFacts: View, Equatable {
             .foregroundStyle(look.label)
             .lineLimit(1)
             .minimumScaleFactor(0.8)
+            // Without the star, which VoiceOver reads by its symbol's name, "Favorite".
+            .accessibilityLabel(average + votesText)
     }
 
     /// A value in 15 pt semibold, with its second part regular and secondary.

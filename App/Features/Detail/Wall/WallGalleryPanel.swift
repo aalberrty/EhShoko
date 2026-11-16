@@ -231,9 +231,10 @@ private struct WallGalleryFacts: View, Equatable {
                     .accessibilityLabel(Self.votes(count))
             }
         }
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel(L10n.Localizable.Gallery.Figure.rating)
-        .accessibilityValue(ratingValue)
+        // One label, not a label and a value: the line combines its pieces, and a value would
+        // be read after the whole line, away from "Rating".
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(L10n.Localizable.Gallery.Figure.rating + ", " + ratingValue)
     }
 
     private var ratingValue: String {

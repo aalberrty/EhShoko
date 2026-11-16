@@ -287,6 +287,8 @@ struct ListOfflineBanner: View {
     private func line(_ text: String) -> some View {
         let symbol = Image(systemName: "wifi.slash")
             .foregroundStyle(look.secondaryLabel)
+            // The text says it; VoiceOver would read the symbol as "Wi-Fi Off" first.
+            .accessibilityHidden(true)
         let retryButton = Button(L10n.Localizable.ErrorView.Button.retry, action: retry)
             .buttonStyle(.borderless)
             .fontWeight(.semibold)

@@ -213,7 +213,7 @@ private struct DockPill: View {
             // The concrete colour, not the inherited accent, which turns grey in an
             // inspector shown as a sheet on iOS 26.
             .tint(item.isDimmed ? tint.opacity(Self.dimmedTint) : tint)
-            .accessibilityLabel([item.title, item.detail].compactMap(\.self).joined(separator: ", "))
+            .accessibilityLabel([item.title, item.spokenDetail ?? item.detail].compactMap(\.self).joined(separator: ", "))
             .walkIdentifier("dock.pill")
             .disabled(!item.isEnabled)
             .chromeMorph(.centre)
