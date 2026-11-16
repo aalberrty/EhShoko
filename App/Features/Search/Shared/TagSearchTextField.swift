@@ -68,7 +68,8 @@ final class TagSearchTextField: UISearchTextField {
 
 /// A SwiftUI row on top of the keyboard: the field's input accessory, so it moves with the
 /// keyboard and the field bar sits on it (`spikes/S6.md` section 4). Ledger draws its keys in
-/// it. It draws no backdrop: what the row holds carries its own surfaces.
+/// it. What the row holds carries its own surfaces; behind them the view draws the keyboard's
+/// band on iOS 18 and nothing on iOS 26 (`KeyboardBand`).
 ///
 /// A plain view, not a `UIInputView`: the keyboard keeps a `UIInputView` it has shown alive
 /// after its field has gone, with nothing pointing at it (two retains too many), one more for
@@ -88,6 +89,7 @@ final class TagSearchAccessoryView: UIView {
         self.host = host
         let height = Self.height
         super.init(frame: CGRect(x: 0, y: 0, width: 320, height: height))
+        backgroundColor = KeyboardBand.color
         host.view.backgroundColor = .clear
         host.view.maximumContentSizeCategory = .accessibilityMedium
         host.view.translatesAutoresizingMaskIntoConstraints = false

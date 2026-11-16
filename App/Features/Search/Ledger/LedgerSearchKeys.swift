@@ -6,7 +6,7 @@ import SwiftUI
 ///
 /// The field hosts this row as its input accessory (`spikes/S6.md` section 4): it moves with
 /// the keyboard, 48 pt high growing to 60 with Dynamic Type, and scrolls sideways. Each key is
-/// its own glass capsule on iOS 26 (a material capsule on iOS 18, on the keyboard's backdrop);
+/// its own glass capsule on iOS 26 (a material capsule on iOS 18, on the keyboard's band);
 /// the row itself is clear, so no glass sits on glass.
 struct LedgerSearchKeys: View {
     @Environment(\.searchFieldController) private var field
