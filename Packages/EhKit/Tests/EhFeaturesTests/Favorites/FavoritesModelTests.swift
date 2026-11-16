@@ -130,6 +130,40 @@ import Testing
         #expect(env.query("inline_set", ofRequest: previousCount) == nil)
     }
 
+    /// A folder pushed from the library sorts its own list: that list is reloaded with the
+    /// order, the library keeps its choice, and the chosen folder's list, out of date now, is
+    /// a new one that loads when it is shown.
+    @Test func aFolderSortedFromItsOwnScreenReloadsThatFolderAndKeepsTheChoice() async throws {
+        let env = try ListTestEnvironment()
+        env.transport.on(.any, reply: try ListFixture.favoritesSorted(by: .favoritedTime))
+        let model = env.make { FavoritesModel() }
+        await model.list.loadIfNeeded()
+        let all = model.list
+        let folder = model.list(for: 3)
+        await folder.loadIfNeeded()
+        let current = try #require(folder.favoritesSortOrder)
+
+        model.setSortOrder(current, in: 3)
+        #expect(!folder.entries.galleries.isEmpty)
+        #expect(model.list === all)
+
+        let other: FavoritesSortOrder = current == .favoritedTime ? .lastUpdateTime : .favoritedTime
+        model.setSortOrder(other, in: 3)
+        #expect(model.category == -1)
+        #expect(model.loadedList(for: 3) === folder)
+        #expect(folder.entries.galleries.isEmpty)
+        #expect(model.list !== all)
+        #expect(model.loadedList(for: -1) === model.list)
+        #expect(model.list.entries.galleries.isEmpty)
+
+        await folder.loadIfNeeded()
+        #expect(env.query("favcat", ofRequest: 2) == "3")
+        #expect(env.query("inline_set", ofRequest: 2) != nil)
+        await model.list.loadIfNeeded()
+        #expect(env.query("favcat", ofRequest: 3) == "all")
+        #expect(env.query("inline_set", ofRequest: 3) == nil)
+    }
+
     @Test func keywordSearchesTheCurrentFolder() async throws {
         let env = try ListTestEnvironment()
         env.transport.on(.any, reply: .fixture(ListFixture.favorites))

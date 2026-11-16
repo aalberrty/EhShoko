@@ -36,8 +36,9 @@ nonisolated public enum Route: Hashable, Sendable {
     /// Search results within favourites or Watched, submitted from the search surface.
     /// Everywhere is `typedSearch`.
     case listSearch(SearchScope, keyword: String)
-    /// One favourites folder's list (0...9), pushed from Ledger's Index and Wall's piles.
-    case favoritesFolder(Int)
+    /// One favourites folder's list, pushed from Ledger's Index, Ledger's folder grid and
+    /// Wall's piles. `Route.favoritesFolder(_:library:)` builds it from a folder's number.
+    case favoritesFolder(FavoritesFolderRoute)
     /// Search results for a keyword built from a tag, an uploader or a title ("detail
     /// search"). Unlike `typedSearch`, it is not added to the search history.
     case search(keyword: String)
@@ -51,6 +52,12 @@ nonisolated public enum Route: Hashable, Sendable {
 }
 
 extension Route {
+    /// Folder `folder`'s list (0...9, or -1 for every folder). Pushed from a library, it shows
+    /// that folder's list in the library's model (`FavoritesFolderRoute.library`).
+    public static func favoritesFolder(_ folder: Int, library: FavoritesModel? = nil) -> Route {
+        .favoritesFolder(FavoritesFolderRoute(folder: folder, library: library))
+    }
+
     /// Whether the browse bar (the tab bar and its accessory, or the command bar) is hidden
     /// while this route is the top screen of its stack.
     ///
@@ -86,5 +93,32 @@ nonisolated public struct DetailChildRoute: Hashable, Sendable {
     public func hash(into hasher: inout Hasher) {
         hasher.combine(ObjectIdentifier(parent))
         hasher.combine(destination)
+    }
+}
+
+/// A favourites folder's screen. Pushed from a library it carries the library's model, as a
+/// gallery's child screen carries the gallery's, so the folder's list is the one the library
+/// keeps (`FavoritesModel.list(for:)`): a folder it has loaded, or All after the page its
+/// folders and counts came with, shows what is there and asks for nothing. Without one (the
+/// Index) the screen has a model of its own.
+///
+/// Two values are equal when they show the same folder of the same model instance.
+nonisolated public struct FavoritesFolderRoute: Hashable, Sendable {
+    /// 0...9, or -1 for every folder.
+    public let folder: Int
+    public let library: FavoritesModel?
+
+    public init(folder: Int, library: FavoritesModel? = nil) {
+        self.folder = folder
+        self.library = library
+    }
+
+    public static func == (lhs: Self, rhs: Self) -> Bool {
+        lhs.folder == rhs.folder && lhs.library === rhs.library
+    }
+
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(folder)
+        hasher.combine(library.map(ObjectIdentifier.init))
     }
 }
