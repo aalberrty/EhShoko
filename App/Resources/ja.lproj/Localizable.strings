@@ -346,6 +346,11 @@
 "filters_view.title.disable_tags_filter" = "タグフィルタを無視";
 "filters_view.section.title.advanced" = "詳細";
 "filters_view.section.title.default_filter" = "デフォルトのフィルタ";
+"filters_view.section.title.narrow_down" = "絞り込み";
+"filters_view.title.pages_separator" = "〜";
+"filters_view.title.any" = "指定なし";
+"filters_view.title.options_on" = "%d 件オン";
+"filters_view.section.footer.separate_filters" = "リスト、フォロー中、検索はそれぞれ別のフィルタを持ちます。変更はすぐに反映されます。";
 // FilterRange
 "enum.filter_range.value.search" = "検索";
 "enum.filter_range.value.global" = "リスト";

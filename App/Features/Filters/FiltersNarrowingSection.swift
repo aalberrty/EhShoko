@@ -2,9 +2,10 @@ import EhFeatures
 import EhModels
 import SwiftUI
 
-/// The card under the categories: the advanced switch, the minimum rating as stars, the page
-/// range in two boxes, and a row that pushes the other advanced options with how many differ
-/// from their defaults.
+/// The card under the categories, headed "Narrow down": the advanced switch, the minimum
+/// rating as stars, the page range in two boxes, and a row that pushes the other advanced
+/// options with how many differ from their defaults. The footer says each range keeps its own
+/// filter and that changes apply at once.
 ///
 /// The site applies all of these only while advanced settings are on, so each row below the
 /// switch is disabled while it is off, and the rating and the range each keep their own switch
@@ -37,6 +38,10 @@ struct FiltersNarrowingSection: View {
                 .lookFormRow(.labelDimmedBySystem)
             }
             .disabled(!model.filter.advanced)
+        } header: {
+            Text(L10n.Localizable.FiltersView.Section.Title.narrowDown)
+        } footer: {
+            Text(L10n.Localizable.FiltersView.Section.Footer.separateFilters)
         }
     }
 }
@@ -93,7 +98,7 @@ private struct FiltersStarPicker: View {
     }
 }
 
-/// "Pages range" and the two bounds. Return in the first moves to the second.
+/// "Pages" and the two bounds, "20 to Any". Return in the first moves to the second.
 private struct FiltersPagesRow: View {
     @Bindable var model: FiltersModel
     var focusedBound: FocusState<FiltersModel.Bound?>.Binding
@@ -106,7 +111,7 @@ private struct FiltersPagesRow: View {
                 FiltersBoundField(text: $model.filter.pageLowerBound)
                     .focused(focusedBound, equals: .lower)
                     .submitLabel(.next)
-                Text(verbatim: "–")
+                Text(L10n.Localizable.FiltersView.Title.pagesSeparator)
                     .foregroundStyle(look.secondaryLabel)
                 FiltersBoundField(text: $model.filter.pageUpperBound)
                     .focused(focusedBound, equals: .upper)
@@ -120,7 +125,7 @@ private struct FiltersPagesRow: View {
     }
 }
 
-/// A page bound in a box on the look's fill.
+/// A page bound in a box on the look's fill; an empty bound reads "Any".
 private struct FiltersBoundField: View {
     @Binding var text: String
 
@@ -131,7 +136,7 @@ private struct FiltersBoundField: View {
 
     var body: some View {
         TextField(text: $text) {
-            EmptyView()
+            Text(L10n.Localizable.FiltersView.Title.any)
         }
         .font(.callout.weight(.semibold).monospacedDigit())
         .foregroundStyle(isEnabled ? look.label : look.tertiaryLabel)
@@ -144,7 +149,7 @@ private struct FiltersBoundField: View {
     }
 }
 
-/// "Advanced", with the number of options that differ from their defaults when there are any.
+/// "Advanced", with "3 on" for the options that differ from their defaults when there are any.
 private struct FiltersAdvancedLabel: View {
     let changed: Int
 
@@ -153,7 +158,7 @@ private struct FiltersAdvancedLabel: View {
     var body: some View {
         LabeledContent {
             if changed > 0 {
-                Text(changed, format: .number)
+                Text(L10n.Localizable.FiltersView.Title.optionsOn(changed))
                     .foregroundStyle(look.secondaryLabel)
             }
         } label: {

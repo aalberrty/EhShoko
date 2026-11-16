@@ -1512,16 +1512,24 @@ internal enum L10n {
     }
     internal enum FiltersView {
       internal enum Section {
+        internal enum Footer {
+          /// Lists, Watched and Search each keep their own filters. Changes apply as you make them.
+          internal static let separateFilters = L10n.tr("Localizable", "filters_view.section.footer.separate_filters", fallback: "Lists, Watched and Search each keep their own filters. Changes apply as you make them.")
+        }
         internal enum Title {
           /// Advanced
           internal static let advanced = L10n.tr("Localizable", "filters_view.section.title.advanced", fallback: "Advanced")
           /// Your default filters
           internal static let defaultFilter = L10n.tr("Localizable", "filters_view.section.title.default_filter", fallback: "Your default filters")
+          /// Narrow down
+          internal static let narrowDown = L10n.tr("Localizable", "filters_view.section.title.narrow_down", fallback: "Narrow down")
         }
       }
       internal enum Title {
         /// Advanced options
         internal static let advancedSettings = L10n.tr("Localizable", "filters_view.title.advanced_settings", fallback: "Advanced options")
+        /// Any
+        internal static let any = L10n.tr("Localizable", "filters_view.title.any", fallback: "Any")
         /// Ignore language filter
         internal static let disableLanguageFilter = L10n.tr("Localizable", "filters_view.title.disable_language_filter", fallback: "Ignore language filter")
         /// Ignore tag filter
@@ -1534,6 +1542,12 @@ internal enum L10n {
         internal static let minimumRating = L10n.tr("Localizable", "filters_view.title.minimum_rating", fallback: "Minimum rating")
         /// Only galleries with torrents
         internal static let onlyShowGalleriesWithTorrents = L10n.tr("Localizable", "filters_view.title.only_show_galleries_with_torrents", fallback: "Only galleries with torrents")
+        /// %d on
+        internal static func optionsOn(_ p1: Int) -> String {
+          return L10n.tr("Localizable", "filters_view.title.options_on", p1, fallback: "%d on")
+        }
+        /// to
+        internal static let pagesSeparator = L10n.tr("Localizable", "filters_view.title.pages_separator", fallback: "to")
         /// Include downvoted tags
         internal static let searchDownvotedTags = L10n.tr("Localizable", "filters_view.title.search_downvoted_tags", fallback: "Include downvoted tags")
         /// Include expunged galleries

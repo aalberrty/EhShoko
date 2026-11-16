@@ -346,6 +346,11 @@
 "filters_view.title.disable_tags_filter" = "Ignore tag filter";
 "filters_view.section.title.advanced" = "Advanced";
 "filters_view.section.title.default_filter" = "Your default filters";
+"filters_view.section.title.narrow_down" = "Narrow down";
+"filters_view.title.pages_separator" = "to";
+"filters_view.title.any" = "Any";
+"filters_view.title.options_on" = "%d on";
+"filters_view.section.footer.separate_filters" = "Lists, Watched and Search each keep their own filters. Changes apply as you make them.";
 // FilterRange
 "enum.filter_range.value.search" = "Search";
 "enum.filter_range.value.global" = "Lists";

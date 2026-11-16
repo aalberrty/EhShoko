@@ -346,6 +346,11 @@
 "filters_view.title.disable_tags_filter" = "忽略標籤過濾";
 "filters_view.section.title.advanced" = "進階";
 "filters_view.section.title.default_filter" = "你的預設過濾";
+"filters_view.section.title.narrow_down" = "縮小範圍";
+"filters_view.title.pages_separator" = "至";
+"filters_view.title.any" = "不限";
+"filters_view.title.options_on" = "已開啟 %d 項";
+"filters_view.section.footer.separate_filters" = "列表、訂閱和搜尋各有自己的過濾條件。變更即時生效。";
 // FilterRange
 "enum.filter_range.value.search" = "搜尋";
 "enum.filter_range.value.global" = "列表";
