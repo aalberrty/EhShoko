@@ -9,10 +9,11 @@ import SwiftUI
 /// its trailing items.
 ///
 /// The subtitle says what the list is narrowed to: the filter in words ("8 of 10 categories ·
-/// ★ 3+"), or for favourites the count and the order. Where the bar does not hold the list's
-/// primary control (under `tabs`), the subtitle is that control: it opens Filters, or is the
-/// order's menu. Toplists' period is a menu on the title, its page a menu in the subtitle's
-/// place. "Find in this list" shows the find field under the bar.
+/// ★ 3+"), for favourites the count and the order, or "0 galleries" for a search that found
+/// nothing. Where the bar does not hold the list's primary control (under `tabs`), the
+/// subtitle is that control: it opens Filters, or is the order's menu. Toplists' period is a
+/// menu on the title, its page a menu in the subtitle's place. "Find in this list" shows the
+/// find field under the bar.
 struct LedgerListChrome: ViewModifier {
     let input: ListDesignInput
     /// A favourites folder on a screen of its own: its title is a menu of the folders.
@@ -93,15 +94,20 @@ private struct LedgerListTitleItems: ViewModifier {
         }
     }
 
-    /// The filter in words, or the favourites' count and order; `nil` for neither.
+    /// The filter in words, or the favourites' count and order, or for a search that found
+    /// nothing "0 galleries"; `nil` for none of these.
     private var subtitle: String? {
         switch input.controls.primary {
         case .filter(let summary):
+            // The empty search's state below says the filter in words.
+            if let found = emptySearchCount { return found }
             return summary.isDefault ? nil : summary.longText
         case .sort(let sort):
             var parts = [String]()
             if let count = folderCount {
                 parts.append(count.formatted())
+            } else if let found = emptySearchCount {
+                parts.append(found)
             }
             if let order = Self.order(of: sort) {
                 parts.append(order)
@@ -110,6 +116,22 @@ private struct LedgerListTitleItems: ViewModifier {
         case nil:
             return nil
         }
+    }
+
+    /// "0 galleries" when the list is a search that found nothing; `nil` otherwise. Only a
+    /// search's title reads the list's phase, which changes when a page comes in.
+    private var emptySearchCount: String? {
+        switch input.context.kind {
+        case .search, .scopedSearch: break
+        case .place, .folder: return nil
+        }
+        guard input.feed.phase == .empty else { return nil }
+        return Self.galleries(input.feed.entries.count)
+    }
+
+    /// "1 gallery", "0 galleries", "12 galleries".
+    private static func galleries(_ count: Int) -> String {
+        count == 1 ? L10n.Localizable.List.gallery(count) : L10n.Localizable.List.galleries(count)
     }
 
     /// How many galleries the folder holds, as the last favourites page said.
