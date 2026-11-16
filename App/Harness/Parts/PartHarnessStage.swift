@@ -10,8 +10,6 @@ struct PartHarnessStage: View {
     let model: PartHarnessModel
 
     @State private var search = CommandBarSearch()
-    /// The Library tab's Favourites / History switch, owned here as `TabsShell` owns it.
-    @State private var library = TabsBarLibrarySwitch()
 
     var body: some View {
         let options = model.options
@@ -66,8 +64,7 @@ struct PartHarnessStage: View {
         case .home where model.options.part == .start:
             HomeStackHost(router: router.home)
         case .library:
-            // The tab's own root: its switch over the library part and History.
-            StackHost(router: router.library) { TabsBarLibraryTab(library: library).tabsAccountButton() }
+            StackHost(router: router.library) { PartHarnessLibraryTab().tabsAccountButton() }
         case .search, .top:
             // No account button: the shell gives these two none.
             StackHost(router: router.stack(for: tab)) { PartHarnessRoot(model: model) }
@@ -92,6 +89,17 @@ struct PartHarnessStage: View {
         } else {
             StackHost(router: router.home, hasBar: true, root: { PartHarnessRoot(model: model) }, bar: bar)
         }
+    }
+}
+
+/// The Library tab's root under `tabs`: its switch over the library part and History. The
+/// switch lives only while the Library tab does, so the memory check never finds it under
+/// another part or bar.
+private struct PartHarnessLibraryTab: View {
+    @State private var library = TabsBarLibrarySwitch()
+
+    var body: some View {
+        TabsBarLibraryTab(library: library)
     }
 }
 
