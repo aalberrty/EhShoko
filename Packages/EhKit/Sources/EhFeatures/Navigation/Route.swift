@@ -13,8 +13,9 @@ nonisolated public enum SettingsRoute: Hashable, Sendable {
     case design
     /// Experience › one page's options.
     case designPart(DesignPart)
-    /// Experience › the setup wizard.
-    case designSetup
+    /// Experience › the setup wizard, starting from the current choices, or from `start` when
+    /// the offer after install opens it with the preset it had selected.
+    case designSetup(start: DesignStyle? = nil)
     case reading
     case laboratory
     case logs

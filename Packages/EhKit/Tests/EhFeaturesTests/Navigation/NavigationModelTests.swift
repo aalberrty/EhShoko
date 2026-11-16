@@ -367,7 +367,9 @@ import Testing
     @Test func settingsRoutesForExperience() {
         #expect(Route.settings(.designPart(.list)) != .settings(.designPart(.gallery)))
         #expect(Set(DesignPart.allCases.map { SettingsRoute.designPart($0) }).count == DesignPart.allCases.count)
-        #expect(SettingsRoute.design != .designSetup)
+        #expect(SettingsRoute.design != .designSetup())
+        #expect(SettingsRoute.designSetup() == .designSetup(start: nil))
+        #expect(SettingsRoute.designSetup(start: .wall) != .designSetup(start: .ledger))
     }
 
     // MARK: Presented over everything
@@ -391,6 +393,23 @@ import Testing
 
         router.offer = false
         #expect(!router.showsOffer(isUnlocked: true))
+    }
+
+    /// The offer is presented from the same place as the Settings sheet and the reader opened
+    /// from Continue, which can show one at a time.
+    @Test func theOfferWaitsForSettingsAndTheReader() {
+        let router = AppRouter()
+        router.offer = true
+
+        router.presentSettings([.settings(.design)])
+        #expect(!router.showsOffer(isUnlocked: true))
+        router.dismissSettings()
+        #expect(router.showsOffer(isUnlocked: true))
+
+        router.reading = ReadingRequest(gallery: makeGallery(), page: 1)
+        #expect(!router.showsOffer(isUnlocked: true))
+        router.reading = nil
+        #expect(router.showsOffer(isUnlocked: true))
     }
 
     @Test func aReadingRequestIsIdentifiedByItsGallery() {

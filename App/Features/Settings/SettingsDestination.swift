@@ -16,7 +16,7 @@ struct SettingsDestination: View {
         case .appIcon: AppIconScreen()
         case .design: DesignScreen()
         case .designPart(let part): DesignOptionsScreen(part: part)
-        case .designSetup: DesignSetupScreen()
+        case .designSetup(let start): DesignSetupScreen(startingPoint: start)
         case .reading: ReadingSettingsScreen()
         case .laboratory: LaboratorySettingsScreen()
         case .logs: LogsScreen()

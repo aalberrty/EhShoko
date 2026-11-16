@@ -136,10 +136,13 @@ public final class AppRouter {
 
     // MARK: The offer
 
-    /// The offer's queue rule: it waits until the app is unlocked and neither the greeting nor
-    /// the gallery sheet is showing.
+    /// The offer's queue rule: it waits until the app is unlocked and nothing else is
+    /// presented over the browsing UI: the greeting, the gallery sheet, the Settings sheet or
+    /// the reader opened from Continue. They are all presented from the same place, which can
+    /// show one at a time.
     public func showsOffer(isUnlocked: Bool) -> Bool {
         offer && isUnlocked && presentedGreeting == nil && presentedGallery == nil
+            && !isSettingsPresented && reading == nil
     }
 
     // MARK: Gallery sheet
