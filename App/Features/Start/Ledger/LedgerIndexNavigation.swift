@@ -36,23 +36,6 @@ struct LedgerIndexNavigation {
     }
 }
 
-/// What the iPad column shows as chosen: the place at the bottom of the stack, or Front
-/// Page, which the list column shows while no place is on the path.
-nonisolated enum LedgerIndexPlace: Hashable, Sendable {
-    case list(GalleryListKind)
-    case folder(Int)
-
-    init?(base route: Route?) {
-        switch route {
-        case nil: self = .list(.frontpage)
-        case .galleryList(.favorites): return nil
-        case .galleryList(let kind): self = .list(kind)
-        case .favoritesFolder(let route): self = .folder(route.folder)
-        case .listSearch, .search, .typedSearch, .detail, .detailChild, .settings: self = .list(.frontpage)
-        }
-    }
-}
-
 extension LedgerIndexNavigation {
     func choose(_ place: LedgerIndexPlace) {
         switch place {
