@@ -20,6 +20,8 @@ nonisolated enum ListHarnessSlot: String, CaseIterable, Identifiable, Sendable {
     /// ranks.
     case shelf
     case shelfRanked = "shelf-ranked"
+    /// Shelf's Home: the same list under Home's header (title, Continue, Popular now).
+    case shelfHome = "shelf-home"
     /// Wall's list as Front Page at each density.
     case wallLarge = "wall-large"
     case wallMedium = "wall-medium"
@@ -69,6 +71,8 @@ struct ListHarnessSlotView: View {
             ListHarnessCoverRows(galleries: galleries)
         case .shelf, .shelfRanked:
             ShelfListHarnessSlot(feed: ListHarnessFeed.feed(for: galleries), isRanked: slot == .shelfRanked)
+        case .shelfHome:
+            ListHarnessShelfHome(feed: ListHarnessFeed.feed(for: galleries))
         case .wallLarge, .wallMedium, .wallSmall:
             WallListHarnessSlot(feed: ListHarnessFeed.feed(for: galleries))
         case .ledger, .ledgerTitles:

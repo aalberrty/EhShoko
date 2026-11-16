@@ -10,6 +10,7 @@ import Foundation
 /// | `-HarnessCount <n>` | 500 | Synthetic galleries. |
 /// | `-HarnessTags YES` | NO | Rows show their tags (the slots that have a tag line). |
 /// | `-HarnessDock YES` | NO | A gallery dock (`ActionDock`) floats over the list, as the shell places it. |
+/// | `-HarnessBar YES` | NO | The command bar floats over the list instead, as the shell places it (`command` also works, as in the part harness). |
 /// | `-HarnessSpeed <pt/s>` | 2000 | Speed of the scripted scroll. |
 /// | `-HarnessCoverLatency <s>` | 0.08 | How long each cover takes to arrive. |
 /// | `-HarnessAutoRun YES` | NO | Start the scripted scroll once the first screen has settled. |
@@ -19,6 +20,7 @@ nonisolated struct ListHarnessOptions: Equatable, Sendable {
     var galleryCount = 500
     var showsTags = false
     var showsDock = false
+    var showsBar = false
     var speed: Double = 2_000
     var coverLatency: Double = 0.08
     var runsAutomatically = false
@@ -45,6 +47,7 @@ nonisolated struct ListHarnessOptions: Equatable, Sendable {
         }
         options.showsTags = defaults.bool(forKey: "HarnessTags")
         options.showsDock = defaults.bool(forKey: "HarnessDock")
+        options.showsBar = defaults.bool(forKey: "HarnessBar") || defaults.string(forKey: "HarnessBar") == "command"
         let speed = defaults.double(forKey: "HarnessSpeed")
         if speed > 0 {
             options.speed = speed
