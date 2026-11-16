@@ -9,6 +9,11 @@
 # walk ends and the app quits, or for --limit seconds. Whatever happened before the attach
 # (the launch itself) is not in the trace: measure launch with measure.sh.
 #
+# What an attached recording holds (iPad, iPadOS 26.7, Xcode 26.2): the time profile and the
+# Allocations track (open walk.trace in Instruments; xctrace cannot export Allocations). The
+# Hitches and os_signpost tables came back empty when attaching; for hitches and the app's
+# signposts use measure.sh, whose recordings launch the app.
+#
 # Options:
 #   --team <TEAMID>       The (personal) team the app and the runner are signed with. Required.
 #   --out <dir>           Where the trace, the result bundle and the screenshots go. Default: a
@@ -59,7 +64,7 @@ while [[ $# -gt 0 ]]; do
     --fixture-args) fixture_args="$2"; shift 2 ;;
     --app-args) app_args="$2"; shift 2 ;;
     --patience) patience="$2"; shift 2 ;;
-    -h|--help) sed -n '2,29p' "$0"; exit 0 ;;
+    -h|--help) sed -n '2,34p' "$0"; exit 0 ;;
     --*) die "unknown option $1" ;;
     *) break ;;
   esac
