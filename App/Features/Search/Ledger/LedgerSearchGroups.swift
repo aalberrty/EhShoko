@@ -122,7 +122,7 @@ private struct LedgerRecentlySeen: View {
         if !rows.isEmpty {
             LedgerSearchHeading(title: L10n.Localizable.SearchView.Section.Title.recentlySeen)
             ForEach(rows) { row in
-                Button { openGallery(row.gallery) } label: {
+                Button { openGallery(row.gallery, from: .recentlySeen) } label: {
                     LedgerSeenGalleryRow(row: row)
                 }
                 .ledgerSearchRow(separator: .row(isLast: row.id == rows.last?.id))

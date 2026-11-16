@@ -53,7 +53,9 @@ struct ShelfHomeView: View {
             // From the card, which the reader zooms out of, under either bar.
             openReader: { item in openContinueReader(item, from: .card) },
             openHistory: openHistory,
-            openGallery: { gallery in openGallery(gallery) },
+            // Popular's covers are their own zoom sources: a gallery that is also in the Front
+            // Page below zooms back into the cover it was opened from.
+            openGallery: { gallery in openGallery(gallery, from: .coverShelf) },
             showPopular: { stack.push(.galleryList(.popular)) }
         )
     }

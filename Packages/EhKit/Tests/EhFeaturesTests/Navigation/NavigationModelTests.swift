@@ -174,6 +174,29 @@ import Testing
         #expect(stack.sideIntent == .read(page: 3))
     }
 
+    @Test func aPushedGalleryKeepsTheCoverItWasOpenedFrom() {
+        let stack = StackRouter()
+        let gallery = makeGallery()
+
+        stack.open(gallery, origin: .coverShelf, inSidePane: false)
+        stack.open(gallery, inSidePane: false)
+
+        // The same gallery from the shelf and from the list below it: two screens, each
+        // zooming back into its own cover.
+        #expect(stack.path == [.detail(gallery, origin: .coverShelf), .detail(gallery, origin: .list)])
+        #expect(stack.path[0] != stack.path[1])
+    }
+
+    @Test func theSidePaneKeepsNoOrigin() {
+        let stack = StackRouter()
+        let gallery = makeGallery()
+        stack.open(gallery, intent: .read(page: 2), origin: .recentlySeen, inSidePane: true)
+
+        stack.moveSidePaneOntoStack()
+
+        #expect(stack.path == [.detail(gallery, intent: .read(page: 2), origin: .list)])
+    }
+
     @Test func anotherGalleryInTheSidePaneStartsOnAFreshPaneStack() {
         let stack = StackRouter()
         let first = makeGallery(gid: "1")

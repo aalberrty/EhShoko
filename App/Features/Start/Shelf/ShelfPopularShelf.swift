@@ -84,7 +84,7 @@ struct ShelfPopularCell: View {
         let gallery = entry.gallery
         VStack(alignment: .leading, spacing: 0) {
             CoverImage(url: gallery.coverURL, size: Self.cover, cornerRadius: 10)
-                .zoomSource(entry.id)
+                .galleryZoomSource(entry.id, from: .coverShelf)
             Text(entry.title.core)
                 .font(.caption.weight(.semibold))
                 .lookTitleDesign()
