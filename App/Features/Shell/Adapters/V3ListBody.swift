@@ -40,7 +40,7 @@ private struct V3ListChrome: ViewModifier {
 
     func body(content: Content) -> some View {
         let context = input.context
-        if context.embedsInStart {
+        if !context.showsTitle {
             // The first screen draws the title and the top bar's items.
             content
         } else {

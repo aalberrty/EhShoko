@@ -45,8 +45,8 @@ struct WallListChrome: ViewModifier {
     }
 }
 
-/// The list's own title, unless it is embedded in a first screen or the library, which draw
-/// theirs. Small, in the bar's own row, so the covers start right under the bar. A large title
+/// The list's own title, unless the screen around it draws one (a first screen, the Library
+/// tab). Small, in the bar's own row, so the covers start right under the bar. A large title
 /// was tried: when the command bar's place menu swaps the list in place, the bar shows it
 /// collapsed until the list is scrolled, so the same list had two looks.
 private struct WallListTitle: ViewModifier {
@@ -54,7 +54,7 @@ private struct WallListTitle: ViewModifier {
     let ownFolder: Int?
 
     func body(content: Content) -> some View {
-        if context.embedsInStart {
+        if !context.showsTitle {
             content
         } else {
             content
