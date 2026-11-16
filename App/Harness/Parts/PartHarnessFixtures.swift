@@ -188,7 +188,7 @@ enum PartHarnessDependencies {
     static func install(in values: inout DependencyValues) {
         guard let database = try? AppDatabase.makeInMemory() else { return }
         values.database = database
-        let settings = PartHarnessModel.makeSettings()
+        let settings = PartHarnessModel.makeSettings(for: .atLaunch, translatesTags: PartHarnessRichPage.isRequested)
         values.settings = settings
         self.settings = settings
         PartHarnessAccount.atLaunch.install(in: &values)

@@ -16,13 +16,13 @@ actor PartHarnessSite {
         case favorites
         case watched
         case list(isPaged: Bool)
-        /// A gallery page, `/g/<gid>/<token>/`.
+        /// A gallery page, `/g/<gid>/<token>/` (the harness's galleries have no token).
         case gallery(gid: String)
 
         /// The page a URL asks for, or `nil` for one the site does not serve (the API, an image).
         init?(url: URL) {
             let components = url.pathComponents
-            if components.count >= 4, components[1] == "g" {
+            if components.count >= 3, components[1] == "g" {
                 self = .gallery(gid: components[2])
                 return
             }

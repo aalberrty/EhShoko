@@ -24,26 +24,30 @@ final class PartHarnessModel {
 
     init(options: PartHarnessOptions) {
         self.options = options
-        settings = PartHarnessDependencies.settings ?? Self.makeSettings()
-        settings.designChoices = options.choices
-        settings.preferredColorScheme = options.scheme.preferredColorScheme
-        settings.showsTagsInList = options.showsTags
-        settings.wallDensity = options.density
-        if PartHarnessDependencies.isInstalled, PartHarnessRichPage.isRequested {
-            // The rich page's chips show the stored translations.
-            settings.enablesTagsExtension = true
-            settings.translatesTags = true
-        }
+        // The installed settings were set up from the launch's options when they were made:
+        // SwiftUI evaluates the view's `@State` initial value again whenever its parent is
+        // drawn, and a model made then and thrown away must not write them back.
+        settings = PartHarnessDependencies.settings ?? Self.makeSettings(for: options, translatesTags: false)
         fixtures.state = options.state
         selectPartTab()
     }
 
     /// Settings of the harness's own, empty at each start (launch arguments such as
-    /// `-settings.readingDirection` still apply), so nothing the user chose changes.
-    static func makeSettings() -> SettingsStore {
+    /// `-settings.readingDirection` still apply) and set to `options`, so nothing the user
+    /// chose changes. `translatesTags`: the rich page's chips show the stored translations.
+    static func makeSettings(for options: PartHarnessOptions, translatesTags: Bool) -> SettingsStore {
         let defaults = UserDefaults(suiteName: settingsSuite) ?? .standard
         defaults.removePersistentDomain(forName: settingsSuite)
-        return SettingsStore(defaults: defaults)
+        let settings = SettingsStore(defaults: defaults)
+        settings.designChoices = options.choices
+        settings.preferredColorScheme = options.scheme.preferredColorScheme
+        settings.showsTagsInList = options.showsTags
+        settings.wallDensity = options.density
+        if translatesTags {
+            settings.enablesTagsExtension = true
+            settings.translatesTags = true
+        }
+        return settings
     }
 
     /// The settings were changed from inside the app (the wizard's Apply, Experience's presets,
