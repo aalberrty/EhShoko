@@ -99,11 +99,11 @@ final class WalkRunner {
         case .terminate:
             app.terminate()
         case .tap(let target):
-            try tap(try find(target))
+            _ = try find(target)
+            try tap(target)
         case .tapIfPresent(let target, let within):
-            let element = target.element(in: app)
-            if element.waitForExistence(timeout: within) {
-                try tap(element)
+            if target.element(in: app).waitForExistence(timeout: within) {
+                try tap(target)
             }
         case .tapPoint(let x, let y):
             app.coordinate(withNormalizedOffset: CGVector(dx: x, dy: y)).tap()
@@ -125,7 +125,7 @@ final class WalkRunner {
         case .type(let text, let target):
             if let target {
                 let element = try find(target)
-                try tap(element)
+                try tap(target)
                 element.typeText(text)
             } else {
                 app.typeText(text)
@@ -208,16 +208,29 @@ final class WalkRunner {
         return element
     }
 
-    /// Taps the element, waiting briefly for it to become hittable; an element that exists
-    /// but reports itself not hittable (under a glass bar, in a SwiftUI overlay) is tapped
-    /// at its middle.
-    private func tap(_ element: XCUIElement) throws {
-        let hittable = NSPredicate(format: "hittable == true")
-        let expectation = XCTNSPredicateExpectation(predicate: hittable, object: element)
-        if XCTWaiter.wait(for: [expectation], timeout: 3) == .completed {
+    /// Taps the first element of the target whose frame is on screen, at its middle.
+    ///
+    /// Not through `isHittable`: when XCTest cannot work out an element's hittability (a menu
+    /// item still appearing, a twin with an empty frame) it ends the test on the spot, which
+    /// `continueAfterFailure` does not prevent. An element that exists only off screen is
+    /// tapped by XCTest itself, which scrolls it into view.
+    private func tap(_ target: Target) throws {
+        let window = app.frame
+        // A short settle: a control that has just appeared may still be moving.
+        Thread.sleep(forTimeInterval: 0.3)
+        var candidates = target.query(in: app).allElementsBoundByIndex
+        if target.picksLast { candidates.reverse() }
+        let onScreen = candidates.first { element in
+            let frame = element.frame
+            return !frame.isEmpty && frame.width >= 1 && frame.height >= 1 && window.intersects(frame)
+        }
+        if let element = onScreen {
+            let frame = element.frame.intersection(window)
+            app.coordinate(withNormalizedOffset: .zero).withOffset(CGVector(dx: frame.midX, dy: frame.midY)).tap()
+        } else if let element = candidates.first {
             element.tap()
         } else {
-            element.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
+            throw WalkFailure(step: currentStep, reason: "\(target) is gone")
         }
     }
 
@@ -250,13 +263,20 @@ final class WalkRunner {
         throw WalkFailure(step: currentStep, reason: "\(target) was not found after scrolling \(screens) times")
     }
 
+    /// The system back button (`BackButton` on iOS 26; on iOS 18 a SwiftUI stack's has no
+    /// identifier, only the previous screen's title, so the leading button of a navigation
+    /// bar), or the edge swipe where a page draws its own top bar.
     private func goBack() throws {
-        let button = app.navigationBars.buttons.matching(identifier: "BackButton").allElementsBoundByIndex
-            .first { $0.isHittable }
-        if let button {
-            button.tap()
+        let bars = app.navigationBars.allElementsBoundByIndex.filter { !$0.frame.isEmpty }
+        let identified = app.navigationBars.buttons.matching(identifier: "BackButton").allElementsBoundByIndex
+            .first { !$0.frame.isEmpty && app.frame.intersects($0.frame) }
+        let leading = bars.lazy.compactMap { bar -> XCUIElement? in
+            bar.buttons.allElementsBoundByIndex.first { $0.frame.minX - bar.frame.minX < 24 && !$0.frame.isEmpty }
+        }.first
+        if let button = identified ?? leading {
+            let frame = button.frame
+            app.coordinate(withNormalizedOffset: .zero).withOffset(CGVector(dx: frame.midX, dy: frame.midY)).tap()
         } else {
-            // No system back button (a custom top bar): the edge swipe.
             let start = app.coordinate(withNormalizedOffset: CGVector(dx: 0.005, dy: 0.5))
             let end = app.coordinate(withNormalizedOffset: CGVector(dx: 0.85, dy: 0.5))
             start.press(forDuration: 0.05, thenDragTo: end, withVelocity: 1200, thenHoldForDuration: 0.05)

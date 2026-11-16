@@ -50,10 +50,12 @@ struct Screens {
         type: .button
     )
     static let favourite = Target.id("dock.favorite") | .id("dock.favorite.tip-anchor")
-    static let close = Target.button("Close")
+    /// iOS 26's system close and confirm buttons; on iOS 18 the fallbacks are an "xmark"
+    /// and a "checkmark" (`SheetButtons.swift`), found by their symbols.
+    static let close = Target(matches: [.label("Close"), .identifier("xmark")], type: .button)
     static let searchField = Target(matches: [.field("Search")])
     static let backButton = Target(matches: [.identifier("BackButton")], type: .button)
-    static let done = Target.button("Done")
+    static let done = Target(matches: [.label("Done"), .identifier("checkmark")], type: .button)
 
     /// Closes the Settings sheet from any of its screens: back to its root (the back buttons
     /// are labelled with the screen they return to), then Done.
@@ -199,7 +201,7 @@ struct Screens {
     /// Back from the result's gallery and out of the search surface, which under `command` is
     /// an overlay with its own Cancel or Close.
     var closeSearch: [Step] {
-        var steps: [Step] = [.tapIfPresent(Self.backButton, within: 2), .pause(seconds: 1)]
+        var steps: [Step] = [.ifPresent(Self.readPill, within: 1, then: [.back], else: []), .pause(seconds: 1)]
         if choices.bar == .command {
             steps += [.tapIfPresent(Target(matches: [.label("Cancel"), .label("Close")], type: .button), within: 2), .pause(seconds: 1)]
         }

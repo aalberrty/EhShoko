@@ -91,8 +91,14 @@ struct Target: CustomStringConvertible, Sendable {
     /// The element, which may not exist yet: queries are lazy, so this never waits.
     @MainActor
     func element(in app: XCUIApplication) -> XCUIElement {
-        let query = root(in: app).descendants(matching: type).matching(predicate)
+        let query = self.query(in: app)
         return picksLast ? query.allElementsBoundByIndex.last ?? query.firstMatch : query.firstMatch
+    }
+
+    /// Every element that matches, in the order of the tree.
+    @MainActor
+    func query(in app: XCUIApplication) -> XCUIElementQuery {
+        root(in: app).descendants(matching: type).matching(predicate)
     }
 
     @MainActor
