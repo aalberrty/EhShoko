@@ -22,7 +22,7 @@ struct ShelfHomeHeader: View {
                 .padding(.bottom, 8)
             ShelfContinueSection(margins: margins, open: actions.openReader, openHistory: actions.openHistory)
             ShelfPopularSection(model: popular, margins: margins, open: actions.openGallery, showAll: actions.showPopular)
-            ShelfHomeHeading(title: GalleryListKind.frontpage.title, margins: margins)
+            ShelfFrontPageHeading(margins: margins)
                 .padding(.top, ShelfHomeHeading.spaceAbove)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -86,6 +86,31 @@ private nonisolated struct ShelfMidnightSchedule: TimelineSchedule {
 }
 
 // MARK: Headings
+
+/// "Front Page" with the filter summary pill trailing, where the bar does not hold the filter
+/// (`shelf.md` section 2, item 4): the list's wrapper hands the header the list's control. It
+/// opens Filters on the Front Page's set.
+private struct ShelfFrontPageHeading: View {
+    let margins: ShelfHomeMargins
+
+    @Environment(\.listHeadingControl) private var control
+
+    var body: some View {
+        HStack(alignment: .firstTextBaseline, spacing: 8) {
+            Text(GalleryListKind.frontpage.title)
+                .lookSectionHeader()
+                .lineLimit(1)
+            Spacer(minLength: 0)
+            if let control, case .filter(let summary) = control.control {
+                ShelfListFilterPill(summary: summary) { control.perform(.filters) }
+                    .layoutPriority(1)
+            }
+        }
+        .frame(minHeight: 44)
+        .padding(.leading, margins.leading)
+        .padding(.trailing, margins.trailing)
+    }
+}
 
 /// A section's heading line: the title in the look's section style and, trailing, a link in
 /// the tint ("History ›", "See all ›"). The line is 44 pt high, the link's target.

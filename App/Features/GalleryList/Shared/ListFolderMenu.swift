@@ -32,11 +32,12 @@ struct ListFolderMenu: View {
         folder == -1 ? userStore?.favoriteTotalCount : userStore?.favoriteFolderCounts[folder]
     }
 
-    /// Replaces the folder on top of the stack; the list under a gallery page or anything else
-    /// on top is left alone.
+    /// Replaces the folder on top of the stack, in the same library's model when it came from
+    /// one; the list under a gallery page or anything else on top is left alone.
     private func choose(_ folder: Int) {
-        guard folder != current, let stack, case .favoritesFolder? = stack.path.last else { return }
-        stack.path[stack.path.count - 1] = .favoritesFolder(folder)
+        guard folder != current, let stack, case .favoritesFolder(let route)? = stack.path.last else { return }
+        _ = route.library?.list(for: folder)
+        stack.path[stack.path.count - 1] = .favoritesFolder(folder, library: route.library)
     }
 }
 
@@ -45,7 +46,7 @@ extension ListDesignInput {
     /// title is then a menu of the folders; `nil` for every other list, and for a folder the
     /// library shows under its own header and title.
     func ownFolder(hasHeader: Bool) -> Int? {
-        guard !hasHeader, !context.embedsInStart, case .folder(let folder) = context.kind else { return nil }
+        guard !hasHeader, context.showsTitle, case .folder(let folder) = context.kind else { return nil }
         return folder
     }
 }

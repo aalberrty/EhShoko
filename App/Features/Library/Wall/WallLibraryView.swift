@@ -12,8 +12,9 @@ import SwiftUI
 /// and each pile takes the newest covers of its folder that the page holds, or, for a folder
 /// opened this session in the same model, that folder's own newest. The model keeps the
 /// pages, so coming back to the library, or another library design, asks for nothing, and
-/// the Library tab's re-selection, which `LibraryScreen` performs on the model's list,
-/// reloads exactly what the piles show.
+/// the Library tab's re-selection reloads exactly what the piles show: All's page. A pile
+/// pushes its folder with the model, so the folder shows the list the model keeps (All's
+/// page is already there) and a folder opened that way gives its pile its own covers.
 ///
 /// Under `command` the screen is "Favorites" with a large title, and the bar's trailing
 /// control is the favourites' Sort. Under `tabs` the Library tab names the screen above its
@@ -26,6 +27,7 @@ struct WallLibraryView: View {
     @Environment(StackRouter.self) private var stack
     @Environment(\.chrome) private var chrome
     @Environment(\.look) private var look
+    @Environment(\.tabsBarRootReselections) private var rootReselections
 
     var body: some View {
         let isSignedIn = accountSession.isLoggedIn
@@ -54,6 +56,8 @@ struct WallLibraryView: View {
             }
             await model.list.loadIfNeeded()
         }
+        // The Library tab re-selected at its root: All again, which the task above loads.
+        .onChange(of: rootReselections) { model.reloadForTabReselection() }
     }
 
     /// The model's All favourites, once it is the chosen list.
@@ -79,9 +83,10 @@ struct WallLibraryView: View {
         chrome.bar != .tabs
     }
 
-    /// A folder's list, or every folder's, over the library.
+    /// A folder's list, or every folder's, over the library, in the library's model.
     private func open(_ folder: Int) {
-        stack.push(.favoritesFolder(folder))
+        _ = model.list(for: folder)
+        stack.push(.favoritesFolder(folder, library: model))
     }
 
     // MARK: Sort

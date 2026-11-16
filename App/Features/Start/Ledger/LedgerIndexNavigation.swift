@@ -47,7 +47,7 @@ nonisolated enum LedgerIndexPlace: Hashable, Sendable {
         case nil: self = .list(.frontpage)
         case .galleryList(.favorites): return nil
         case .galleryList(let kind): self = .list(kind)
-        case .favoritesFolder(let index): self = .folder(index)
+        case .favoritesFolder(let route): self = .folder(route.folder)
         case .listSearch, .search, .typedSearch, .detail, .detailChild, .settings: self = .list(.frontpage)
         }
     }

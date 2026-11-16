@@ -24,8 +24,8 @@ struct GalleryListScreen<Header: View>: View {
         self.header = header()
     }
 
-    /// A folder of the library's own model, which keeps each folder's list: the library
-    /// chooses the folder and this list follows it.
+    /// A folder of the library's own model, which keeps each folder's list: the folder the
+    /// context names (`.folder(n)`), which the library chose or pushed.
     init(context: ListContext, favorites: FavoritesModel, @ViewBuilder header: () -> Header) {
         self.context = context
         self.favorites = favorites
@@ -62,7 +62,7 @@ struct GalleryListScreen<Header: View>: View {
                 .id(context.kind)
         case .folder(let folder):
             if let favorites {
-                FolderListHost(context: context, favorites: favorites, header: header)
+                FolderListHost(context: context, favorites: favorites, folder: folder, header: header)
             } else {
                 OwnedFolderListHost(context: context, folder: folder, header: header)
                     .id(context.kind)
@@ -113,7 +113,14 @@ private struct ListDesignSwitch<Header: View>: View {
 
 // MARK: The shared host
 
-/// What every list has around its design, whatever it lists.
+/// What every list has around its design, whatever it lists. Besides the models' sheets and
+/// the reader it does for every design what its surroundings ask of a list:
+/// - it hands a first screen's header the list's primary control (`\.listHeadingControl`),
+///   for the heading that header draws;
+/// - a pull to refresh also runs the refresh its surroundings declare (Shelf's Home declares
+///   Popular's), which the design's own `refreshable` would otherwise hide;
+/// - re-selecting its tab while it is the tab's root reloads it;
+/// - a favourite removed or moved from its rows leaves a favourites folder at once.
 struct ListHost<Header: View>: View {
     let context: ListContext
     let feed: ListFeed
@@ -133,6 +140,10 @@ struct ListHost<Header: View>: View {
     @Environment(StackRouter.self) private var stack
     @Environment(AppRouter.self) private var appRouter
     @Environment(\.openGallery) private var openGallery
+    @Environment(\.chrome) private var chrome
+    /// What the screen around the list refreshes (`refreshable` outside the list).
+    @Environment(\.refresh) private var surroundingRefresh
+    @Environment(\.tabsBarRootReselections) private var rootReselections
 
     private enum ListSheet: Identifiable {
         case filters(FilterRange)
@@ -148,11 +159,14 @@ struct ListHost<Header: View>: View {
 
     var body: some View {
         let controls = ListControls(menu: menu, primary: primary, isFinding: isFinding)
+        // A pull to refresh also refreshes what the surroundings declare.
+        let shown = feed.refreshing(with: surroundingRefresh)
         ListDesignSwitch(
-            input: ListDesignInput(context: context, feed: feed, controls: controls, perform: perform, actions: actions),
+            input: ListDesignInput(context: context, feed: shown, controls: controls, perform: perform, actions: actions),
             header: header
         )
-        .loadsList(feed)
+        .environment(\.listHeadingControl, headingControl)
+        .loadsList(shown)
         .barControl(controls.barControl) { action in
             switch action {
             case .primary: perform(.filters)
@@ -181,7 +195,29 @@ struct ListHost<Header: View>: View {
         .onChange(of: actions.readingRequest) { _, request in
             if let request { lastRead = request.gallery }
         }
+        // A favourites folder drops at once what was removed or moved away from its rows,
+        // whichever design drew them; the decision is the model's. History and the part
+        // harness's fixtures keep their rows.
+        .onChange(of: actions.favoriteChanges) { _, changes in
+            (feed.source as? GalleryListModel)?.applyFavoriteChanges(changes)
+        }
+        // Only a tab's root sees the count change: the tab is re-selected while its stack is
+        // at the root. The side pane's and the sheet's stacks are not the tab's.
+        .onChange(of: rootReselections) {
+            if !chrome.isSidePane, !chrome.isSheet { feed.reload() }
+        }
         .sensoryFeedback(.impact(weight: .light), trigger: sheet?.id) { _, sheet in sheet != nil }
+    }
+
+    /// The primary control for a first screen's header that draws this list's heading: where
+    /// the bar does not hold it, and not over a list that cannot be shown (signed out, failed),
+    /// as a design's own heading line.
+    private var headingControl: ListHeadingControl? {
+        guard context.heading == .header, !chrome.barHoldsPrimaryControl, let primary else { return nil }
+        switch feed.phase {
+        case .signedOut, .failed: return nil
+        case .loading, .empty, .content: return ListHeadingControl(control: primary, perform: perform)
+        }
     }
 
     private var readingRequest: Binding<ReadingRequest?> {

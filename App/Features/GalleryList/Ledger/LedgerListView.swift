@@ -41,7 +41,6 @@ struct LedgerListView<Header: View>: View {
                 }
             }
             .onDisappear { visits.hasLeft = true }
-            .followsFavoriteChanges(of: input)
     }
 
     @ViewBuilder
