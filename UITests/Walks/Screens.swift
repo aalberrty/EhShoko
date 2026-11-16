@@ -141,8 +141,9 @@ struct Screens {
             .in(choices.bar == .tabs ? .tabBar : .container("Navigation"))
         // A gallery in the side pane (regular width) is closed with the pane's Close: with it
         // open, the bar's Search did not open search on the iPad after F23's chrome changes.
-        // iOS 18's Close is the "xmark" fallback (`SheetButtons.swift`).
-        let paneClose = Target(matches: [.label("Close"), .identifier("xmark")], type: .button).in(.navigationBar)
+        // iOS 18's Close is the "xmark" fallback (`SheetButtons.swift`). Not scoped to a bar:
+        // the pane's is not the first navigation bar.
+        let paneClose = Target(matches: [.label("Close"), .identifier("xmark")], type: .button)
         return [
             .ifPresent(search, within: 2, then: [.tapIfPresent(paneClose, within: 3)], else: [.back]),
             .pause(seconds: 1),
