@@ -9,6 +9,8 @@ struct LedgerIndexNavigation {
     let appRouter: AppRouter
     /// The `home` stack: under `command` the only one, under `tabs` the Home tab's.
     let stack: StackRouter
+    /// Opens the reader from the Continue card, which it then zooms out of.
+    let openContinueReader: ContinueReaderOpener
 
     /// A list: pushed over the Index on a phone, the list column's root beside it.
     func open(_ kind: GalleryListKind) {
@@ -27,8 +29,10 @@ struct LedgerIndexNavigation {
         stack.push(SearchSurfaceModel.route(for: keyword, in: .everywhere))
     }
 
+    /// From the card, under either bar: under `tabs` it shows only beside the iPad column,
+    /// where the accessory is off, so the card is what the reader zooms out of.
     func continueReading(_ item: ContinueItem) {
-        appRouter.reading = ReadingRequest(gallery: item.gallery, page: item.page)
+        openContinueReader(item, from: .card)
     }
 
     func signIn() {

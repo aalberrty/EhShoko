@@ -75,7 +75,6 @@ struct LedgerIndexContinueCard: View {
 
     @Environment(\.look) private var look
     @Environment(\.onTint) private var onTint
-    @Environment(\.chrome) private var chrome
     @Environment(\.dynamicTypeSize) private var typeSize
 
     private var cornerRadius: CGFloat { isCompact ? 14 : 18 }
@@ -89,7 +88,7 @@ struct LedgerIndexContinueCard: View {
                 .padding(.vertical, isCompact ? 9 : 11)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 // On the content: the reader zooms out of the card and back into it.
-                .readerSource(sourceID)
+                .readerSource(.continueCard(gid: item.gallery.gid))
                 .background(look.raised, in: shape)
                 .overlay(alignment: .bottom) { progressBar }
                 .clipShape(shape)
@@ -148,12 +147,5 @@ struct LedgerIndexContinueCard: View {
 
     private var progressText: String {
         L10n.Localizable.Shell.Continue.progress(item.page, item.pageCount, Int((item.fraction * 100).rounded()))
-    }
-
-    /// Under `command` the shell zooms the reader out of `continueCard`. Under `tabs` it asks
-    /// for `continueBar`, the accessory's; the card shows under `tabs` only beside the iPad
-    /// column, where the accessory is off and the card is that control.
-    private var sourceID: ReaderSourceID {
-        chrome.bar == .tabs ? .continueBar(gid: item.gallery.gid) : .continueCard(gid: item.gallery.gid)
     }
 }
