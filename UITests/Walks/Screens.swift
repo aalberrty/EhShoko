@@ -88,13 +88,19 @@ struct Screens {
 
     // MARK: Lists
 
-    /// Toplists, the second list, from whichever bar.
+    /// The dimmed rest of the screen beside a column the system lays over it: Ledger's Index at
+    /// launch in portrait on an iPad on iOS 18. The bar under it is faded and takes no taps.
+    static let overlayDismissal = Target.id("PopoverDismissRegion")
+
+    /// Toplists, the second list, from whichever bar. An Index laid over the list is dismissed
+    /// first, as a person would to reach the list and its bar.
     var openSecondList: [Step] {
+        let reveal: [Step] = [.tapIfPresent(Self.overlayDismissal, within: 1), .pause(seconds: 1)]
         switch choices.bar {
         case .tabs:
-            Self.openTab("Top") + [.wait(Self.galleryInList)]
+            return reveal + Self.openTab("Top") + [.wait(Self.galleryInList)]
         case .command:
-            choosePlace("Toplists") + [.wait(Self.galleryInList)]
+            return reveal + choosePlace("Toplists") + [.wait(Self.galleryInList)]
         }
     }
 
