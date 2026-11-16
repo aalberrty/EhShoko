@@ -76,7 +76,7 @@ struct WallPreviewsWall: View {
             .padding(.horizontal, WallPreviewsLayout.margin)
             .padding(.vertical, WallPreviewsLayout.rowSpacing)
             // Adds itself to the scroll view above it.
-            .background { WallPreviewsPinch { step(dense: $0 < 0) } }
+            .background { ScrollViewPinch { step(dense: $0 < 0) } }
         }
         .scrollPosition($position)
         .onScrollGeometryChange(for: WallPreviewsScroll.Mark.self) { geometry in
@@ -293,85 +293,5 @@ private struct WallPreviewCell: View, Equatable {
         .accessibilityLabel(L10n.Localizable.Reader.Page.label(index))
         .accessibilityAddTraits(isCurrent ? [.isButton, .isSelected] : .isButton)
         .accessibilityHint(failed ? L10n.Localizable.ErrorView.Button.retry : "")
-    }
-}
-
-/// Adds a pinch to the scroll view it is placed in: a `UIPinchGestureRecognizer` on the
-/// `UIScrollView` itself. At that level the pinch and the scroll view's pan never run
-/// together, so a pinch does not scroll and a two-finger scroll does not pinch. One step per
-/// pinch: apart is 1, together is -1.
-private struct WallPreviewsPinch: UIViewRepresentable {
-    let onStep: (Int) -> Void
-
-    func makeCoordinator() -> Coordinator {
-        Coordinator()
-    }
-
-    func makeUIView(context: Context) -> Probe {
-        let view = Probe()
-        view.isUserInteractionEnabled = false
-        view.coordinator = context.coordinator
-        return view
-    }
-
-    func updateUIView(_ view: Probe, context: Context) {
-        context.coordinator.onStep = onStep
-    }
-
-    static func dismantleUIView(_ view: Probe, coordinator: Coordinator) {
-        coordinator.detach()
-    }
-
-    /// Finds the scroll view once it is in a window.
-    final class Probe: UIView {
-        weak var coordinator: Coordinator?
-
-        override func didMoveToWindow() {
-            super.didMoveToWindow()
-            guard window != nil else { return }
-            var ancestor = superview
-            while let view = ancestor, !(view is UIScrollView) {
-                ancestor = view.superview
-            }
-            coordinator?.attach(to: ancestor as? UIScrollView)
-        }
-    }
-
-    final class Coordinator: NSObject {
-        var onStep: (Int) -> Void = { _ in }
-        private let recognizer = UIPinchGestureRecognizer()
-        private var hasStepped = false
-
-        override init() {
-            super.init()
-            recognizer.addTarget(self, action: #selector(pinched))
-        }
-
-        func attach(to scrollView: UIScrollView?) {
-            guard let scrollView, recognizer.view !== scrollView else { return }
-            detach()
-            scrollView.addGestureRecognizer(recognizer)
-        }
-
-        func detach() {
-            recognizer.view?.removeGestureRecognizer(recognizer)
-        }
-
-        @objc private func pinched(_ recognizer: UIPinchGestureRecognizer) {
-            switch recognizer.state {
-            case .began:
-                hasStepped = false
-            case .changed where !hasStepped:
-                if recognizer.scale >= 1.3 {
-                    hasStepped = true
-                    onStep(1)
-                } else if recognizer.scale <= 0.77 {
-                    hasStepped = true
-                    onStep(-1)
-                }
-            default:
-                break
-            }
-        }
     }
 }
