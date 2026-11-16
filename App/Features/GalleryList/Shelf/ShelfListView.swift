@@ -32,6 +32,7 @@ struct ShelfListView<Header: View>: View {
     @Environment(\.lookTint) private var tint
     @Environment(\.dynamicTypeSize) private var typeSize
     @Environment(\.chrome) private var chrome
+    @Environment(\.accessibilityVoiceOverEnabled) private var isVoiceOverOn
 
     var body: some View {
         content
@@ -101,7 +102,7 @@ struct ShelfListView<Header: View>: View {
         let metrics = texts.metrics
         let tagLimit = isRanked || !settings.showsTagsInList ? 0 : tagsThatFit(metrics)
         return ShelfRowStyle(
-            isRanked: isRanked, footer: footer, tagLimit: tagLimit,
+            isRanked: isRanked, footer: footer, tagLimit: tagLimit, isSpoken: ListSpokenRows.isOn(isVoiceOverOn),
             height: isRanked ? metrics.ranked : tagLimit > 0 ? metrics.standard.tags : metrics.standard.plain,
             zoom: zoomNamespace ?? localZoom, texts: texts, textsRevision: texts.revision
         )

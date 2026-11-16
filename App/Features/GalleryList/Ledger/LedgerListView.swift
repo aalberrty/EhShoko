@@ -118,6 +118,7 @@ private struct LedgerListContent<Header: View>: View {
     @Environment(\.openGallery) private var openGallery
     @Environment(StackRouter.self) private var stack
     @Environment(\.lookTint) private var tint
+    @Environment(\.accessibilityVoiceOverEnabled) private var isVoiceOverOn
 
     private static var rowInsets: EdgeInsets {
         EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: LedgerGalleryRow.trailingInset)
@@ -134,7 +135,7 @@ private struct LedgerListContent<Header: View>: View {
         prefetcher.update(entries)
         let rows = LedgerRows(
             kind: kind, textInset: LedgerGalleryRow.textInset(showsCover: style.showsCover),
-            selectedID: stack.sideGallery?.gid
+            selectedID: stack.sideGallery?.gid, isSpoken: ListSpokenRows.isOn(isVoiceOverOn)
         )
         return List {
             header
@@ -199,10 +200,11 @@ private struct LedgerListContent<Header: View>: View {
         let actions = input.actions
         let folder = rows.kind.marksFolders && !style.showsCover ? actions.favoriteFolder(of: entry) : nil
         let facts = words.facts(for: entry, ending: rows.kind.age, rank: rank)
+        let spoken = rows.isSpoken ? words.spokenLine(for: entry, ending: rows.kind.age, rank: rank) : nil
         return Button {
             openGallery(entry.gallery)
         } label: {
-            LedgerGalleryRow(entry: entry, facts: facts, folder: folder, style: style)
+            LedgerGalleryRow(entry: entry, facts: facts, spoken: spoken, folder: folder, style: style)
                 .equatable()
         }
         .listRowInsets(Self.rowInsets)
@@ -229,6 +231,8 @@ private struct LedgerRows {
     let textInset: CGFloat
     /// The gallery in the side pane, whose row is tinted (iPad).
     let selectedID: String?
+    /// VoiceOver is on: rows read their words in full (`LedgerListWords.spokenLine`).
+    let isSpoken: Bool
 }
 
 /// What a kind of list changes in Ledger's rows.

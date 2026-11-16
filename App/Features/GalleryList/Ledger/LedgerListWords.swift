@@ -59,11 +59,7 @@ final class LedgerListWords {
     /// neither the tags nor the title name one.
     func facts(for entry: GalleryEntry, ending kind: AgeKind, rank: Int?) -> AttributedString {
         let gallery = entry.gallery
-        let age: AgeKey = switch kind {
-        case .added: entry.addedAge.map { AgeKey(age: $0, kind: .added) } ?? AgeKey(age: entry.postedAge, kind: .posted)
-        case .opened: entry.openedAge.map { AgeKey(age: $0, kind: .opened) } ?? AgeKey(age: entry.postedAge, kind: .posted)
-        case .posted: AgeKey(age: entry.postedAge, kind: .posted)
-        }
+        let age = ageKey(of: entry, ending: kind)
         let key = FactsKey(
             category: gallery.category, language: entry.languageCode, pages: gallery.pageCount,
             rating: entry.ratingText, age: age, rank: rank
@@ -72,6 +68,28 @@ final class LedgerListWords {
         let line = makeFacts(key)
         facts[entry.id] = (key, line)
         return line
+    }
+
+    /// What VoiceOver reads for a row, everything it shows in words: "credit, title, No. 4,
+    /// Doujinshi, Japanese, 48 pages, 4.5 stars, 2 hours ago". Asked for only while VoiceOver
+    /// is on; its words are made once per value.
+    func spokenLine(for entry: GalleryEntry, ending kind: AgeKind, rank: Int?) -> String {
+        var parts: [String] = []
+        if let credit = entry.credit { parts.append(credit) }
+        parts.append(entry.title.core)
+        if let rank { parts.append(L10n.Localizable.List.rank(rank)) }
+        parts.append(words.categoryName(entry.gallery.category))
+        if let code = entry.languageCode { parts.append(words.languageName(code: code)) }
+        parts.append(words.pages(entry.gallery.pageCount))
+        parts.append(words.spokenRating(entry.ratingText))
+        let age = ageKey(of: entry, ending: kind)
+        let spokenAge = switch age.kind {
+        case .posted: words.spokenAgo(age.age)
+        case .added: words.spokenAdded(age.age)
+        case .opened: words.spokenOpened(age.age)
+        }
+        parts.append(spokenAge)
+        return parts.joined(separator: ", ")
     }
 
     /// "Today", "Yesterday", then the date: "Thursday, 12 November", with the year when it is
@@ -121,6 +139,16 @@ final class LedgerListWords {
         line.append(name)
         line.append(AttributedString(separator + rest.joined(separator: separator)))
         return line
+    }
+
+    /// The age a row's line ends with: the one `kind` asks for, or when the gallery was
+    /// posted where the page did not say.
+    private func ageKey(of entry: GalleryEntry, ending kind: AgeKind) -> AgeKey {
+        switch kind {
+        case .added: entry.addedAge.map { AgeKey(age: $0, kind: .added) } ?? AgeKey(age: entry.postedAge, kind: .posted)
+        case .opened: entry.openedAge.map { AgeKey(age: $0, kind: .opened) } ?? AgeKey(age: entry.postedAge, kind: .posted)
+        case .posted: AgeKey(age: entry.postedAge, kind: .posted)
+        }
     }
 
     private func ageText(_ key: AgeKey) -> String {

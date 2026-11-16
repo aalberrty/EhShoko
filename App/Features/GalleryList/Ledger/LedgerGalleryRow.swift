@@ -23,6 +23,9 @@ nonisolated struct LedgerRowStyle: Equatable {
 struct LedgerGalleryRow: View, Equatable {
     let entry: GalleryEntry
     let facts: AttributedString
+    /// What VoiceOver reads in place of the row's texts, which abbreviate ("48 p", "★ 4.5",
+    /// "2h ago"); `nil` while VoiceOver is off.
+    let spoken: String?
     /// Titles only, in favourites: the folder whose colour the square takes.
     let folder: Int?
     let style: LedgerRowStyle
@@ -86,7 +89,7 @@ struct LedgerGalleryRow: View, Equatable {
             CategoryMark(entry.gallery.category, style: .bar)
         }
         .padding(.vertical, 8)
-        .accessibilityElement(children: .combine)
+        .modifier(LedgerRowSpeech(spoken: spoken))
     }
 
     private var titlesOnly: some View {
@@ -106,7 +109,7 @@ struct LedgerGalleryRow: View, Equatable {
         }
         .padding(.leading, Self.squareLeading)
         .padding(.vertical, 9)
-        .accessibilityElement(children: .combine)
+        .modifier(LedgerRowSpeech(spoken: spoken))
     }
 
     private var title: some View {
@@ -123,6 +126,18 @@ struct LedgerGalleryRow: View, Equatable {
             .font(Self.factsFont)
             .foregroundStyle(style.look.secondaryLabel)
             .lineLimit(1)
+    }
+}
+
+/// The row as one element: its texts combined (Voice Control and the walks name rows by
+/// them), or with VoiceOver on the same in words.
+private struct LedgerRowSpeech: ViewModifier {
+    let spoken: String?
+
+    func body(content: Content) -> some View {
+        content
+            .accessibilityElement(children: spoken == nil ? .combine : .ignore)
+            .accessibilityLabel(Text(verbatim: spoken ?? ""), isEnabled: spoken != nil)
     }
 }
 
