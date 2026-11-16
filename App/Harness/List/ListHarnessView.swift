@@ -161,7 +161,7 @@ private struct ListHarnessBar: View {
         GlassGroup(spacing: ActionDock.spacing) {
             CommandBar(
                 router: router,
-                control: .button(systemImage: "line.3.horizontal.decrease", title: "Filters", showsDot: true),
+                control: .button(systemImage: "line.3.horizontal.decrease", title: "Filters", narrowing: "8 of 10 categories"),
                 perform: { _ in }, openSearch: { _ in }
             )
             .frame(maxWidth: 560)

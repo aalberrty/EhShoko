@@ -41,6 +41,9 @@ indirect enum Step: Sendable {
     case screenshot(String)
     /// The accessibility tree of the screen, attached as text: what a walk's targets can name.
     case dump(String)
+    /// XCUITest's accessibility audit of the screen (`performAccessibilityAudit()`), attached as
+    /// text with one line per issue. A survey: issues are noted and never fail the walk.
+    case audit(String)
     /// The first steps if the target shows up within `within` seconds, otherwise the second:
     /// where designs or devices differ (a menu on one, a row on the other).
     case ifPresent(Target, within: Double, then: [Step], else: [Step])
@@ -87,6 +90,7 @@ indirect enum Step: Sendable {
         case .pause(let seconds): "pause \(seconds) s"
         case .screenshot(let name): "screenshot \(name)"
         case .dump(let name): "dump \(name)"
+        case .audit(let name): "audit \(name)"
         case .ifPresent(let target, _, _, _): "if \(target)"
         case .group(let name, _): name
         case .optional: "optional"

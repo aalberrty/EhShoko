@@ -65,10 +65,12 @@ struct CommandBarTrailingControl: View {
     var body: some View {
         Group {
             switch control {
-            case .button(let systemImage, _, let showsDot):
+            case .button(let systemImage, _, let narrowing):
                 Button { perform(.primary) } label: {
-                    CommandBarSymbol(systemImage: systemImage, showsDot: showsDot)
+                    CommandBarSymbol(systemImage: systemImage, showsDot: narrowing != nil)
                 }
+                // The dot's meaning, which VoiceOver cannot see: "8 of 10 categories · ★ 3+".
+                .accessibilityValue(narrowing ?? "")
             case .menu(let systemImage, _, let controls):
                 Menu {
                     ListMenuEntries(controls: controls) { perform(.menu($0)) }

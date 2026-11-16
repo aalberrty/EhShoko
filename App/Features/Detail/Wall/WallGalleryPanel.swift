@@ -231,9 +231,10 @@ private struct WallGalleryFacts: View, Equatable {
                     .accessibilityLabel(Self.votes(count))
             }
         }
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel(L10n.Localizable.Gallery.Figure.rating)
-        .accessibilityValue(ratingValue)
+        // One label, not a label and a value: the line combines its pieces, and a value would
+        // be read after the whole line, away from "Rating".
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(L10n.Localizable.Gallery.Figure.rating + ", " + ratingValue)
     }
 
     private var ratingValue: String {
@@ -291,12 +292,19 @@ struct WallGallerySectionHeading: View {
     var action: () -> Void = {}
 
     @Environment(\.look) private var look
+    @Environment(\.dynamicTypeSize) private var typeSize
 
     var body: some View {
-        HStack(alignment: .firstTextBaseline) {
+        // At the accessibility sizes the link goes under the title, which side by side would
+        // be broken into syllables.
+        let stacks = typeSize.isAccessibilitySize
+        let layout = stacks
+            ? AnyLayout(VStackLayout(alignment: .leading, spacing: Tokens.Spacing.xSmall))
+            : AnyLayout(HStackLayout(alignment: .firstTextBaseline))
+        layout {
             Text(title)
                 .lookSectionHeader()
-            Spacer(minLength: Tokens.Spacing.small)
+            if !stacks { Spacer(minLength: Tokens.Spacing.small) }
             if let link {
                 Button(action: action) {
                     HStack(spacing: 2) {

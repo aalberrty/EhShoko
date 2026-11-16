@@ -65,6 +65,9 @@ private struct ShelfReaderActionGroup: View {
                     .contentShape(.rect)
             }
             .accessibilityLabel(L10n.Localizable.ReadingView.ContextMenu.Button.share)
+            .accessibilityShowsLargeContentViewer {
+                Label(L10n.Localizable.ReadingView.ContextMenu.Button.share, systemImage: "square.and.arrow.up")
+            }
 
             ShelfReaderMoreMenu(model: model, offersDualPage: offersDualPage)
         }

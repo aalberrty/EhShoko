@@ -137,6 +137,8 @@ private struct DesignAccentRow: View {
         HStack(spacing: Tokens.Spacing.small) {
             Text(L10n.Localizable.Settings.Design.accent)
                 .foregroundStyle(look.label)
+                // The menu says it with its value; VoiceOver would read it twice.
+                .accessibilityHidden(true)
             Spacer(minLength: Tokens.Spacing.small)
             Circle()
                 .fill(tint)

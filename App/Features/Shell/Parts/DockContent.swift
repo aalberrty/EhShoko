@@ -40,6 +40,9 @@ nonisolated struct DockItem: Equatable, Sendable {
     var title: String
     /// The pill's second part, set lighter after the title ("page 23 of 48", "23 / 48").
     var detail: String?
+    /// What VoiceOver reads for `detail` when its short form does not read well ("23 / 48" is
+    /// read as "page 23 of 48"); `nil` reads `detail`.
+    var spokenDetail: String?
     /// A round button's symbol; on the pill, an optional symbol before the title (Wall's ▶).
     var systemImage: String?
     /// What a tap does.
@@ -56,11 +59,13 @@ nonisolated struct DockItem: Equatable, Sendable {
     var readerGalleryID: String?
 
     init(
-        title: String, detail: String? = nil, systemImage: String? = nil, action: DockAction,
+        title: String, detail: String? = nil, spokenDetail: String? = nil, systemImage: String? = nil,
+        action: DockAction,
         menu: DockMenu? = nil, isEnabled: Bool = true, isDimmed: Bool = false, readerGalleryID: String? = nil
     ) {
         self.title = title
         self.detail = detail
+        self.spokenDetail = spokenDetail
         self.systemImage = systemImage
         self.action = action
         self.menu = menu

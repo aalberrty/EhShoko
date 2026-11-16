@@ -82,6 +82,9 @@ private struct DesignPictures: View {
                 .frame(width: Self.size.width, height: Self.size.height)
             Text(caption)
                 .font(.caption2)
+                // A caption under a picture of fixed width: beyond this size its words break
+                // in the middle. The row above says the same in full.
+                .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
                 .foregroundStyle(look.secondaryLabel)
                 .multilineTextAlignment(.center)
                 .accessibilityHidden(true)

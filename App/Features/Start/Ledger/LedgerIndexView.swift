@@ -56,7 +56,7 @@ struct LedgerIndexView: View {
     }
 
     private static let pasteControl = BarControl.button(
-        systemImage: "doc.on.clipboard", title: L10n.Localizable.Search.Link.title, showsDot: false
+        systemImage: "doc.on.clipboard", title: L10n.Localizable.Search.Link.title, narrowing: nil
     )
 
     /// Hands the link to the app as a shared link is handed to it, so the shell resolves it

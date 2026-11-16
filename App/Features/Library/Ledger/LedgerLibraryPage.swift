@@ -89,7 +89,8 @@ private struct LedgerLibraryFolderGrid: View {
     private static let oneColumn = [GridItem(.flexible())]
 
     var body: some View {
-        LazyVGrid(columns: typeSize.isAccessibilitySize ? Self.oneColumn : Self.fitting, spacing: 6) {
+        // One column from the largest standard size, where two cut folder names to a word.
+        LazyVGrid(columns: typeSize >= .xxxLarge ? Self.oneColumn : Self.fitting, spacing: 6) {
             ForEach(userStore.libraryFolders) { folder in
                 LedgerFolderCell(folder: folder) { open(folder.index) }
             }

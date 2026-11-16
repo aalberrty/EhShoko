@@ -117,13 +117,17 @@ private struct ShelfPopularFailed: View {
     let retry: () -> Void
 
     @Environment(\.look) private var look
+    @Environment(\.dynamicTypeSize) private var typeSize
 
     var body: some View {
-        HStack(alignment: .firstTextBaseline, spacing: 8) {
+        let stacks = typeSize.isAccessibilitySize
+        let layout = ShelfHomeHeading.layout(stacks: stacks)
+        layout {
             Text(L10n.Localizable.Start.Shelf.popularFailed)
                 .font(.subheadline)
                 .foregroundStyle(look.secondaryLabel)
-            Spacer(minLength: 0)
+                .fixedSize(horizontal: false, vertical: true)
+            if !stacks { Spacer(minLength: 0) }
             Button(L10n.Localizable.ErrorView.Button.retry, action: retry)
                 .font(.subheadline.weight(.medium))
                 .frame(minHeight: 44)

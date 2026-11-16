@@ -6,6 +6,7 @@
 /// | `swaps` | From each preset, each other part set to each of its other values (15 per preset, 45): `swap-<preset>-<part>-<value>`, e.g. `swap-shelf-list-wall`. |
 /// | `mixes` | The six heaviest mixes of the plan's table: `mix-1` … `mix-6`. |
 /// | `device` | The steps done once per device, not per walk: `device-options`, `device-wizard-apply`, `device-wizard-close`, `device-storyboards`, `device-offer`, `device-closing`. |
+/// | `a11y` | The accessibility audit of each screen group under each preset: `a11y-shelf`, `a11y-wall`, `a11y-ledger` (`AccessibilityWalks`). Not part of `all`. |
 /// | `all` | All of them. |
 ///
 /// `WALKS` takes set names and walk ids, comma-separated: `presets,mix-3,device-offer`.
@@ -26,6 +27,7 @@ enum WalkCatalogue {
         case "swaps": swaps.map(\.id)
         case "mixes": mixes.indices.map { "mix-\($0 + 1)" }
         case "device": DeviceWalks.ids
+        case "a11y": AccessibilityWalks.ids
         case "all": ["presets", "swaps", "mixes", "device"].flatMap { set(named: $0) ?? [] }
         default: nil
         }
@@ -42,7 +44,7 @@ enum WalkCatalogue {
             let choices = mixes[number - 1]
             return PlanWalk(id: id, title: "Mix \(number)", choices: choices, environment: environment).walk
         }
-        return DeviceWalks.walk(id: id, in: environment)
+        return DeviceWalks.walk(id: id, in: environment) ?? AccessibilityWalks.walk(id: id, in: environment)
     }
 
     // MARK: Single swaps

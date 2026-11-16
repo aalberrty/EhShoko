@@ -49,7 +49,7 @@ enum GalleryDockItems {
         case .inProgress(let page):
             DockItem(
                 title: L10n.Localizable.Gallery.continue, detail: progress(page, model.pageCount),
-                systemImage: systemImage, action: .read, readerGalleryID: gid
+                spokenDetail: L10n.Localizable.Gallery.Continue.page(page, model.pageCount), systemImage: systemImage, action: .read, readerGalleryID: gid
             )
         case .finished:
             DockItem(

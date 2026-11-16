@@ -40,8 +40,9 @@ nonisolated enum ListPrimaryControl: Equatable, Sendable {
 
 /// What a screen puts in the command bar's trailing circle (`wall.md` section 1).
 nonisolated enum BarControl: Equatable, Sendable {
-    /// A button: the filter, with a dot when it is not the default; Ledger's paste button.
-    case button(systemImage: String, title: String, showsDot: Bool)
+    /// A button: the filter, with a dot and VoiceOver's value (what it narrows) when it is not
+    /// the default; Ledger's paste button.
+    case button(systemImage: String, title: String, narrowing: String?)
     /// A button that opens a menu of list controls: Sort on favourites, More on History and
     /// Toplists, which have no primary control.
     case menu(systemImage: String, title: String, controls: ListMenuControls)
@@ -62,7 +63,7 @@ extension ListControls {
         case .filter(let summary):
             .button(
                 systemImage: "line.3.horizontal.decrease", title: L10n.Localizable.FiltersView.Title.filters,
-                showsDot: !summary.isDefault
+                narrowing: summary.isDefault ? nil : summary.longText
             )
         case .sort(let picker):
             .menu(systemImage: picker.systemImage, title: picker.title, controls: ListMenuControls(sort: picker))

@@ -180,6 +180,8 @@ private struct LedgerCommentRow: View, Equatable {
                         .foregroundStyle(look.secondaryLabel)
                 }
             }
+            // One stop for VoiceOver: name, date and score. The body stays apart, for its links.
+            .accessibilityElement(children: .combine)
             ForEach(item.blocks.indices, id: \.self) { index in
                 switch item.blocks[index] {
                 case .text(let text):

@@ -22,6 +22,7 @@ final class WalkRunner {
     private var path: [String] = []
     private var screenshots = 0
     private var trees = 0
+    private var audits = 0
     private var hasLaunched = false
 
     init(app: XCUIApplication, walk: Walk, environment: WalkEnvironment) {
@@ -77,6 +78,46 @@ final class WalkRunner {
         attachment.name = String(format: "%@__tree-%02d-%@", walk.id, trees, name)
         attachment.lifetime = .keepAlways
         attach(attachment)
+    }
+
+    /// The screen's accessibility audit, attached as `<walk>__audit-<nn>-<name>` with one line
+    /// per issue, and counted in the walk's notes. Every issue is handed back as handled, so the
+    /// audit reports and does not fail the walk.
+    func audit(named name: String) {
+        audits += 1
+        var lines: [String] = []
+        do {
+            try app.performAccessibilityAudit { issue in
+                lines.append(Self.line(for: issue))
+                return true
+            }
+        } catch {
+            lines.append("The audit could not run: \(error.localizedDescription)")
+        }
+        let attachment = XCTAttachment(string: lines.isEmpty ? "No issues." : lines.joined(separator: "\n"))
+        attachment.name = String(format: "%@__audit-%02d-%@", walk.id, audits, name)
+        attachment.lifetime = .keepAlways
+        attach(attachment)
+        record.notes.append("audit \(name): \(lines.count) issue\(lines.count == 1 ? "" : "s")")
+    }
+
+    /// "Contrast · Contrast nearly passed · “Couldn't load Popular” (type 48) at 20,398, 180×18";
+    /// the type is `XCUIElement.ElementType`'s raw value (48 static text, 9 button, 1 other).
+    private static func line(for issue: XCUIAccessibilityAuditIssue) -> String {
+        let types: [(XCUIAccessibilityAuditType, String)] = [
+            (.contrast, "Contrast"), (.elementDetection, "Element detection"), (.hitRegion, "Hit region"),
+            (.sufficientElementDescription, "Description"), (.dynamicType, "Dynamic Type"),
+            (.textClipped, "Text clipped"), (.trait, "Trait"),
+        ]
+        let type = types.first { issue.auditType.contains($0.0) }?.1 ?? "Type \(issue.auditType.rawValue)"
+        var element = "no element"
+        if let found = issue.element, found.exists {
+            let label = found.label.isEmpty ? (found.identifier.isEmpty ? "unlabelled" : found.identifier) : found.label
+            let frame = found.frame
+            element = "“\(label)” (type \(found.elementType.rawValue)) at \(Int(frame.minX)),\(Int(frame.minY)),"
+                + " \(Int(frame.width))×\(Int(frame.height))"
+        }
+        return "\(type) · \(issue.compactDescription) · \(element)"
     }
 
     // MARK: Steps
@@ -157,6 +198,8 @@ final class WalkRunner {
             if environment.dumpsTrees { dumpTree(named: name) }
         case .dump(let name):
             dumpTree(named: name)
+        case .audit(let name):
+            audit(named: name)
         case .ifPresent(let target, let within, let then, let otherwise):
             let present = target.element(in: app).waitForExistence(timeout: within)
             for step in present ? then : otherwise { try perform(step) }

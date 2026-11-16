@@ -157,6 +157,7 @@ private struct ShelfPanelButtonLabel: View {
         .background { Self.shape.fill(isOn ? tint.opacity(0.2) : .clear) }
         .contentShape(Self.shape)
         .accessibilityAddTraits(isOn ? .isSelected : [])
+        .accessibilityShowsLargeContentViewer { Label(title, systemImage: symbol) }
     }
 }
 

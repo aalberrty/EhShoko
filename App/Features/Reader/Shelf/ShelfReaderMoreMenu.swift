@@ -30,6 +30,8 @@ struct ShelfReaderMoreMenu: UIViewRepresentable {
         configuration.preferredSymbolConfigurationForImage = UIImage.SymbolConfiguration(textStyle: .body)
             .applying(UIImage.SymbolConfiguration(weight: .medium))
         let button = UIButton(configuration: configuration)
+        // The circle keeps its size: the symbol stops growing where the group's text does.
+        button.maximumContentSizeCategory = .extraExtraExtraLarge
         button.showsMenuAsPrimaryAction = true
         let items = context.coordinator
         button.menu = UIMenu(children: [
