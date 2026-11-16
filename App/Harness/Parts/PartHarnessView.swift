@@ -80,6 +80,8 @@ struct PartHarnessView: View {
         .task { await model.prepare() }
         .task { await model.continueModel.observe() }
         .task { await model.runMemoryCheck() }
+        // As the shell does once its first screen is up, so the Favourite tip can show here.
+        .task { await TipsConfiguration.configure() }
         .task {
             guard PartHarnessDependencies.isInstalled else { return }
             await PartHarnessAccount.atLaunch.signInLater()
