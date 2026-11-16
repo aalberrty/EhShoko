@@ -32,7 +32,7 @@ struct LedgerIndexNavigation {
     }
 
     func signIn() {
-        appRouter.presentSettings([.settings(.account), .settings(.login)])
+        appRouter.presentSignIn()
     }
 }
 

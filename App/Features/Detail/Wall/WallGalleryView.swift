@@ -22,6 +22,7 @@ struct WallGalleryView: View {
     let model: GalleryDetailModel
 
     @Environment(StackRouter.self) private var stack: StackRouter?
+    @Environment(AppRouter.self) private var appRouter: AppRouter?
     @Environment(\.chrome) private var chrome
     @Environment(\.look) private var look
     @Environment(\.verticalSizeClass) private var verticalSizeClass
@@ -31,7 +32,6 @@ struct WallGalleryView: View {
     /// crossing that line draws the cover again and nothing else.
     @State private var coverage = WallCoverCoverage()
     @State private var hud: HUDConfiguration?
-    @State private var asksToSignIn = false
     @State private var searchCount = 0
     @State private var copyCount = 0
 
@@ -65,7 +65,6 @@ struct WallGalleryView: View {
         .wallGalleryDock(model, signIn: signIn, search: search)
         .hud($hud)
         .galleryFavoriteHUD(model, hud: $hud)
-        .gallerySignInAlert(isPresented: $asksToSignIn)
         .sensoryFeedback(.success, trigger: copyCount)
         .sensoryFeedback(.impact(flexibility: .soft), trigger: searchCount)
     }
@@ -96,7 +95,7 @@ struct WallGalleryView: View {
     }
 
     private func signIn() {
-        asksToSignIn = true
+        appRouter?.presentSignIn()
     }
 
     private func search(_ keyword: String) {
@@ -111,7 +110,7 @@ struct WallGalleryView: View {
     }
 }
 
-/// What the panel's parts ask the page to do: the page owns the sign-in prompt, the stack and
+/// What the panel's parts ask the page to do: the page opens sign-in and owns the stack and
 /// the HUD, which would scroll away inside the panel.
 struct WallGalleryPanelActions {
     let signIn: () -> Void

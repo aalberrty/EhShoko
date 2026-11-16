@@ -67,7 +67,7 @@ struct LedgerCommentsView: View {
             if model.canCompose {
                 model.compose()
             } else {
-                appRouter?.presentSettings([.settings(.account), .settings(.login)])
+                appRouter?.presentSignIn()
             }
         }
         // The composer belongs to this screen's model, which also edits.

@@ -63,7 +63,7 @@ struct ShellPresentations: ViewModifier {
         case .search(let keyword):
             router.selectedStack.push(.search(keyword: keyword))
         case .signIn:
-            router.presentSettings([.settings(.account), .settings(.login)])
+            router.presentSignIn()
         }
     }
 
@@ -102,7 +102,8 @@ struct ShellPresentations: ViewModifier {
 }
 
 /// Settings: a sheet with its own stack, opened from the account button, the place menu and
-/// the sign-in prompts (`AppRouter.presentSettings`).
+/// the sign-in prompts (`AppRouter.presentSettings`, `presentSignIn`). Done, the system's
+/// confirm button at the top trailing corner, closes it.
 private struct SettingsSheet: View {
     let router: AppRouter
 
@@ -110,12 +111,21 @@ private struct SettingsSheet: View {
         RoutedStack(router: router.settings) {
             SettingsScreen()
                 .toolbar {
-                    ToolbarItem(placement: .topBarLeading) {
-                        SheetCloseButton { router.dismissSettings() }
+                    ToolbarItem(placement: .confirmationAction) {
+                        SheetConfirmButton { router.dismissSettings() }
                     }
                 }
         }
         .pushesGalleries(on: router.settings)
+    }
+}
+
+extension AppRouter {
+    /// Opens sign-in: the Settings sheet at Settings › Sign in, Back leading to the page with
+    /// the account card. Every prompt for an account opens it this way and at once, without
+    /// asking first, as the old app's Login did.
+    func presentSignIn() {
+        presentSettings([.settings(.login)])
     }
 }
 

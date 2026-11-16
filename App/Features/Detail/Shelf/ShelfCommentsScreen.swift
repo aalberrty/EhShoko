@@ -10,7 +10,6 @@ import UIKit
 /// is scrolled to and highlighted.
 struct ShelfCommentsScreen: View {
     @State private var model: CommentsModel
-    @State private var asksToSignIn = false
 
     @Environment(StackRouter.self) private var stack
     @Environment(AppRouter.self) private var appRouter: AppRouter?
@@ -63,21 +62,17 @@ struct ShelfCommentsScreen: View {
         .navigationTitle(L10n.Localizable.CommentsView.Title.comments)
         .navigationBarTitleDisplayMode(.inline)
         .dock(.pill(writeComment)) { _ in
-            model.canCompose ? model.compose() : (asksToSignIn = true)
+            if model.canCompose {
+                model.compose()
+            } else {
+                appRouter?.presentSignIn()
+            }
         }
         .sheet(item: $model.composer) { composer in
             PostCommentSheet(composer: composer) { text in model.submit(text, for: composer) }
         }
         .sensoryFeedback(.impact(weight: .light), trigger: model.composer) { _, composer in composer != nil }
         .hud(linkHUD)
-        .alert(L10n.Localizable.ErrorView.Headline.loginRequired, isPresented: $asksToSignIn) {
-            Button(L10n.Localizable.NotLoginView.Button.login) {
-                appRouter?.presentSettings([.settings(.account), .settings(.login)])
-            }
-            Button(L10n.Localizable.Common.cancel, role: .cancel) {}
-        } message: {
-            Text(L10n.Localizable.List.Signin.note)
-        }
     }
 
     private var writeComment: DockItem {

@@ -16,11 +16,11 @@ struct ShelfGalleryView: View {
     let model: GalleryDetailModel
 
     @Environment(StackRouter.self) private var stack: StackRouter?
+    @Environment(AppRouter.self) private var appRouter: AppRouter?
     @Environment(\.horizontalSizeClass) private var sizeClass
     @Environment(\.look) private var look
     @State private var width: CGFloat?
     @State private var hud: HUDConfiguration?
-    @State private var asksToSignIn = false
 
     var body: some View {
         ScrollView {
@@ -39,7 +39,6 @@ struct ShelfGalleryView: View {
         .shelfGalleryDock(model, signIn: signIn)
         .hud($hud)
         .galleryFavoriteHUD(model, hud: $hud)
-        .gallerySignInAlert(isPresented: $asksToSignIn)
     }
 
     /// Before the first layout the size class decides, so an iPad opens in two columns.
@@ -80,7 +79,7 @@ struct ShelfGalleryView: View {
     }
 
     private func signIn() {
-        asksToSignIn = true
+        appRouter?.presentSignIn()
     }
 }
 

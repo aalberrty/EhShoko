@@ -57,7 +57,7 @@ private struct ListPaginationFooter: View {
     }
 }
 
-/// The "need login" prompt. Its button opens Settings › Account › Login (legacy
+/// The "need login" prompt. Its button opens Settings › Sign in (legacy
 /// `NotLoginView` routing).
 struct LoginRequiredView: View {
     @Environment(AppRouter.self) private var appRouter
@@ -66,7 +66,7 @@ struct LoginRequiredView: View {
     var body: some View {
         NotLoggedInView {
             loginRequests += 1
-            appRouter.presentSettings([.settings(.account), .settings(.login)])
+            appRouter.presentSignIn()
         }
         .sensoryFeedback(.impact(flexibility: .soft), trigger: loginRequests)
     }

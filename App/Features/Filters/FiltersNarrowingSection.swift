@@ -16,25 +16,25 @@ struct FiltersNarrowingSection: View {
     var body: some View {
         Section {
             Toggle(L10n.Localizable.FiltersView.Title.advancedSettings, isOn: $model.filter.advanced)
-                .filtersRow()
+                .lookFormRow()
             Group {
                 Toggle(L10n.Localizable.FiltersView.Title.setMinimumRating, isOn: $model.filter.minRatingActivated)
-                    .filtersRow()
+                    .lookFormRow()
                 FiltersRatingRow(rating: $model.filter.minRating)
-                    .filtersRow()
+                    .lookFormRow()
                     .disabled(!model.filter.minRatingActivated)
                 Toggle(L10n.Localizable.FiltersView.Title.setPagesRange, isOn: $model.filter.pageRangeActivated)
-                    .filtersRow()
+                    .lookFormRow()
                     .disabled(model.isPageRangeToggleDisabled)
                 FiltersPagesRow(model: model, focusedBound: focusedBound)
-                    .filtersRow()
+                    .lookFormRow()
                     .disabled(!model.filter.pageRangeActivated)
                 NavigationLink {
                     FiltersAdvancedScreen(model: model)
                 } label: {
                     FiltersAdvancedLabel(changed: FilterSummary(model.filter).advancedOptionCount)
                 }
-                .filtersRow(dimsWhenDisabled: false)
+                .lookFormRow(.labelDimmedBySystem)
             }
             .disabled(!model.filter.advanced)
         }

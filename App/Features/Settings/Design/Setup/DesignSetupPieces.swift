@@ -60,27 +60,3 @@ struct DesignSetupProgress: View {
         .accessibilityHidden(true)
     }
 }
-
-/// An empty ring, or a filled circle with a check in the tint: the option card's mark, for
-/// the wizard's own "Keep what I have" card.
-struct DesignSetupRadioMark: View {
-    let isSelected: Bool
-
-    @Environment(\.look) private var look
-    @Environment(\.onTint) private var onTint
-
-    var body: some View {
-        ZStack {
-            Circle()
-                .strokeBorder(look.tertiaryLabel, lineWidth: 1.5)
-                .opacity(isSelected ? 0 : 1)
-            Image(systemName: "checkmark.circle.fill")
-                .resizable()
-                .symbolRenderingMode(.palette)
-                .foregroundStyle(onTint, .tint)
-                .opacity(isSelected ? 1 : 0)
-        }
-        .frame(width: 24, height: 24)
-        .accessibilityHidden(true)
-    }
-}

@@ -8,7 +8,7 @@ import EhModels
 @MainActor
 enum GalleryDockItems {
     /// Favourite: a tap saves to the folder used last, or removes a favourite; a long press
-    /// chooses the folder. Signed out it is dimmed, and a tap asks the user to sign in.
+    /// chooses the folder. Signed out it is dimmed, and a tap opens sign-in.
     static func favorite(model: GalleryDetailModel, folderName: (Int) -> String) -> DockItem {
         let isFavorited = model.isFavorited
         return DockItem(

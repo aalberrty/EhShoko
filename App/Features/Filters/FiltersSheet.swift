@@ -25,7 +25,7 @@ struct FiltersSheet: View {
                 FiltersCategorySection(model: model)
                 FiltersNarrowingSection(model: model, focusedBound: $focusedBound)
             }
-            .filtersFormStyle()
+            .lookFormStyle(sectionSpacing: .compact)
             .navigationTitle(L10n.Localizable.FiltersView.Title.filters)
             .toolbarTitleDisplayMode(.inline)
             .toolbar {

@@ -197,7 +197,7 @@ struct LedgerGalleryView: View {
     }
 
     private func signIn() {
-        appRouter?.presentSettings([.settings(.account), .settings(.login)])
+        appRouter?.presentSignIn()
     }
 }
 
