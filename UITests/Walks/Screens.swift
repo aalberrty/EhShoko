@@ -149,9 +149,11 @@ struct Screens {
             .tap(Self.readPill),
             .pause(seconds: 3),
             .screenshot("reader"),
-            .swipe(.left, on: nil), .pause(seconds: 1),
-            .swipe(.left, on: nil), .pause(seconds: 1),
-            .swipe(.left, on: nil), .pause(seconds: 1),
+            // The default reading direction is top to bottom (`Setting.readingDirection`): the
+            // pages turn upwards. (Each reading mode is walked once per device, `device-closing`.)
+            .swipe(.up, on: nil), .pause(seconds: 1),
+            .swipe(.up, on: nil), .pause(seconds: 1),
+            .swipe(.up, on: nil), .pause(seconds: 1),
             .screenshot("reader-page-3"),
             .group("show the controls", .tapPoint(x: 0.5, y: 0.45), .wait(Self.close), .screenshot("reader-controls")),
             .group("hide the controls", .tapPoint(x: 0.5, y: 0.45), .pause(seconds: 1.5), .screenshot("reader-hidden")),
@@ -161,9 +163,11 @@ struct Screens {
 
     var favourite: [Step] {
         if environment.isSignedIn {
+            // The harness does not serve the gallery page that a favourite fetches again, so the
+            // heart keeps its state: the screenshot is early enough to catch the confirmation.
             return [
-                .tap(Self.favourite), .pause(seconds: 1.5), .screenshot("favourited"),
-                .tap(Self.favourite), .pause(seconds: 1.5), .screenshot("unfavourited"),
+                .tap(Self.favourite), .pause(seconds: 0.6), .screenshot("favourited"), .pause(seconds: 1),
+                .tap(Self.favourite), .pause(seconds: 0.6), .screenshot("unfavourited"), .pause(seconds: 1),
             ]
         }
         // Signed out, Favourite opens Settings at Sign in.
@@ -225,7 +229,8 @@ struct Screens {
             // The fixture's first named folder (`PartHarnessAccount`).
             return open + [
                 .pause(seconds: 2), .screenshot("library"),
-                .optional([.tap(Target(matches: [.labelPrefix("To Read")])), .pause(seconds: 2), .screenshot("library-folder")]),
+                // A button: a row's folder mark ("To Read · added 1mo ago") must not match.
+                .optional([.tap(Target(matches: [.labelPrefix("To Read")], type: .button)), .pause(seconds: 2), .screenshot("library-folder")]),
             ]
         }
         // Signed out the library says so, unless the harness shows its fixture rows there.
@@ -245,12 +250,15 @@ struct Screens {
 
     var changePartInSettings: [Step] {
         let open: [Step] = switch choices.bar {
-        case .tabs: [.tap(Self.accountButton)]
+        // The account button is on a tab's root: Wall's and Ledger's libraries push the folder
+        // the walk opened, so it is taken from Home.
+        case .tabs: Self.openTab("Home") + [.pause(seconds: 1), .tap(Self.accountButton)]
         case .command: choosePlace("Settings")
         }
         let change = settingsChange
         return open + [
-            .wait(Self.customise), .screenshot("settings"),
+            // In an iPad's form sheet the row is below the fold.
+            .wait(Self.customise), .scrollTo(Self.customise, screens: 3), .screenshot("settings"),
             .tap(Self.customise), .wait(Self.experienceBar),
             .scrollTo(Self.partRow(change.part), screens: 6),
             .screenshot("experience"),

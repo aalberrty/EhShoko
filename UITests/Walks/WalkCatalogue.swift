@@ -7,6 +7,8 @@
 /// | `mixes` | The six heaviest mixes of the plan's table: `mix-1` … `mix-6`. |
 /// | `device` | The steps done once per device, not per walk: `device-options`, `device-wizard-apply`, `device-wizard-close`, `device-storyboards`, `device-offer`, `device-closing`. |
 /// | `a11y` | The accessibility audit of each screen group under each preset: `a11y-shelf`, `a11y-wall`, `a11y-ledger` (`AccessibilityWalks`). Not part of `all`. |
+/// | `pushes` | Shelf's list pushed over each gallery design under each bar and in a link's gallery sheet (`PushWalks`); not in `all`. |
+/// | `looks` | Shelf's Home and the gallery sheet in each look (`LookWalks`; run with the `offline` fixture); not in `all`. |
 /// | `all` | All of them. |
 ///
 /// `WALKS` takes set names and walk ids, comma-separated: `presets,mix-3,device-offer`.
@@ -28,6 +30,8 @@ enum WalkCatalogue {
         case "mixes": mixes.indices.map { "mix-\($0 + 1)" }
         case "device": DeviceWalks.ids
         case "a11y": AccessibilityWalks.ids
+        case "pushes": PushWalks.ids
+        case "looks": LookWalks.ids
         case "all": ["presets", "swaps", "mixes", "device"].flatMap { set(named: $0) ?? [] }
         default: nil
         }
@@ -43,6 +47,12 @@ enum WalkCatalogue {
         if id.hasPrefix("mix-"), let number = Int(id.dropFirst("mix-".count)), mixes.indices.contains(number - 1) {
             let choices = mixes[number - 1]
             return PlanWalk(id: id, title: "Mix \(number)", choices: choices, environment: environment).walk
+        }
+        if id.hasPrefix("push-") {
+            return PushWalks.walk(id: id, in: environment)
+        }
+        if id.hasPrefix("home-") || id.hasPrefix("sheet-") {
+            return LookWalks.walk(id: id, in: environment)
         }
         return DeviceWalks.walk(id: id, in: environment) ?? AccessibilityWalks.walk(id: id, in: environment)
     }
