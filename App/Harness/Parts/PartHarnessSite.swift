@@ -16,9 +16,16 @@ actor PartHarnessSite {
         case favorites
         case watched
         case list(isPaged: Bool)
+        /// A gallery page, `/g/<gid>/<token>/` (the harness's galleries have no token).
+        case gallery(gid: String)
 
-        /// The page a URL asks for, or `nil` for one the site does not serve (a gallery, the API).
+        /// The page a URL asks for, or `nil` for one the site does not serve (the API, an image).
         init?(url: URL) {
+            let components = url.pathComponents
+            if components.count >= 3, components[1] == "g" {
+                self = .gallery(gid: components[2])
+                return
+            }
             switch url.path {
             case "/favorites.php": self = .favorites
             case "/watched": self = .watched
@@ -37,6 +44,9 @@ actor PartHarnessSite {
     private var galleries: [Gallery] = []
     private var favorites: [String: Favorite] = [:]
     private var sortsByPosted = false
+    /// The galleries whose favourite was added, moved or removed since launch: the folder, or
+    /// `nil` for removed.
+    private var changedFavorites: [String: Int?] = [:]
 
     private nonisolated static let pageSize = 25
     private nonisolated static let folderColors = ["000", "f00", "fa0", "dd0", "080", "9f4", "4bf", "00f", "508", "e8e"]
@@ -72,7 +82,24 @@ actor PartHarnessSite {
             return html(rows: rows, isFavorites: false, next: next.map { "next=\($0)" })
         case .list(isPaged: false):
             return html(rows: Array(galleries.prefix(Self.pageSize)), isFavorites: false, next: nil)
+        case .gallery:
+            // A gallery page is made from the stored page (`PartHarnessTransport`).
+            return ""
         }
+    }
+
+    /// A favourite added or moved to `folder`, or removed (`nil`): the favourites pages show it
+    /// from now on, and the gallery's page is served (`favoriteChange(gid:)`).
+    func setFavorite(gid: String, folder: Int?) async {
+        await prepare()
+        favorites[gid] = folder.map { Favorite(folder: $0, date: Date()) }
+        changedFavorites[gid] = .some(folder)
+    }
+
+    /// The folder a favourite was changed to since launch (`.some(nil)` when removed), or `nil`
+    /// when it was not changed: then the gallery's page is not served and the stored page stays.
+    func favoriteChange(gid: String) -> Int?? {
+        changedFavorites[gid]
     }
 
     private func prepare() async {

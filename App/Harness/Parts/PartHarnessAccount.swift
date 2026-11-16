@@ -69,7 +69,7 @@ nonisolated struct PartHarnessAccount: Sendable {
         values.userStore = UserStore(defaults: defaults)
         PartHarnessRequestLog.reset()
         values.ehClient = EhClient(
-            transport: PartHarnessTransport(account: self, cookies: Self.cookies),
+            transport: PartHarnessTransport(account: self, cookies: Self.cookies, database: values.database),
             cookies: Self.cookies, host: { .ehentai }
         )
     }

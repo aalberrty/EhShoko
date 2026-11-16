@@ -174,15 +174,23 @@ final class PartHarnessFixtures: ListFixtureProvider {
 }
 
 /// The dependencies of a harness launched as the whole app (`-Harness part`): an empty
-/// database in memory, and the account of `PartHarnessAccount`: a cookie jar, a user store and
-/// a client of its own, whose requests are recorded and answered on the device. Nothing a
-/// part does leaves the device and nothing it shows depends on the user's data.
+/// database in memory, the harness's settings, and the account of `PartHarnessAccount`: a
+/// cookie jar, a user store and a client of its own, whose requests are recorded and answered
+/// on the device. Nothing a part does leaves the device and nothing it shows depends on the
+/// user's data. The settings are the ones the harness's shell shows, so what reads them through
+/// `@Dependency(\.settings)` (the setup wizard, the offer, the reader) reads the same choices.
 enum PartHarnessDependencies {
     private(set) static var isInstalled = false
+    /// The harness's settings once installed; `nil` for a harness opened from Laboratory,
+    /// which makes its own and leaves the app's dependencies alone.
+    private(set) static var settings: SettingsStore?
 
     static func install(in values: inout DependencyValues) {
         guard let database = try? AppDatabase.makeInMemory() else { return }
         values.database = database
+        let settings = PartHarnessModel.makeSettings(for: .atLaunch, translatesTags: PartHarnessRichPage.isRequested)
+        values.settings = settings
+        self.settings = settings
         PartHarnessAccount.atLaunch.install(in: &values)
         isInstalled = true
     }

@@ -151,5 +151,22 @@ nonisolated enum PartHarnessScheme: String, CaseIterable, Identifiable, Sendable
     case system, light, dark
 
     var id: String { rawValue }
+
+    /// The harness's scheme is its settings' Theme, so Settings can change it.
+    init(_ scheme: PreferredColorScheme) {
+        switch scheme {
+        case .automatic: self = .system
+        case .light: self = .light
+        case .dark: self = .dark
+        }
+    }
+
+    var preferredColorScheme: PreferredColorScheme {
+        switch self {
+        case .system: .automatic
+        case .light: .light
+        case .dark: .dark
+        }
+    }
 }
 #endif

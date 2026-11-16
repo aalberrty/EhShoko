@@ -9,8 +9,6 @@ import SwiftUI
 struct PartHarnessStage: View {
     let model: PartHarnessModel
 
-    @State private var search = CommandBarSearch()
-
     var body: some View {
         let options = model.options
         let router = model.app.router
@@ -29,13 +27,12 @@ struct PartHarnessStage: View {
             case .tabs:
                 tabs(options: options, router: router)
             case .command:
-                commandStack(router: router)
-                    .searchSurfaceCover(scope: $search.scope, over: router.home)
+                PartHarnessCommandStack(model: model, router: router)
             }
         }
         .environment(\.chrome, ChromeContext(bar: options.choices.bar))
         .modifier(ShellPresentations(model: model.app, bar: options.choices.bar))
-        .onAppear { model.open(search: $search) }
+        .onAppear { model.open() }
     }
 
     /// Under `tabs`, the part is in the tab the shell puts it in, on that tab's stack and with
@@ -79,8 +76,30 @@ struct PartHarnessStage: View {
         Binding(get: { model.app.router.selectedTab }, set: { model.app.selectTab($0) })
     }
 
+}
+
+/// The part's stack under `command`, with the search surface the bar opens. The surface's
+/// state is here rather than on the stage, so it lives only while the `command` bar does, as
+/// the shell's own (`CommandShell`): the memory check finds none of it under `tabs`.
+private struct PartHarnessCommandStack: View {
+    let model: PartHarnessModel
+    let router: AppRouter
+
+    @State private var search = CommandBarSearch()
+
+    var body: some View {
+        stack
+            .searchSurfaceCover(scope: $search.scope, over: router.home)
+            .onAppear {
+                // The search part opens on the surface, in the scope asked for.
+                if model.options.part == .search {
+                    search.scope = model.options.scope
+                }
+            }
+    }
+
     @ViewBuilder
-    private func commandStack(router: AppRouter) -> some View {
+    private var stack: some View {
         let bar: (BarControl?, @escaping (BarAction) -> Void) -> CommandBar = { control, perform in
             CommandBar(router: router, control: control, perform: perform) { search.scope = $0 }
         }

@@ -15,14 +15,11 @@ enum DeviceWalks {
         switch id {
         case "device-options":
             return Walk(id: id, title: "Every options screen", launch: launch, steps: options(screens))
-        // The wizard on the real app: under the part harness the shell reads a settings store
-        // of its own, while the wizard reads and writes the app's (`@Dependency(\.settings)`).
+        // The wizard under the part harness, whose settings it reads and writes.
         case "device-wizard-apply":
-            let live = liveLaunch(environment)
-            return Walk(id: id, title: "The wizard, applied", launch: live.launch, steps: wizardApply(live.screens))
+            return Walk(id: id, title: "The wizard, applied", launch: launch, steps: wizardApply(screens))
         case "device-wizard-close":
-            let live = liveLaunch(environment)
-            return Walk(id: id, title: "The wizard, left with Close", launch: live.launch, steps: wizardClose(live.screens))
+            return Walk(id: id, title: "The wizard, left with Close", launch: launch, steps: wizardClose(screens))
         case "device-storyboards":
             return Walk(id: id, title: "Each preset's storyboard, then the preset", launch: launch, steps: storyboards(environment))
         case "device-offer":
@@ -32,14 +29,6 @@ enum DeviceWalks {
         default:
             return nil
         }
-    }
-
-    /// Shelf's preset on the real app, its own data and the network.
-    private static func liveLaunch(_ environment: WalkEnvironment) -> (launch: [String], screens: Screens) {
-        var live = environment
-        live.fixture = .live
-        let shelf = Choices(preset: .shelf)
-        return (live.baseArguments() + shelf.arguments(for: .live), Screens(choices: shelf, environment: live))
     }
 
     // MARK: Settings
@@ -98,14 +87,13 @@ enum DeviceWalks {
                 .tap(Screens.optionCard(option)), .pause(seconds: 0.8), .screenshot("wizard-\(part.rawValue)"), .tap(next)
             ))
         }
-        // Seen on the bar and Settings' Customize row rather than in a list, so that it runs on
-        // the real app (`live`): under the part harness the shell has a settings store of its
-        // own, and the wizard writes the app's. No screenshot shows the real app's first
-        // screen, which holds the site's covers.
+        // Seen on the screen, in Ledger's colours and the bar's tabs, and on Settings'
+        // Customize row.
         steps += [
             .wait(Target.button("Apply")), .screenshot("wizard-summary"), .tap(Target.button("Apply")),
             .pause(seconds: 2), .tapIfPresent(Screens.done), .pause(seconds: 1.5),
-            .expect(Screens.tab("Home")), .tap(Screens.accountButton), .wait(Screens.customise), .pause(seconds: 1),
+            .expect(Screens.tab("Home")), .screenshot("wizard-applied"),
+            .tap(Screens.accountButton), .wait(Screens.customise), .pause(seconds: 1),
             .screenshot("wizard-applied-settings"), .tap(Screens.done),
         ]
         return steps
@@ -121,7 +109,7 @@ enum DeviceWalks {
             .tap(Target(matches: [.label("Close"), .label("Cancel")], type: .button)),
             .tapIfPresent(Target.button("Discard"), within: 3),
             .pause(seconds: 1.5), .tapIfPresent(Screens.done), .pause(seconds: 1.5),
-            .expect(Screens.tab("Home")),
+            .expect(Screens.tab("Home")), .screenshot("wizard-closed"),
             .tap(Screens.accountButton), .wait(Screens.customise), .pause(seconds: 1),
             .screenshot("wizard-closed-settings"), .tap(Screens.done),
         ]
@@ -226,6 +214,7 @@ enum DeviceWalks {
         ]
         let kicker = Target(matches: [.labelPrefix("The end ·")])
         let favoriteTile = Target(matches: [.label("Favorite"), .labelPrefix("Favorite,")], type: .button)
+        let favoritedTile = Target(matches: [.label("Favorited"), .labelPrefix("Favorited,")], type: .button)
         let readAgain = Target(matches: [.label("Read again"), .labelPrefix("Read again")], type: .button)
         var steps: [Step] = []
         for mode in modes {
@@ -244,8 +233,9 @@ enum DeviceWalks {
                 // Once: favourite on the closing page, close, and read again from the page.
                 group += [
                     // The tile turns to Favorited once the page is fetched again, which the
-                    // harness does not serve: the screenshot shows the tap, not the state.
-                    .tap(favoriteTile), .pause(seconds: 0.6), .screenshot("closing-favorite-tapped"), .pause(seconds: 1),
+                    // harness serves.
+                    .tap(favoriteTile), .wait(favoritedTile, timeout: 15), .pause(seconds: 0.6),
+                    .screenshot("closing-favorited"),
                     .tapPoint(x: 0.5, y: 0.2), .tapIfPresent(Screens.close, within: 3), .pause(seconds: 1.5),
                     .wait(readAgain), .screenshot("read-again"),
                     .tap(readAgain), .pause(seconds: 3), .screenshot("read-again-reader"),

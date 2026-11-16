@@ -17,15 +17,14 @@ struct LedgerGalleryChildView: View {
             if let detail = model.detail {
                 LedgerGalleryInfosView(gallery: model.gallery, detail: detail)
             }
-        case .archives, .torrents, .postComment, .tagDetail, .reader:
+        case .archives, .torrents, .tagDetail, .reader:
             EmptyView()
         }
     }
 }
 
 /// The content of a sheet Ledger's gallery page opens: tag detail, archives and torrents at
-/// the medium detent, the comment composer. `GalleryPage` presents it; the sheet sets its own
-/// detents.
+/// the medium detent. `GalleryPage` presents it; the sheet sets its own detents.
 struct LedgerGallerySheet: View {
     let destination: DetailDestination
     let model: GalleryDetailModel
@@ -36,8 +35,6 @@ struct LedgerGallerySheet: View {
             LedgerArchivesSheet(gallery: model.gallery, archiveURL: archiveURL)
         case .torrents:
             LedgerTorrentsSheet(gid: model.gallery.gid, token: model.gallery.token)
-        case .postComment:
-            PostCommentSheet(composer: .new) { text in model.postComment(text) }
         case .tagDetail(let detail):
             LedgerTagDetailSheet(detail: detail, model: model)
         case .comments, .previews, .galleryInfos, .reader:

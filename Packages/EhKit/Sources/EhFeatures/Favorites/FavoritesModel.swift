@@ -15,9 +15,6 @@ public final class FavoritesModel {
     /// The selected folder; `-1` is every folder.
     public private(set) var category = -1
     public private(set) var list: GalleryListModel
-    /// The search field's text. Only submitting it reloads the list.
-    public var keyword = ""
-    public var isQuickSearchPresented = false
 
     /// Every folder's list made so far. Observed, so a view that draws what a folder has
     /// loaded (`loadedList(for:)`) sees a folder opened after it was drawn.
@@ -25,8 +22,6 @@ public final class FavoritesModel {
     /// Unused directly: `withDependencies(from: self)` reads the dependencies it captured, so
     /// lists made after `init` use the same client and stores as the first one.
     @ObservationIgnored @Dependency(\.ehClient) private var client
-    /// The keyword the lists were loaded with.
-    @ObservationIgnored private var submittedKeyword = ""
 
     public init() {
         let list = GalleryListModel(source: .favorites(category: -1, keyword: "", sortOrder: nil))
@@ -48,7 +43,7 @@ public final class FavoritesModel {
     /// another screen loads or shows (All's first page, which brings the folders' counts).
     public func list(for folder: Int) -> GalleryListModel {
         if let list = lists[folder] { return list }
-        let list = makeList(category: folder, keyword: submittedKeyword)
+        let list = makeList(category: folder)
         lists[folder] = list
         return list
     }
@@ -69,25 +64,10 @@ public final class FavoritesModel {
         let target = list(for: folder)
         guard order != target.favoritesSortOrder else { return }
         lists = [folder: target]
-        target.reset(to: .favorites(category: folder, keyword: submittedKeyword, sortOrder: order))
+        target.reset(to: .favorites(category: folder, keyword: "", sortOrder: order))
         if folder != category {
             list = list(for: category)
         }
-    }
-
-    /// Searches the current folder for the field's text. Other folders' lists were loaded with
-    /// the old keyword and are dropped.
-    public func submitKeyword() {
-        submittedKeyword = keyword
-        lists = [category: list]
-        list.reset(to: .favorites(category: category, keyword: keyword, sortOrder: nil))
-    }
-
-    /// A word picked in Quick Search closes the sheet, replaces the field's text and is searched.
-    public func quickSearch(_ word: String) {
-        isQuickSearchPresented = false
-        keyword = word
-        submitKeyword()
     }
 
     /// Re-selecting the tab at its root reloads the current folder (only when logged in, which
@@ -98,9 +78,9 @@ public final class FavoritesModel {
     }
 
     /// Lists made later still use this model's dependencies.
-    private func makeList(category: Int, keyword: String) -> GalleryListModel {
+    private func makeList(category: Int) -> GalleryListModel {
         withDependencies(from: self) {
-            GalleryListModel(source: .favorites(category: category, keyword: keyword, sortOrder: nil))
+            GalleryListModel(source: .favorites(category: category, keyword: "", sortOrder: nil))
         }
     }
 }

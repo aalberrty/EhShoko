@@ -50,6 +50,8 @@ struct Screens {
         type: .button
     )
     static let favourite = Target.id("dock.favorite") | .id("dock.favorite.tip-anchor")
+    /// The dock's heart once the gallery is a favourite.
+    static let unfavourite = Target.button("Remove from favorites")
     /// iOS 26's system close and confirm buttons; on iOS 18 the fallbacks are an "xmark"
     /// and a "checkmark" (`SheetButtons.swift`), found by their symbols.
     static let close = Target(matches: [.label("Close"), .identifier("xmark")], type: .button)
@@ -163,11 +165,12 @@ struct Screens {
 
     var favourite: [Step] {
         if environment.isSignedIn {
-            // The harness does not serve the gallery page that a favourite fetches again, so the
-            // heart keeps its state: the screenshot is early enough to catch the confirmation.
+            // The harness serves the gallery page that a favourite fetches again, so the heart
+            // turns once the page is back: each screenshot shows the new state.
             return [
-                .tap(Self.favourite), .pause(seconds: 0.6), .screenshot("favourited"), .pause(seconds: 1),
-                .tap(Self.favourite), .pause(seconds: 0.6), .screenshot("unfavourited"), .pause(seconds: 1),
+                .tap(Self.favourite), .wait(Self.unfavourite, timeout: 15), .pause(seconds: 0.6), .screenshot("favourited"),
+                .tap(Self.unfavourite), .waitGone(Self.unfavourite, timeout: 15), .pause(seconds: 0.6),
+                .screenshot("unfavourited"),
             ]
         }
         // Signed out, Favourite opens Settings at Sign in.
