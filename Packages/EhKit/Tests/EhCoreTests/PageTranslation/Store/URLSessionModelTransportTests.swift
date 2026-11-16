@@ -332,7 +332,9 @@ final class StubURLProtocol: URLProtocol, @unchecked Sendable {
         let transport = makeTransport()
         let request = request(0..<1024)
         let fetch = Task { try await transport.fetch(request) { _ in } }
+        let deadline = ContinuousClock.now + .seconds(60)
         while StubURLProtocol.seen(host: store).isEmpty {
+            try #require(ContinuousClock.now < deadline, "The request never reached the network")
             try await Task.sleep(for: .milliseconds(5))
         }
 

@@ -45,6 +45,15 @@ import Testing
             .sorted()
     }
 
+    /// Waits until that many bytes of the file are on disk, and fails rather than hang.
+    private func waitForBytesOnDisk(_ bytes: Int64, _ downloader: ModelDownloader) async throws {
+        let deadline = ContinuousClock.now + .seconds(60)
+        while downloader.bytesOnDisk(of: file, in: .galTransl4B) < bytes {
+            try #require(ContinuousClock.now < deadline, "Only \(downloader.bytesOnDisk(of: file, in: .galTransl4B)) bytes arrived")
+            try await Task.sleep(for: .milliseconds(5))
+        }
+    }
+
     private func ranges(to url: URL) -> [Range<Int64>] {
         transport.requests.filter { $0.url == url }.map(\.range).sorted { $0.lowerBound < $1.lowerBound }
     }
@@ -123,9 +132,7 @@ import Testing
         let job = job([first])
         let progress = progress
         let download = Task { try await downloader.download(job, progress: progress) }
-        while downloader.bytesOnDisk(of: file, in: .galTransl4B) < 4 * 1024 {
-            try await Task.sleep(for: .milliseconds(5))
-        }
+        try await waitForBytesOnDisk(4 * 1024, downloader)
 
         download.cancel()
         await #expect(throws: CancellationError.self) { try await download.value }
@@ -224,15 +231,14 @@ import Testing
     @Test func theNextSourceGoesOnWhereTheFirstStopped() async throws {
         transport.publish(data, at: first)
         transport.publish(data, at: second)
-        // One request at a time: three ranges arrive, the fourth is refused.
-        let downloader = downloader(slots: 1)
+        // Three ranges arrive from the first source; the others never do. Every range
+        // has a slot, so the ones that are held cannot keep the three from arriving.
+        let downloader = downloader()
         let job = job([first, second])
         transport.hang(first, from: 3 * 1024)
         let progress = progress
         let download = Task { try await downloader.download(job, progress: progress) }
-        while downloader.bytesOnDisk(of: file, in: .galTransl4B) < 3 * 1024 {
-            try await Task.sleep(for: .milliseconds(5))
-        }
+        try await waitForBytesOnDisk(3 * 1024, downloader)
         download.cancel()
         _ = try? await download.value
         transport.release(first)
