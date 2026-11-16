@@ -98,12 +98,13 @@ enum DeviceWalks {
                 .tap(Screens.optionCard(option)), .pause(seconds: 0.8), .screenshot("wizard-\(part.rawValue)"), .tap(next)
             ))
         }
-        // Seen on the bar, the look and Settings' Customize row rather than in a list, so that
-        // it runs on the real app (`live`): under the part harness the shell has a settings
-        // store of its own, and the wizard writes the app's.
+        // Seen on the bar and Settings' Customize row rather than in a list, so that it runs on
+        // the real app (`live`): under the part harness the shell has a settings store of its
+        // own, and the wizard writes the app's. No screenshot shows the real app's first
+        // screen, which holds the site's covers.
         steps += [
             .wait(Target.button("Apply")), .screenshot("wizard-summary"), .tap(Target.button("Apply")),
-            .pause(seconds: 2), .tapIfPresent(Screens.done), .pause(seconds: 1.5), .screenshot("wizard-applied"),
+            .pause(seconds: 2), .tapIfPresent(Screens.done), .pause(seconds: 1.5),
             .expect(Screens.tab("Home")), .tap(Screens.accountButton), .wait(Screens.customise), .pause(seconds: 1),
             .screenshot("wizard-applied-settings"), .tap(Screens.done),
         ]
@@ -120,7 +121,7 @@ enum DeviceWalks {
             .tap(Target(matches: [.label("Close"), .label("Cancel")], type: .button)),
             .tapIfPresent(Target.button("Discard"), within: 3),
             .pause(seconds: 1.5), .tapIfPresent(Screens.done), .pause(seconds: 1.5),
-            .expect(Screens.tab("Home")), .screenshot("wizard-closed"),
+            .expect(Screens.tab("Home")),
             .tap(Screens.accountButton), .wait(Screens.customise), .pause(seconds: 1),
             .screenshot("wizard-closed-settings"), .tap(Screens.done),
         ]
@@ -196,16 +197,18 @@ enum DeviceWalks {
 
     /// After a fresh install (`run_walks.sh --fresh` removes the app first), the offer shows
     /// once, and not on the next launch. Runs on the real app (`live`): the harness keeps no
-    /// settings between launches.
+    /// settings between launches. Only the offer is photographed: the real app's first screen
+    /// holds the site's covers.
     private static func offer(id: String, environment: WalkEnvironment) -> Walk {
         var live = environment
         live.fixture = .live
         let offerTitle = Target.label("Choose your experience")
         return Walk(id: id, title: "The offer after install", launch: live.baseArguments(showsOffer: true), steps: [
             .launch(extra: []), .wait(offerTitle, timeout: 30), .screenshot("offer"),
-            .tap(Target.button("Not now")), .waitGone(offerTitle, timeout: 10), .screenshot("offer-dismissed"),
+            .tap(Target.button("Not now")), .waitGone(offerTitle, timeout: 10),
             .terminate, .launch(extra: []), .pause(seconds: 6),
-            .group("not again", .waitGone(offerTitle, timeout: 1)), .screenshot("offer-not-again"),
+            // XCTest polls a predicate about once a second: a shorter wait fails while nothing is there.
+            .group("not again", .waitGone(offerTitle, timeout: 5)),
         ])
     }
 

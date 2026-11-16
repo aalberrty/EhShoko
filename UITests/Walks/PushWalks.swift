@@ -16,9 +16,10 @@ enum PushWalks {
     }
 
     /// A tag of the signed-in fixture's fuller page (`PartHarnessRichPage`) with no translation,
-    /// so its chip reads the same in every design; the credit that names the artist pushes a
-    /// list too, and either will do.
-    static let tag = Target(matches: [.labelContains("hoshino kanae")], type: .button)
+    /// so it reads the same in every design: a chip (a button) in Shelf's and Wall's pages, a
+    /// link inside the namespace's line of text in Ledger's. The exact label: the title, which
+    /// names the artist too, is a button that expands it.
+    static let tag = Target(matches: [.label("hoshino kanae")], type: .any)
 
     static func walk(id: String, in environment: WalkEnvironment) -> Walk? {
         let words = id.split(separator: "-").map(String.init)

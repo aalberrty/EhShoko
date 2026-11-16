@@ -76,7 +76,9 @@ enum LookWalks {
             .launch(extra: []), .wait(Screens.readPill), .pause(seconds: 1), .screenshot("gallery-sheet"),
             .tap(Target(matches: [.label("Rate"), .labelPrefix("Rate,")], type: .button)),
             .wait(Target.label("Sign in")), .pause(seconds: 1), .screenshot("sign-in-over-sheet"),
-            .tap(Screens.done), .pause(seconds: 1.5), .wait(Screens.readPill), .screenshot("back-on-sheet"),
+        ] + Screens.closeSettings + [
+            // Settings opens with Sign in pushed: back to its root, then Done.
+            .pause(seconds: 1.5), .wait(Screens.readPill), .screenshot("back-on-sheet"),
             .tap(Screens.close), .pause(seconds: 1.5), .waitGone(Screens.readPill, timeout: 5), .screenshot("sheet-closed"),
         ]
     }
