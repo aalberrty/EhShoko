@@ -11,6 +11,8 @@ import UIKit
 /// - Around Ledger's split view it is inset past the Index column (`leadingInset`), because a
 ///   split view takes over the stack in its detail column and a host on that stack never
 ///   sees a pushed screen (`spikes/S5.md`).
+/// - While something is drawn over the stack (`isCovered`: the command bar's search surface,
+///   Ledger's Index laid over the list) the chrome fades out and the screens keep its room.
 ///
 /// It changes what it shows once per navigation: the path and the screens' entries change at
 /// different moments, so it decides in one place and only once the top route's entry has
@@ -20,15 +22,18 @@ struct BottomChrome<Content: View, Bar: View>: View {
     private let router: StackRouter
     private let hasBar: Bool
     private let leadingInset: CGFloat
+    private let isCovered: Bool
     private let content: Content
     private let bar: (BarControl?, @escaping (BarAction) -> Void) -> Bar
 
     @State private var entries: [ChromeEntry] = []
     /// The top screen's entry, as last resolved. `nil` until the root has reported.
     @State private var top: ChromeEntry?
+    /// Counts the times the chrome came back after showing nothing: each time is a new glass
+    /// container with a namespace of its own.
+    @State private var appearances = 0
     @State private var isKeyboardUp = false
     @State private var bottomSafeArea: CGFloat = 0
-    @Namespace private var glass
 
     /// The bar is 52 pt high and reaches 8 pt below the safe area, so a screen keeps 44 free.
     private static var reserve: CGFloat { ActionDock.height - 8 }
@@ -36,16 +41,18 @@ struct BottomChrome<Content: View, Bar: View>: View {
 
     /// - Parameters:
     ///   - hasBar: whether `bar` is drawn while the top screen shows browse chrome.
+    ///   - isCovered: something is drawn over the stack and its chrome.
     ///   - bar: the browse bar, given the top screen's control for its trailing circle and
     ///     what performs it.
     init(
-        router: StackRouter, hasBar: Bool, leadingInset: CGFloat = 0,
+        router: StackRouter, hasBar: Bool, leadingInset: CGFloat = 0, isCovered: Bool = false,
         @ViewBuilder content: () -> Content,
         @ViewBuilder bar: @escaping (BarControl?, @escaping (BarAction) -> Void) -> Bar
     ) {
         self.router = router
         self.hasBar = hasBar
         self.leadingInset = leadingInset
+        self.isCovered = isCovered
         self.content = content()
         self.bar = bar
     }
@@ -75,11 +82,7 @@ struct BottomChrome<Content: View, Bar: View>: View {
 
     // MARK: What is shown
 
-    nonisolated private enum Shown: Equatable {
-        case bar, dock, hidden
-    }
-
-    private var shown: Shown {
+    private var shown: ChromeShown {
         guard let top else { return hasBar ? .bar : .hidden }
         if top.dock != nil { return .dock }
         return hasBar && top.route?.hidesBrowseChrome != true ? .bar : .hidden
@@ -96,38 +99,42 @@ struct BottomChrome<Content: View, Bar: View>: View {
         if top == nil {
             top = entry
         } else {
-            withAnimation(.smooth(duration: 0.4)) { top = entry }
+            let wasHidden = shown == .hidden
+            withAnimation(.smooth(duration: 0.4)) {
+                top = entry
+                if wasHidden, shown != .hidden { appearances += 1 }
+            }
         }
     }
 
     // MARK: The chrome
 
     private var chrome: some View {
-        GlassGroup(spacing: ActionDock.spacing) {
-            ZStack {
-                switch shown {
-                case .bar:
-                    bar(top?.bar) { [actions = top?.barActions] in actions?.perform($0) }
-                case .dock:
-                    if let dock = top?.dock {
-                        ActionDock(content: dock) { [actions = top?.dockActions] in actions?.perform($0) }
-                    }
-                case .hidden:
-                    EmptyView()
-                }
+        ZStack {
+            // The shapes morph between the bar and a dock inside one container. When nothing
+            // takes their place the container goes as a whole and fades: a glass shape that
+            // leaves its container with no shape to turn into dissolves, but is cut within a
+            // frame when a shape with its slot arrives meanwhile (a dock declared just after its
+            // screen). The container that comes next is another one, with its own namespace, so
+            // nothing in it is taken for the shapes still fading.
+            if shown != .hidden {
+                ChromeShapes(shown: shown, top: top, bar: bar)
+                    .frame(maxWidth: Self.maximumWidth)
+                    .id(appearances)
+                    .transition(.opacity)
             }
-            .frame(maxWidth: Self.maximumWidth)
-            .frame(height: ActionDock.height)
         }
+        .frame(height: ActionDock.height)
         .padding(.horizontal, 12)
         .padding(.leading, leadingInset)
         // 26 pt above the screen's edge where there is a home indicator; 8 pt above the edge
         // where the bottom safe area is zero.
         .padding(.bottom, bottomSafeArea > 0 ? -8 : 8)
-        .environment(\.chromeNamespace, glass)
         // iOS 26's keyboard is translucent: chrome left under it shows through below the keys.
-        .opacity(isKeyboardUp ? 0 : 1)
-        .allowsHitTesting(shown != .hidden && !isKeyboardUp)
+        .opacity(isKeyboardUp || isCovered ? 0 : 1)
+        .animation(.smooth(duration: 0.3), value: isCovered)
+        .allowsHitTesting(shown != .hidden && !isKeyboardUp && !isCovered)
+        .accessibilityHidden(isCovered)
     }
 
     // MARK: Keyboard
@@ -146,6 +153,38 @@ struct BottomChrome<Content: View, Bar: View>: View {
         for await _ in hides.map({ _ in true }) {
             isKeyboardUp = false
         }
+    }
+}
+
+nonisolated private enum ChromeShown: Equatable {
+    case bar, dock, hidden
+}
+
+/// The bar or the top screen's dock, in one glass container whose shapes morph into each other.
+private struct ChromeShapes<Bar: View>: View {
+    let shown: ChromeShown
+    let top: ChromeEntry?
+    let bar: (BarControl?, @escaping (BarAction) -> Void) -> Bar
+
+    @Namespace private var glass
+
+    var body: some View {
+        GlassGroup(spacing: ActionDock.spacing) {
+            ZStack {
+                switch shown {
+                case .bar:
+                    bar(top?.bar) { [actions = top?.barActions] in actions?.perform($0) }
+                case .dock:
+                    if let dock = top?.dock {
+                        ActionDock(content: dock) { [actions = top?.dockActions] in actions?.perform($0) }
+                    }
+                case .hidden:
+                    EmptyView()
+                }
+            }
+            .frame(height: ActionDock.height)
+        }
+        .environment(\.chromeNamespace, glass)
     }
 }
 

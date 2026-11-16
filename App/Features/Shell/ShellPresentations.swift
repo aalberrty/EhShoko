@@ -121,6 +121,10 @@ struct ShellPresentations: ViewModifier {
 struct SettingsSheet: View {
     let router: AppRouter
 
+    /// The look the sheet's screens were built in.
+    @State private var builtLook: Look?
+    @Environment(\.look) private var look
+
     var body: some View {
         RoutedStack(router: router.settings) {
             SettingsScreen()
@@ -131,6 +135,19 @@ struct SettingsSheet: View {
                 }
         }
         .pushesGalleries(on: router.settings)
+        // A list's rows keep the separator colour they were first drawn with, so after a
+        // change of look the screens are built again, on the same path. Not in the update
+        // that changed it: what changed it (a preset tile, the wizard's Apply) still reacts
+        // to its own change with a haptic and, for the wizard, by leaving.
+        .id(builtLook ?? look)
+        .task(id: look) {
+            guard let builtLook, builtLook != look else {
+                builtLook = look
+                return
+            }
+            try? await Task.sleep(for: .seconds(0.8))
+            if !Task.isCancelled { self.builtLook = look }
+        }
     }
 }
 

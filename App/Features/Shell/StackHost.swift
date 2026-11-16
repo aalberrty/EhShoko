@@ -9,12 +9,14 @@ import SwiftUI
 struct StackHost<Root: View, Bar: View>: View {
     let router: StackRouter
     let hasBar: Bool
+    /// Something is drawn over the stack: the command bar's search surface.
+    var isCovered = false
     @ViewBuilder var root: Root
     @ViewBuilder var bar: (BarControl?, @escaping (BarAction) -> Void) -> Bar
 
     var body: some View {
         BottomChrome(
-            router: router, hasBar: hasBar,
+            router: router, hasBar: hasBar, isCovered: isCovered,
             content: { RoutedStack(router: router) { root } },
             bar: bar
         )
@@ -40,6 +42,8 @@ extension StackHost where Bar == EmptyView {
 struct HomeStackHost<Bar: View>: View {
     let router: StackRouter
     let hasBar: Bool
+    /// Something is drawn over the stack: the command bar's search surface.
+    var isCovered = false
     @ViewBuilder var bar: (BarControl?, @escaping (BarAction) -> Void) -> Bar
 
     @Environment(SettingsStore.self) private var settings
@@ -47,10 +51,10 @@ struct HomeStackHost<Bar: View>: View {
 
     var body: some View {
         if StartStructure.hasLeadingColumn(settings), sizeClass == .regular {
-            LeadingColumnHost(router: router, hasBar: hasBar, bar: bar)
+            LeadingColumnHost(router: router, hasBar: hasBar, isCovered: isCovered, bar: bar)
         } else {
             StackHost(
-                router: router, hasBar: hasBar,
+                router: router, hasBar: hasBar, isCovered: isCovered,
                 root: { StartScreen().tabsAccountButton() },
                 bar: bar
             )
@@ -69,26 +73,32 @@ extension HomeStackHost where Bar == EmptyView {
 private struct LeadingColumnHost<Bar: View>: View {
     let router: StackRouter
     let hasBar: Bool
+    let isCovered: Bool
     let bar: (BarControl?, @escaping (BarAction) -> Void) -> Bar
 
     @State private var visibility = NavigationSplitViewVisibility.all
+    /// The split view's width and its list column's, which says where the list starts.
+    @State private var widths = ColumnWidths()
     @Environment(\.chrome) private var chrome
-
-    /// The split view keeps reporting `.all` while it is collapsed; this host exists only on
-    /// regular width, where the column is beside the list whenever it is visible.
-    private var columnIsBeside: Bool {
-        visibility == .all || visibility == .doubleColumn
-    }
 
     var body: some View {
         BottomChrome(
             router: router, hasBar: hasBar,
-            leadingInset: columnIsBeside ? StartStructure.leadingColumnWidth : 0,
+            leadingInset: widths.columnInset,
+            isCovered: isCovered || indexIsOverList,
             content: { columns },
             bar: bar
         )
         .opensGalleries(on: router)
         .environment(\.chrome, columnChrome(isLeadingColumn: false))
+    }
+
+    /// The Index is shown but the list did not make room for it: it lies over the list (in
+    /// portrait beside a side pane, and on iOS 18 in portrait), and the list's chrome would
+    /// show through the column's glass. The split view keeps reporting `.all` while it is
+    /// collapsed, which this host never is: it exists only on regular width.
+    private var indexIsOverList: Bool {
+        (visibility == .all || visibility == .doubleColumn) && widths.columnInset == 0
     }
 
     private var columns: some View {
@@ -106,12 +116,31 @@ private struct LeadingColumnHost<Bar: View>: View {
             PlaceRootedStack(router: router) {
                 GalleryListScreen(context: .place(.frontpage))
             }
+            .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { widths.list = $0 }
         }
+        .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { widths.split = $0 }
     }
 
     /// The tab bar's accessory is off while the column shows, so the column keeps Continue.
     private func columnChrome(isLeadingColumn: Bool) -> ChromeContext {
         ChromeContext(bar: chrome.bar, continueIsInChrome: false, isLeadingColumn: isLeadingColumn)
+    }
+}
+
+/// Where the list column of Ledger's split view starts, taken from the widths rather than from
+/// the column's visibility, which says `.all` both when the Index is beside the list and when
+/// it lies over it.
+nonisolated private struct ColumnWidths: Equatable {
+    var split: CGFloat = 0
+    var list: CGFloat = 0
+
+    /// How far the list column starts from the split view's leading edge: the Index column's
+    /// width while it is beside the list, zero while it is hidden or over the list.
+    var columnInset: CGFloat {
+        guard list > 0 else { return 0 }
+        let inset = split - list
+        // The two are measured in separate layouts and may differ by a fraction.
+        return inset > 1 ? inset : 0
     }
 }
 

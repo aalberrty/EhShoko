@@ -40,7 +40,8 @@ extension View {
 
     /// Lets this glass shape morph into or out of another with the same `id` in `namespace`,
     /// inside one `GlassGroup` (`glassEffectID`). On iOS 18 the material shapes are matched
-    /// with `matchedGeometryEffect` and cross-fade.
+    /// with `matchedGeometryEffect` and cross-fade. With Reduce Motion the shapes do not
+    /// travel: each fades where it is.
     func glassMorphID(_ id: some Hashable & Sendable, in namespace: Namespace.ID) -> some View {
         modifier(GlassMorph(id: id, namespace: namespace))
     }
@@ -116,10 +117,21 @@ private struct GlassButtonStyle: ViewModifier {
 private struct GlassMorph<ID: Hashable & Sendable>: ViewModifier {
     let id: ID
     let namespace: Namespace.ID
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     func body(content: Content) -> some View {
         if #available(iOS 26, *) {
-            content.glassEffectID(id, in: namespace)
+            // The container's morph moves and stretches the glass whatever the setting says;
+            // materialising makes each shape appear or dissolve in place instead.
+            if reduceMotion {
+                content
+                    .glassEffectID(id, in: namespace)
+                    .glassEffectTransition(.materialize)
+            } else {
+                content.glassEffectID(id, in: namespace)
+            }
+        } else if reduceMotion {
+            content.transition(.opacity)
         } else {
             content
                 .matchedGeometryEffect(id: id, in: namespace)
