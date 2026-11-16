@@ -37,6 +37,10 @@ struct ActionDock: View {
             trailing
         }
         .frame(height: Self.height)
+        // The command bar's rule, for the shapes it morphs into: the dock keeps its height, its
+        // text and symbols stop growing at the largest standard size, and a long press shows
+        // any button in the large content viewer.
+        .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
         .accessibilityElement(children: .contain)
     }
 
@@ -62,6 +66,7 @@ struct ActionDock: View {
             .chromeShape(.trailing, in: .circle)
             .accessibilityLabel(title)
             .walkIdentifier("dock.menu")
+            .accessibilityShowsLargeContentViewer { Label(title, systemImage: systemImage) }
         case nil:
             EmptyView()
         }
@@ -147,6 +152,9 @@ private struct DockRoundButton: View {
             .disabled(!item.isEnabled)
             .chromeShape(slot, in: .circle)
             .accessibilityLabel(item.title)
+            .accessibilityShowsLargeContentViewer {
+                Label(item.title, systemImage: item.systemImage ?? "circle")
+            }
     }
 
     @ViewBuilder
@@ -215,6 +223,9 @@ private struct DockPill: View {
             .tint(item.isDimmed ? tint.opacity(Self.dimmedTint) : tint)
             .accessibilityLabel([item.title, item.spokenDetail ?? item.detail].compactMap(\.self).joined(separator: ", "))
             .walkIdentifier("dock.pill")
+            .accessibilityShowsLargeContentViewer {
+                Text([item.title, item.detail].compactMap(\.self).joined(separator: " "))
+            }
             .disabled(!item.isEnabled)
             .chromeMorph(.centre)
     }
