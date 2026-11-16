@@ -144,7 +144,10 @@ struct BottomChrome<Content: View, Bar: View>: View {
         .opacity(isKeyboardUp || isHidden ? 0 : 1)
         .animation(.smooth(duration: 0.3), value: isHidden)
         .allowsHitTesting(shown != .hidden && !isKeyboardUp && !isHidden)
-        .accessibilityHidden(isHidden)
+        // With nothing shown (under `tabs`, on a screen without a dock) the empty frame is
+        // still an element, 24 × 44 at the bottom centre, which the accessibility audit
+        // reported as having no description.
+        .accessibilityHidden(isHidden || shown == .hidden)
     }
 
     // MARK: Keyboard
