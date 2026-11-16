@@ -48,12 +48,10 @@
 // MARK: TabItem
 "tab_item.title.home" = "主頁";
 "tab_item.title.favorites" = "收藏";
-"tab_item.title.search" = "搜尋";
 "tab_item.title.setting" = "設定";
 
 // MARK: ToolbarItem
 "toolbar_item.button.filters" = "過濾";
-"toolbar_item.button.jump_page" = "前往頁面";
 "toolbar_item.button.quick_search" = "快速搜尋";
 
 // MARK: JumpPage
@@ -113,13 +111,7 @@
 
 // MARK: HomeView
 "home_view.title.home" = "主頁";
-"home_view.section.title.frontpage" = "最新";
-"home_view.section.title.toplists" = "排行榜";
-"home_view.section.title.other" = "更多";
 // HomeMiscGridType
-"enum.home_misc_grid_type.title.popular" = "熱門";
-"enum.home_misc_grid_type.title.watched" = "訂閱";
-"enum.home_misc_grid_type.title.history" = "瀏覽記錄";
 
 // MARK: FrontpageView
 "frontpage_view.title.frontpage" = "最新";
@@ -137,19 +129,15 @@
 "history_view.title.history" = "瀏覽記錄";
 
 // MARK: FavoritesView
-"favorites_view.title.favorites" = "收藏";
 // FavoriteCategory
 "struct.user.favorite_category.default" = "收藏夾 %@";
-"struct.user.favorite_category.all" = "全部";
 
 // MARK: SearchView
 "search_view.title.search" = "搜尋";
-"search_view.section.title.recently_searched" = "最近搜尋";
 "search_view.section.title.recently_seen" = "最近瀏覽";
 "search_view.section.title.quick_search" = "快速搜尋";
 // Searchable
 "searchable.prompt.filter" = "依標題過濾";
-"searchable.title.matches_count" = "%d 個相符項目";
 
 // MARK: QuickSearchView
 "quick_search_view.title.quick_search" = "快速搜尋";
@@ -162,15 +150,12 @@
 // MARK: SettingView
 "setting_view.title.setting" = "設定";
 // SettingStateRoute
-"enum.setting_state_route.value.account" = "帳户";
 "enum.setting_state_route.value.general" = "一般";
-"enum.setting_state_route.value.appearance" = "外觀";
 "enum.setting_state_route.value.reading" = "閱讀";
 "enum.setting_state_route.value.laboratory" = "實驗室";
 "enum.setting_state_route.value.about" = "關於 EhShoko";
 
 // MARK: AccountSettingView
-"account_setting_view.title.account" = "帳户";
 "account_setting_view.title.shows_new_dawn_greeting" = "顯示每日獎勵";
 "account_setting_view.button.login" = "登入";
 "account_setting_view.button.logout" = "登出";
@@ -216,17 +201,12 @@
 "logs_view.title.latest" = "目前";
 
 // MARK: AppearanceSettingView
-"appearance_setting_view.title.appearance" = "外觀";
 "appearance_setting_view.title.theme" = "主題";
-"appearance_setting_view.title.tint_color" = "強調色";
-"appearance_setting_view.title.display_mode" = "版面配置";
 "appearance_setting_view.title.shows_tags_in_list" = "列表中顯示標籤";
 "appearance_setting_view.title.maximum_number_of_tags" = "顯示的標籤數";
 "appearance_setting_view.title.displays_japanese_title" = "優先顯示日文標題";
 "appearance_setting_view.button.app_icon" = "App 圖示";
 "appearance_setting_view.menu.title.infite" = "不限";
-"appearance_setting_view.section.title.list" = "列表";
-"appearance_setting_view.section.title.gallery" = "畫廊";
 // PreferredColorScheme
 "enum.preferred_color_scheme.value.automatic" = "自動";
 "enum.preferred_color_scheme.value.light" = "淺色";
@@ -238,8 +218,6 @@
 "enum.app_icon_type.value.stand_with_ukraine_2022" = "聲援烏克蘭（2022）";
 "enum.app_icon_type.value.not_my_president" = "NOT MY PRESIDENT";
 // ListDisplayMode
-"enum.list_display_mode.value.detail" = "詳細";
-"enum.list_display_mode.value.thumbnail" = "封面";
 
 // MARK: AppIconView
 "app_icon_view.title.app_icon" = "App 圖示";
@@ -264,34 +242,17 @@
 
 // MARK: AboutView
 "about_view.title.ehShoko" = "EhShoko";
-"about_view.button.website" = "網站";
-"about_view.button.altStore_source" = "AltStore 來源";
 "about_view.title.version" = "版本";
 "about_view.section.title.special_thanks" = "鳴謝";
-"about_view.section.title.code_level_contributors" = "程式貢獻者";
-"about_view.section.title.translation_contributors" = "譯者";
 "about_view.section.title.acknowledgements" = "開源軟件";
 
 // MARK: DetailView
-"detail_view.button.read" = "閱讀";
-"detail_view.button.post_comment" = "撰寫留言";
-"detail_view.toolbar_item.button.archives" = "存檔";
-"detail_view.toolbar_item.button.torrents" = "種子";
 "detail_view.toolbar_item.button.share" = "分享";
 "detail_view.context_menu.button.detail" = "標籤詳細資訊";
 "detail_view.context_menu.button.withdraw_vote" = "撤回投票";
 "detail_view.context_menu.button.vote_up" = "投贊成票";
 "detail_view.context_menu.button.vote_down" = "投反對票";
-"detail_view.description_section.title.favorited" = "收藏數";
-"detail_view.description_section.title.language" = "語言";
-"detail_view.description_section.title.ratings" = "%@ 人評分";
-"detail_view.description_section.title.page_count" = "篇幅";
-"detail_view.description_section.title.file_size" = "大小";
-"detail_view.description_section.description.favorited" = "次";
-"detail_view.description_section.description.page_count" = "頁";
 "detail_view.action_section.button.give_a_rating" = "評分";
-"detail_view.action_section.button.similar_gallery" = "相似畫廊";
-"detail_view.section.title.previews" = "預覽";
 "detail_view.section.title.comments" = "留言";
 
 // MARK: ArchivesView
@@ -357,7 +318,6 @@
 "reading_view.context_menu.button.save" = "儲存到「相片」";
 "reading_view.context_menu.button.save_original" = "儲存原圖";
 "reading_view.context_menu.button.share" = "分享";
-"reading_view.toolbar_item.title.auto_play" = "自動播放";
 "reading_view.toolbar_item.title.dual_page_mode" = "雙頁並排";
 "reading_view.toolbar_item.title.except_the_cover" = "封面單獨顯示";
 "reading_view.toolbar_item.button.retry_all_failed_images" = "重試失敗的頁面";
