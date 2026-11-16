@@ -117,8 +117,6 @@ struct Choices: Equatable, Sendable {
             for part in Part.allCases { arguments += [part.settingArgument, self[part]] }
             if let density { arguments += ["-settings.wallDensity", density.rawValue] }
             arguments += ["-settings.showsTagsInList", showsTags ? "<true/>" : "<false/>"]
-            // The offer would cover the first screen of every walk.
-            arguments += ["-settings.experienceOfferShown", "<true/>"]
         }
         if hidesLedgerCovers { arguments += ["-settings.ledgerShowsCovers", "<false/>"] }
         return arguments

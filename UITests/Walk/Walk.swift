@@ -25,7 +25,7 @@ struct Walk: Sendable {
 /// |---|---|
 /// | `WALKS` | Which walks: set names (`presets`, `swaps`, `mixes`, `device`, `all`) and walk ids, comma-separated. Default `presets`. |
 /// | `WALK_FIXTURE` | `offline` (default): the part harness's whole shell, its seeded database and offline client. `signedIn`: the same with the harness's signed-in fixture, once it exists (`WALK_FIXTURE_ARGS` says which arguments turn it on). `live`: the real app on its own data and the network. |
-/// | `WALK_FIXTURE_ARGS` | Launch arguments that turn the signed-in fixture on, space-separated. Default `-HarnessAccount signedIn`. |
+/// | `WALK_FIXTURE_ARGS` | Launch arguments that turn the signed-in fixture on, space-separated. Default `-HarnessSignedIn YES -HarnessRich YES` (signed in with ten named folders, and the first gallery's fuller stored page; `PartHarnessAccount`, `PartHarnessRichPage`). |
 /// | `WALK_EXTRA_ARGS` | More launch arguments for every launch, space-separated. |
 /// | `WALK_ATTACH` | `YES`: the first launch of a walk activates the app that is already running (started by Instruments) instead of launching it. |
 /// | `WALK_PATIENCE` | Seconds to wait for an element (default 20); raise it on a loaded Mac. |
@@ -57,7 +57,7 @@ struct WalkEnvironment: Sendable {
             .map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty }
         fixture = environment["WALK_FIXTURE"].flatMap(Fixture.init(rawValue:)) ?? .offline
         let fixtureArguments = words("WALK_FIXTURE_ARGS")
-        self.fixtureArguments = fixtureArguments.isEmpty ? ["-HarnessAccount", "signedIn"] : fixtureArguments
+        self.fixtureArguments = fixtureArguments.isEmpty ? ["-HarnessSignedIn", "YES", "-HarnessRich", "YES"] : fixtureArguments
         extraArguments = words("WALK_EXTRA_ARGS")
         attachesToRunningApp = environment["WALK_ATTACH"] == "YES"
         patience = environment["WALK_PATIENCE"].flatMap(Double.init) ?? Step.patience
@@ -68,9 +68,13 @@ struct WalkEnvironment: Sendable {
 
     var isSignedIn: Bool { fixture == .signedIn }
 
-    /// What every launch passes, whatever the walk: English labels, no tips, and the fixture.
-    var baseArguments: [String] {
+    /// What every launch passes, whatever the walk: English labels, no tips, the offer after
+    /// install marked as shown (only the offer's own walk sees it), and the fixture.
+    func baseArguments(showsOffer: Bool = false) -> [String] {
         var arguments = ["-AppleLanguages", "(en)", "-AppleLocale", "en_US", "-Tips", "hide"]
+        if !showsOffer {
+            arguments += ["-settings.experienceOfferShown", "<true/>"]
+        }
         switch fixture {
         case .offline:
             arguments += ["-Harness", "part", "-HarnessPart", "shell", "-HarnessPanel", "NO"]

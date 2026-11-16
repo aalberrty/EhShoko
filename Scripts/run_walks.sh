@@ -21,9 +21,12 @@
 #   --team <TEAMID>       Device signing with this (personal) team: the app becomes
 #                         app.ehshoko.<TEAMID> and the runner app.ehshoko.<TEAMID>.uitests.
 #   --fixture <name>      offline (default): the part harness's whole shell, its seeded database
-#                         and offline client. signedIn: the harness's signed-in fixture (with
-#                         --fixture-args). live: the real app, its own data and the network.
-#   --fixture-args "<a>"  The launch arguments that turn the signed-in fixture on.
+#                         and offline client. signedIn: the same, signed in with named folders
+#                         and the first gallery's fuller page (-HarnessSignedIn YES -HarnessRich
+#                         YES). live: the real app, its own data and the network.
+#   --fixture-args "<a>"  Other launch arguments for the signed-in fixture (for example
+#                         "-HarnessSignedIn YES -HarnessNetwork YES" to load lists through the
+#                         harness's recording client).
 #   --app-args "<a>"      More launch arguments for every launch.
 #   --patience <s>        Seconds to wait for an element (default 20); raise it on a loaded Mac.
 #   --dumps               Attach the accessibility tree at every screenshot (for writing walks).

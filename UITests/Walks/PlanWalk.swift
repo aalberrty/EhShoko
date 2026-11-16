@@ -18,7 +18,7 @@ struct PlanWalk {
     var walk: Walk {
         Walk(
             id: id, title: "\(title): \(choices.summary)",
-            launch: environment.baseArguments + choices.arguments(for: environment.fixture) + Screens.searchFixtureArguments,
+            launch: environment.baseArguments() + choices.arguments(for: environment.fixture) + Screens.searchFixtureArguments,
             steps: steps
         )
     }

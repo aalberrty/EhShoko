@@ -216,7 +216,11 @@ struct Screens {
         case .command: choosePlace("Favorites")
         }
         if environment.isSignedIn {
-            return open + [.pause(seconds: 2), .screenshot("library")]
+            // The fixture's first named folder (`PartHarnessAccount`).
+            return open + [
+                .pause(seconds: 2), .screenshot("library"),
+                .optional([.tap(Target(matches: [.labelPrefix("To Read")])), .pause(seconds: 2), .screenshot("library-folder")]),
+            ]
         }
         // Signed out the library says so, unless the harness shows its fixture rows there.
         return open + [

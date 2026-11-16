@@ -10,7 +10,7 @@ enum DeviceWalks {
 
     static func walk(id: String, in environment: WalkEnvironment) -> Walk? {
         let shelf = Choices(preset: .shelf)
-        let launch = environment.baseArguments + shelf.arguments(for: environment.fixture)
+        let launch = environment.baseArguments() + shelf.arguments(for: environment.fixture)
         let screens = Screens(choices: shelf, environment: environment)
         switch id {
         case "device-options":
@@ -173,7 +173,7 @@ enum DeviceWalks {
         var live = environment
         live.fixture = .live
         let offerTitle = Target.label("Choose your experience")
-        return Walk(id: id, title: "The offer after install", launch: live.baseArguments, steps: [
+        return Walk(id: id, title: "The offer after install", launch: live.baseArguments(showsOffer: true), steps: [
             .launch(extra: []), .wait(offerTitle, timeout: 30), .screenshot("offer"),
             .tap(Target.button("Not now")), .waitGone(offerTitle, timeout: 10), .screenshot("offer-dismissed"),
             .terminate, .launch(extra: []), .pause(seconds: 6),
