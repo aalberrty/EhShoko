@@ -147,7 +147,7 @@ struct BalloonFinder: Sendable {
 
     /// Where the fill may go: light pixels near the background's colour that are not walls
     /// and, with a mask, not far outside it.
-    private func passablePlane(scene: BlockScene, hint: Balloon?) -> [UInt8] {
+    func passablePlane(scene: BlockScene, hint: Balloon?) -> [UInt8] {
         let window = scene.window, width = window.width, height = window.height
         let dark = scene.luma.map { $0 < UInt8(darkLuma) ? UInt8(1) : 0 }
         let wall = Morphology.dilateSquare(dark, width: width, height: height, radius: 2)
@@ -167,7 +167,7 @@ struct BalloonFinder: Sendable {
     /// The connected passable area that holds most of the background pixels in and around the
     /// text's box. Voting keeps out a glyph's counter (the inside of 口) and the paper beyond
     /// a corner of the box that pokes out of a round balloon.
-    private func dominantFill(passable: [UInt8], scene: BlockScene) -> [UInt8]? {
+    func dominantFill(passable: [UInt8], scene: BlockScene) -> [UInt8]? {
         let window = scene.window, width = window.width, height = window.height
         let text = scene.textRect
         let pad = max(4, min(text.width, text.height) / 6)
@@ -216,7 +216,7 @@ struct BalloonFinder: Sendable {
         return owner.map { $0 == chosen ? 1 : 0 }
     }
 
-    private func touchesOpenEdge(_ fill: [UInt8], window: PixelWindow) -> Bool {
+    func touchesOpenEdge(_ fill: [UInt8], window: PixelWindow) -> Bool {
         let width = window.width, height = window.height
         if !window.touchesPageEdge(top: true) {
             for x in 0..<width where fill[x] != 0 { return true }
@@ -233,7 +233,7 @@ struct BalloonFinder: Sendable {
         return false
     }
 
-    private func coverage(of rect: PixelRect, by plane: [UInt8], window: PixelWindow) -> Double {
+    func coverage(of rect: PixelRect, by plane: [UInt8], window: PixelWindow) -> Double {
         let local = window.local(rect)
         var inside = 0, total = 0
         for y in stride(from: local.y0, to: local.y1, by: 2) {
@@ -249,7 +249,7 @@ struct BalloonFinder: Sendable {
     /// within a few pixels. A light area of artwork that only looks like a balloon has long
     /// stretches of edge with nothing drawn along them. The page's edge counts for half the
     /// outline at most: a balloon may be cut by it, but blank paper is no balloon.
-    private func outlineScore(filled: [UInt8], scene: BlockScene, rim: Int) -> Double {
+    func outlineScore(filled: [UInt8], scene: BlockScene, rim: Int) -> Double {
         let window = scene.window, width = window.width, height = window.height
         var drawn = 0, atPageEdge = 0, total = 0
         let steps = [(1, 0), (-1, 0), (0, 1), (0, -1)]
