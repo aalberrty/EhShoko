@@ -78,6 +78,7 @@ struct ShelfListFooterRow: View {
                 Color.clear
             case .loading:
                 ProgressView()
+                    .accessibilityLabel(L10n.Localizable.LoadingView.Title.loading)
             case .failed:
                 ListLoadMoreFailedRow(retry: retry)
             case .end:
