@@ -17,6 +17,8 @@ struct ShelfHomeView: View {
     @Environment(AppRouter.self) private var appRouter
     @Environment(\.chrome) private var chrome
     @Environment(\.openGallery) private var openGallery
+    @Environment(\.showLibraryHistory) private var showLibraryHistory
+    @Environment(\.openContinueReader) private var openContinueReader
 
     /// The header's identity in the list, for scrolling back to the top.
     private static let top = "ShelfHomeView.top"
@@ -33,8 +35,7 @@ struct ShelfHomeView: View {
                 withAnimation { proxy.scrollTo(Self.top, anchor: .top) }
             }
         }
-        // Inside the list, its own refresh is the one that runs; this one reaches Popular
-        // when the list's wrapper also runs the refresh its surroundings declare.
+        // The list's wrapper runs this with the list's own refresh: Popular and the Front Page.
         .refreshable { await popular.refresh() }
         // The header draws the title; the bar keeps it for Back and the app switcher.
         .navigationTitle(L10n.Localizable.HomeView.Title.home)
@@ -49,9 +50,8 @@ struct ShelfHomeView: View {
 
     private var actions: ShelfHomeActions {
         ShelfHomeActions(
-            openReader: { item in
-                appRouter.reading = ReadingRequest(gallery: item.gallery, page: item.page)
-            },
+            // From the card, which the reader zooms out of, under either bar.
+            openReader: { item in openContinueReader(item, from: .card) },
             openHistory: openHistory,
             openGallery: { gallery in openGallery(gallery) },
             showPopular: { stack.push(.galleryList(.popular)) }
@@ -65,9 +65,7 @@ struct ShelfHomeView: View {
         case .command:
             appRouter.go(to: .list(.history), start: .shelf)
         case .tabs:
-            // Until the Library tab's segment can be chosen from outside it, History opens on
-            // this tab's stack.
-            stack.push(.galleryList(.history))
+            if !showLibraryHistory() { stack.push(.galleryList(.history)) }
         }
     }
 }

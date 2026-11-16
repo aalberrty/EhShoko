@@ -60,12 +60,19 @@ public final class FavoritesModel {
         lists[folder]
     }
 
-    /// Asks the server to sort favourites by `order` and reloads. This changes the account's
-    /// own setting, so every other folder's list is out of date and is dropped.
-    public func setSortOrder(_ order: FavoritesSortOrder) {
-        guard order != sortOrder else { return }
-        lists = [category: list]
-        list.reset(to: .favorites(category: category, keyword: submittedKeyword, sortOrder: order))
+    /// Asks the server to sort favourites by `order` and reloads `folder`'s list, the chosen
+    /// folder's when `nil` (a folder pushed from the library sorts its own). This changes the
+    /// account's own setting, so every other folder's list is out of date and is dropped; the
+    /// chosen folder, when it is another, gets a new list, loaded when it is next shown.
+    public func setSortOrder(_ order: FavoritesSortOrder, in folder: Int? = nil) {
+        let folder = folder ?? category
+        let target = list(for: folder)
+        guard order != target.favoritesSortOrder else { return }
+        lists = [folder: target]
+        target.reset(to: .favorites(category: folder, keyword: submittedKeyword, sortOrder: order))
+        if folder != category {
+            list = list(for: category)
+        }
     }
 
     /// Searches the current folder for the field's text. Other folders' lists were loaded with

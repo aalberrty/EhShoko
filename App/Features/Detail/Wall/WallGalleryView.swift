@@ -17,7 +17,7 @@ import SwiftUI
 ///
 /// Close and Share are toolbar items, so the system draws them: Close, a chevron down, stands
 /// where Back would be, because the card is put away downwards (the zoom's own pull). In the
-/// side pane the shell's Close is there instead.
+/// side pane and the gallery sheet the shell's Close is there instead.
 struct WallGalleryView: View {
     let model: GalleryDetailModel
 
@@ -71,10 +71,11 @@ struct WallGalleryView: View {
 
     // MARK: Top bar
 
-    /// The card's own Close: wherever nothing else closes it. The side pane's root has the
-    /// shell's Close, and a page pushed inside the pane keeps the system's Back.
+    /// The card's own Close: wherever nothing else closes it. The side pane's root and the
+    /// gallery sheet's have the shell's Close, and a page pushed inside either keeps the
+    /// system's Back.
     private var showsClose: Bool {
-        !chrome.isSidePane
+        !chrome.isSidePane && !chrome.isSheet
     }
 
     @ToolbarContentBuilder
@@ -118,9 +119,9 @@ struct WallGalleryPanelActions {
     let copy: (String) -> Void
 }
 
-/// The card's Close, a chevron down where Back would be. It puts the card away: back to the
-/// list it was opened from, or, as the root of a sheet, the sheet. A modifier of its own, so
-/// that only this follows the presentation's state.
+/// The card's Close, a chevron down where Back would be. It puts the card away, back to the
+/// screen it was pushed from. A modifier of its own, so that only this follows the
+/// presentation's state.
 private struct WallGalleryClose: ViewModifier {
     let isShown: Bool
 

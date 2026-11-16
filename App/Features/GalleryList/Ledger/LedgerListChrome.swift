@@ -25,7 +25,7 @@ struct LedgerListChrome: ViewModifier {
 
     func body(content: Content) -> some View {
         content
-            .modifier(LedgerListTitleItems(input: input, ownFolder: ownFolder, isShown: !input.context.embedsInStart))
+            .modifier(LedgerListTitleItems(input: input, ownFolder: ownFolder, isShown: input.context.drawsHeadingLine))
             .toolbar {
                 ToolbarItemGroup(placement: .topBarTrailing) {
                     Button { showsCovers.toggle() } label: {

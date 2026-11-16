@@ -23,8 +23,8 @@ struct RouteDestination: View {
             )
         case .listSearch(let scope, let keyword):
             GalleryListScreen(context: ListContext(kind: .scopedSearch(scope, keyword: keyword), title: keyword))
-        case .favoritesFolder(let folder):
-            LibraryFolderScreen(folder: folder)
+        case .favoritesFolder(let route):
+            LibraryFolderScreen(route: route)
         case .detail(let gallery, let intent):
             GalleryPage(gallery: gallery, intent: intent)
                 // From the cover that was tapped, whatever list design drew it. The pane's and

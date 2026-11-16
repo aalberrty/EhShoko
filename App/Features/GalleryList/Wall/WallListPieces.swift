@@ -92,7 +92,7 @@ struct WallListTop: View {
         }
         // Under the list's own top bar the covers keep the wall's margin from it; under a
         // first screen's header they follow it directly.
-        .padding(.top, input.context.embedsInStart ? 0 : WallGridLayout.margin)
+        .padding(.top, input.context.heading == .header ? 0 : WallGridLayout.margin)
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 }

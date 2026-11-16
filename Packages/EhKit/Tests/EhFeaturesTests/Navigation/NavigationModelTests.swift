@@ -100,6 +100,9 @@ import Testing
         router.home.popToRoot()
         router.home.push(.favoritesFolder(3))
         #expect(router.place == .list(.favorites))
+        router.home.popToRoot()
+        router.home.push(.favoritesFolder(3, library: FavoritesModel()))
+        #expect(router.place == .list(.favorites))
 
         // A quick search from the Index is a search, not a place.
         router.home.popToRoot()
@@ -263,6 +266,19 @@ import Testing
         #expect(!Route.search(keyword: "a").hidesBrowseChrome)
         #expect(!Route.typedSearch(keyword: "a").hidesBrowseChrome)
         #expect(!Route.settings(.general).hidesBrowseChrome)
+    }
+
+    /// A folder pushed from a library is another screen than the same folder of another
+    /// library, or of none.
+    @Test func aFoldersRouteIsTheFolderAndTheLibrarysModel() {
+        let library = FavoritesModel()
+        #expect(Route.favoritesFolder(3) == .favoritesFolder(FavoritesFolderRoute(folder: 3)))
+        #expect(Route.favoritesFolder(3, library: library) == .favoritesFolder(3, library: library))
+        #expect(Route.favoritesFolder(3, library: library) != .favoritesFolder(3))
+        #expect(Route.favoritesFolder(3, library: library) != .favoritesFolder(3, library: FavoritesModel()))
+        #expect(Route.favoritesFolder(3, library: library) != .favoritesFolder(4, library: library))
+        #expect(Set<Route>([.favoritesFolder(3, library: library), .favoritesFolder(3, library: library)]).count == 1)
+        #expect(!Route.favoritesFolder(-1, library: library).hidesBrowseChrome)
     }
 
     @Test func theTopScreenAloneDecidesTheBarAtAnyDepth() {

@@ -70,15 +70,15 @@ struct ShelfListChrome: ViewModifier {
     }
 }
 
-/// The list's own title, unless it is embedded in a first screen or the library, which draw
-/// theirs. Large and leading in the bar's own row, as the Library tab's: a large title below
+/// The list's own title, unless the screen around it draws one (a first screen, the Library
+/// tab). Large and leading in the bar's own row, as the Library tab's: a large title below
 /// the bar would sit under the period control's or the find field's scroll edge effect on
 /// iOS 26 and be blurred by it.
 private struct ShelfListTitle: ViewModifier {
     let context: ListContext
 
     func body(content: Content) -> some View {
-        if context.embedsInStart {
+        if !context.showsTitle {
             content
         } else {
             content

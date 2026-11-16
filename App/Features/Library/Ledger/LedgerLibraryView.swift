@@ -8,11 +8,11 @@ import SwiftUI
 /// It is what the Library tab's Favourites segment and the place menu's Favourites show.
 /// Under `tabs` the Library tab draws the title with its switch, so the screen draws none.
 ///
-/// The galleries of a folder are never shown here: each folder is pushed as a list with a
-/// model of its own (`Route.favoritesFolder`). What the screen requests is the folders'
-/// counts, once, when nobody has loaded a favourites page this session. They come with All's
-/// first page, which goes into the shared model's All list, so Wall's piles or Shelf's All,
-/// if the design changes, find it loaded.
+/// The galleries of a folder are never shown here: each folder is pushed as a list, the
+/// folder's list in the shared model (`Route.favoritesFolder(_:library:)`). What the screen
+/// requests is the folders' counts, once, when nobody has loaded a favourites page this
+/// session. They come with All's first page, which goes into the shared model's All list, so
+/// All pushed from here, or Wall's piles or Shelf's All if the design changes, find it loaded.
 struct LedgerLibraryView: View {
     /// `LibraryScreen`'s model, whose All list holds the counts' page.
     let model: FavoritesModel
@@ -38,8 +38,11 @@ struct LedgerLibraryView: View {
         let isSignedIn = accountSession.isLoggedIn
         Group {
             if isSignedIn {
-                LedgerLibraryPage(showsTitle: hasTitle, open: open) {
-                    await counts.refresh()
+                // Weakly: the navigation controller keeps the page's refresh control, and with
+                // it this action, after the page has gone (a change of library design), and the
+                // action would keep the counts and the library's model alive with it.
+                LedgerLibraryPage(showsTitle: hasTitle, open: open) { [weak counts = counts] in
+                    await counts?.refresh()
                 }
             } else {
                 ListSignInState(kind: .favorites)
@@ -65,8 +68,9 @@ struct LedgerLibraryView: View {
         chrome.bar != .tabs
     }
 
-    /// A folder's list, or every folder's (`-1`), over the library.
+    /// A folder's list, or every folder's (`-1`), over the library, in the library's model.
     private func open(_ folder: Int) {
-        stack.push(.favoritesFolder(folder))
+        _ = model.list(for: folder)
+        stack.push(.favoritesFolder(folder, library: model))
     }
 }
