@@ -292,12 +292,19 @@ struct WallGallerySectionHeading: View {
     var action: () -> Void = {}
 
     @Environment(\.look) private var look
+    @Environment(\.dynamicTypeSize) private var typeSize
 
     var body: some View {
-        HStack(alignment: .firstTextBaseline) {
+        // At the accessibility sizes the link goes under the title, which side by side would
+        // be broken into syllables.
+        let stacks = typeSize.isAccessibilitySize
+        let layout = stacks
+            ? AnyLayout(VStackLayout(alignment: .leading, spacing: Tokens.Spacing.xSmall))
+            : AnyLayout(HStackLayout(alignment: .firstTextBaseline))
+        layout {
             Text(title)
                 .lookSectionHeader()
-            Spacer(minLength: Tokens.Spacing.small)
+            if !stacks { Spacer(minLength: Tokens.Spacing.small) }
             if let link {
                 Button(action: action) {
                     HStack(spacing: 2) {

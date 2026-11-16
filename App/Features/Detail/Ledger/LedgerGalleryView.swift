@@ -208,16 +208,22 @@ private struct LedgerGalleryBanner: View {
     let retry: () -> Void
 
     @Environment(\.look) private var look
+    @Environment(\.dynamicTypeSize) private var typeSize
 
     var body: some View {
-        HStack(spacing: 10) {
+        // At the accessibility sizes Retry goes under the text, which beside it would be
+        // squeezed to a word a line.
+        let layout = typeSize.isAccessibilitySize
+            ? AnyLayout(VStackLayout(alignment: .leading, spacing: 6))
+            : AnyLayout(HStackLayout(spacing: 10))
+        layout {
             Image(systemName: error == .networkingFailed ? "wifi.exclamationmark" : "exclamationmark.triangle")
                 .foregroundStyle(look.secondaryLabel)
                 .accessibilityHidden(true)
             Text(error == .networkingFailed ? L10n.Localizable.Gallery.offline : error.alertText)
                 .font(.footnote)
                 .foregroundStyle(look.secondaryLabel)
-                .lineLimit(2)
+                .lineLimit(typeSize.isAccessibilitySize ? nil : 2)
                 .frame(maxWidth: .infinity, alignment: .leading)
             if error.isRetryable {
                 Button(L10n.Localizable.ErrorView.Button.retry, action: retry)
