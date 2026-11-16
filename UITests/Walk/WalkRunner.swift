@@ -16,6 +16,8 @@ final class WalkRunner {
     /// Called after every step; a failure XCTest recorded during the step (a query that
     /// failed, the app that crashed) comes back here and fails the walk.
     var takeIssue: () -> String? = { nil }
+    /// Runtime warnings the app raised during the step, noted in the record.
+    var takeWarnings: () -> [String] = { [] }
     var attach: (XCTAttachment) -> Void = { _ in }
 
     private(set) var record: WalkRecord
@@ -127,6 +129,9 @@ final class WalkRunner {
         defer { path.removeLast() }
         try XCTContext.runActivity(named: currentStep) { _ in
             try act(step)
+            for warning in takeWarnings() {
+                record.notes.append("\(currentStep): runtime warning: \(warning.prefix(300))")
+            }
             if let issue = takeIssue() {
                 throw WalkFailure(step: currentStep, reason: issue)
             }
