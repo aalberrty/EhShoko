@@ -1,6 +1,5 @@
-import Dependencies
-import EhCore
 import EhFeatures
+import EhModels
 import SwiftUI
 
 /// The privacy blur over the whole app and, when the auto-lock expired, the lock control
@@ -13,13 +12,12 @@ struct PrivacyOverlayView: View {
     let lock: AppLockModel
     let snapshot: PrivacySnapshot
     let unlock: () -> Void
-
     // Hosted in its own window above the app (`SceneWindowBridge`), outside the root that puts
-    // the look into the environment, so it reads the look where the root does.
-    @Dependency(\.settings) private var settings
+    // the look into the environment, so the bridge hands it the root's look and accent.
+    let look: Look
+    let accentColor: RGBColor
 
     var body: some View {
-        let look = Look(settings.look)
         ZStack {
             if let view = snapshot.view {
                 // The ground shows at the blurred edges instead of the sharp window below.
@@ -39,7 +37,7 @@ struct PrivacyOverlayView: View {
         }
         .ignoresSafeArea()
         .animation(.default, value: lock.isLocked)
-        .lookEnvironment(look, accent: settings.accentColor)
+        .lookEnvironment(look, accent: accentColor)
     }
 }
 
