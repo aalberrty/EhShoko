@@ -16,11 +16,15 @@ struct Target: CustomStringConvertible, Sendable {
         case labelPrefix(String)
         /// A text or search field whose label or placeholder starts with this text.
         case field(String)
+        /// The accessibility value is exactly this (a collapsed tab bar's "Collapsed").
+        case value(String)
     }
 
     /// Where to look: the whole app, or only inside one kind of bar.
     enum Scope: Sendable {
         case app, tabBar, navigationBar, toolbar, sheet, alert
+        /// Inside the element with this label (the command bar is "Navigation").
+        case container(String)
     }
 
     var matches: [Match]
@@ -78,6 +82,7 @@ struct Target: CustomStringConvertible, Sendable {
             case .labelContains(let text): "…\(text)…"
             case .labelPrefix(let text): "\(text)…"
             case .field(let text): "field \(text)…"
+            case .value(let value): "value “\(value)”"
             }
         }
         return names.joined(separator: " or ")
@@ -100,6 +105,7 @@ struct Target: CustomStringConvertible, Sendable {
         case .toolbar: app.toolbars.firstMatch
         case .sheet: app.sheets.firstMatch
         case .alert: app.alerts.firstMatch
+        case .container(let label): app.descendants(matching: .any).matching(NSPredicate(format: "label == %@", label)).firstMatch
         }
     }
 
@@ -117,6 +123,7 @@ struct Target: CustomStringConvertible, Sendable {
                     format: "(elementType == %d OR elementType == %d) AND (label BEGINSWITH %@ OR placeholderValue BEGINSWITH %@)",
                     XCUIElement.ElementType.textField.rawValue, XCUIElement.ElementType.searchField.rawValue, text, text
                 )
+            case .value(let value): NSPredicate(format: "value == %@", value)
             }
         })
     }

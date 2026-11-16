@@ -82,7 +82,7 @@ enum DeviceWalks {
         steps += [
             .wait(Target.button("Apply")), .screenshot("wizard-summary"), .tap(Target.button("Apply")),
             .pause(seconds: 2), .tapIfPresent(Screens.done), .pause(seconds: 1.5), .screenshot("wizard-applied"),
-            .tap(Screens.tab("Top")), .wait(Screens.galleryInList), .screenshot("wizard-applied-list"),
+            ] + Screens.openTab("Top") + [.wait(Screens.galleryInList), .screenshot("wizard-applied-list"),
         ]
         return steps
     }
@@ -138,7 +138,7 @@ enum DeviceWalks {
         case .shelf:
             return relaunch + [
                 .scroll(.down, screens: 1.5, on: nil), .screenshot("shelf-1-scrolled"),
-                .tap(Screens.tab("Top")), .wait(Screens.galleryInList), .screenshot("shelf-2-tab"),
+                ] + Screens.openTab("Top") + [.wait(Screens.galleryInList), .screenshot("shelf-2-tab"),
                 .tap(Screens.galleryInList), .wait(Screens.readPill), .screenshot("shelf-3-gallery"),
                 .tap(Screens.readPill), .pause(seconds: 3), .tapPoint(x: 0.5, y: 0.45), .pause(seconds: 1),
                 .screenshot("shelf-4-reader"), .tap(Screens.close),

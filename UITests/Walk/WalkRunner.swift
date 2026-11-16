@@ -157,6 +157,9 @@ final class WalkRunner {
             if environment.dumpsTrees { dumpTree(named: name) }
         case .dump(let name):
             dumpTree(named: name)
+        case .ifPresent(let target, let within, let then, let otherwise):
+            let present = target.element(in: app).waitForExistence(timeout: within)
+            for step in present ? then : otherwise { try perform(step) }
         case .group(_, let steps):
             for step in steps { try perform(step) }
         case .optional(let steps):

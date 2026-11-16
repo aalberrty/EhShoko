@@ -88,7 +88,7 @@ struct Screens {
     var openSecondList: [Step] {
         switch choices.bar {
         case .tabs:
-            [.tap(Self.tab("Top")), .wait(Self.galleryInList)]
+            Self.openTab("Top") + [.wait(Self.galleryInList)]
         case .command:
             choosePlace("Toplists") + [.wait(Self.galleryInList)]
         }
@@ -97,14 +97,37 @@ struct Screens {
     /// Opens the command bar's place menu and chooses an entry. On Ledger's Index (a phone's
     /// first screen) there is no menu: the Index's own row is the way.
     func choosePlace(_ title: String) -> [Step] {
-        [
-            .tap(Target(matches: [.label("Home"), .label("Frontpage"), .label("Index"), .label("Toplists"),
-                                  .label("Popular"), .label("Watched"), .label("History"), .label("Favorites")],
-                        type: .button)),
-            .pause(seconds: 1),
-            .dump("place-menu"),
-            .tap(Target(matches: [.label(title)], type: .button).last),
+        let menu = Target(
+            matches: ["Home", "Frontpage", "Index", "Popular", "Watched", "Toplists", "History", "Favorites"].map { .label($0) },
+            type: .button
+        ).in(.container("Navigation"))
+        // Ledger's Index on a phone has no menu: its own rows (and the account button) instead.
+        let fromIndex: [Step] = title == "Settings"
+            ? [.tap(Self.accountButton)]
+            : [.tap(Target(matches: [.label(title), .labelPrefix(title + ",")], type: .button))]
+        return [
+            .ifPresent(menu, within: 3, then: [
+                .tap(menu), .pause(seconds: 1),
+                .tap(Target(matches: [.label(title)], type: .button).last),
+            ], else: fromIndex),
         ]
+    }
+
+    /// A tab, after expanding the tab bar if scrolling collapsed it (iOS 26 on a phone).
+    static func openTab(_ name: String) -> [Step] {
+        [
+            .tapIfPresent(Target(matches: [.value("Collapsed")], type: .button).in(.tabBar), within: 1),
+            .pause(seconds: 0.8),
+            .tap(tab(name)),
+        ]
+    }
+
+    /// Back out of a pushed gallery page, which hides the bars; a gallery in the side pane
+    /// leaves them, and stays. Wall's page has no system back button: `back` swipes.
+    var leaveGallery: [Step] {
+        let search = Target(matches: [.label("Search")], type: .button)
+            .in(choices.bar == .tabs ? .tabBar : .container("Navigation"))
+        return [.ifPresent(search, within: 2, then: [], else: [.back, .pause(seconds: 1)])]
     }
 
     // MARK: The gallery
@@ -155,11 +178,9 @@ struct Screens {
     // MARK: Search
 
     var search: [Step] {
-        // Out of the gallery first: a pushed page hides the bars (in the side pane it stays).
-        let leave: [Step] = [.tapIfPresent(Self.backButton, within: 2), .pause(seconds: 1)]
         let open: [Step] = switch choices.bar {
-        case .tabs: leave + [.tap(Self.tab("Search"))]
-        case .command: leave + [.tap(Target.button("Search"))]
+        case .tabs: leaveGallery + Self.openTab("Search")
+        case .command: leaveGallery + [.tap(Target.button("Search").in(.container("Navigation")))]
         }
         return open + [
             .wait(Self.searchField),
@@ -189,7 +210,7 @@ struct Screens {
 
     var library: [Step] {
         let open: [Step] = switch choices.bar {
-        case .tabs: [.tap(Self.tab("Library"))]
+        case .tabs: Self.openTab("Library")
         case .command: choosePlace("Favorites")
         }
         if environment.isSignedIn {
