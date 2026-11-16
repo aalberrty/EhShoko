@@ -4,8 +4,8 @@ import UIKit
 
 /// A page's preview that is an image of its own rather than a tile of a sprite sheet, decoded
 /// once at the size the site sends it and drawn at whatever size a screen shows it
-/// (`Design/designs/README.md` section 9.3): the gallery page's strip and the grid of all
-/// previews, in any design, draw the same bitmap. It fills the proposed width at the preview
+/// (`Design/designs/README.md` section 9.3): the gallery page's strip, the grid of all
+/// previews and the reader's thumbnail strip, in any design, draw the same bitmap. It fills the proposed width at the preview
 /// aspect and covers that box.
 struct StandalonePreview: View {
     let url: URL

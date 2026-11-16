@@ -86,7 +86,8 @@ struct ReaderThumbnail: View, Equatable {
                 cropRect: CGRect(x: tile.offset, y: 0, width: tile.width, height: tile.height)
             )
         } else if let url {
-            RemoteImage(url: url, width: width, aspectRatio: Tokens.Aspect.preview)
+            // The gallery page's bitmap, decoded once at the site's size; the strip clips it.
+            StandalonePreview(url: url, cornerRadius: 0)
         } else {
             ImagePlaceholder(aspectRatio: Tokens.Aspect.preview, style: isInGallery ? .activity : .plain)
         }
