@@ -22,6 +22,9 @@ final class WalkTests: XCTestCase {
         var pending: String?
         /// Whether XCTest recorded a failure, so the walk's failure is not recorded twice.
         var recordedAny = false
+        /// Runtime warnings XCTest passed on from the app (the Thread Performance Checker's
+        /// priority inversions): kept for the record, they do not stop the step.
+        var warnings: [String] = []
     }
 
     nonisolated override class var defaultTestSuite: XCTestSuite {
@@ -64,6 +67,12 @@ final class WalkTests: XCTestCase {
                 return state.pending
             }
         }
+        runner.takeWarnings = { [unowned self] in
+            issues.withLock { state in
+                defer { state.warnings = [] }
+                return state.warnings
+            }
+        }
         issues.withLock { $0.isWalking = true }
         do {
             try runner.run()
@@ -85,10 +94,21 @@ final class WalkTests: XCTestCase {
 
     /// XCTest's own failures during a walk (for example a tap on an element that went away)
     /// are kept for the step to report, which ends the walk there.
+    /// The app's runtime warnings that XCTest reports as issues of the test (a thread waiting
+    /// on one of lower quality of service): findings about the app, not a step that failed.
+    nonisolated static func isRuntimeWarning(_ description: String) -> Bool {
+        description.contains("Performance Diagnostics") || description.contains("Investigate ways to avoid priority inversions")
+    }
+
     nonisolated override func record(_ issue: XCTIssue) {
         let description = issue.compactDescription
+        let isWarning = Self.isRuntimeWarning(description)
         issues.withLock { state in
             guard state.isWalking else { return }
+            if isWarning {
+                state.warnings.append(description)
+                return
+            }
             state.recordedAny = true
             if state.pending == nil { state.pending = description }
         }

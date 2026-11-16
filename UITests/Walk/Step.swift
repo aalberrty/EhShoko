@@ -26,6 +26,9 @@ indirect enum Step: Sendable {
     /// Scrolls down (up to `screens` times) until the target is on screen: rows of a lazy
     /// list exist only once they are near it.
     case scrollTo(Target, screens: Int)
+    /// Swipes the window in a direction (up to `times` times) until the target is on screen: the
+    /// reader's pages, turned until its closing page shows.
+    case swipeUntil(Target, Direction, times: Int)
     /// Waits until the target exists.
     case wait(Target, timeout: Double)
     /// Waits until the target is gone.
@@ -82,6 +85,7 @@ indirect enum Step: Sendable {
         case .pinch(let scale, let target): "pinch \(scale)" + (target.map { " on \($0)" } ?? "")
         case .type(let text, let target): "type “\(text)”" + (target.map { " into \($0)" } ?? "")
         case .scrollTo(let target, _): "scroll to \(target)"
+        case .swipeUntil(let target, let direction, _): "swipe \(direction.rawValue) until \(target)"
         case .wait(let target, _): "wait for \(target)"
         case .waitGone(let target, _): "wait until \(target) is gone"
         case .expect(let target): "expect \(target)"

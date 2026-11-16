@@ -16,6 +16,8 @@ final class WalkRunner {
     /// Called after every step; a failure XCTest recorded during the step (a query that
     /// failed, the app that crashed) comes back here and fails the walk.
     var takeIssue: () -> String? = { nil }
+    /// Runtime warnings the app raised during the step, noted in the record.
+    var takeWarnings: () -> [String] = { [] }
     var attach: (XCTAttachment) -> Void = { _ in }
 
     private(set) var record: WalkRecord
@@ -127,6 +129,9 @@ final class WalkRunner {
         defer { path.removeLast() }
         try XCTContext.runActivity(named: currentStep) { _ in
             try act(step)
+            for warning in takeWarnings() {
+                record.notes.append("\(currentStep): runtime warning: \(warning.prefix(300))")
+            }
             if let issue = takeIssue() {
                 throw WalkFailure(step: currentStep, reason: issue)
             }
@@ -173,6 +178,8 @@ final class WalkRunner {
             }
         case .scrollTo(let target, let screens):
             try scrollTo(target, screens: screens)
+        case .swipeUntil(let target, let direction, let times):
+            try swipe(direction, until: target, times: times)
         case .wait(let target, let timeout):
             _ = try find(target, timeout: timeout)
         case .waitGone(let target, let timeout):
@@ -300,6 +307,23 @@ final class WalkRunner {
             start.press(forDuration: 0.05, thenDragTo: end, withVelocity: 900, thenHoldForDuration: 0.15)
         }
         throw WalkFailure(step: currentStep, reason: "\(target) was not found after scrolling \(screens) times")
+    }
+
+    private func swipe(_ direction: Step.Direction, until target: Target, times: Int) throws {
+        let element = target.element(in: app)
+        for _ in 0...times {
+            // On screen, not only in the tree: a strip keeps the next page's views below the fold.
+            if element.waitForExistence(timeout: 1.5), app.frame.contains(CGPoint(x: element.frame.midX, y: element.frame.midY)) {
+                return
+            }
+            switch direction {
+            case .up: app.swipeUp()
+            case .down: app.swipeDown()
+            case .left: app.swipeLeft()
+            case .right: app.swipeRight()
+            }
+        }
+        throw WalkFailure(step: currentStep, reason: "\(target) did not appear after \(times) swipes \(direction.rawValue)")
     }
 
     /// The system back button (`BackButton` on iOS 26; on iOS 18 a SwiftUI stack's has no

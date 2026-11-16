@@ -96,7 +96,9 @@ def main():
     for case in test_cases(results.get("testNodes", [])):
         walk = walk_of_test(case["name"])
         record = records.get(walk, {})
-        passed = case.get("result") == "Passed"
+        # XCTest passes a test whose walk stopped early on something it does not count as a
+        # failure; the walk's own record says whether every step was done.
+        passed = case.get("result") == "Passed" and record.get("passed", True)
         if passed:
             outcome = "passed"
         elif record.get("failedStep"):
