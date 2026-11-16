@@ -61,6 +61,9 @@ final class ReaderPageStatusView: UIView {
     override init(frame: CGRect) {
         super.init(frame: frame)
         backgroundColor = .readerBackground
+        // The card has to fit in the page it stands for, which in the vertical strip is as tall
+        // as a page's image: beyond this size its text would push Retry out of the page.
+        maximumContentSizeCategory = .accessibilityMedium
 
         card.layer.cornerRadius = 16
         card.layer.cornerCurve = .continuous
@@ -130,11 +133,6 @@ final class ReaderPageStatusView: UIView {
         var retryAll = UIButton.Configuration.plain()
         retryAll.contentInsets = NSDirectionalEdgeInsets(top: 6, leading: 8, bottom: 6, trailing: 8)
         retryAll.titleLineBreakMode = .byWordWrapping
-        retryAll.titleTextAttributesTransformer = UIConfigurationTextAttributesTransformer { incoming in
-            var outgoing = incoming
-            outgoing.font = UIFont.preferredFont(forTextStyle: .subheadline)
-            return outgoing
-        }
         retryAllButton.configuration = retryAll
         retryAllButton.isHidden = true
         retryAllButton.addAction(UIAction { [weak self] _ in self?.onRetryAllFailed?() }, for: .primaryActionTriggered)
@@ -276,6 +274,13 @@ final class ReaderPageStatusView: UIView {
         retryButton.configuration?.baseForegroundColor = tint
         retryButton.configuration?.baseBackgroundColor = tint
         retryAllButton.configuration?.baseForegroundColor = tint
+        // From the view's traits, so it keeps to the card's largest text size.
+        let retryAllFont = Self.font(.subheadline, traits: traits)
+        retryAllButton.configuration?.titleTextAttributesTransformer = UIConfigurationTextAttributesTransformer { incoming in
+            var outgoing = incoming
+            outgoing.font = retryAllFont
+            return outgoing
+        }
     }
 
     private static func font(

@@ -37,6 +37,9 @@ struct ShelfReaderControls: View {
             .padding(.bottom, frame.panelBottom)
             .offset(y: isShown ? 0 : ShelfReaderMetrics.slide)
         }
+        // The groups keep their size, as the other designs' controls do: their text stops
+        // growing at the largest standard size, and the large content viewer names a button.
+        .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
         // The panel sits as far from the bottom edge as from the sides where the screen has
         // room below the home indicator, so it measures from the edge itself.
         .ignoresSafeArea(.container, edges: .bottom)
