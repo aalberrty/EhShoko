@@ -37,6 +37,8 @@ struct AppShellView: View {
         .animation(.easeOut(duration: 0.25), value: model.launchState == .ready)
         // The one place the look is set: every screen, sheet and cover below inherits it.
         .lookEnvironment(Look(settings.look), accent: settings.accentColor)
+        // And for the colours UIKit resolves itself: a list's separators (`LookTrait`).
+        .windowLook(Look(settings.look))
         .environment(model.router)
         .environment(settings)
         .background {

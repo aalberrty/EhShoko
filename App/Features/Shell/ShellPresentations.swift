@@ -118,12 +118,12 @@ struct ShellPresentations: ViewModifier {
 /// Settings: a sheet with its own stack, opened from the account button, the place menu and
 /// the sign-in prompts (`AppRouter.presentSettings`, `presentSignIn`). Done, the system's
 /// confirm button at the top trailing corner, closes it.
+///
+/// A change of look made here leaves every screen on the path as it is, scrolled where it was:
+/// the separators of its lists follow the look through the window's traits (`LookTrait`), not
+/// by building the screens again.
 struct SettingsSheet: View {
     let router: AppRouter
-
-    /// The look the sheet's screens were built in.
-    @State private var builtLook: Look?
-    @Environment(\.look) private var look
 
     var body: some View {
         RoutedStack(router: router.settings) {
@@ -135,19 +135,6 @@ struct SettingsSheet: View {
                 }
         }
         .pushesGalleries(on: router.settings)
-        // A list's rows keep the separator colour they were first drawn with, so after a
-        // change of look the screens are built again, on the same path. Not in the update
-        // that changed it: what changed it (a preset tile, the wizard's Apply) still reacts
-        // to its own change with a haptic and, for the wizard, by leaving.
-        .id(builtLook ?? look)
-        .task(id: look) {
-            guard let builtLook, builtLook != look else {
-                builtLook = look
-                return
-            }
-            try? await Task.sleep(for: .seconds(0.8))
-            if !Task.isCancelled { self.builtLook = look }
-        }
     }
 }
 
