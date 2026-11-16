@@ -332,11 +332,17 @@ final class WalkRunner {
     private func goBack() throws {
         let bars = app.navigationBars.allElementsBoundByIndex.filter { !$0.frame.isEmpty }
         let identified = app.navigationBars.buttons.matching(identifier: "BackButton").allElementsBoundByIndex
-            .first { !$0.frame.isEmpty && app.frame.intersects($0.frame) }
-        let leading = bars.lazy.compactMap { bar -> XCUIElement? in
+            .filter { !$0.frame.isEmpty && app.frame.intersects($0.frame) }
+        let leading = bars.compactMap { bar -> XCUIElement? in
             bar.buttons.allElementsBoundByIndex.first { $0.frame.minX - bar.frame.minX < 24 && !$0.frame.isEmpty }
-        }.first
-        if let button = identified ?? leading {
+        }
+        // On an iPad several columns have a bar: the screen pushed last is in the trailing one
+        // (the side pane's). A pane's Close is not a way back.
+        let closes = ["Close", "xmark"]
+        let button = (identified + leading)
+            .filter { !closes.contains($0.label) && !closes.contains($0.identifier) }
+            .max { $0.frame.minX < $1.frame.minX }
+        if let button {
             let frame = button.frame
             app.coordinate(withNormalizedOffset: .zero).withOffset(CGVector(dx: frame.midX, dy: frame.midY)).tap()
         } else {

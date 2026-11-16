@@ -21,7 +21,9 @@ public nonisolated enum LeadingColumnVisibility: Equatable, Sendable {
 /// lays it over the list all the same, it is hidden again. A choice the user makes with the
 /// column's button stays as they made it. While a window is resized the two widths pass
 /// through values that belong to no layout, so only an inset as wide as the Index counts as
-/// the Index beside the list.
+/// the Index beside the list; and a list as wide as the split view counts as the Index over it
+/// only once the split view has changed width since the Index was beside the list (a screen
+/// pushed onto the list is laid out once at the split view's width).
 ///
 /// A side pane that is about to open is known before the split view narrows: when the room it
 /// leaves is too small by the same rule, the Index is hidden in the same update that opens the
@@ -38,6 +40,8 @@ public nonisolated struct LeadingColumnLayout: Equatable, Sendable {
     private var isShown = true
     /// The narrowest split view the Index has been beside the list in.
     private var narrowestBeside = CGFloat.infinity
+    /// The split view's width when the Index was last seen beside the list.
+    private var besideSplit: CGFloat?
     /// The split view's width when the host hid the Index for want of room, until it shows it
     /// again or the user changes the column.
     private var hiddenAt: CGFloat?
@@ -118,6 +122,12 @@ public nonisolated struct LeadingColumnLayout: Equatable, Sendable {
         guard list > 0, split > 0, list <= split + 1 else { return nil }
         let inset = split - list > 1 ? split - list : 0
         let wasBeside = isMeasured && isShown && measuredInset > 0
+        // A screen pushed onto the list lays itself out once as wide as the split view before
+        // it takes its place beside the Index: with nothing narrower, that is no layout of the
+        // Index over the list.
+        if wasBeside, inset == 0, let besideSplit, abs(split - besideSplit) <= 1 {
+            return nil
+        }
         let wasReturning = isReturning
         isMeasured = true
         isReturning = false
@@ -128,6 +138,7 @@ public nonisolated struct LeadingColumnLayout: Equatable, Sendable {
         if isShown, inset > 0 {
             if abs(inset - column) <= Self.columnMargins {
                 narrowestBeside = min(narrowestBeside, split)
+                besideSplit = split
             }
         } else if isShown, wasBeside || wasReturning {
             isShown = false

@@ -85,6 +85,16 @@ import Testing
         #expect(!host.layout.isColumnOverList)
     }
 
+    @Test func aScreenPushedOntoTheListAtTheSplitViewsWidthKeepsTheIndex() {
+        var host = besideInPortrait()
+        // Search results pushed onto the list: laid out once as wide as the split view.
+        #expect(host.layOut(split: 1032, list: 1032) == nil)
+        #expect(host.layout.listInset == Self.inset)
+        #expect(!host.layout.isColumnOverList)
+        #expect(host.layOut(split: 1032, list: 1032 - Self.inset) == nil)
+        #expect(host.layout.listInset == Self.inset)
+    }
+
     // MARK: Showing it again
 
     @Test func theIndexComesBackAsWideAsItHasBeenBesideTheList() {
