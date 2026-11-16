@@ -17,7 +17,7 @@ struct ExperienceSection: View {
                 )
             }
             if DesignSetupEntry.isAvailable {
-                NavigationLink(value: Route.settings(.designSetup)) {
+                NavigationLink(value: Route.settings(.designSetup())) {
                     SettingsRowLabel(
                         symbol: "wand.and.stars", title: L10n.Localizable.Settings.Design.setup,
                         description: L10n.Localizable.Settings.Design.Setup.desc
