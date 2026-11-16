@@ -42,9 +42,7 @@ struct ShellPresentations: ViewModifier {
             .onChange(of: router.reading) { _, request in
                 if let request { lastRead = request.gallery }
             }
-            .sheet(isPresented: offer) {
-                ExperienceOfferSlot(router: router)
-            }
+            .modifier(ExperienceOfferSlot(offer: model.experienceOffer, router: router))
             .hud(linkHUD)
             .sensoryFeedback(.impact(weight: .light), trigger: router.presentedGallery?.gid) { _, new in new != nil }
             .task(id: model.links.request) { await model.links.handleRequest() }
@@ -76,14 +74,6 @@ struct ShellPresentations: ViewModifier {
 
     private var reading: Binding<ReadingRequest?> {
         Binding(get: { model.router.reading }, set: { model.router.reading = $0 })
-    }
-
-    /// The router's queue rule: unlocked, and neither the greeting nor the gallery sheet up.
-    private var offer: Binding<Bool> {
-        Binding(
-            get: { model.router.showsOffer(isUnlocked: !model.lock.isLocked) },
-            set: { if !$0 { model.router.offer = false } }
-        )
     }
 
     /// Progress of a link being opened; the error HUD clears itself.
