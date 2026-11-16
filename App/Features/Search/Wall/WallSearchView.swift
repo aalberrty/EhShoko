@@ -46,6 +46,9 @@ struct WallSearchView: View {
                     }
                 }
             }
+            // On iOS 18 the field bar's gradient would lay a band of the look's background over
+            // the material; on the look's own ground it fades the rows as on every screen.
+            .legacyBottomBarFade(presentation.canClose ? .hidden : .automatic)
             .searchSurfaceDrawsClose()
             #if DEBUG || HARNESS
             .searchDesignHarness(model: model)

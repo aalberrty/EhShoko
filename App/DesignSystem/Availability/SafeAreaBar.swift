@@ -8,9 +8,19 @@ extension View {
     ///
     /// The bar draws no surface of its own: glass shapes inside it (`glassSurface`,
     /// `GlassGroup`) are the controls. Not for a screen inside a tab whose iOS 18 accessory
-    /// capsule sits in the same inset (`legacyTabAccessory`).
+    /// capsule sits in the same inset (`legacyTabAccessory`). A screen that does not stand on
+    /// the look's background turns the iOS 18 gradient off with `legacyBottomBarFade(.hidden)`.
     func bottomBar(spacing: CGFloat? = nil, @ViewBuilder content: () -> some View) -> some View {
         modifier(BottomBar(spacing: spacing, bar: content()))
+    }
+
+    /// Whether the `bottomBar`s inside draw their iOS 18 gradient, which fades the rows into
+    /// the look's background before they meet the controls. A screen over something else
+    /// (Wall's search over its material) passes `.hidden`: the gradient would lay a band of the
+    /// look's background over it, and the rows meet the controls with no band, as they pass
+    /// under the system's bars. iOS 26 keeps the system's scroll edge effect either way.
+    func legacyBottomBarFade(_ visibility: Visibility) -> some View {
+        environment(\.legacyBottomBarFade, visibility)
     }
 
     /// Pins `content` under the navigation bar, above the scrolling content (Top's period
@@ -27,10 +37,16 @@ extension View {
     }
 }
 
+extension EnvironmentValues {
+    /// Set by `legacyBottomBarFade(_:)`; `.hidden` turns the iOS 18 gradient off.
+    @Entry var legacyBottomBarFade: Visibility = .automatic
+}
+
 private struct BottomBar<Bar: View>: ViewModifier {
     let spacing: CGFloat?
     let bar: Bar
     @Environment(\.look) private var look
+    @Environment(\.legacyBottomBarFade) private var fade
 
     func body(content: Content) -> some View {
         if #available(iOS 26, *) {
@@ -40,15 +56,17 @@ private struct BottomBar<Bar: View>: ViewModifier {
         } else {
             content.safeAreaInset(edge: .bottom, spacing: spacing) {
                 bar.background {
-                    // Reaches a little above the bar and down under the home indicator, so the
-                    // rows fade out before they meet the controls.
-                    LinearGradient(
-                        colors: [look.background.opacity(0), look.background.opacity(0.92)],
-                        startPoint: .top, endPoint: .bottom
-                    )
-                    .padding(.top, -24)
-                    .ignoresSafeArea(edges: .bottom)
-                    .allowsHitTesting(false)
+                    if fade != .hidden {
+                        // Reaches a little above the bar and down under the home indicator, so
+                        // the rows fade out before they meet the controls.
+                        LinearGradient(
+                            colors: [look.background.opacity(0), look.background.opacity(0.92)],
+                            startPoint: .top, endPoint: .bottom
+                        )
+                        .padding(.top, -24)
+                        .ignoresSafeArea(edges: .bottom)
+                        .allowsHitTesting(false)
+                    }
                 }
             }
         }
