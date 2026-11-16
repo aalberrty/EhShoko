@@ -98,7 +98,8 @@ private struct LedgerIndexPageFavorites: View {
                     .buttonStyle(.borderless)
             }
             .ledgerIndexPageHeader()
-            LazyVGrid(columns: typeSize.isAccessibilitySize ? Self.oneColumn : Self.twoColumns, spacing: 6) {
+            // One column from the largest standard size, where two cut folder names to a word.
+            LazyVGrid(columns: typeSize >= .xxxLarge ? Self.oneColumn : Self.twoColumns, spacing: 6) {
                 ForEach(userStore.libraryFolders) { folder in
                     LedgerFolderCell(folder: folder) { navigation.openFolder(folder.index) }
                 }
