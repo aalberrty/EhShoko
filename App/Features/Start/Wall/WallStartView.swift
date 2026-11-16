@@ -1,4 +1,5 @@
 import EhFeatures
+import EhModels
 import SwiftUI
 
 /// Wall's first screen (`wall.md` section 2): the current place's list, whatever place that
@@ -27,6 +28,12 @@ struct WallStartView: View {
                     WallContinueBanner()
                 }
             }
+            // No title is drawn, but the bar keeps the place's name, as Shelf's Home does: for
+            // Back and the app switcher, and as the bar's name for VoiceOver, which otherwise
+            // read the hosting controller's type name.
+            .navigationTitle(GalleryListKind.frontpage.title)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar(removing: .title)
         case .list(.favorites):
             LibraryScreen()
         case .list(let kind):
