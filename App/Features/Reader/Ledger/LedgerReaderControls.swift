@@ -113,8 +113,8 @@ final class LedgerSheetState {
 /// How much of the screen's bottom the page gives up (spike S4): what the open sheet covers,
 /// and only while the controls show, at the open height, in a paged direction, in portrait on
 /// a screen of compact width. Otherwise nothing: at rest the sheet covers the page's foot, in
-/// the vertical direction the strip scrolls behind the sheet, and in landscape there is no
-/// room above it.
+/// the vertical direction the strip scrolls behind the sheet (and only the closing page makes
+/// room, `coveredBottom`), and in landscape there is no room above it.
 ///
 /// What the sheet covers is its open height and the safe area under it: sizes, never the
 /// sheet's position, which has values in flight while the system moves it. So the inset has
@@ -131,8 +131,18 @@ nonisolated struct LedgerPageInset: Equatable {
     var safeAreaBottom: CGFloat
 
     var value: CGFloat {
-        isShown && isOpen && isPaged && isPortrait && isCompactWidth ? (openHeight + safeAreaBottom).rounded() : 0
+        isShown && isOpen && isPaged && isPortrait && isCompactWidth ? covered : 0
     }
+
+    /// What the open sheet covers while the engine keeps drawing under it: in the vertical
+    /// direction, in portrait. The strip scrolls behind the sheet, and the closing page keeps
+    /// this much room under its column so that it can rise above the sheet. In landscape the
+    /// open sheet leaves no room above it.
+    var coveredBottom: CGFloat {
+        isShown && isOpen && !isPaged && isPortrait && isCompactWidth ? covered : 0
+    }
+
+    private var covered: CGFloat { (openHeight + safeAreaBottom).rounded() }
 }
 
 /// Sets the viewport's inset: one animated change whenever what decides it changes, and back
@@ -148,11 +158,13 @@ private struct LedgerPageInsetDriver: View {
     @State private var screen = LedgerScreenShape()
 
     var body: some View {
-        let inset = LedgerPageInset(
+        let page = LedgerPageInset(
             isShown: model.showsPanel, isOpen: sheet.isOpen, isPaged: settings.readingDirection != .vertical,
             isPortrait: !screen.isLandscape, isCompactWidth: horizontalSizeClass == .compact,
             openHeight: sheet.openHeight, safeAreaBottom: screen.safeAreaBottom
-        ).value
+        )
+        let inset = page.value
+        let covered = page.coveredBottom
         Color.clear
             .allowsHitTesting(false)
             .accessibilityHidden(true)
@@ -163,7 +175,14 @@ private struct LedgerPageInsetDriver: View {
             .onChange(of: inset, initial: true) { _, inset in
                 set(inset)
             }
-            .onDisappear { set(0) }
+            // Not animated: only the closing page reads it, and the strip moves to keep it in view.
+            .onChange(of: covered, initial: true) { _, covered in
+                viewport.coveredBottom = covered
+            }
+            .onDisappear {
+                set(0)
+                viewport.coveredBottom = 0
+            }
     }
 
     private func set(_ inset: CGFloat) {

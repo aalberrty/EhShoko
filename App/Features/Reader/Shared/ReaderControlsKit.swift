@@ -17,6 +17,13 @@ final class ReaderViewport {
     /// own size (spike S4). Change it inside one animation, so the engine follows it frame by
     /// frame, and set it back to 0 when the controls hide and when the design goes away.
     var bottomInset: CGFloat = 0
+
+    /// How much of the screen's bottom, measured from its edge, the controls cover while the
+    /// engine keeps drawing under them: Ledger's open sheet in the vertical direction, where
+    /// the strip scrolls behind it. Nothing indexed by page reads it; the closing page keeps
+    /// that much room under its column (`ReaderClosingPage.bottomReserve`). Set it back to 0
+    /// when the controls hide and when the design goes away.
+    var coveredBottom: CGFloat = 0
 }
 
 /// The layer a design's floating controls sit in (`Design/designs/README.md` section 13):
