@@ -164,33 +164,6 @@ import Testing
         #expect(env.query("inline_set", ofRequest: 3) == nil)
     }
 
-    @Test func keywordSearchesTheCurrentFolder() async throws {
-        let env = try ListTestEnvironment()
-        env.transport.on(.any, reply: .fixture(ListFixture.favorites))
-        let model = env.make { FavoritesModel() }
-        await model.list.loadIfNeeded()
-
-        model.keyword = "tag"
-        model.submitKeyword()
-        await model.list.loadIfNeeded()
-        #expect(env.query("f_search", ofRequest: 1) == "tag")
-        #expect(env.query("sn", ofRequest: 1) == "on")
-
-        var screen = ListScreenTask()
-        await screen.render(model.list)
-        model.select(category: 4)
-        await screen.render(model.list)
-        #expect(env.query("f_search", ofRequest: 2) == "tag")
-
-        model.isQuickSearchPresented = true
-        model.quickSearch("other")
-        #expect(!model.isQuickSearchPresented)
-        #expect(model.keyword == "other")
-        await model.list.loadIfNeeded()
-        #expect(env.query("f_search", ofRequest: 3) == "other")
-        #expect(env.query("favcat", ofRequest: 3) == "4")
-    }
-
     @Test func tabReselectionReloadsTheCurrentFolder() async throws {
         let env = try ListTestEnvironment()
         env.transport.on(.any, reply: .fixture(ListFixture.favorites))

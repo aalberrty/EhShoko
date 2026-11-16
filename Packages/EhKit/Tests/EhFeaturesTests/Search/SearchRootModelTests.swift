@@ -102,33 +102,12 @@ import Testing
         #expect(stack.path == [.typedSearch(keyword: "a"), .typedSearch(keyword: "a")])
     }
 
-    @Test func quickSearchPickSearchesOnceTheSheetIsGone() {
-        let model = SearchRootModel()
-        let stack = StackRouter()
-        model.showQuickSearch()
-
-        model.selectQuickSearchWord("f:glasses$")
-
-        #expect(model.sheet == nil)
-        #expect(model.keyword == "f:glasses$")
-        #expect(stack.isAtRoot)
-
-        model.sheetDismissed(on: stack)
-        #expect(stack.path == [.typedSearch(keyword: "f:glasses$")])
-
-        // Dismissing a sheet without a pick pushes nothing.
-        stack.popToRoot()
-        model.showFilters()
-        model.sheet = nil
-        model.sheetDismissed(on: stack)
-        #expect(stack.isAtRoot)
-    }
-
     @Test func aQuickSearchPickIsTakenOnceForTheSurface() {
         let model = SearchRootModel()
         model.showQuickSearch()
         model.selectQuickSearchWord("f:glasses$")
         #expect(model.sheet == nil)
+        #expect(model.keyword == "f:glasses$")
 
         #expect(model.takePendingSearch() == "f:glasses$")
         #expect(model.takePendingSearch() == nil)
@@ -137,30 +116,5 @@ import Testing
         model.showQuickSearch()
         model.sheet = nil
         #expect(model.takePendingSearch() == nil)
-    }
-
-    @Test func rootReselectionReloads() {
-        let model = SearchRootModel()
-        model.rootReselected()
-        #expect(model.reloadID == 1)
-    }
-
-    @Test func reselectionReloadRestartsTheObservation() async throws {
-        let database = try await TestDatabase.inMemory()
-        try await database.recordSearchKeyword("a")
-        let model = makeModel(database)
-        var task = Task { await model.observe() }
-        try await eventually { model.historyKeywords == ["a"] }
-
-        // The view restarts `observe()` whenever `reloadID` changes.
-        let reloadID = model.reloadID
-        model.rootReselected()
-        #expect(model.reloadID != reloadID)
-        task.cancel()
-        try await database.recordSearchKeyword("b")
-        task = Task { await model.observe() }
-        defer { task.cancel() }
-
-        try await eventually { model.historyKeywords == ["b", "a"] }
     }
 }

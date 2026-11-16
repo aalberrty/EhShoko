@@ -19,15 +19,14 @@ struct WallGalleryChildView: View {
             if let detail = model.detail {
                 WallGalleryInfosView(gallery: model.gallery, detail: detail)
             }
-        case .archives, .torrents, .postComment, .tagDetail, .reader:
+        case .archives, .torrents, .tagDetail, .reader:
             EmptyView()
         }
     }
 }
 
 /// The content of a sheet the page asked for: a tag's details, the archive options and the
-/// torrents at the medium height, and the comment composer. `GalleryPage` presents it; each
-/// sets its own detents.
+/// torrents at the medium height. `GalleryPage` presents it; each sets its own detents.
 struct WallGallerySheet: View {
     let destination: DetailDestination
     let model: GalleryDetailModel
@@ -38,8 +37,6 @@ struct WallGallerySheet: View {
             WallArchivesSheet(gallery: model.gallery, archiveURL: archiveURL)
         case .torrents:
             WallTorrentsSheet(gid: model.gallery.gid, token: model.gallery.token)
-        case .postComment:
-            PostCommentSheet(composer: .new) { text in model.postComment(text) }
         case .tagDetail(let detail):
             WallTagDetailSheet(detail: detail, model: model)
         case .comments, .previews, .galleryInfos, .reader:

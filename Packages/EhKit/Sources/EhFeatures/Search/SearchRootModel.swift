@@ -21,8 +21,6 @@ public final class SearchRootModel {
     public private(set) var recentGalleries: [Gallery] = []
 
     public var sheet: SearchSheet?
-    /// Bumped when the tab is re-selected at its root; the view restarts `observe()` on it.
-    public private(set) var reloadID = 0
 
     // A quick-search word picked in the sheet is searched once the sheet has gone, so the
     // push does not race the dismissal (legacy waited a fixed 0.5 s).
@@ -108,22 +106,11 @@ public final class SearchRootModel {
         sheet = nil
     }
 
-    public func sheetDismissed(on stack: StackRouter) {
-        guard let pendingSearch = takePendingSearch() else { return }
-        search(pendingSearch, on: stack)
-    }
-
     /// The word picked in the Quick Search sheet, once: the search surface searches it in its
     /// own scope when the sheet has gone. `nil` when the sheet closed without a pick.
     public func takePendingSearch() -> String? {
         defer { pendingSearch = nil }
         return pendingSearch
-    }
-
-    /// The Search tab was tapped while already showing this root: reload the lists.
-    /// (Re-selecting it with results pushed pops the whole stack in `AppRouter.select`.)
-    public func rootReselected() {
-        reloadID += 1
     }
 }
 
