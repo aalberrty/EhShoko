@@ -65,6 +65,7 @@ struct PartHarnessView: View {
                 .presentationDetents([.medium, .large])
         }
         .lookEnvironment(Look(options.choices.look), accent: model.settings.accentColor)
+        .windowLook(Look(options.choices.look))
         .preferredColorScheme(options.scheme == .system ? nil : (options.scheme == .dark ? .dark : .light))
         .dynamicTypeSize(options.usesLargestText ? DynamicTypeSize.accessibility5...DynamicTypeSize.accessibility5 : DynamicTypeSize.xSmall...DynamicTypeSize.accessibility5)
         .environment(\.zoomNamespace, zoom)

@@ -44,11 +44,25 @@ nonisolated public enum Route: Hashable, Sendable {
     case search(keyword: String)
     /// Search results for a keyword typed or picked in the Search tab; recorded in the history.
     case typedSearch(keyword: String)
-    /// A gallery's detail screen. `intent` is what it should do once it has opened.
-    case detail(Gallery, intent: DetailIntent? = nil)
+    /// A gallery's detail screen. `intent` is what it should do once it has opened; `origin`
+    /// is the cover it was opened from, which its zoom comes out of and returns to.
+    case detail(Gallery, intent: DetailIntent? = nil, origin: GalleryOrigin = .list)
     /// A child screen of a gallery's detail screen (comments, previews, gallery infos).
     case detailChild(DetailChildRoute)
     case settings(SettingsRoute)
+}
+
+/// Which of a screen's covers a gallery was opened from, where one gallery can be on screen
+/// twice: a cover in the first screen's shelf above the Front Page's row of the same gallery,
+/// or a recently seen cover on the search surface over a list. Each kind of cover is its own
+/// zoom source, so the page zooms back into the cover it came out of.
+nonisolated public enum GalleryOrigin: Hashable, Sendable {
+    /// A list's row or cell, and wherever a screen does not say.
+    case list
+    /// A shelf of covers above a list (Home's Popular).
+    case coverShelf
+    /// The search surface's recently seen galleries.
+    case recentlySeen
 }
 
 extension Route {

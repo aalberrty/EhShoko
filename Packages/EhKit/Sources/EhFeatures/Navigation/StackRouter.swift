@@ -47,9 +47,10 @@ public final class StackRouter {
 
     /// Opens a gallery: pushed onto this stack, or shown in the side pane on a fresh pane
     /// stack. The caller (`\.openGallery`) decides which from the layout and the gallery design.
-    public func open(_ gallery: Gallery, intent: DetailIntent? = nil, inSidePane: Bool) {
+    /// The pane's page does not zoom, so it keeps no origin.
+    public func open(_ gallery: Gallery, intent: DetailIntent? = nil, origin: GalleryOrigin = .list, inSidePane: Bool) {
         guard inSidePane else {
-            push(.detail(gallery, intent: intent))
+            push(.detail(gallery, intent: intent, origin: origin))
             return
         }
         sideStorage?.popToRoot()

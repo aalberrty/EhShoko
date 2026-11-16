@@ -73,7 +73,8 @@ private struct LookFormRowGround: ViewModifier {
     func body(content: Content) -> some View {
         content
             .listRowBackground(look.raised)
-            .listRowSeparatorTint(look.separator)
+            // The trait's colour, not `look.separator`: a list keeps the first tint it was given.
+            .listRowSeparatorTint(Look.traitSeparator)
     }
 }
 

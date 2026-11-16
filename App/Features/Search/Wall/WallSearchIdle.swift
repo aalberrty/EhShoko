@@ -170,7 +170,7 @@ struct WallRecentlySeen: View {
         let galleries = model.root.recentGalleries
         if !galleries.isEmpty {
             WallSearchHeading(title: L10n.Localizable.SearchView.Section.Title.recentlySeen)
-            WallRecentlySeenCovers(galleries: galleries) { openGallery($0) }
+            WallRecentlySeenCovers(galleries: galleries) { openGallery($0, from: .recentlySeen) }
                 .padding(.bottom, 6)
         }
     }
@@ -188,7 +188,7 @@ private struct WallRecentlySeenCovers: View {
                 ForEach(galleries) { gallery in
                     Button { open(gallery) } label: {
                         CoverImage(url: gallery.coverURL, size: Self.cover, cornerRadius: 8)
-                            .zoomSource(gallery.gid)
+                            .galleryZoomSource(gallery.gid, from: .recentlySeen)
                     }
                     .buttonStyle(.plain)
                     .accessibilityLabel(gallery.trimmedTitle)

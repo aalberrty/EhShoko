@@ -172,7 +172,7 @@ import Testing
         await pollUntil { !stack.isAtRoot }
 
         // The pushed gallery is the stored one, which also carries its last open date.
-        guard case .detail(let pushed, let intent) = stack.path.first, stack.path.count == 1 else {
+        guard case .detail(let pushed, let intent, _) = stack.path.first, stack.path.count == 1 else {
             Issue.record("Expected one detail route, got \(stack.path)")
             return
         }
@@ -193,7 +193,7 @@ import Testing
         model.openLink(URL(string: "https://e-hentai.org/g/31338/cafe/#c5143504")!, on: stack)
         await pollUntil { !stack.isAtRoot }
 
-        guard case .detail(let gallery, let intent) = try #require(stack.path.first) else {
+        guard case .detail(let gallery, let intent, _) = try #require(stack.path.first) else {
             Issue.record("Expected a detail route, got \(stack.path)")
             return
         }
@@ -233,7 +233,7 @@ import Testing
         model.openLink(URL(string: "https://e-hentai.org/g/999/tok/")!, on: stack)
         await pollUntil { !stack.isAtRoot }
 
-        guard case .detail(let gallery, _) = try #require(stack.path.first) else {
+        guard case .detail(let gallery, _, _) = try #require(stack.path.first) else {
             Issue.record("Expected a detail route, got \(stack.path)")
             return
         }

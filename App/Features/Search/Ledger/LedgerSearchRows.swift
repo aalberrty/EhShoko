@@ -164,7 +164,7 @@ struct LedgerSeenGalleryRow: View {
     var body: some View {
         HStack(spacing: 12) {
             CoverImage(url: row.gallery.coverURL, size: CGSize(width: 34, height: 49), cornerRadius: 5)
-                .zoomSource(row.gallery.gid)
+                .galleryZoomSource(row.gallery.gid, from: .recentlySeen)
                 .alignmentGuide(.listRowSeparatorLeading) { $0[.leading] }
             VStack(alignment: .leading, spacing: 2) {
                 Text(row.category)

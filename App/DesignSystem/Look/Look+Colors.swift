@@ -25,6 +25,13 @@ nonisolated extension Look {
     /// Stars, in every look.
     var rating: Color { LookPalette.rating.color }
 
+    /// The separator of whichever look the trait collection carries (`LookTrait`), for a
+    /// list's row separators: one colour for every look, which UIKit resolves again when the
+    /// look changes, as it does when light and dark change.
+    static let traitSeparator = Color(uiColor: UIColor { traits in
+        traits[LookTrait.self].palette.separator.ui.resolvedColor(with: traits)
+    })
+
     /// The same tokens for UIKit (window tints, `UISearchTextField`).
     var uiBackground: UIColor { palette.background.ui }
     var uiLabel: UIColor { palette.label.ui }
