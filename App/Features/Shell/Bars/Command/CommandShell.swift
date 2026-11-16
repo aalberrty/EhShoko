@@ -16,7 +16,9 @@ struct CommandShell: View {
 
     var body: some View {
         let router = model.router
-        HomeStackHost(router: router.home, hasBar: true) { control, perform in
+        // The bar is hidden while the search surface is open: the surface draws its own field
+        // bar, and Wall's backdrop is a material the bar would show through.
+        HomeStackHost(router: router.home, hasBar: true, isCovered: search.scope != nil) { control, perform in
             CommandBar(router: router, control: control, perform: perform) { scope in
                 search.scope = scope
             }
