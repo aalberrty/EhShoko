@@ -174,23 +174,31 @@ final class PartHarnessFixtures: ListFixtureProvider {
 }
 
 /// The dependencies of a harness launched as the whole app (`-Harness part`): an empty
-/// database in memory and a client that is offline, so nothing a part does leaves the
-/// device and nothing it shows depends on the user's data.
+/// database in memory, and the account of `PartHarnessAccount`: a cookie jar, a user store and
+/// a client of its own, whose requests are recorded and answered on the device. Nothing a
+/// part does leaves the device and nothing it shows depends on the user's data.
 enum PartHarnessDependencies {
     private(set) static var isInstalled = false
 
     static func install(in values: inout DependencyValues) {
         guard let database = try? AppDatabase.makeInMemory() else { return }
         values.database = database
-        values.ehClient = .previewValue
+        PartHarnessAccount.atLaunch.install(in: &values)
         isInstalled = true
     }
 
-    /// Fills the harness's database: an opened history, three galleries in progress for
-    /// Continue, and a stored page for the first gallery, which a gallery design then shows
-    /// as it shows a saved page offline.
+    /// Lists load through the client instead of the fixtures (`-HarnessNetwork`).
+    static var loadsLists: Bool {
+        isInstalled && PartHarnessAccount.atLaunch.loadsLists
+    }
+
+    /// Gives the account its folders, then fills the harness's database: an opened history,
+    /// three galleries in progress for Continue, and a stored page for the first gallery, which
+    /// a gallery design then shows as it shows a saved page offline (`PartHarnessRichPage` for a
+    /// fuller one).
     static func seed(with entries: [GalleryEntry]) async {
         guard isInstalled else { return }
+        PartHarnessAccount.atLaunch.prepare()
         @Dependency(\.database) var database
         let now = Date()
         for (index, entry) in entries.prefix(40).enumerated().reversed() {
@@ -200,6 +208,10 @@ enum PartHarnessDependencies {
             try? await database.updateReadingProgress(gid: entry.id, progress: max(entry.gallery.pageCount / 2, 1))
         }
         guard let gallery = entries.first?.gallery else { return }
+        if PartHarnessRichPage.isRequested {
+            await PartHarnessRichPage.seed(gallery, covers: entries.compactMap(\.gallery.coverURL))
+            return
+        }
         let detail = GalleryDetail(
             gid: gallery.gid, title: gallery.title, jpnTitle: nil, isFavorited: false, visibility: .yes,
             rating: gallery.rating, userRating: 0, ratingCount: 318, category: gallery.category,

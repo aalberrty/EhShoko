@@ -26,7 +26,13 @@ import Foundation
 /// | `-HarnessScheme` | the system's | `light`, `dark` |
 /// | `-HarnessTextSize max` | the system's | the largest Dynamic Type size |
 /// | `-HarnessPanel NO` | YES | hides the panel's button, for screenshots |
+/// | `-HarnessSignedIn YES`, `-HarnessNetwork YES`, `-HarnessSignInAfter <s>`, `-HarnessLatency <s>`, `-HarnessFixturePath <file>` | signed out, fixtures | the harness's own account and network (`PartHarnessAccount`): signed in with ten named folders, lists loaded through a client that records every request in `Documents/harness-requests.txt` |
+/// | `-HarnessRich YES`, `-HarnessFavorited YES`, `-HarnessRated <n>`, `-HarnessPages <n>`, `-HarnessProgress <n>` | the plain stored page | the first gallery's fuller stored page (`PartHarnessRichPage`) |
 /// | `-HarnessMemoryCheck` | none | `shelf`, `wall`, `ledger`: the scripted memory check. 25 s after launch (time to visit screens) the live per-design objects are written to `Documents/part-harness-heap-1.txt`, the designs switch to this preset, and 10 s later they are written to `part-harness-heap-2.txt` (`PartHarnessHeap`) |
+///
+/// Launched as the whole app it also writes, in `Documents/`, `harness-requests.txt` (every
+/// request of its client, `PartHarnessAccount`) and `harness-decodes.txt` (the covers decoded
+/// and served, `PartHarnessDecodeLog`).
 nonisolated struct PartHarnessOptions: Equatable, Sendable {
     var part = PartHarnessPart.shell
     /// The design of every part. The part under test takes its own; the others are its
@@ -81,6 +87,19 @@ nonisolated struct PartHarnessOptions: Equatable, Sendable {
             options.showsPanelButton = defaults.bool(forKey: "HarnessPanel")
         }
         return options
+    }
+}
+
+extension PartHarnessOptions {
+    /// The tab the shell puts the part in under `tabs`; the harness shows that tab's stack.
+    var tab: AppTab {
+        switch part {
+        case .search: .search
+        case .library: .library
+        case .list where kind == .watched: .watched
+        case .list where kind == .toplists: .top
+        case .list, .shell, .gallery, .start: .home
+        }
     }
 }
 

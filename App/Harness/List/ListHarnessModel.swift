@@ -90,7 +90,7 @@ final class ListHarnessModel {
     }
 
     private func applyOptions(from old: ListHarnessOptions) {
-        if options.showsTags != old.showsTags || options.slot != old.slot {
+        if options.showsTags != old.showsTags || options.slot != old.slot || options.showsBar != old.showsBar {
             applySettings()
         }
     }
@@ -101,6 +101,10 @@ final class ListHarnessModel {
         settings.showsTagsInList = options.showsTags
         settings.wallDensity = options.slot.wallDensity ?? .medium
         settings.ledgerShowsCovers = options.slot != .ledgerTitles
+        // The bar's place: Wall's first screen is the Front Page, which the list stands for.
+        if options.showsBar {
+            settings.designStart = .wall
+        }
     }
 }
 

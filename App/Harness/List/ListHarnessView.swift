@@ -1,4 +1,5 @@
 #if DEBUG || HARNESS
+import EhCore
 import EhFeatures
 import SwiftUI
 
@@ -46,6 +47,8 @@ struct ListHarnessView: View {
                 .overlay(alignment: .bottom) {
                     if model.options.showsDock {
                         ListHarnessDock()
+                    } else if model.options.showsBar {
+                        ListHarnessBar(settings: model.settings)
                     }
                 }
         }
@@ -69,6 +72,7 @@ struct ListHarnessView: View {
                 }
                 Toggle(isOn: $model.options.showsTags) { Text(verbatim: "Tags in rows") }
                 Toggle(isOn: $model.options.showsDock) { Text(verbatim: "Dock over the list") }
+                Toggle(isOn: $model.options.showsBar) { Text(verbatim: "Command bar over the list") }
                 Picker(selection: $model.options.speed) {
                     ForEach([1_000.0, 2_000, 4_000], id: \.self) { speed in
                         Text(verbatim: "\(Int(speed)) pt/s").tag(speed)
@@ -108,7 +112,8 @@ private struct ListHarnessStatus: View {
     }
 
     private var text: String {
-        let setup = "\(options.slot.rawValue)\(options.showsDock ? " + dock" : "") · \(options.galleryCount) galleries · \(Int(options.speed)) pt/s"
+        let chrome = options.showsDock ? " + dock" : options.showsBar ? " + bar" : ""
+        let setup = "\(options.slot.rawValue)\(chrome) · \(options.galleryCount) galleries · \(Int(options.speed)) pt/s"
         switch phase {
         case .preparing: return "Preparing \(setup)"
         case .ready: return "\(setup) · Run scrolls to the end"
@@ -142,6 +147,33 @@ private struct ListHarnessDock: View {
             action: .comments
         ))
     )
+}
+
+/// The command bar over the list, in its glass container, as the shell's bottom chrome places
+/// it (an overlay; the list keeps its full height, so rows pass under the glass). It reads the
+/// harness's settings, whose first screen is Wall's, so it names Front Page as its place.
+private struct ListHarnessBar: View {
+    let settings: SettingsStore
+    @State private var router = AppRouter()
+    @Namespace private var glass
+
+    var body: some View {
+        GlassGroup(spacing: ActionDock.spacing) {
+            CommandBar(
+                router: router,
+                control: .button(systemImage: "line.3.horizontal.decrease", title: "Filters", showsDot: true),
+                perform: { _ in }, openSearch: { _ in }
+            )
+            .frame(maxWidth: 560)
+            .frame(height: ActionDock.height)
+        }
+        // The shell's margins (`BottomChrome`).
+        .padding(.horizontal, 12)
+        .padding(.bottom, Tokens.Spacing.small)
+        .environment(\.chromeNamespace, glass)
+        .environment(settings)
+        .environment(router)
+    }
 }
 
 /// Opens the list harness from Settings › Laboratory.

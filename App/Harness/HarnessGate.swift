@@ -2,11 +2,13 @@ import SwiftUI
 
 /// The app's root, or a harness in its place when the app is launched to measure one.
 ///
-/// In debug builds, launching with `-Harness list`, `-Harness reader`, `-Harness look`, `-Harness dock` or
-/// `-Harness previews` shows that harness as
-/// the whole app: the shell, its launch sequence and the first screen's requests never start,
-/// so nothing else competes with the run being measured. `Scripts/measure.sh`
-/// launches it this way; `ListHarnessOptions` lists the other arguments.
+/// In debug builds, launching with `-Harness part`, `-Harness list`, `-Harness reader`,
+/// `-Harness look`, `-Harness dock` or `-Harness previews` shows that harness as the whole
+/// app: the shell, its launch sequence and the first screen's requests never start, so nothing
+/// else competes with the run being measured. `Scripts/measure.sh` and
+/// `Scripts/harness_check.sh` launch it this way. Each harness reads the rest of its arguments
+/// itself: `PartHarnessOptions`, `PartHarnessAccount` and `PartHarnessRichPage` (part),
+/// `ListHarnessOptions` (list), `ReaderHarnessOptions` (reader).
 struct HarnessGate<Content: View>: View {
     @ViewBuilder let content: () -> Content
 
@@ -20,7 +22,10 @@ struct HarnessGate<Content: View>: View {
         case .list:
             ListHarnessView(options: .atLaunch)
         case .reader:
-            // Only `-HarnessExitAfter` means anything here: it ends a memory recording.
+            // The reader harness reads its checks (`-ReaderHarnessCheck calls|firstpage|rotation|walk`,
+            // `-ReaderHarnessModes`, `-ReaderHarnessRepeat`, `-ReaderHarnessPose`,
+            // `-ReaderHarnessLook`; `ReaderHarnessOptions`). Of the launch actions only
+            // `-HarnessExitAfter` means anything here: it ends a memory recording.
             ReaderHarnessView()
                 .harnessLaunchActions { _ in }
         case .look:
