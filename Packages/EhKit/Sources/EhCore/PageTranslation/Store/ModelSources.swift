@@ -58,7 +58,8 @@ public struct ModelSourceConfiguration: Sendable, Hashable {
         let storePath = "\(artifact.id.rawValue)/\(artifact.version)/\(file.path)"
         if let privateStore {
             // Whoever set a private store up meant it, so it is asked for every artifact.
-            sources.append(ModelFileSource(kind: .privateStore, url: privateStore.appending(path: storePath), token: token))
+            let url = privateStore.appending(path: storePath)
+            sources.append(ModelFileSource(kind: .privateStore, url: url, token: token))
         }
         if artifact.sharing == .publicStore, let publicStore {
             sources.append(ModelFileSource(kind: .publicStore, url: publicStore.appending(path: storePath), token: nil))

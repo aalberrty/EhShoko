@@ -78,7 +78,9 @@ actor ModelInstaller {
     }
 
     func survey(_ artifact: ModelArtifact) -> ModelArtifactSurvey {
-        if let record = record(of: artifact) { return ModelArtifactSurvey(record: record, bytesOnDisk: artifact.downloadSize) }
+        if let record = record(of: artifact) {
+            return ModelArtifactSurvey(record: record, bytesOnDisk: artifact.downloadSize)
+        }
         var survey = ModelArtifactSurvey(isComplete: true)
         for file in artifact.files {
             if isInPlace(file, of: artifact) {

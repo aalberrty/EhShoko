@@ -251,7 +251,9 @@ enum ModelChunkDelivery {
     }
 
     /// Moves the downloaded file into place when it is the range that was asked for.
-    static func deliver(_ location: URL, response: URLResponse?, ticket: ModelChunkTicket, root: URL) -> ModelChunkOutcome {
+    static func deliver(
+        _ location: URL, response: URLResponse?, ticket: ModelChunkTicket, root: URL
+    ) -> ModelChunkOutcome {
         guard let response = response as? HTTPURLResponse else { return .refused(status: 0, retryAfter: nil) }
         let outcome = judge(
             status: response.statusCode, contentRange: response.value(forHTTPHeaderField: "Content-Range"),

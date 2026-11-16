@@ -115,7 +115,9 @@ struct ModelDownloader: Sendable {
         bytesOnDisk(of: job.file, in: job.artifact) > 0
     }
 
-    private func fetch(_ job: ModelFileJob, from source: ModelFileSource, progress: ModelDownloadProgress) async throws {
+    private func fetch(
+        _ job: ModelFileJob, from source: ModelFileSource, progress: ModelDownloadProgress
+    ) async throws {
         let file = job.file
         let ranges = chunkRanges(of: file)
         let partURL = layout.partURL(of: file, in: job.artifact)
@@ -282,8 +284,8 @@ final class ModelDownloadProgress: Sendable {
             if !always, let last = state.lastReport, now - last < interval { return nil }
             state.lastReport = now
             state.sequence += 1
-            let bytes = state.settled.values.reduce(0, +) + state.chunks.values.reduce(0) { $0 + $1.values.reduce(0, +) }
-            return (state.sequence, bytes)
+            let waiting = state.chunks.values.reduce(0) { $0 + $1.values.reduce(0, +) }
+            return (state.sequence, state.settled.values.reduce(0, +) + waiting)
         }
         if let due { report(due.0, due.1) }
     }

@@ -38,8 +38,6 @@ extension PageTranslationModelStore {
             if !intent.artifacts.contains(artifact.id) { intent.artifacts.append(artifact.id) }
         }
         writeIntent()
-        let total = artifacts.reduce(0) { $0 + $1.downloadSize }
-        environment.log("Downloading \(artifacts.map(\.id.rawValue).joined(separator: ", ")): \(total) bytes in the catalog.")
         let plan = Task { await self.plan(for: artifacts) }
         for artifact in artifacts {
             run(for: artifact.id) { store in
@@ -59,6 +57,11 @@ extension PageTranslationModelStore {
         let left = artifacts.reduce(Int64(0)) { total, artifact in
             total + max(0, artifact.downloadSize - (surveys[artifact.id]?.bytesOnDisk ?? 0))
         }
+        // The one line a download leaves in the log when it starts: after the app was
+        // closed, "still to fetch" is what shows that nothing is fetched twice.
+        let total = artifacts.reduce(Int64(0)) { $0 + $1.downloadSize }
+        let names = artifacts.map(\.id.rawValue).joined(separator: ", ")
+        environment.log("Downloading \(names): \(left) of \(total) bytes still to fetch.")
         guard left > 0 else { return .ready(configuration) }
         let needed = ModelStoreEnvironment.spaceNeeded(forDownloading: left)
         let available = await Self.freeSpace(environment)
@@ -86,9 +89,8 @@ extension PageTranslationModelStore {
             let total = artifact.downloadSize
             let inPlace = total - files.reduce(0) { $0 + $1.size }
             let progress = ModelDownloadProgress { [weak self] sequence, bytes in
-                Task { @MainActor in
-                    self?.note(ModelTransferProgress(completedBytes: inPlace + bytes, totalBytes: total), sequence, for: id)
-                }
+                let progress = ModelTransferProgress(completedBytes: inPlace + bytes, totalBytes: total)
+                Task { @MainActor in self?.note(progress, sequence, for: id) }
             }
             progressSequences[id] = 0
             states[id] = .downloading(ModelTransferProgress(

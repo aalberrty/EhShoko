@@ -24,7 +24,8 @@ public struct ModelStoreLayout: Sendable, Hashable {
 
     /// The app's folder.
     public static var applicationSupport: ModelStoreLayout {
-        ModelStoreLayout(root: URL.applicationSupportDirectory.appending(path: "PageTranslationModels", directoryHint: .isDirectory))
+        let support = URL.applicationSupportDirectory
+        return ModelStoreLayout(root: support.appending(path: "PageTranslationModels", directoryHint: .isDirectory))
     }
 
     public func folder(of artifact: ModelArtifactID) -> URL {
