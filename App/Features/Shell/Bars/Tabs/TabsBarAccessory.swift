@@ -20,7 +20,7 @@ struct TabsBarAccessory: View {
             Button {
                 appRouter.reading = ReadingRequest(gallery: item.gallery, page: item.page)
             } label: {
-                TabsBarAccessoryPlacement { isCompact in
+                TabAccessoryPlacementReader { isCompact in
                     TabsBarAccessoryLabel(item: shown, isCompact: isCompact)
                 }
             }
@@ -109,34 +109,5 @@ private struct TabsBarAccessoryLabel: View {
         // On the content, inside the accessory's glass: a marker around glass does nothing
         // (`spikes/S4.md`).
         .readerSource(.continueBar(gid: item.gid))
-    }
-}
-
-/// Tells the accessory's content whether it is in the bar's inline slot.
-///
-/// The placement is an iOS 26 environment value; on the systems without it the content is the
-/// capsule's and always full. Compact unless the placement is `.expanded`: it is `nil` while
-/// the accessory is being removed, and the full form must not be laid into an inline slot
-/// (`spikes/S3.md`, question 4).
-private struct TabsBarAccessoryPlacement<Content: View>: View {
-    @ViewBuilder let content: (_ isCompact: Bool) -> Content
-
-    var body: some View {
-        if #available(iOS 26, *), TabAccessoryKind.usesSystemAccessory {
-            TabsBarSystemAccessoryPlacement(content: content)
-        } else {
-            content(false)
-        }
-    }
-}
-
-@available(iOS 26, *)
-private struct TabsBarSystemAccessoryPlacement<Content: View>: View {
-    let content: (_ isCompact: Bool) -> Content
-
-    @Environment(\.tabViewBottomAccessoryPlacement) private var placement
-
-    var body: some View {
-        content(placement != .expanded)
     }
 }

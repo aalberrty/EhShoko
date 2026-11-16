@@ -14,6 +14,42 @@ enum TabAccessoryKind {
     static var usesSystemAccessory: Bool {
         if #available(iOS 26.1, *) { true } else { false }
     }
+
+    /// iOS 26.0: the first system with the accessory, which draws the capsule instead. Its tab
+    /// bar does not always hide when a stack's root asks for it, so the tab asks as well
+    /// (`TabsBarStack`).
+    static var isIOS26_0: Bool {
+        if #available(iOS 26, *) { !usesSystemAccessory } else { false }
+    }
+}
+
+/// Tells an accessory's content whether it is in the bar's inline slot, where it lays out its
+/// compact form.
+///
+/// 26.1 and later: compact unless `tabViewBottomAccessoryPlacement` is `.expanded`. It is `nil`
+/// while the accessory is being removed, and the full form must not be laid into an inline slot
+/// (`spikes/S3.md`, question 4). Elsewhere the content is the capsule's and always full.
+struct TabAccessoryPlacementReader<Content: View>: View {
+    @ViewBuilder let content: (_ isCompact: Bool) -> Content
+
+    var body: some View {
+        if #available(iOS 26, *), TabAccessoryKind.usesSystemAccessory {
+            SystemTabAccessoryPlacement(content: content)
+        } else {
+            content(false)
+        }
+    }
+}
+
+@available(iOS 26, *)
+private struct SystemTabAccessoryPlacement<Content: View>: View {
+    let content: (_ isCompact: Bool) -> Content
+
+    @Environment(\.tabViewBottomAccessoryPlacement) private var placement
+
+    var body: some View {
+        content(placement != .expanded)
+    }
 }
 
 extension View {

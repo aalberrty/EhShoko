@@ -47,15 +47,10 @@ private struct TabsBarHiding: ViewModifier {
     func body(content: Content) -> some View {
         // The same for the whole life of the process, so this `if` never rebuilds a tab,
         // and on the other systems a push or a pop does not run this body.
-        if Self.isNeeded {
+        if TabAccessoryKind.isIOS26_0 {
             content.toolbarVisibility(appRouter.stack(for: tab).hidesBrowseChrome ? .hidden : .automatic, for: .tabBar)
         } else {
             content
         }
     }
-
-    /// iOS 26.0: the system that draws the capsule on iOS 26.
-    private static let isNeeded: Bool = {
-        if #available(iOS 26, *) { !TabAccessoryKind.usesSystemAccessory } else { false }
-    }()
 }
