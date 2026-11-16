@@ -346,6 +346,11 @@
 "filters_view.title.disable_tags_filter" = "忽略标签过滤";
 "filters_view.section.title.advanced" = "高级";
 "filters_view.section.title.default_filter" = "你的默认过滤";
+"filters_view.section.title.narrow_down" = "缩小范围";
+"filters_view.title.pages_separator" = "至";
+"filters_view.title.any" = "不限";
+"filters_view.title.options_on" = "已开启 %d 项";
+"filters_view.section.footer.separate_filters" = "列表、订阅和搜索各有自己的筛选条件。更改即时生效。";
 // FilterRange
 "enum.filter_range.value.search" = "搜索";
 "enum.filter_range.value.global" = "列表";
