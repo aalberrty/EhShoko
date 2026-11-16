@@ -21,13 +21,18 @@ struct Screens {
     static let tabBar = Target(matches: [.label("Tab Bar")], type: .tabBar)
     /// The command bar's container (`shell.bar.accessibility`).
     static let commandBar = Target(matches: [.label("Navigation")])
+    /// A tab: in the tab bar on a phone; on an iPad the tabs are buttons at the top, with no
+    /// tab bar element.
     static func tab(_ name: String) -> Target { Target.button(name).in(.tabBar) }
     static let accountButton = Target.button("Account and settings")
 
-    /// A row or cell of the first gallery in a list (its label starts with the title and goes
-    /// on with the circle, category and pages), not the Continue card, which is the title alone.
+    /// A row or cell of the first gallery in a list. Shelf's row is labelled with the title,
+    /// then the circle, category and pages; Ledger's starts with the circle when there is
+    /// one; Wall's cell is the title alone. (Shelf's Continue card is the title alone too, but
+    /// no walk opens a gallery from Shelf's Home.)
     static let galleryInList = Target(
-        matches: [.labelPrefix(galleryTitle + ","), .labelPrefix(galleryTitle + " ·")], type: .button
+        matches: [.labelPrefix(galleryTitle + ","), .labelContains(", " + galleryTitle + ","), .label(galleryTitle)],
+        type: .button
     )
     /// The dock's pill: "Read", or "Continue" with the page.
     static let readPill = Target(

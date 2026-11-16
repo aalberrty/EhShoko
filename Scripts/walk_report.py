@@ -60,7 +60,8 @@ def export_attachments(bundle, run):
                 name = match.group("name") if match else suggested.stem
                 walk, _, rest = name.partition("__")
                 if not rest:
-                    walk, rest = walk_of_test(test["testIdentifier"].split("/")[-1]), name
+                    # XCTest's own (a recording, UI snapshots) of a failed test.
+                    walk, rest = walk_of_test(test["testIdentifier"].split("/")[-1]), "xctest/" + name
                 target = run / walk / (rest + suggested.suffix)
                 target.parent.mkdir(parents=True, exist_ok=True)
                 shutil.copyfile(folder / attachment["exportedFileName"], target)

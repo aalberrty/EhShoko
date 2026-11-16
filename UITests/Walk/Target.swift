@@ -91,7 +91,8 @@ struct Target: CustomStringConvertible, Sendable {
     private func root(in app: XCUIApplication) -> XCUIElement {
         switch scope {
         case .app: app
-        case .tabBar: app.tabBars.firstMatch
+        // An iPad's tabs are buttons at the top, outside any tab bar element.
+        case .tabBar: app.tabBars.firstMatch.exists ? app.tabBars.firstMatch : app
         case .navigationBar: app.navigationBars.firstMatch
         case .toolbar: app.toolbars.firstMatch
         case .sheet: app.sheets.firstMatch
