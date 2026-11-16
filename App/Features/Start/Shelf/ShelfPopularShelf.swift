@@ -160,7 +160,8 @@ private struct ShelfPopularPlaceholders: View {
         }
         .padding(.leading, margins.leading)
         .padding(.top, 1)
-        .frame(maxWidth: .infinity, alignment: .leading)
+        // As wide as the shelf it stands for, not as its five covers (`ShelfContinuePlaceholders`).
+        .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
         .clipped()
         .shimmering()
         .accessibilityHidden(true)
