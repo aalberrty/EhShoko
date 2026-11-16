@@ -61,6 +61,7 @@ struct ActionDock: View {
             .buttonStyle(.plain)
             .chromeShape(.trailing, in: .circle)
             .accessibilityLabel(title)
+            .walkIdentifier("dock.menu")
         case nil:
             EmptyView()
         }
@@ -97,6 +98,17 @@ extension View {
     /// chrome slot.
     func chromeMorph(_ slot: ChromeSlot) -> some View {
         modifier(ChromeMorph(slot: slot))
+    }
+
+    /// An identifier the UI walks find a dock control by (`UITests/`), where its label is not
+    /// enough (Wall's More beside a list's More); only in builds with the harness.
+    @ViewBuilder
+    fileprivate func walkIdentifier(_ identifier: String) -> some View {
+        #if DEBUG || HARNESS
+        accessibilityIdentifier(identifier)
+        #else
+        self
+        #endif
     }
 
     /// The button the Favourite tip points at (`README.md` section 5.4): the tip's
@@ -202,6 +214,7 @@ private struct DockPill: View {
             // inspector shown as a sheet on iOS 26.
             .tint(item.isDimmed ? tint.opacity(Self.dimmedTint) : tint)
             .accessibilityLabel([item.title, item.detail].compactMap(\.self).joined(separator: ", "))
+            .walkIdentifier("dock.pill")
             .disabled(!item.isEnabled)
             .chromeMorph(.centre)
     }

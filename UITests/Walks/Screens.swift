@@ -34,20 +34,42 @@ struct Screens {
         matches: [.labelPrefix(galleryTitle + ","), .labelContains(", " + galleryTitle + ","), .label(galleryTitle)],
         type: .button
     )
+    /// The first gallery's row as one list design draws it, which tells the designs apart:
+    /// Shelf's row reads title then circle, Ledger's circle then title, Wall's cell the title.
+    static func galleryRow(in style: Style) -> Target {
+        switch style {
+        case .shelf: Target(matches: [.labelContains(galleryTitle + ", Hapoi-Dokoro")], type: .button)
+        case .wall: Target(matches: [.label(galleryTitle)], type: .button)
+        case .ledger: Target(matches: [.labelPrefix("Hapoi-Dokoro · Kimimaru, " + galleryTitle)], type: .button)
+        }
+    }
+
     /// The dock's pill: "Read", or "Continue" with the page.
     static let readPill = Target(
-        matches: [.label("Read"), .labelPrefix("Continue,"), .labelPrefix("Continue ·"), .label("Continue"), .labelPrefix("Read,")],
+        matches: [.identifier("dock.pill"), .label("Read"), .labelPrefix("Continue,"), .labelPrefix("Continue ·"), .label("Continue"), .labelPrefix("Read,")],
         type: .button
     )
     static let favourite = Target.id("dock.favorite") | .id("dock.favorite.tip-anchor")
     static let close = Target.button("Close")
-    static let searchField = Target(matches: [], type: .searchField)
+    static let searchField = Target(matches: [.field("Search")])
+    static let backButton = Target(matches: [.identifier("BackButton")], type: .button)
     static let done = Target.button("Done")
+
+    /// Closes the Settings sheet from any of its screens: back to its root (the back buttons
+    /// are labelled with the screen they return to), then Done.
+    static let closeSettings: [Step] = [
+        .tapIfPresent(Target(matches: [.label("Experience")], type: .button), within: 1),
+        .pause(seconds: 0.8),
+        .tapIfPresent(Target(matches: [.label("Settings")], type: .button), within: 2),
+        .pause(seconds: 0.8),
+        .tap(done),
+    ]
+    static let experienceBar = Target(matches: [.identifier("Experience")], type: .navigationBar)
 
     /// Settings' "Customize" row, which opens Experience.
     static let customise = Target(matches: [.labelPrefix("Customize")])
     /// Experience's row for a part ("Lists", with its choice after it).
-    static func partRow(_ part: Part) -> Target { Target(matches: [.label(part.settingsTitle), .labelPrefix(part.settingsTitle + ",")]) }
+    static func partRow(_ part: Part) -> Target { Target(matches: [.labelPrefix(part.settingsTitle + ",")], type: .button) }
     /// An options screen's card: its label is the option's name.
     static func optionCard(_ name: String) -> Target { Target(matches: [.label(name)], type: .button).last }
 
@@ -116,13 +138,12 @@ struct Screens {
         // Signed out, Favourite opens Settings at Sign in.
         return [
             .tap(Self.favourite), .wait(Target.label("Sign in")), .screenshot("favourite-sign-in"),
-            .tap(Self.done), .wait(Self.readPill),
-        ]
+        ] + Self.closeSettings + [.wait(Self.readPill)]
     }
 
     var comments: [Step] {
         let open: [Step] = switch choices.gallery {
-        case .wall: [.tap(Target.button("More")), .pause(seconds: 1), .tap(Target.button("Comments"))]
+        case .wall: [.tap(Target.id("dock.menu")), .pause(seconds: 1), .tap(Target.button("Comments"))]
         case .shelf, .ledger: [.tap(Target.button("Comments"))]
         }
         return open + [
@@ -134,9 +155,11 @@ struct Screens {
     // MARK: Search
 
     var search: [Step] {
+        // Out of the gallery first: a pushed page hides the bars (in the side pane it stays).
+        let leave: [Step] = [.tapIfPresent(Self.backButton, within: 2), .pause(seconds: 1)]
         let open: [Step] = switch choices.bar {
-        case .tabs: [.tap(Self.tab("Search"))]
-        case .command: [.back, .tap(Target.button("Search").in(.app))]
+        case .tabs: leave + [.tap(Self.tab("Search"))]
+        case .command: leave + [.tap(Target.button("Search"))]
         }
         return open + [
             .wait(Self.searchField),
@@ -149,7 +172,17 @@ struct Screens {
             .wait(Self.galleryInList),
             .screenshot("search-results"),
             .tap(Self.galleryInList), .wait(Self.readPill), .screenshot("search-gallery"),
-        ]
+        ] + closeSearch
+    }
+
+    /// Back from the result's gallery and out of the search surface, which under `command` is
+    /// an overlay with its own Cancel or Close.
+    var closeSearch: [Step] {
+        var steps: [Step] = [.tapIfPresent(Self.backButton, within: 2), .pause(seconds: 1)]
+        if choices.bar == .command {
+            steps += [.tapIfPresent(Target(matches: [.label("Cancel"), .label("Close")], type: .button), within: 2), .pause(seconds: 1)]
+        }
+        return steps
     }
 
     // MARK: Library
@@ -162,7 +195,11 @@ struct Screens {
         if environment.isSignedIn {
             return open + [.pause(seconds: 2), .screenshot("library")]
         }
-        return open + [.pause(seconds: 2), .expect(Target(matches: [.labelContains("Sign in")])), .screenshot("library-sign-in")]
+        // Signed out the library says so, unless the harness shows its fixture rows there.
+        return open + [
+            .pause(seconds: 2), .expect(Target(matches: [.labelContains("Sign in")]) | Self.galleryInList),
+            .screenshot("library"),
+        ]
     }
 
     // MARK: Settings
@@ -181,12 +218,14 @@ struct Screens {
         let change = settingsChange
         return open + [
             .wait(Self.customise), .screenshot("settings"),
-            .tap(Self.customise), .wait(Self.partRow(change.part)),
+            .tap(Self.customise), .wait(Self.experienceBar),
+            .scrollTo(Self.partRow(change.part), screens: 6),
             .screenshot("experience"),
             .tap(Self.partRow(change.part)), .pause(seconds: 1.5), .screenshot("options"),
             .tap(Self.optionCard(change.to.name)), .pause(seconds: 1),
             .screenshot("option-chosen"),
-            .tap(Self.done), .pause(seconds: 1.5),
-        ] + openSecondList + [.screenshot("applied")]
+        ] + Self.closeSettings + [
+            .pause(seconds: 1.5),
+        ] + openSecondList + [.expect(Self.galleryRow(in: change.to)), .screenshot("applied")]
     }
 }

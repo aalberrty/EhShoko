@@ -30,6 +30,7 @@ struct Walk: Sendable {
 /// | `WALK_ATTACH` | `YES`: the first launch of a walk activates the app that is already running (started by Instruments) instead of launching it. |
 /// | `WALK_PATIENCE` | Seconds to wait for an element (default 20); raise it on a loaded Mac. |
 /// | `WALK_HOLD` | Seconds to wait after the walk's first launch before its next step, so that Instruments can attach to the app (`trace_walk.sh`). |
+/// | `WALK_KEEP_GOING` | `YES`: a failed step of the walk's top level is noted and the walk goes on with the next one (to survey a new walk in one run); the walk still fails. |
 /// | `WALK_DUMPS` | `YES`: every screenshot also attaches the screen's accessibility tree, for writing a walk. |
 struct WalkEnvironment: Sendable {
     enum Fixture: String, Sendable {
@@ -44,6 +45,7 @@ struct WalkEnvironment: Sendable {
     var patience: Double
     var dumpsTrees: Bool
     var holdAfterFirstLaunch: Double
+    var keepsGoing: Bool
 
     static let current = WalkEnvironment(ProcessInfo.processInfo.environment)
 
@@ -61,6 +63,7 @@ struct WalkEnvironment: Sendable {
         patience = environment["WALK_PATIENCE"].flatMap(Double.init) ?? Step.patience
         dumpsTrees = environment["WALK_DUMPS"] == "YES"
         holdAfterFirstLaunch = environment["WALK_HOLD"].flatMap(Double.init) ?? 0
+        keepsGoing = environment["WALK_KEEP_GOING"] == "YES"
     }
 
     var isSignedIn: Bool { fixture == .signedIn }

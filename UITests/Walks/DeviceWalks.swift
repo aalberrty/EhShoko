@@ -36,7 +36,7 @@ enum DeviceWalks {
         [
             .launch(extra: []), screens.waitForFirstScreen,
             .tap(Screens.accountButton), .wait(Screens.customise), .tap(Screens.customise),
-            .wait(Screens.partRow(.list)),
+            .wait(Screens.experienceBar),
         ]
     }
 
@@ -45,9 +45,10 @@ enum DeviceWalks {
         openExperience(screens) + [.screenshot("experience")] + Part.allCases.map { part in
             .group(
                 part.rawValue,
+                .scrollTo(Screens.partRow(part), screens: 6),
                 .tap(Screens.partRow(part)), .pause(seconds: 1.5), .screenshot("options-\(part.rawValue)"),
                 .scroll(.down, screens: 1, on: nil), .screenshot("options-\(part.rawValue)-end"),
-                .back, .wait(Screens.partRow(.list))
+                .back, .wait(Screens.experienceBar)
             )
         }
     }

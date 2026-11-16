@@ -21,6 +21,7 @@ final class WalkRunner {
     private(set) var record: WalkRecord
     private var path: [String] = []
     private var screenshots = 0
+    private var trees = 0
     private var hasLaunched = false
 
     init(app: XCUIApplication, walk: Walk, environment: WalkEnvironment) {
@@ -38,6 +39,7 @@ final class WalkRunner {
     func run() throws {
         let start = Date()
         defer { record.seconds = Date().timeIntervalSince(start) }
+        var firstFailure: WalkFailure?
         for step in walk.steps {
             let stepStart = Date()
             do {
@@ -46,9 +48,15 @@ final class WalkRunner {
             } catch let failure as WalkFailure {
                 record.steps.append(.init(name: step.name, seconds: Date().timeIntervalSince(stepStart), passed: false))
                 record.fail(failure)
-                throw failure
+                guard environment.keepsGoing else { throw failure }
+                // Surveying a walk: note the failure, show where it happened, and go on.
+                screenshot(named: "failed-\(record.steps.count)")
+                dumpTree(named: "failed-\(record.steps.count)")
+                record.notes.append("\(failure.step): \(failure.reason)")
+                firstFailure = firstFailure ?? failure
             }
         }
+        if let firstFailure { throw firstFailure }
         record.passed = true
     }
 
@@ -65,7 +73,8 @@ final class WalkRunner {
     /// The accessibility tree as text, attached as `<walk>__tree-<name>`.
     func dumpTree(named name: String) {
         let attachment = XCTAttachment(string: app.debugDescription)
-        attachment.name = "\(walk.id)__tree-\(name)"
+        trees += 1
+        attachment.name = String(format: "%@__tree-%02d-%@", walk.id, trees, name)
         attachment.lifetime = .keepAlways
         attach(attachment)
     }
@@ -121,6 +130,8 @@ final class WalkRunner {
             } else {
                 app.typeText(text)
             }
+        case .scrollTo(let target, let screens):
+            try scrollTo(target, screens: screens)
         case .wait(let target, let timeout):
             _ = try find(target, timeout: timeout)
         case .waitGone(let target, let timeout):
@@ -222,6 +233,18 @@ final class WalkRunner {
             let end = element.coordinate(withNormalizedOffset: to)
             start.press(forDuration: 0.05, thenDragTo: end, withVelocity: 900, thenHoldForDuration: 0.15)
         }
+    }
+
+    private func scrollTo(_ target: Target, screens: Int) throws {
+        let element = target.element(in: app)
+        for _ in 0...screens {
+            if element.waitForExistence(timeout: 1.5), element.isHittable { return }
+            // From the middle of the window, which is inside a form sheet on an iPad too.
+            let start = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.62))
+            let end = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.38))
+            start.press(forDuration: 0.05, thenDragTo: end, withVelocity: 900, thenHoldForDuration: 0.15)
+        }
+        throw WalkFailure(step: currentStep, reason: "\(target) was not found after scrolling \(screens) times")
     }
 
     private func goBack() throws {

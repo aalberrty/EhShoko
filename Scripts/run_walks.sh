@@ -27,6 +27,8 @@
 #   --app-args "<a>"      More launch arguments for every launch.
 #   --patience <s>        Seconds to wait for an element (default 20); raise it on a loaded Mac.
 #   --dumps               Attach the accessibility tree at every screenshot (for writing walks).
+#   --keep-going          After a failed part of a walk, note it and go on with the next part
+#                         (to survey a new walk in one run); the walk still counts as failed.
 #   --fresh               Remove the app from the destination first (the offer after install).
 #   --release             Build Release with the HARNESS condition (optimised, as measured).
 #   --append <file>       Also append the table's rows to this Markdown file (one table for
@@ -55,6 +57,7 @@ fixture_args=""
 app_args=""
 patience=""
 dumps=NO
+keep_going=NO
 fresh=NO
 configuration=Debug
 append=""
@@ -72,10 +75,11 @@ while [[ $# -gt 0 ]]; do
     --app-args) app_args="$2"; shift 2 ;;
     --patience) patience="$2"; shift 2 ;;
     --dumps) dumps=YES; shift ;;
+    --keep-going) keep_going=YES; shift ;;
     --fresh) fresh=YES; shift ;;
     --release) configuration=Release; shift ;;
     --append) append="$2"; shift 2 ;;
-    -h|--help) sed -n '2,46p' "$0"; exit 0 ;;
+    -h|--help) sed -n '2,48p' "$0"; exit 0 ;;
     --*) die "unknown option $1" ;;
     *) break ;;
   esac
@@ -169,6 +173,7 @@ export TEST_RUNNER_WALK_FIXTURE="$fixture"
 [[ -n "$app_args" ]] && export TEST_RUNNER_WALK_EXTRA_ARGS="$app_args"
 [[ -n "$patience" ]] && export TEST_RUNNER_WALK_PATIENCE="$patience"
 [[ "$dumps" == YES ]] && export TEST_RUNNER_WALK_DUMPS=YES
+[[ "$keep_going" == YES ]] && export TEST_RUNNER_WALK_KEEP_GOING=YES
 
 printf '%s\n' "destination=$destination" "set=$set" "fixture=$fixture" "configuration=$configuration" \
   "xctestrun=$xctestrun" "started=$(date '+%Y-%m-%d %H:%M:%S')" > "$out/run.txt"

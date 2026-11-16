@@ -14,6 +14,8 @@ struct Target: CustomStringConvertible, Sendable {
         case labelContains(String)
         /// The label starts with this text.
         case labelPrefix(String)
+        /// A text or search field whose label or placeholder starts with this text.
+        case field(String)
     }
 
     /// Where to look: the whole app, or only inside one kind of bar.
@@ -75,6 +77,7 @@ struct Target: CustomStringConvertible, Sendable {
             case .label(let label): "“\(label)”"
             case .labelContains(let text): "…\(text)…"
             case .labelPrefix(let text): "\(text)…"
+            case .field(let text): "field \(text)…"
             }
         }
         return names.joined(separator: " or ")
@@ -109,6 +112,11 @@ struct Target: CustomStringConvertible, Sendable {
             case .label(let label): NSPredicate(format: "label == %@", label)
             case .labelContains(let text): NSPredicate(format: "label CONTAINS[c] %@", text)
             case .labelPrefix(let text): NSPredicate(format: "label BEGINSWITH %@", text)
+            case .field(let text):
+                NSPredicate(
+                    format: "(elementType == %d OR elementType == %d) AND (label BEGINSWITH %@ OR placeholderValue BEGINSWITH %@)",
+                    XCUIElement.ElementType.textField.rawValue, XCUIElement.ElementType.searchField.rawValue, text, text
+                )
             }
         })
     }
