@@ -40,7 +40,7 @@ struct ShelfHomeView: View {
         // The header draws the title; the bar keeps it for Back and the app switcher.
         .navigationTitle(L10n.Localizable.HomeView.Title.home)
         .navigationBarTitleDisplayMode(.inline)
-        .toolbar(removing: .title)
+        .modifier(ShelfHomeBarTitle())
         // Home keeps its account button under `command`; under `tabs` the shell adds it.
         .startAccountButton()
         // The model owns the load, so pushing a gallery does not cancel it; a failed load is
@@ -80,4 +80,20 @@ struct ShelfHomeActions {
     let openGallery: (Gallery) -> Void
     /// "See all": the Popular list.
     let showPopular: () -> Void
+}
+
+/// What the bar shows in place of "Home": nothing, with nothing for VoiceOver either. Not
+/// `toolbar(removing: .title)`: on iOS 26, once the bar changed from `tabs` to `command`, that
+/// left the Home tab's navigation bar content in UIKit's pending updates, and through the account
+/// button's item it kept this list, its rows and its header alive.
+private struct ShelfHomeBarTitle: ViewModifier {
+    func body(content: Content) -> some View {
+        content.toolbar {
+            ToolbarItem(placement: .principal) {
+                Color.clear
+                    .frame(width: 1, height: 1)
+                    .accessibilityHidden(true)
+            }
+        }
+    }
 }
