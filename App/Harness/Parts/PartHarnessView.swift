@@ -77,6 +77,9 @@ struct PartHarnessView: View {
         .environment(userStore)
         .environment(tagTranslationService)
         .environment(accountSession)
+        // The wizard, Experience and Theme change the harness's settings from inside the app.
+        .onChange(of: model.settings.designChoices) { model.settingsChanged() }
+        .onChange(of: model.settings.preferredColorScheme) { model.settingsChanged() }
         .task { await model.prepare() }
         .task { await model.continueModel.observe() }
         .task { await model.runMemoryCheck() }
