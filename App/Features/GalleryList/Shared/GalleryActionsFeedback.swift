@@ -5,7 +5,8 @@ import SwiftUI
 extension View {
     /// What a list shows after an action from its long-press menu or swipe actions: a HUD
     /// naming the folder a favourite went into ("Added to To Read"), and a haptic for success
-    /// or failure. Apply it once, at the list's screen.
+    /// or failure. A favourite also tells the Favourite tip (`FavoriteTip.record`), so a
+    /// one-tap Favourite from a list earns it. Apply it once, at the list's screen.
     ///
     /// It observes only the actions model's report and feedback, which change once per action,
     /// so the list's rows are not invalidated by it.
@@ -28,6 +29,7 @@ private struct GalleryActionsFeedback: ViewModifier {
                 hud = .symbol(
                     "heart.fill", title: L10n.Localizable.List.Favorited.hud(userStore.favoriteFolderName(report.folder))
                 )
+                FavoriteTip.record(report)
             }
             .sensoryFeedback(trigger: actions.feedback) { _, feedback in
                 feedback.map { $0.isSuccess ? SensoryFeedback.success : .error }

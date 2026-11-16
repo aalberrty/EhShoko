@@ -113,7 +113,8 @@ private struct FiltersPagesRow: View {
                     .submitLabel(.done)
             }
         } label: {
-            Text(L10n.Localizable.FiltersView.Title.pagesRange)
+            // "Pages", as drawn; the switch above says what the boxes limit.
+            Text(L10n.Localizable.Gallery.Figure.pages)
         }
         .onSubmit { model.submitBound() }
     }

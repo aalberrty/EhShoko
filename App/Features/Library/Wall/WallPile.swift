@@ -9,8 +9,7 @@ nonisolated struct WallPile: Identifiable, Equatable, Sendable {
     enum Card: Equatable, Sendable {
         /// One of the newest covers the app has for the folder.
         case cover(URL)
-        /// A cover not drawn yet: the page is on its way, or the cover is being decoded for
-        /// two piles at once (`WallPileCovers.shared(in:)`). Drawn as a cover's placeholder.
+        /// A cover not known yet: the page is on its way. Drawn as a cover's placeholder.
         case pending
         /// The page is here and holds no more of the folder's galleries: a tile in the
         /// folder's colour (All's is neutral).
@@ -62,28 +61,12 @@ nonisolated enum WallPileCovers {
         return covers
     }
 
-    /// The covers shown in two piles at once: All's newest are also their folders' newest.
-    ///
-    /// Two cover views asking for one cover in the same frame each decode it when it comes
-    /// from the disk cache, which does not join the two loads as the downloader does. So the
-    /// page decodes these once itself, and both piles draw them once that is done.
-    static func shared(in covers: [Int: [URL]]) -> Set<URL> {
-        let all = Set(covers[WallPile.allFolders] ?? [])
-        guard !all.isEmpty else { return [] }
-        var shared = Set<URL>()
-        for (folder, urls) in covers where folder != WallPile.allFolders {
-            shared.formUnion(urls.filter(all.contains))
-        }
-        return shared
-    }
-
     /// A pile's three cards: its covers, as many as it has, then tiles once the page is
-    /// here, or placeholders while it is on its way. A cover in `held` is a placeholder too.
-    static func cards(_ covers: [URL], held: Set<URL>, isLoaded: Bool) -> [WallPile.Card] {
+    /// here, or placeholders while it is on its way.
+    static func cards(_ covers: [URL], isLoaded: Bool) -> [WallPile.Card] {
         (0..<WallPile.coversPerPile).map { place in
             guard place < covers.count else { return isLoaded ? .tile : .pending }
-            let url = covers[place]
-            return held.contains(url) ? .pending : .cover(url)
+            return .cover(covers[place])
         }
     }
 

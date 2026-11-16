@@ -24,7 +24,7 @@ nonisolated enum TipsConfiguration {
         }
         guard isFirstCall else { return }
         do {
-            #if DEBUG
+            #if DEBUG || HARNESS
             try DebugRequest.atLaunch?.applyBeforeConfiguring()
             #endif
             // One tip in the app, so no pacing between tips: it shows as soon as it is earned.
@@ -36,9 +36,10 @@ nonisolated enum TipsConfiguration {
     }
 }
 
-#if DEBUG
+#if DEBUG || HARNESS
 extension TipsConfiguration {
-    /// `-Tips reset|show|hide` at launch, for UI tests and screenshots.
+    /// `-Tips reset|show|hide` at launch, for UI tests, screenshots and measured runs
+    /// (`Scripts/measure.sh` passes `hide`).
     ///
     /// - `reset` empties TipKit's store, so the tip is earned again by the next one-tap
     ///   Favourite, as on a fresh install.

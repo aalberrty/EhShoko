@@ -49,6 +49,8 @@
 #                         --app-arg -Harness --app-arg reader to time the reader harness).
 #   --bundle-id <id>      The app to measure. Default: $APP_BUNDLE_ID, else app.ehshoko.
 #
+# Every launch gets -Tips hide, so the Favourite tip never shows during a recording.
+#
 # The harness and the launch arguments above exist in Debug builds, and in any build compiled
 # with the HARNESS condition, which measures optimised code: add
 #   'SWIFT_ACTIVE_COMPILATION_CONDITIONS=$(inherited) HARNESS'
@@ -77,6 +79,8 @@ clear_images=NO
 exit_after=""
 extra_args=()
 signpost_template=Logging
+# Every launch shows no tip (TipKit's Favourite tip), so nothing interrupts a recorded run.
+tips_args=(-Tips hide)
 
 die() { echo "measure.sh: $*" >&2; exit 1; }
 
@@ -185,7 +189,7 @@ record() {
     # xctrace exits non-zero for warnings too; whether the trace is usable shows in the report.
     xcrun xctrace record --quiet --no-prompt --device "$device" --template "$template" \
       ${instruments[@]+"${instruments[@]}"} --time-limit "$limit" --output "$trace" \
-      --launch -- "$target" "$@" >/dev/null 2>"$issues" || echo "measure.sh: xctrace reported issues" >&2
+      --launch -- "$target" "$@" "${tips_args[@]}" >/dev/null 2>"$issues" || echo "measure.sh: xctrace reported issues" >&2
     cat "$issues" >&2
     # A device refuses to record ("an unknown problem") while the app still runs, which a
     # terminate that timed out under load leaves behind, and for a while after a heavy
@@ -244,7 +248,7 @@ case "$run" in
               # this platform"), so the run is the harness alone and its frame timing is reported.
               terminate
               echo "Scrolling, run $index (the harness's own frame timing)" >&2
-              xcrun simctl launch --console-pty "$device" "$bundle_id" "${harness_args[@]}" > "$out/console-$index.txt" 2>&1 \
+              xcrun simctl launch --console-pty "$device" "$bundle_id" "${harness_args[@]}" "${tips_args[@]}" > "$out/console-$index.txt" 2>&1 \
                 || echo "measure.sh: the launch failed (see console-$index.txt)" >&2
             else
               mark_stale result.json
