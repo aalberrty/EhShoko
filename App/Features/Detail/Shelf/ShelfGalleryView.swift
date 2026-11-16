@@ -65,9 +65,13 @@ struct ShelfGalleryView: View {
                 ShelfGalleryMain(model: model, signIn: signIn)
             }
             .frame(maxWidth: .infinity, alignment: .top)
-            ShelfGalleryMore(model: model)
-                .frame(maxWidth: .infinity, alignment: .top)
-                .padding(.top, -18)
+            // One column: the tags and the comments are two views, which an `HStack` would
+            // otherwise lay out side by side.
+            VStack(alignment: .leading, spacing: 0) {
+                ShelfGalleryMore(model: model)
+            }
+            .frame(maxWidth: .infinity, alignment: .top)
+            .padding(.top, -18)
         }
         .padding(.horizontal, Tokens.Spacing.small)
         .padding(.top, Tokens.Spacing.small)
