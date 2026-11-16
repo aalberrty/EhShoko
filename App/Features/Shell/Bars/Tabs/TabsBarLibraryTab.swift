@@ -20,8 +20,8 @@ struct TabsBarLibraryTab: View {
     var body: some View {
         Group {
             switch library.segment {
-            case .favorites: LibraryScreen()
-            case .history: GalleryListScreen(context: .place(.history, embedsInStart: true))
+            case .favorites: LibraryScreen(model: library.favorites)
+            case .history: GalleryListScreen(context: .place(.history, heading: .screen))
             }
         }
         .navigationTitle(L10n.Localizable.Shell.Tab.library)

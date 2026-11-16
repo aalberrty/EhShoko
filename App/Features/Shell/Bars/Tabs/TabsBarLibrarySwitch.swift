@@ -17,6 +17,9 @@ nonisolated enum TabsBarLibrarySegment: Hashable, Sendable {
 @Observable
 final class TabsBarLibrarySwitch {
     var segment = TabsBarLibrarySegment.favorites
+    /// The Favourites segment's model, kept while the tab exists, so the folders it loaded
+    /// are there again after History. Made the first time the segment is shown.
+    @ObservationIgnored private(set) lazy var favorites = FavoritesModel()
 }
 
 /// Shows History where the tabs bar keeps it: the Library tab, at its root, on its History
