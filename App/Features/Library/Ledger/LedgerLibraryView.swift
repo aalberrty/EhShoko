@@ -38,8 +38,11 @@ struct LedgerLibraryView: View {
         let isSignedIn = accountSession.isLoggedIn
         Group {
             if isSignedIn {
-                LedgerLibraryPage(showsTitle: hasTitle, open: open) {
-                    await counts.refresh()
+                // Weakly: the navigation controller keeps the page's refresh control, and with
+                // it this action, after the page has gone (a change of library design), and the
+                // action would keep the counts and the library's model alive with it.
+                LedgerLibraryPage(showsTitle: hasTitle, open: open) { [weak counts = counts] in
+                    await counts?.refresh()
                 }
             } else {
                 ListSignInState(kind: .favorites)

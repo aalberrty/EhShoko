@@ -28,7 +28,9 @@ struct LedgerLibraryPage: View {
             }
             .padding(.bottom, 24)
         }
-        .refreshable { await refresh() }
+        // Only the refresh: the navigation controller keeps the refresh control after the
+        // page has gone, and the page's other closures hold the library's screen.
+        .refreshable { [refresh] in await refresh() }
         .ledgerBarTitle(showsTitle ? L10n.Localizable.Shell.Place.favorites : nil)
     }
 }
