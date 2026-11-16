@@ -198,6 +198,8 @@ final class WalkRunner {
             }
         case .back:
             try goBack()
+        case .backSwipe(let reach):
+            backSwipe(reach: reach)
         case .pause(let seconds):
             Thread.sleep(forTimeInterval: seconds)
         case .screenshot(let name):
@@ -329,6 +331,18 @@ final class WalkRunner {
     /// The system back button (`BackButton` on iOS 26; on iOS 18 a SwiftUI stack's has no
     /// identifier, only the previous screen's title, so the leading button of a navigation
     /// bar), or the edge swipe where a page draws its own top bar.
+    private func backSwipe(reach: Double) {
+        let width = app.frame.width
+        // The column of the screen pushed last: the trailing-most bar.
+        let leadingEdge = app.navigationBars.allElementsBoundByIndex
+            .filter { !$0.frame.isEmpty && app.frame.intersects($0.frame) }
+            .map(\.frame.minX).max() ?? 0
+        let start = app.coordinate(withNormalizedOffset: CGVector(dx: (max(leadingEdge, 0) + 2) / width, dy: 0.5))
+        let end = app.coordinate(withNormalizedOffset: CGVector(dx: reach, dy: 0.5))
+        start.press(forDuration: 0.05, thenDragTo: end, withVelocity: 250, thenHoldForDuration: 0.3)
+        Thread.sleep(forTimeInterval: 1.2)
+    }
+
     private func goBack() throws {
         let bars = app.navigationBars.allElementsBoundByIndex.filter { !$0.frame.isEmpty }
         let identified = app.navigationBars.buttons.matching(identifier: "BackButton").allElementsBoundByIndex
