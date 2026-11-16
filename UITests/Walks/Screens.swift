@@ -72,6 +72,8 @@ struct Screens {
 
     /// Settings' "Customize" row, which opens Experience.
     static let customise = Target(matches: [.labelPrefix("Customize")])
+    /// The Settings sheet's root.
+    static let settingsBar = Target(matches: [.identifier("Settings")], type: .navigationBar)
     /// Experience's row for a part ("Lists", with its choice after it).
     static func partRow(_ part: Part) -> Target { Target(matches: [.labelPrefix(part.settingsTitle + ",")], type: .button) }
     /// An options screen's card: its label is the option's name.
@@ -266,8 +268,9 @@ struct Screens {
         }
         let change = settingsChange
         return open + [
-            // In an iPad's form sheet the row is below the fold.
-            .wait(Self.customise), .scrollTo(Self.customise, screens: 3), .screenshot("settings"),
+            // In an iPad's form sheet the row is below the fold, and a list makes no row before
+            // it is near the screen: wait for the sheet, then scroll to the row.
+            .wait(Self.settingsBar), .pause(seconds: 1), .scrollTo(Self.customise, screens: 3), .screenshot("settings"),
             .tap(Self.customise), .wait(Self.experienceBar),
             .scrollTo(Self.partRow(change.part), screens: 6),
             .screenshot("experience"),
