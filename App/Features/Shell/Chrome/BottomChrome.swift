@@ -60,6 +60,10 @@ struct BottomChrome<Content: View, Bar: View>: View {
             .transformPreference(ChromeKey.self) { $0 = [] }
             .onChange(of: router.path) { resolve(entries) }
             .environment(\.chromeReserve, isKeyboardUp ? 0 : reserve)
+            // The reserve changes with what is shown, inside that change's animation, which is
+            // for the chrome: the screens are kept out of it where it would hang them. Before
+            // the overlay, so the chrome keeps it.
+            .bottomBarHeightChangesAtOnce(reserve)
             .onGeometryChange(for: CGFloat.self) { $0.safeAreaInsets.bottom } action: { bottomSafeArea = $0 }
             .overlay(alignment: .bottom) { chrome }
             // The chrome stays at the bottom under a screen's keyboard, as a tab bar does; the

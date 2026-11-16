@@ -25,6 +25,21 @@ extension View {
     func topBar(isPresented: Bool = true, spacing: CGFloat? = nil, @ViewBuilder content: () -> some View) -> some View {
         modifier(TopBar(isPresented: isPresented, spacing: spacing, bar: content()))
     }
+
+    /// Around screens whose `bottomBar` is `height` high, where that height is switched inside
+    /// an animation (the shell's host switches it while its bar turns into a dock). On iOS 26
+    /// the screens follow the animation and this adds nothing. On iOS 18 they take the new
+    /// height at once, and what is outside this view keeps the animation.
+    ///
+    /// On iOS 18 a bottom inset that changes inside an animation hangs the app when it reaches
+    /// a `List` that has just been pushed under a navigation bar with a large title (also the
+    /// inline large one). The list is laid out at the animation's in-between sizes; the bar's
+    /// height follows the list's offset and the list's top inset follows the bar's height, and
+    /// the two flip between the expanded and the collapsed bar inside one layout pass, which
+    /// never ends. A scroll view, or a small title, does not do it.
+    func bottomBarHeightChangesAtOnce(_ height: CGFloat) -> some View {
+        modifier(BottomBarHeightChange(height: height))
+    }
 }
 
 private struct BottomBar<Bar: View>: ViewModifier {
@@ -51,6 +66,19 @@ private struct BottomBar<Bar: View>: ViewModifier {
                     .allowsHitTesting(false)
                 }
             }
+        }
+    }
+}
+
+private struct BottomBarHeightChange: ViewModifier {
+    let height: CGFloat
+
+    func body(content: Content) -> some View {
+        if #available(iOS 26, *) {
+            content
+        } else {
+            // Only the update that changes the height loses its animation.
+            content.transaction(value: height) { $0.animation = nil }
         }
     }
 }
