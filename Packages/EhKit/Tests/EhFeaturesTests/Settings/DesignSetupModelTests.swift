@@ -2,6 +2,7 @@ import Dependencies
 @testable import EhCore
 import EhFeatures
 import EhModels
+import EhTestSupport
 import Foundation
 import Observation
 import Testing
@@ -296,50 +297,5 @@ import Testing
         }
         change()
         return fired.value
-    }
-}
-
-/// In-memory defaults that count the writes to each setting.
-///
-/// `@unchecked Sendable` as `UserDefaults` itself: the dictionaries are only touched under
-/// `lock`.
-nonisolated private final class CountingDefaults: UserDefaults, @unchecked Sendable {
-    private let lock = NSLock()
-    private var values: [String: Any] = [:]
-    private var writes: [String: Int] = [:]
-
-    override func object(forKey key: String) -> Any? {
-        lock.withLock { values[key] }
-    }
-
-    override func set(_ value: Any?, forKey key: String) {
-        lock.withLock {
-            values[key] = value
-            writes[key, default: 0] += 1
-        }
-    }
-
-    override func removeObject(forKey key: String) {
-        lock.withLock {
-            values[key] = nil
-            writes[key, default: 0] += 1
-        }
-    }
-
-    func reset() {
-        lock.withLock { writes.removeAll() }
-    }
-
-    var counts: [SettingKey: Int] {
-        let writes = lock.withLock { self.writes }
-        var counts: [SettingKey: Int] = [:]
-        for key in SettingKey.allCases {
-            if let count = writes[key.name] { counts[key] = count }
-        }
-        return counts
-    }
-
-    var total: Int {
-        lock.withLock { writes.values.reduce(0, +) }
     }
 }

@@ -1,5 +1,4 @@
 #if DEBUG || HARNESS
-import Darwin
 import Dependencies
 import EhCore
 import EhFeatures
@@ -45,15 +44,15 @@ final class DesignSetupProbe {
 
     private func run(_ hooks: Hooks) async {
         await rest(4)
-        note("footprint, wizard open: \(footprint())")
+        note("footprint, wizard open: \(HarnessCPU.footprint())")
         note("heap, step 1:\n" + PartHarnessHeap.report())
-        note("step 1, stage playing: " + (await cpu(for: 3)))
+        note("step 1, stage playing: " + (await HarnessCPU.sample(for: 3)))
         hooks.cover(true)
         await rest(3)
-        note("step 1, alert over the stage: " + (await cpu(for: 3)))
+        note("step 1, alert over the stage: " + (await HarnessCPU.sample(for: 3)))
         hooks.cover(false)
         await rest(3)
-        note("step 1, alert closed: " + (await cpu(for: 3)))
+        note("step 1, alert closed: " + (await HarnessCPU.sample(for: 3)))
 
         while hooks.model.step != .summary {
             let from = hooks.model.stepNumber ?? 0
@@ -62,11 +61,11 @@ final class DesignSetupProbe {
             await rest(0.5)
             note("heap at \(hooks.model.stepNumber.map { "step \($0)" } ?? "the summary"):\n" + PartHarnessHeap.report())
             if hooks.model.stepNumber == 2 {
-                note("step 2, the stage gone: " + (await cpu(for: 3)))
+                note("step 2, the stage gone: " + (await HarnessCPU.sample(for: 3)))
                 // The alert's own cost, with no stage under it.
                 hooks.cover(true)
                 await rest(3)
-                note("step 2, the same alert: " + (await cpu(for: 3)))
+                note("step 2, the same alert: " + (await HarnessCPU.sample(for: 3)))
                 hooks.cover(false)
                 await rest(3)
             }
@@ -79,7 +78,7 @@ final class DesignSetupProbe {
         if let preset = Self.applies {
             await apply(preset, hooks)
         }
-        note("footprint at the end: \(footprint())")
+        note("footprint at the end: \(HarnessCPU.footprint())")
         write()
     }
 
@@ -117,53 +116,12 @@ final class DesignSetupProbe {
 
     // MARK: Measures
 
-    /// The process's and the main thread's CPU time over `seconds`, in ms per second.
-    private func cpu(for seconds: Double) async -> String {
-        let process = Self.processSeconds()
-        let main = Self.mainThreadSeconds()
-        await rest(seconds)
-        let processRate = (Self.processSeconds() - process) / seconds * 1_000
-        let mainRate = (Self.mainThreadSeconds() - main) / seconds * 1_000
-        return String(format: "CPU %.1f ms/s (main thread %.1f ms/s)", processRate, mainRate)
-    }
-
     private func lateFrames(during action: () -> Void) async -> String {
         let counter = DesignSetupLateFrames()
         counter.start()
         action()
         await rest(1)
         return counter.stop()
-    }
-
-    private static func processSeconds() -> Double {
-        var usage = rusage()
-        getrusage(RUSAGE_SELF, &usage)
-        return seconds(usage.ru_utime) + seconds(usage.ru_stime)
-    }
-
-    private static func seconds(_ value: timeval) -> Double {
-        Double(value.tv_sec) + Double(value.tv_usec) / 1_000_000
-    }
-
-    /// The calling thread's CPU time; called on the main actor, so the main thread's.
-    private static func mainThreadSeconds() -> Double {
-        var info = thread_basic_info()
-        var count = mach_msg_type_number_t(MemoryLayout<thread_basic_info_data_t>.size / MemoryLayout<integer_t>.size)
-        let thread = pthread_mach_thread_np(pthread_self())
-        let status = withUnsafeMutablePointer(to: &info) { pointer in
-            pointer.withMemoryRebound(to: integer_t.self, capacity: Int(count)) {
-                thread_info(thread, thread_flavor_t(THREAD_BASIC_INFO), $0, &count)
-            }
-        }
-        guard status == KERN_SUCCESS else { return 0 }
-        let user = Double(info.user_time.seconds) + Double(info.user_time.microseconds) / 1_000_000
-        let system = Double(info.system_time.seconds) + Double(info.system_time.microseconds) / 1_000_000
-        return user + system
-    }
-
-    private func footprint() -> String {
-        guard let footprint = MemoryFootprint.current() else { return "unknown" }
-        return String(format: "%.2f MB", Double(footprint.current) / 1_048_576)
     }
 
     private func note(_ line: String) {
