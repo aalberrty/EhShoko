@@ -56,7 +56,8 @@ let package = Package(
 
         // Page translation: models in, patches out (Core ML, Core Graphics, Core Text, ImageIO).
         // Needs no database, network or dependencies, so it builds and tests alone.
-        .target(name: "EhPageTranslation", dependencies: ["EhModels"]),
+        // Its resources are the three subset fonts the translation is lettered in.
+        .target(name: "EhPageTranslation", dependencies: ["EhModels"], resources: [.copy("Resources/Fonts")]),
         .testTarget(name: "EhPageTranslationTests", dependencies: ["EhPageTranslation"]),
 
         // Dependency keys, settings and UI-independent services built on the layers above.
