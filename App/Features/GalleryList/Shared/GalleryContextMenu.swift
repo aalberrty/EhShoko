@@ -19,10 +19,26 @@ extension View {
     ///   - actions: the list's actions model; it performs Read and the favourite actions.
     ///   - offersMove: whether the list shows favourites, where Move to folder is offered.
     func galleryContextMenu(_ entry: GalleryEntry, actions: GalleryActionsModel, offersMove: Bool = false) -> some View {
-        contextMenu {
+        modifier(GalleryContextMenuModifier(entry: entry, actions: actions, offersMove: offersMove))
+    }
+}
+
+private struct GalleryContextMenuModifier: ViewModifier {
+    let entry: GalleryEntry
+    let actions: GalleryActionsModel
+    let offersMove: Bool
+
+    // The preview is hosted outside the screen and gets none of its environment's objects
+    // (reading one there stops the app), so it is handed the two it needs. Only the
+    // references are read here, no property of either, so a row observes nothing.
+    @Environment(SettingsStore.self) private var settings: SettingsStore?
+    @Environment(TagTranslationService.self) private var tagTranslations: TagTranslationService?
+
+    func body(content: Content) -> some View {
+        content.contextMenu {
             GalleryContextMenu(entry: entry, actions: actions, offersMove: offersMove)
         } preview: {
-            GalleryMenuPreview(entry: entry)
+            GalleryMenuPreview(entry: entry, settings: settings, tagTranslations: tagTranslations)
         }
     }
 }
@@ -101,10 +117,9 @@ struct GalleryContextMenu: View {
 /// rows translate theirs: a lookup in the translations table, made when the menu opens.
 private struct GalleryMenuPreview: View {
     let entry: GalleryEntry
+    let settings: SettingsStore?
+    let tagTranslations: TagTranslationService?
     @Environment(\.look) private var look
-    // Read by the preview's body, which runs when the menu opens, never while the list scrolls.
-    @Environment(SettingsStore.self) private var settings
-    @Environment(TagTranslationService.self) private var tagTranslations: TagTranslationService?
 
     private static let coverSize = CGSize(width: 104, height: 149)
 
@@ -126,7 +141,8 @@ private struct GalleryMenuPreview: View {
                     }
                 }
             }
-            let translations = settings.translatesTags ? tagTranslations : nil
+            // Read by the preview's body, which runs when the menu opens, not while rows scroll.
+            let translations = settings?.translatesTags == true ? tagTranslations : nil
             ForEach(entry.gallery.tags.prefix(6)) { tag in
                 TagText(
                     namespace: tag.namespace?.localizedName ?? tag.rawNamespace,
