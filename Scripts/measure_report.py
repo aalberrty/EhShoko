@@ -33,7 +33,7 @@ def note(name, value):
     FIGURES.setdefault(name, []).append(float(value))
 
 
-def export(trace, xpath):
+def export(trace, xpath, attempts=None):
     """The path of a file holding the XML of one xctrace export query, or None when the trace
     has no such table. The caller removes the file.
 
@@ -43,7 +43,8 @@ def export(trace, xpath):
     """
     handle, path = tempfile.mkstemp(suffix=".xml", prefix="ehshoko-export-")
     os.close(handle)
-    for _ in range(EXPORT_ATTEMPTS):
+    attempts = attempts or EXPORT_ATTEMPTS
+    for _ in range(attempts):
         result = subprocess.run(
             ["xcrun", "xctrace", "export", "--input", str(trace), "--xpath", xpath, "--output", path],
             capture_output=True, text=True,
@@ -51,14 +52,15 @@ def export(trace, xpath):
         if result.returncode == 0:
             return path
     os.remove(path)
-    print(f"    (xctrace export failed {EXPORT_ATTEMPTS} times for {trace.name}: exit {result.returncode})")
+    print(f"    (xctrace export failed {attempts} times for {trace.name}: exit {result.returncode})")
     return None
 
 
 EXPORT_ATTEMPTS = 40
+PROFILE_ATTEMPTS = 6
 
 
-def iter_rows(trace, schema):
+def iter_rows(trace, schema, attempts=None):
     """The rows of the first table with this schema, one at a time, as pairs of a dict
     (column mnemonic -> element) and the function that resolves a reference.
 
@@ -67,7 +69,7 @@ def iter_rows(trace, schema):
     handed over, so a time profile of several minutes (gigabytes of XML) does not have to fit
     in memory: only the values later rows refer to are kept.
     """
-    path = export(trace, f'/trace-toc/run[@number="1"]/data/table[@schema="{schema}"]')
+    path = export(trace, f'/trace-toc/run[@number="1"]/data/table[@schema="{schema}"]', attempts)
     if path is None:
         return
     by_id = {}
@@ -244,7 +246,9 @@ def report_time_profile(trace, galleries=0, windows=None):
     if windows is None:
         windows = scroll_windows(signpost_intervals(trace))
     leaves, app_frames, totals, seen = {}, {}, [0] * max(len(windows), 1), False
-    for row, resolve in iter_rows(trace, "time-profile"):
+    # The time profile is the largest table and the one whose export fails most; the figures
+    # that matter come from the harness's own clock, so it is not retried for long.
+    for row, resolve in iter_rows(trace, "time-profile", attempts=PROFILE_ATTEMPTS):
         seen = True
         time = number(row.get("time"))
         scroll = next((index for index, (begin, end) in enumerate(windows) if begin <= time <= end), None)
