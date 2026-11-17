@@ -227,7 +227,7 @@ PY
 # nothing: its screen needs no care.
 show_rest() {
   is_simulator && return 0
-  xcrun devicectl device process launch --device "$device" --terminate-existing "$bundle_id" \
+  xcrun devicectl device process launch --device "$device" --terminate-existing -- "$bundle_id" \
     -Harness rest -HarnessRestLabel "$1" >/dev/null 2>&1 \
     || echo "measure.sh: could not show the rest screen" >&2
 }
@@ -303,8 +303,11 @@ mark_stale() {
   rm -f "$marker"
 }
 
-# fetch_file <file in Library/Caches/ListHarness> <destination>: copies what the harness wrote
-# in the last run.
+# fetch_file <file in Library/Caches/ListHarness> <destination> [the run before's copy]: copies
+# what the harness wrote in the last run. A series marks the file stale once, before its first
+# run (each mark is a round trip to the device, seconds a phone's screen waits for); a later
+# run that never started leaves the run before's file there, byte for byte, which is told
+# here and marked stale.
 fetch_file() {
   local source="Library/Caches/ListHarness/$1"
   if is_simulator; then
@@ -315,6 +318,10 @@ fetch_file() {
     xcrun devicectl device copy from --device "$device" --domain-type appDataContainer \
       --domain-identifier "$bundle_id" --source "$source" --destination "$2" >/dev/null 2>&1
   fi || echo "measure.sh: the harness wrote no $1 (did the run finish?)" >&2
+  if [[ -n "${3:-}" && -f "$2" && -f "$3" ]] && cmp -s "$2" "$3"; then
+    echo "measure.sh: this run left no $1 of its own" >&2
+    echo '{"stale": true}' > "$2"
+  fi
 }
 
 # The scripted scrolls of one launch, recorded for hitches --runs times.
@@ -330,10 +337,10 @@ scroll_runs() {
       xcrun simctl launch --console-pty "$device" "$bundle_id" "$@" "${tips_args[@]}" > "$out/console-$index.txt" 2>&1 \
         || echo "measure.sh: the launch failed (see console-$index.txt)" >&2
     else
-      mark_stale result.json
+      [[ $index -gt 1 ]] || mark_stale result.json
       record "$hitches_template" "$out/hitches-$index.trace" "${scroll_limit}s" "${hitches_instruments[@]}" -- "$@"
     fi
-    fetch_file result.json "$out/result-$index.json"
+    fetch_file result.json "$out/result-$index.json" "$out/result-$((index - 1)).json"
   done
 }
 
@@ -400,9 +407,9 @@ case "$run" in
     printf '%s\n' "link=${link:-none}" "clear_images=$clear_images" "exit_after=${exit_after:-none}" "arguments=${extra_args[*]:-none}" "template=$signpost_template" \
       "light=$light" "device=$device" >> "$out/run.txt"
     for ((index = 1; index <= runs; index++)); do
-      [[ -z "$exit_after" ]] || mark_stale footprint.json
+      [[ -z "$exit_after" || $index -gt 1 ]] || mark_stale footprint.json
       record "$signpost_template" "$out/signposts-$index.trace" "${seconds}s" "${signpost_instruments[@]}" -- ${app_args[@]+"${app_args[@]}"}
-      [[ -z "$exit_after" ]] || fetch_file footprint.json "$out/footprint-$index.json"
+      [[ -z "$exit_after" ]] || fetch_file footprint.json "$out/footprint-$index.json" "$out/footprint-$((index - 1)).json"
     done
     ;;
   launch)
@@ -411,9 +418,9 @@ case "$run" in
     [[ -z "$exit_after" ]] || app_args+=(-HarnessExitAfter "$exit_after")
     printf '%s\n' "kind=launch" "exit_after=${exit_after:-none}" "arguments=${extra_args[*]:-none}" "device=$device" > "$out/run.txt"
     for ((index = 1; index <= runs; index++)); do
-      [[ -z "$exit_after" ]] || mark_stale footprint.json
+      [[ -z "$exit_after" || $index -gt 1 ]] || mark_stale footprint.json
       record "App Launch" "$out/launch-$index.trace" "${seconds}s" os_signpost -- ${app_args[@]+"${app_args[@]}"}
-      [[ -z "$exit_after" ]] || fetch_file footprint.json "$out/footprint-$index.json"
+      [[ -z "$exit_after" ]] || fetch_file footprint.json "$out/footprint-$index.json" "$out/footprint-$((index - 1)).json"
     done
     ;;
   *) die "unknown run $run (list, shell, signposts, launch, rest, stop, report)" ;;

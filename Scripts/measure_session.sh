@@ -128,7 +128,8 @@ preset() {
   for part in Start List Gallery Reader Search Library Look; do
     preset_arguments+=(--app-arg "-settings.design$part" --app-arg "$1")
   done
-  preset_arguments+=(--app-arg -settings.experienceOfferShown --app-arg YES)
+  # A Bool setting is read as a property list value, so "YES" would not do.
+  preset_arguments+=(--app-arg -settings.experienceOfferShown --app-arg "<true/>")
 }
 
 selected() {
@@ -151,7 +152,7 @@ measure() {
 # locked): every 5 s, with the alert every half minute.
 wait_for_device() {
   local label="$1" tries=0
-  until xcrun devicectl device process launch --device "$device" --terminate-existing "$bundle_id" \
+  until xcrun devicectl device process launch --device "$device" --terminate-existing -- "$bundle_id" \
       -Harness rest -HarnessRestLabel "$label" >/dev/null 2>&1; do
     if (( tries % 6 == 0 )); then
       echo "[$(date +%H:%M:%S)] The device will not start the app: unlock it (waiting)" >&2

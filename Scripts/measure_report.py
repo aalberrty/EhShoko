@@ -37,8 +37,9 @@ def export(trace, xpath):
     """The path of a file holding the XML of one xctrace export query, or None when the trace
     has no such table. The caller removes the file.
 
-    xctrace export crashes now and then (exit 139, no output; seen half the time on device
-    traces under load), so a failed export is retried before the table counts as missing.
+    xctrace export crashes at random (exit 139, no output: an over-release inside the tool,
+    whatever the template and however quiet the Mac; one export in two to one in eight
+    succeeds), so a failed export is retried many times before the table counts as missing.
     """
     handle, path = tempfile.mkstemp(suffix=".xml", prefix="ehshoko-export-")
     os.close(handle)
@@ -54,7 +55,7 @@ def export(trace, xpath):
     return None
 
 
-EXPORT_ATTEMPTS = 6
+EXPORT_ATTEMPTS = 40
 
 
 def iter_rows(trace, schema):
@@ -308,9 +309,11 @@ def belongs(event, interval):
 
 
 def report_signposts(trace):
-    intervals = [interval for interval in signpost_intervals(trace) if interval["category"] == "Performance"]
+    every = [interval for interval in signpost_intervals(trace) if interval["category"] == "Performance"]
+    intervals = [interval for interval in every if interval["name"] in BUDGET_INTERVALS]
     events = signpost_events(trace)
     print(f"  {trace.name}: {len(intervals)} intervals")
+    report_drawing(every)
     seen = set()
     for interval in intervals:
         detail = " ".join(part for part in (interval["begin"], interval["end"]) if part)
@@ -342,6 +345,27 @@ def report_signposts(trace):
             note(f"{key} after event {message} ms", (end - event["time"]) / 1e6)
     report_first_content_response(intervals, events)
     report_transition_hitches(trace, intervals)
+
+
+# The intervals of PerformanceSignposts.Name, one line each. The category holds others that
+# come once per drawn frame (the previews' SchematicDraw, the moving preview's StageDraw),
+# which are counted instead.
+BUDGET_INTERVALS = ("Launch", "FirstContent", "GalleryOpen", "ReaderOpen", "ListPage")
+
+
+def report_drawing(intervals):
+    """The per-frame drawing intervals of the previews, by name: how many, their median,
+    their longest and their sum, which is main-thread time."""
+    by_name = {}
+    for interval in intervals:
+        if interval["name"] not in BUDGET_INTERVALS:
+            by_name.setdefault(interval["name"], []).append(interval["duration"] / 1e6)
+    for name, durations in by_name.items():
+        print(f"    {name}: {len(durations)} intervals, median {statistics.median(durations):.2f} ms, "
+              f"longest {max(durations):.2f} ms, {sum(durations):.1f} ms in all")
+        note(f"{name} intervals", len(durations))
+        note(f"{name} median ms", statistics.median(durations))
+        note(f"{name} longest ms", max(durations))
 
 
 def report_first_content_response(intervals, events):
