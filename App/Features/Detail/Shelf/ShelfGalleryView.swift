@@ -32,7 +32,7 @@ struct ShelfGalleryView: View {
         }
         .background(look.background)
         .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { width = $0 }
-        .navigationBarTitleDisplayMode(.inline)
+        .modifier(ShelfGalleryBarTitle(model: model))
         .toolbar {
             ShelfGalleryToolbar(model: model) { keyword in stack?.push(.search(keyword: keyword)) }
         }
@@ -140,5 +140,20 @@ private struct ShelfGalleryMore: View {
             ShelfGalleryTags(model: model)
             ShelfGalleryComments(model: model)
         }
+    }
+}
+
+/// The page's heading as the bar's title, which the bar does not draw: VoiceOver, Back and the
+/// app switcher name the page by it instead of by its hosting type. A modifier of its own, so
+/// the titles' arrival and the title setting re-evaluate only it.
+private struct ShelfGalleryBarTitle: ViewModifier {
+    let model: GalleryDetailModel
+
+    @Environment(SettingsStore.self) private var settings
+
+    func body(content: Content) -> some View {
+        content.hiddenBarTitle(
+            ShelfGalleryTitles(model.titles.shown(prefersJapanese: settings.displaysJapaneseTitle)).heading
+        )
     }
 }

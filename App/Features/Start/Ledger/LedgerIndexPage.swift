@@ -94,8 +94,9 @@ private struct LedgerIndexPageFavorites: View {
     var body: some View {
         if accountSession.isLoggedIn {
             LedgerIndexSectionHeader(title: L10n.Localizable.Shell.Place.favorites) {
-                Button(total) { navigation.openFolder(-1) }
+                Button { navigation.openFolder(-1) } label: { Text(total).hitAreaOutset() }
                     .buttonStyle(.borderless)
+                    .hitAreaOutsetReturned()
             }
             .ledgerIndexPageHeader()
             // One column from the largest standard size, where two cut folder names to a word.

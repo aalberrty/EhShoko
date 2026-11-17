@@ -200,8 +200,8 @@ final class WalkRunner {
             }
         case .back:
             try goBack()
-        case .backSwipe(let reach):
-            try backSwipe(reach: reach)
+        case .backSwipe(let swipe):
+            try backSwipe(swipe)
         case .pause(let seconds):
             Thread.sleep(forTimeInterval: seconds)
         case .screenshot(let name):
@@ -333,30 +333,36 @@ final class WalkRunner {
     /// The system back button (`BackButton` on iOS 26; on iOS 18 a SwiftUI stack's has no
     /// identifier, only the previous screen's title, so the leading button of a navigation
     /// bar), or the edge swipe where a page draws its own top bar.
-    /// Where the column of the screen pushed last starts: the trailing-most navigation bar's
-    /// leading edge (0 when one screen fills the window).
-    private var lastColumnMinX: CGFloat {
-        app.navigationBars.allElementsBoundByIndex
-            .filter { !$0.frame.isEmpty && app.frame.intersects($0.frame) }
-            .map(\.frame.minX).max() ?? 0
+    /// The navigation bar of the screen pushed last: the trailing-most one (an iPad's side pane,
+    /// or a form sheet over the screen), or `nil` when no bar shows.
+    private var lastColumnBar: CGRect? {
+        app.navigationBars.allElementsBoundByIndex.map(\.frame)
+            .filter { !$0.isEmpty && app.frame.intersects($0) }
+            .max { $0.minX < $1.minX }
     }
 
+    /// Where the column of the screen pushed last starts (0 when one screen fills the window).
+    private var lastColumnMinX: CGFloat { lastColumnBar?.minX ?? 0 }
+
+    /// Drags under the last column's bar, from half to a tenth of the room below it: inside a
+    /// side pane or an iPad's form sheet, whose bottom is above the window's.
     private func scrollInLastColumn(_ direction: Step.Direction, screens: Double) throws {
         guard direction == .up || direction == .down else {
             throw WalkFailure(step: currentStep, reason: "a column scrolls only up or down")
         }
         let window = app.frame
-        let x = (lastColumnMinX + window.maxX) / 2
-        let (from, to): (CGFloat, CGFloat) = direction == .down ? (0.8, 0.2) : (0.2, 0.8)
+        let bar = lastColumnBar ?? CGRect(x: window.minX, y: window.minY, width: window.width, height: 0)
+        let top = bar.maxY, room = window.maxY - bar.maxY
+        let (from, to): (CGFloat, CGFloat) = direction == .down ? (0.5, 0.1) : (0.1, 0.5)
         let origin = app.coordinate(withNormalizedOffset: .zero)
-        for _ in 0..<max(Int((screens / 0.6).rounded(.up)), 1) {
-            let start = origin.withOffset(CGVector(dx: x, dy: window.height * from))
-            let end = origin.withOffset(CGVector(dx: x, dy: window.height * to))
+        for _ in 0..<max(Int((screens * window.height / (room * 0.4)).rounded(.up)), 1) {
+            let start = origin.withOffset(CGVector(dx: bar.midX, dy: top + room * from))
+            let end = origin.withOffset(CGVector(dx: bar.midX, dy: top + room * to))
             start.press(forDuration: 0.05, thenDragTo: end, withVelocity: 900, thenHoldForDuration: 0.15)
         }
     }
 
-    private func backSwipe(reach: Double) throws {
+    private func backSwipe(_ swipe: Step.BackSwipe) throws {
         let width = app.frame.width
         // The column of the screen pushed last.
         let leadingEdge = lastColumnMinX
@@ -364,12 +370,13 @@ final class WalkRunner {
         // every system: there the walk goes back with the button, and says so.
         if leadingEdge > 1 {
             record.notes.append("\(currentStep): the screen is in a column at \(Int(leadingEdge)) pt; "
-                + (reach < 0.5 ? "no swipe" : "went back with the button"))
-            if reach >= 0.5 { try goBack() }
+                + (swipe == .letGoEarly ? "no swipe" : "went back with the button"))
+            if swipe == .whole { try goBack() }
             return
         }
+        let reach = swipe == .whole ? width * 0.9 : 80
         let start = app.coordinate(withNormalizedOffset: CGVector(dx: 2 / width, dy: 0.5))
-        let end = app.coordinate(withNormalizedOffset: CGVector(dx: reach, dy: 0.5))
+        let end = app.coordinate(withNormalizedOffset: CGVector(dx: reach / width, dy: 0.5))
         // Slowly, and held before letting go, so the finger has no speed left that would finish
         // the pop by itself.
         start.press(forDuration: 0.05, thenDragTo: end, withVelocity: 80, thenHoldForDuration: 0.6)

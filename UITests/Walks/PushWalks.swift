@@ -7,7 +7,7 @@
 /// |---|---|
 /// | `push-<bar>-<gallery>` | Toplists, the first gallery under that bar, a tag on its page, the list, back. |
 /// | `push-sheet-<gallery>` | The gallery in the sheet a link opens (the part harness's `-HarnessPresentation sheet`), a tag, the list, back. |
-/// | `push-tabs-<gallery>-swipe` | As `push-tabs-<gallery>`, back with the interactive back swipe: once let go early (the pop is cancelled and the list stays), then all the way. |
+/// | `push-tabs-<gallery>-swipe` | As `push-tabs-<gallery>`, back with the interactive back swipe: once let go early, 80 pt from the edge (the pop is cancelled and the list stays), then all the way. |
 ///
 /// The set `pushes` holds all twelve.
 enum PushWalks {
@@ -50,18 +50,20 @@ enum PushWalks {
     }
 
     /// The interactive back swipe while the bottom inset changes with it (F29's fix is the
-    /// update that changes it without its animation): let go early, then, if the list is still
-    /// there, the whole way; the gallery and its dock come back. Whether letting go early kept
-    /// the list is noted, not failed: on a full-width stack the pop completes on iOS 18.5 and
-    /// 26.3 alike, which is still to be explained.
+    /// update that changes it without its animation): let go early, which must leave the
+    /// list, then all the way; the gallery and its dock come back.
     private static var pushAndSwipeBack: [Step] {
         push + [
-            .backSwipe(reach: 0.25), .pause(seconds: 1), .screenshot("let-go-early"),
-            .optional([.expect(Screens.galleryRow(in: .shelf))]),
-            .ifPresent(Screens.galleryRow(in: .shelf), within: 2, then: [.backSwipe(reach: 0.9)], else: []),
+            .backSwipe(.letGoEarly), .pause(seconds: 1), .screenshot("let-go-early"),
+            // The list's bar, which stays whatever the list was scrolled to.
+            .expect(listBar),
+            .backSwipe(.whole),
             .wait(Screens.readPill), .screenshot("swiped-back-on-gallery"),
         ]
     }
+
+    /// The pushed list's navigation bar, named after its search.
+    static let listBar = Target(matches: [.identifier("a:\"hoshino kanae$\"")], type: .navigationBar)
 
     private static var push: [Step] {
         [
