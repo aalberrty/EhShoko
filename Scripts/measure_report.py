@@ -79,8 +79,12 @@ def iter_rows(trace, schema):
         columns, node = [], None
         for event, element in ElementTree.iterparse(path, events=("start", "end")):
             if event == "start":
+                # Several tables of one schema come as several nodes; only the first names
+                # the columns.
                 if element.tag == "node":
-                    node, columns = element, []
+                    node = element
+                elif element.tag == "schema":
+                    columns = []
                 continue
             if "id" in element.attrib:
                 by_id[element.attrib["id"]] = element
