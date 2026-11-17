@@ -68,7 +68,8 @@ enum PushWalks {
             .scrollTo(tag, screens: 8), .screenshot("tag"),
             .tap(tag), .pause(seconds: 2),
             .wait(Screens.galleryInList), .screenshot("list-pushed"),
-            .scroll(.down, screens: 1, on: nil), .screenshot("list-scrolled"),
+            // The pushed list, which on an iPad may be in the side pane beside another list.
+            .scrollColumn(.down, screens: 1), .screenshot("list-scrolled"),
         ]
     }
 }

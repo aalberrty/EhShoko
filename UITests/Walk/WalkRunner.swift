@@ -176,6 +176,8 @@ final class WalkRunner {
             } else {
                 app.typeText(text)
             }
+        case .scrollColumn(let direction, let screens):
+            try scrollInLastColumn(direction, screens: screens)
         case .scrollTo(let target, let screens):
             try scrollTo(target, screens: screens)
         case .swipeUntil(let target, let direction, let times):
@@ -331,12 +333,33 @@ final class WalkRunner {
     /// The system back button (`BackButton` on iOS 26; on iOS 18 a SwiftUI stack's has no
     /// identifier, only the previous screen's title, so the leading button of a navigation
     /// bar), or the edge swipe where a page draws its own top bar.
-    private func backSwipe(reach: Double) throws {
-        let width = app.frame.width
-        // The column of the screen pushed last: the trailing-most bar.
-        let leadingEdge = app.navigationBars.allElementsBoundByIndex
+    /// Where the column of the screen pushed last starts: the trailing-most navigation bar's
+    /// leading edge (0 when one screen fills the window).
+    private var lastColumnMinX: CGFloat {
+        app.navigationBars.allElementsBoundByIndex
             .filter { !$0.frame.isEmpty && app.frame.intersects($0.frame) }
             .map(\.frame.minX).max() ?? 0
+    }
+
+    private func scrollInLastColumn(_ direction: Step.Direction, screens: Double) throws {
+        guard direction == .up || direction == .down else {
+            throw WalkFailure(step: currentStep, reason: "a column scrolls only up or down")
+        }
+        let window = app.frame
+        let x = (lastColumnMinX + window.maxX) / 2
+        let (from, to): (CGFloat, CGFloat) = direction == .down ? (0.8, 0.2) : (0.2, 0.8)
+        let origin = app.coordinate(withNormalizedOffset: .zero)
+        for _ in 0..<max(Int((screens / 0.6).rounded(.up)), 1) {
+            let start = origin.withOffset(CGVector(dx: x, dy: window.height * from))
+            let end = origin.withOffset(CGVector(dx: x, dy: window.height * to))
+            start.press(forDuration: 0.05, thenDragTo: end, withVelocity: 900, thenHoldForDuration: 0.15)
+        }
+    }
+
+    private func backSwipe(reach: Double) throws {
+        let width = app.frame.width
+        // The column of the screen pushed last.
+        let leadingEdge = lastColumnMinX
         // A drag from a column's edge (the side pane's) does not reach its back gesture on
         // every system: there the walk goes back with the button, and says so.
         if leadingEdge > 1 {
