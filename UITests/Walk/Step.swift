@@ -23,9 +23,9 @@ indirect enum Step: Sendable {
     case pinch(scale: Double, on: Target?)
     /// Types into the target, or into whatever has the keyboard focus.
     case type(String, into: Target?)
-    /// Drags up or down by `screens` window heights in the column of the screen pushed last:
-    /// on an iPad the side pane's when it shows (the window's middle is the list beside it),
-    /// elsewhere the whole window.
+    /// Drags up or down by about `screens` window heights in the column of the screen pushed
+    /// last: on an iPad the side pane's or a form sheet's (the window's middle is the list
+    /// beside the pane, its lower part below the sheet), elsewhere the whole window.
     case scrollColumn(Direction, screens: Double)
     /// Scrolls down (up to `screens` times) until the target is on screen: rows of a lazy
     /// list exist only once they are near it.
