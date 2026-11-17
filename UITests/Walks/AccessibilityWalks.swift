@@ -55,8 +55,9 @@ enum AccessibilityWalks {
             .group(
                 "settings",
                 openSettings + [
-                    .wait(Screens.customise), .audit("settings"),
-                    .tap(Screens.customise), .wait(Screens.experienceBar), .pause(seconds: 1), .audit("experience"),
+                    // On an iPad Customize is below the form sheet's fold, made only when near.
+                    .wait(Screens.settingsBar), .pause(seconds: 1), .audit("settings"),
+                    .scrollTo(Screens.customise, screens: 3), .tap(Screens.customise), .wait(Screens.experienceBar), .pause(seconds: 1), .audit("experience"),
                 ] + Screens.closeSettings
             ),
         ]

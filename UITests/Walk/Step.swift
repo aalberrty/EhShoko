@@ -23,6 +23,10 @@ indirect enum Step: Sendable {
     case pinch(scale: Double, on: Target?)
     /// Types into the target, or into whatever has the keyboard focus.
     case type(String, into: Target?)
+    /// Drags up or down by `screens` window heights in the column of the screen pushed last:
+    /// on an iPad the side pane's when it shows (the window's middle is the list beside it),
+    /// elsewhere the whole window.
+    case scrollColumn(Direction, screens: Double)
     /// Scrolls down (up to `screens` times) until the target is on screen: rows of a lazy
     /// list exist only once they are near it.
     case scrollTo(Target, screens: Int)
@@ -88,6 +92,7 @@ indirect enum Step: Sendable {
             "scroll \(direction.rawValue) \(screens) screens" + (target.map { " on \($0)" } ?? "")
         case .pinch(let scale, let target): "pinch \(scale)" + (target.map { " on \($0)" } ?? "")
         case .type(let text, let target): "type “\(text)”" + (target.map { " into \($0)" } ?? "")
+        case .scrollColumn(let direction, let screens): "scroll \(direction) \(screens) screens in the last column"
         case .scrollTo(let target, _): "scroll to \(target)"
         case .swipeUntil(let target, let direction, _): "swipe \(direction.rawValue) until \(target)"
         case .wait(let target, _): "wait for \(target)"

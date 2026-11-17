@@ -36,7 +36,8 @@ enum DeviceWalks {
     private static func openExperience(_ screens: Screens) -> [Step] {
         [
             .launch(extra: []), screens.waitForFirstScreen,
-            .tap(Screens.accountButton), .wait(Screens.customise), .scrollTo(Screens.customise, screens: 3), .tap(Screens.customise),
+            .tap(Screens.accountButton), .wait(Screens.settingsBar), .pause(seconds: 1), .scrollTo(Screens.customise, screens: 3),
+            .tap(Screens.customise),
             .wait(Screens.experienceBar),
         ]
     }
@@ -64,7 +65,7 @@ enum DeviceWalks {
     private static func openWizard(_ screens: Screens) -> [Step] {
         [
             .launch(extra: []), screens.waitForFirstScreen,
-            .tap(Screens.accountButton), .wait(setupRow),
+            .tap(Screens.accountButton), .wait(Screens.settingsBar), .pause(seconds: 1),
             // The row sits under the home indicator on a phone, where a tap does nothing.
             .scrollTo(setupRow, screens: 2), .scroll(.down, screens: 0.5, on: nil), .tap(setupRow),
             .wait(next), .screenshot("wizard-start"),
@@ -93,7 +94,7 @@ enum DeviceWalks {
             .wait(Target.button("Apply")), .screenshot("wizard-summary"), .tap(Target.button("Apply")),
             .pause(seconds: 2), .tapIfPresent(Screens.done), .pause(seconds: 1.5),
             .expect(Screens.tab("Home")), .screenshot("wizard-applied"),
-            .tap(Screens.accountButton), .wait(Screens.customise), .pause(seconds: 1),
+            .tap(Screens.accountButton), .wait(Screens.settingsBar), .pause(seconds: 1), .scrollTo(Screens.customise, screens: 3),
             .screenshot("wizard-applied-settings"), .tap(Screens.done),
         ]
         return steps
@@ -110,7 +111,7 @@ enum DeviceWalks {
             .tapIfPresent(Target.button("Discard"), within: 3),
             .pause(seconds: 1.5), .tapIfPresent(Screens.done), .pause(seconds: 1.5),
             .expect(Screens.tab("Home")), .screenshot("wizard-closed"),
-            .tap(Screens.accountButton), .wait(Screens.customise), .pause(seconds: 1),
+            .tap(Screens.accountButton), .wait(Screens.settingsBar), .pause(seconds: 1), .scrollTo(Screens.customise, screens: 3),
             .screenshot("wizard-closed-settings"), .tap(Screens.done),
         ]
     }
@@ -127,7 +128,7 @@ enum DeviceWalks {
             let watch: [Step] = [
                 .launch(extra: choices.arguments(for: environment.fixture)), screens.waitForFirstScreen,
             ] + openSettings(screens) + [
-                .wait(setupRow), .scrollTo(setupRow, screens: 2), .scroll(.down, screens: 0.5, on: nil),
+                .wait(Screens.settingsBar), .pause(seconds: 1), .scrollTo(setupRow, screens: 2), .scroll(.down, screens: 0.5, on: nil),
                 .tap(setupRow), .wait(next),
                 .tap(Target(matches: [.label(style.name)], type: .button)),
             ] + (1...4).flatMap { beat -> [Step] in
