@@ -213,9 +213,12 @@ struct ListLoadMoreFailedRow: View {
             Text(verbatim: "·")
                 .foregroundStyle(look.tertiaryLabel)
                 .accessibilityHidden(true)
-            Button(L10n.Localizable.ErrorView.Button.retry, action: retry)
-                .buttonStyle(.borderless)
-                .fontWeight(.semibold)
+            Button(action: retry) {
+                Text(L10n.Localizable.ErrorView.Button.retry).hitAreaOutset()
+            }
+            .buttonStyle(.borderless)
+            .fontWeight(.semibold)
+            .hitAreaOutsetReturned()
         }
         .font(.subheadline)
         .frame(maxWidth: .infinity, minHeight: 50)
@@ -289,9 +292,12 @@ struct ListOfflineBanner: View {
             .foregroundStyle(look.secondaryLabel)
             // The text says it; VoiceOver would read the symbol as "Wi-Fi Off" first.
             .accessibilityHidden(true)
-        let retryButton = Button(L10n.Localizable.ErrorView.Button.retry, action: retry)
-            .buttonStyle(.borderless)
-            .fontWeight(.semibold)
+        let retryButton = Button(action: retry) {
+            Text(L10n.Localizable.ErrorView.Button.retry).hitAreaOutset()
+        }
+        .buttonStyle(.borderless)
+        .fontWeight(.semibold)
+        .hitAreaOutsetReturned()
         if typeSize.isAccessibilitySize {
             VStack(alignment: .leading, spacing: Tokens.Spacing.xSmall) {
                 HStack(alignment: .firstTextBaseline, spacing: Tokens.Spacing.small) {

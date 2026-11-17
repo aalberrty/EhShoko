@@ -226,10 +226,13 @@ private struct LedgerGalleryBanner: View {
                 .lineLimit(typeSize.isAccessibilitySize ? nil : 2)
                 .frame(maxWidth: .infinity, alignment: .leading)
             if error.isRetryable {
-                Button(L10n.Localizable.ErrorView.Button.retry, action: retry)
-                    .font(.footnote.weight(.semibold))
-                    .buttonStyle(.plain)
-                    .foregroundStyle(.tint)
+                Button(action: retry) {
+                    Text(L10n.Localizable.ErrorView.Button.retry).hitAreaOutset()
+                }
+                .font(.footnote.weight(.semibold))
+                .buttonStyle(.plain)
+                .foregroundStyle(.tint)
+                .hitAreaOutsetReturned()
             }
         }
         .padding(.horizontal, 12)

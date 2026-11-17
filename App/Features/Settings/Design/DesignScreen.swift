@@ -90,6 +90,9 @@ private struct DesignPictures: View {
                 .accessibilityHidden(true)
         }
         .frame(minWidth: Self.size.width)
+        // One element, the picture's, over the caption too: hidden text outside every element
+        // is what the accessibility audit reports as "potentially inaccessible text".
+        .accessibilityElement(children: .combine)
     }
 }
 

@@ -21,6 +21,9 @@ final class ListRowWords {
     private var addedAges: [GalleryEntry.Age: String] = [:]
     private var categoryNames: [EhModels.Category: String] = [:]
     private var tagTexts: [String: String] = [:]
+    private var spokenAges: [GalleryEntry.Age: String] = [:]
+    private var languageNames: [String: String] = [:]
+    private var ratingWords: [String: String] = [:]
 
     private lazy var shortAgeFormatter: DateComponentsFormatter = {
         let formatter = DateComponentsFormatter()
@@ -32,6 +35,13 @@ final class ListRowWords {
     private lazy var relativeFormatter: RelativeDateTimeFormatter = {
         let formatter = RelativeDateTimeFormatter()
         formatter.unitsStyle = .abbreviated
+        formatter.dateTimeStyle = .numeric
+        return formatter
+    }()
+
+    private lazy var spokenAgeFormatter: RelativeDateTimeFormatter = {
+        let formatter = RelativeDateTimeFormatter()
+        formatter.unitsStyle = .full
         formatter.dateTimeStyle = .numeric
         return formatter
     }()
@@ -77,6 +87,38 @@ final class ListRowWords {
     /// "added 2d ago": when a favourite was favourited.
     func added(_ age: GalleryEntry.Age) -> String {
         Self.memo(&addedAges, age) { L10n.Localizable.List.added(ago(age)) }
+    }
+
+    // MARK: Spoken
+
+    // What a row reads out in place of its abbreviations ("1mo", "JA", "48 p", "★ 4.5"), asked
+    // for only while VoiceOver is on (`ShelfRowStyle.isSpoken`, `LedgerListWords.spokenLine`).
+
+    /// "1 month ago".
+    func spokenAgo(_ age: GalleryEntry.Age) -> String {
+        Self.memo(&spokenAges, age) { spokenAgeFormatter.localizedString(from: Self.past(age)) }
+    }
+
+    /// "opened 2 hours ago".
+    func spokenOpened(_ age: GalleryEntry.Age) -> String {
+        L10n.Localizable.List.opened(spokenAgo(age))
+    }
+
+    /// "added 2 days ago".
+    func spokenAdded(_ age: GalleryEntry.Age) -> String {
+        L10n.Localizable.List.added(spokenAgo(age))
+    }
+
+    /// "Japanese" for "JA"; the code itself for one no language has.
+    func languageName(code: String) -> String {
+        Self.memo(&languageNames, code) {
+            Language.allCases.first { $0.code == code }?.localizedName ?? code
+        }
+    }
+
+    /// "4.5 stars".
+    func spokenRating(_ ratingText: String) -> String {
+        Self.memo(&ratingWords, ratingText) { L10n.Localizable.Common.Value.stars(ratingText) }
     }
 
     /// "Doujinshi".

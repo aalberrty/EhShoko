@@ -148,7 +148,7 @@ struct WallListView<Header: View>: View {
             density: layout.density, coverHeight: layout.coverHeight, captionHeight: layout.captionHeight,
             rowSpacing: layout.rowSpacing, facts: Self.facts(for: input.context.kind),
             tagLimit: layout.density == .large && showsTags ? tagsThatFit(layout) : 0,
-            isDimmed: input.feed.staleError?.isNetworkError == true, isSpoken: isVoiceOverOn,
+            isDimmed: input.feed.staleError?.isNetworkError == true, isSpoken: ListSpokenRows.isOn(isVoiceOverOn),
             zoom: zoomNamespace ?? localZoom, texts: texts, textsRevision: texts.revision
         )
     }

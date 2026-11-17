@@ -104,6 +104,39 @@ final class ShelfRowTexts {
         return name.isEmpty ? addedText : name + " · " + addedText
     }
 
+    /// What VoiceOver reads for a row, everything it shows in words: "No. 4, title, credit,
+    /// Doujinshi, Japanese, 48 pages, 4.5 stars, uploader, 2 hours ago" (a favourite: the
+    /// folder and "added 2 days ago"; History: "opened 2 hours ago"). Made only while
+    /// VoiceOver is on, from words made once per value.
+    func spokenLine(for entry: GalleryEntry, rank: Int?, footer: ShelfRowStyle.Footer) -> String {
+        var parts: [String] = []
+        if let rank { parts.append(L10n.Localizable.List.rank(rank)) }
+        parts.append(entry.title.core)
+        if let credit = entry.credit { parts.append(credit) }
+        parts.append(category(entry.gallery.category).name)
+        if let code = entry.languageCode { parts.append(words.languageName(code: code)) }
+        parts.append(words.pages(entry.gallery.pageCount))
+        switch footer {
+        case .posted, .history:
+            parts.append(words.spokenRating(entry.ratingText))
+            if let uploader = entry.uploader { parts.append(uploader) }
+            if footer == .history {
+                if let age = entry.openedAge { parts.append(words.spokenOpened(age)) }
+            } else {
+                parts.append(words.spokenAgo(entry.postedAge))
+            }
+        case .favorites:
+            if let favorite = entry.favorite {
+                let names = inputs?.folderNames ?? []
+                if names.indices.contains(favorite.folder), !names[favorite.folder].isEmpty {
+                    parts.append(names[favorite.folder])
+                }
+                if let age = entry.addedAge { parts.append(words.spokenAdded(age)) }
+            }
+        }
+        return parts.joined(separator: ", ")
+    }
+
     /// The tag's text, translated when the setting is on and the table has it, without emoji.
     func tagText(_ tag: GalleryEntry.Tag) -> String {
         words.tagText(tag)

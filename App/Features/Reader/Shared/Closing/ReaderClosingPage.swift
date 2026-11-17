@@ -43,9 +43,11 @@ struct ReaderClosingPage: View {
     static let bottomReserve: CGFloat = 176
 
     /// The reserve, or none while a design has shortened the engine's viewport (Ledger's open
-    /// sheet, in a paged direction, in portrait): the slot then ends above the controls.
-    static func bottomReserve(viewportInset: CGFloat) -> CGFloat {
-        viewportInset > 0 ? 0 : bottomReserve
+    /// sheet, in a paged direction, in portrait): the slot then ends above the controls. Where
+    /// the controls cover more of the screen than the reserve without shortening the viewport
+    /// (Ledger's open sheet over the vertical strip), as much as they cover.
+    static func bottomReserve(viewportInset: CGFloat, coveredBottom: CGFloat) -> CGFloat {
+        viewportInset > 0 ? 0 : max(bottomReserve, coveredBottom)
     }
 
     /// The hosting controller the engine puts in its trailing slot.
@@ -83,7 +85,11 @@ struct ReaderClosingPage: View {
                 .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { height in
                     ReaderClosingProbe.laidOut(height: height)
                 }
-                .padding(.bottom, Self.bottomReserve(viewportInset: viewport?.bottomInset ?? 0))
+                // The strip measures the block again when this changes (`sizeReporter`) and, resting
+                // at its end, stays there, so the column rises above an opened sheet.
+                .padding(.bottom, Self.bottomReserve(
+                    viewportInset: viewport?.bottomInset ?? 0, coveredBottom: viewport?.coveredBottom ?? 0
+                ))
                 .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { height in
                     sizeReporter.contentHeightDidChange(height)
                 }

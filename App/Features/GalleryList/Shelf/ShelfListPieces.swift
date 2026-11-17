@@ -148,9 +148,11 @@ struct ShelfListHeaderLine: View {
                         Text(L10n.Localizable.List.sort)
                     }
                     .font(.subheadline.weight(.medium))
+                    .hitAreaOutset()
                 }
                 .menuStyle(.button)
                 .buttonStyle(.borderless)
+                .hitAreaOutsetReturned()
             }
         }
     }

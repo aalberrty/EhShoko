@@ -60,7 +60,9 @@ struct ShelfHomeTitle: View {
             Text(L10n.Localizable.HomeView.Title.home)
                 .font(.largeTitle.bold())
                 .foregroundStyle(look.label)
-                .accessibilityAddTraits(.isHeader)
+                // The navigation bar keeps "Home" as the screen's title (`hiddenBarTitle`) and
+                // VoiceOver reads it there, as a heading: read here too, it came twice.
+                .accessibilityHidden(true)
         }
         // At the accessibility sizes the date and "Home" wrap rather than end in "…".
         .lineLimit(typeSize.isAccessibilitySize ? 2 : 1)
