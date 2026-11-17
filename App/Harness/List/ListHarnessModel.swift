@@ -227,9 +227,7 @@ nonisolated struct ListHarnessResult: Equatable, Sendable, Codable {
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
         guard let data = try? encoder.encode(ListHarnessResults(runs: results)) else { return }
-        let url = Self.fileURL
-        try? FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
-        try? data.write(to: url, options: .atomic)
+        HarnessFile.write(data, to: Self.fileURL)
         if let latest = results.last {
             print("ListHarness result \(results.count): \(latest.summary)")
         }

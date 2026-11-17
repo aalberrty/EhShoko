@@ -114,8 +114,23 @@ nonisolated struct HarnessFootprint: Codable, Sendable {
     func write() async {
         guard let data = try? JSONEncoder().encode(self) else { return }
         let url = Self.fileURL
+        HarnessFile.write(data, to: url)
+    }
+}
+
+/// Writes a file `measure.sh` fetches afterwards.
+nonisolated enum HarnessFile {
+    /// Atomically where it can. `measure.sh` puts a marker file there before a run, and on
+    /// some systems the device's copy service then creates the folder as its own (root's):
+    /// the app cannot add or replace a file in such a folder, only write into the marker
+    /// file, which is the app's. So a failed atomic write is tried again in place.
+    static func write(_ data: Data, to url: URL) {
         try? FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
-        try? data.write(to: url, options: .atomic)
+        do {
+            try data.write(to: url, options: .atomic)
+        } catch {
+            try? data.write(to: url)
+        }
     }
 }
 #endif
