@@ -202,7 +202,7 @@ public final class GalleryListModel {
         let fetch = pageFetch(from: request)
         let signpost = PerformanceSignposts.begin(.listPage, "\(source.signpostName) next")
         let load = tasks.run(TaskKey.nextPage) { [weak self] in
-            let outcome = await Outcome.of { try await fetch() }
+            let outcome = await Outcome.of { try await signpost.markingResponses(fetch) }
             self?.finishNextPage(outcome, token: token, previous: previous)
             signpost.end(outcome.signpostOutcome { "\($0.page.galleries.count) galleries" })
         }
@@ -253,7 +253,7 @@ public final class GalleryListModel {
         let fetch = pageFetch(from: request)
         let signpost = PerformanceSignposts.begin(.listPage, "\(source.signpostName) first")
         let load = tasks.run(TaskKey.firstPage) { [weak self] in
-            let outcome = await Outcome.of { try await fetch() }
+            let outcome = await Outcome.of { try await signpost.markingResponses(fetch) }
             self?.finishFirstPage(outcome, token: token, previous: previous)
             signpost.end(outcome.signpostOutcome { "\($0.page.galleries.count) galleries" })
         }
