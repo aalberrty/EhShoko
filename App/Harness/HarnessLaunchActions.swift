@@ -64,10 +64,7 @@ nonisolated struct HarnessLaunchRequest: Sendable {
         // A footprint left by an earlier run must not pass for this one's.
         await HarnessFootprint.removeLast()
         if clearsImageCache {
-            ImagePipeline.cache.clearMemoryCache()
-            await withCheckedContinuation { continuation in
-                ImagePipeline.cache.clearDiskCache { continuation.resume() }
-            }
+            await HarnessImageCache.empty()
         }
         if let link {
             open(link)
@@ -80,6 +77,17 @@ nonisolated struct HarnessLaunchRequest: Sendable {
         }
         await HarnessFootprint(MemoryFootprint.current()).write()
         exit(0)
+    }
+}
+
+/// Empties the image cache, memory and disk, so that what is shown next downloads and decodes
+/// again.
+enum HarnessImageCache {
+    static func empty() async {
+        ImagePipeline.cache.clearMemoryCache()
+        await withCheckedContinuation { continuation in
+            ImagePipeline.cache.clearDiskCache { continuation.resume() }
+        }
     }
 }
 

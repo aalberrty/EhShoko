@@ -1,4 +1,5 @@
 #if DEBUG || HARNESS
+import EhModels
 import Foundation
 
 /// How a list harness run is set up. From Laboratory every field starts at its default; a
@@ -13,7 +14,9 @@ import Foundation
 /// | `-HarnessBar YES` | NO | The command bar floats over the list instead, as the shell places it (`command` also works, as in the part harness). |
 /// | `-HarnessSpeed <pt/s>` | 2000 | Speed of the scripted scroll. |
 /// | `-HarnessCoverLatency <s>` | 0.08 | How long each cover takes to arrive. |
+/// | `-HarnessLook <name>` | the slot's design | The look the list is drawn in (`shelf`, `wall`, `ledger`), for a list under another design's colours and type. |
 /// | `-HarnessAutoRun YES` | NO | Start the scripted scroll once the first screen has settled. |
+/// | `-HarnessRuns <n>` | 1 | With `-HarnessAutoRun`: scroll n times in this one launch. Each run starts from an empty image cache and a list built again with new cover URLs, and has its own `HarnessScroll` interval and its own entry in `result.json`, so one recording (and one save of its trace) stands for n launches. |
 /// | `-HarnessExitWhenDone YES` | NO | Quit after writing the result, which ends an `xctrace` recording. |
 nonisolated struct ListHarnessOptions: Equatable, Sendable {
     var slot = ListHarnessSlot.shelf
@@ -23,7 +26,11 @@ nonisolated struct ListHarnessOptions: Equatable, Sendable {
     var showsBar = false
     var speed: Double = 2_000
     var coverLatency: Double = 0.08
+    /// The look the list is drawn in; `nil` for its own design's.
+    var look: DesignStyle?
     var runsAutomatically = false
+    /// How many scripted scrolls an automatic run makes in one launch.
+    var runs = 1
     var exitsWhenDone = false
 
     /// Seconds between the list's first appearance and the automatic run: the first screen's
@@ -55,7 +62,9 @@ nonisolated struct ListHarnessOptions: Equatable, Sendable {
         if defaults.object(forKey: "HarnessCoverLatency") != nil {
             options.coverLatency = max(defaults.double(forKey: "HarnessCoverLatency"), 0)
         }
+        options.look = defaults.string(forKey: "HarnessLook").flatMap(DesignStyle.init(rawValue:))
         options.runsAutomatically = defaults.bool(forKey: "HarnessAutoRun")
+        options.runs = min(max(defaults.integer(forKey: "HarnessRuns"), 1), 30)
         options.exitsWhenDone = defaults.bool(forKey: "HarnessExitWhenDone")
         return options
     }

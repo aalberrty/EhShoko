@@ -102,12 +102,17 @@ final class PartHarnessFixtures: ListFixtureProvider {
     func prepare() async {
         guard entries.isEmpty else { return }
         ListHarnessURLProtocol.install()
-        entries = await Self.makeEntries()
+        entries = await Self.makeEntries(count: PartHarnessScroll.atLaunch?.galleryCount ?? 120)
+    }
+
+    /// Before another run of a scripted scroll: every list starts again at its first page.
+    func startOver() {
+        lists = [:]
     }
 
     @concurrent
-    nonisolated private static func makeEntries() async -> [GalleryEntry] {
-        let galleries = await ListHarnessGalleries.make(count: 120, session: "parts", coverLatency: 0.05)
+    nonisolated private static func makeEntries(count: Int) async -> [GalleryEntry] {
+        let galleries = await ListHarnessGalleries.make(count: count, session: "parts", coverLatency: 0.05)
         let now = Date()
         return galleries.enumerated().map { index, original in
             // Opened an hour and a half apart, newest first, so History's rows say when.

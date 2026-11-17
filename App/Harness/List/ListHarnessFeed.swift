@@ -27,7 +27,9 @@ final class ListHarnessFeed: ListFeedSource {
     /// The feed for `galleries`. Ages count to just after the newest gallery, so the rows read
     /// "28m ago" to "1w ago" whatever the day; History's opening dates follow the same clock.
     static func feed(for galleries: [Gallery]) -> ListHarnessFeed {
-        if let cached, cached.entries.count == galleries.count, cached.entries.first?.id == galleries.first?.gid {
+        // A later run of the same launch has the same galleries under new cover URLs.
+        if let cached, cached.entries.count == galleries.count, cached.entries.first?.id == galleries.first?.gid,
+           cached.entries.first?.gallery.coverURL == galleries.first?.coverURL {
             return cached
         }
         let now = (galleries.first?.postedDate ?? .now).addingTimeInterval(1_700)

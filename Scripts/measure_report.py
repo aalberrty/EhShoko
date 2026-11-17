@@ -2,6 +2,8 @@
 """Prints the numbers of a measure.sh run from its traces and the harness's result files.
 
     measure_report.py <run folder>
+    measure_report.py --session <session folder>    one table of a session's blocks, each
+                                                     reported before (measure_session_report.sh)
 
 Reads, when present: hitches-<n>.trace (Animation Hitches with os_signpost), result-<n>.json
 (the list harness's own result), time-<n>.trace (Time Profiler), alloc.trace (Allocations),
@@ -13,8 +15,10 @@ figure of every run to summary.json in the run folder. Only the standard library
 import json
 import re
 import statistics
+import os
 import subprocess
 import sys
+import tempfile
 import xml.etree.ElementTree as ElementTree
 from pathlib import Path
 
@@ -30,55 +34,71 @@ def note(name, value):
 
 
 def export(trace, xpath):
-    """The XML of one xctrace export query, or None when the trace has no such table.
+    """The path of a file holding the XML of one xctrace export query, or None when the trace
+    has no such table. The caller removes the file.
 
     xctrace export crashes now and then (exit 139, no output; seen half the time on device
     traces under load), so a failed export is retried before the table counts as missing.
     """
+    handle, path = tempfile.mkstemp(suffix=".xml", prefix="ehshoko-export-")
+    os.close(handle)
     for _ in range(EXPORT_ATTEMPTS):
         result = subprocess.run(
-            ["xcrun", "xctrace", "export", "--input", str(trace), "--xpath", xpath],
+            ["xcrun", "xctrace", "export", "--input", str(trace), "--xpath", xpath, "--output", path],
             capture_output=True, text=True,
         )
         if result.returncode == 0:
-            break
-    else:
-        print(f"    (xctrace export failed {EXPORT_ATTEMPTS} times for {trace.name}: exit {result.returncode})")
-        return None
-    if "<row" not in result.stdout:
-        return None
-    return ElementTree.fromstring(result.stdout)
+            return path
+    os.remove(path)
+    print(f"    (xctrace export failed {EXPORT_ATTEMPTS} times for {trace.name}: exit {result.returncode})")
+    return None
 
 
 EXPORT_ATTEMPTS = 6
 
 
-def table_rows(trace, schema, with_resolver=False):
-    """Rows of the first table with this schema, as dicts of column mnemonic -> element.
+def iter_rows(trace, schema):
+    """The rows of the first table with this schema, one at a time, as pairs of a dict
+    (column mnemonic -> element) and the function that resolves a reference.
 
-    xctrace writes a value once with an id and refers to it later with ref; the row's values
-    are resolved, and with_resolver also returns the function that resolves nested ones.
+    xctrace writes a value once with an id and refers to it later with ref; a row's own values
+    are resolved. The export is read as a stream and each row is dropped once it has been
+    handed over, so a time profile of several minutes (gigabytes of XML) does not have to fit
+    in memory: only the values later rows refer to are kept.
     """
-    root = export(trace, f'/trace-toc/run[@number="1"]/data/table[@schema="{schema}"]')
-    if root is None:
-        return ([], lambda element: element) if with_resolver else []
+    path = export(trace, f'/trace-toc/run[@number="1"]/data/table[@schema="{schema}"]')
+    if path is None:
+        return
     by_id = {}
-    for element in root.iter():
-        if "id" in element.attrib:
-            by_id[element.attrib["id"]] = element
 
     def resolve(element):
         return by_id.get(element.attrib["ref"], element) if "ref" in element.attrib else element
 
-    rows = []
-    for node in root.iter("node"):
-        columns = [col.findtext("mnemonic") for col in node.iter("col")]
-        for row in node.iter("row"):
-            values = {}
-            for mnemonic, element in zip(columns, list(row)):
-                values[mnemonic] = resolve(element)
-            rows.append(values)
-    return (rows, resolve) if with_resolver else rows
+    try:
+        columns, node = [], None
+        for event, element in ElementTree.iterparse(path, events=("start", "end")):
+            if event == "start":
+                if element.tag == "node":
+                    node, columns = element, []
+                continue
+            if "id" in element.attrib:
+                by_id[element.attrib["id"]] = element
+            if element.tag == "col":
+                columns.append(element.findtext("mnemonic"))
+            elif element.tag == "row":
+                yield {mnemonic: resolve(value) for mnemonic, value in zip(columns, list(element))}, resolve
+                if node is not None:
+                    node.remove(element)
+    except ElementTree.ParseError:
+        # An export without the table is a document with no rows, or an empty file.
+        return
+    finally:
+        os.remove(path)
+
+
+def table_rows(trace, schema):
+    """Rows of the first table with this schema, as dicts of column mnemonic -> element."""
+    return [row for row, _ in iter_rows(trace, schema)]
 
 
 def number(element):
@@ -121,93 +141,114 @@ def signpost_intervals(trace):
     return sorted(intervals, key=lambda interval: interval["start"])
 
 
-def scroll_window(intervals):
-    runs = [interval for interval in intervals if interval["name"] == "HarnessScroll"]
-    if not runs:
-        return None
-    return runs[0]["start"], runs[0]["start"] + runs[0]["duration"]
+def scroll_windows(intervals):
+    """The start and end of every scripted scroll in the trace, in order."""
+    return [(interval["start"], interval["start"] + interval["duration"])
+            for interval in intervals if interval["name"] == "HarnessScroll"]
+
+
+def harness_results(result_file):
+    """The harness's results of one launch, one per scroll. A launch of an older build wrote
+    one result at the top level."""
+    if not result_file.exists():
+        return []
+    result = json.loads(result_file.read_text())
+    if result.get("stale"):
+        return [None]
+    return result.get("runs", [result])
 
 
 def report_hitches(trace, result_file, index, galleries=0):
     print(f"  Run {index}")
+    windows = []
     if trace.exists():
-        report_instruments_hitches(trace)
-        # On a device the Animation Hitches template records a time profile too, so the main
-        # thread's cost per row comes from the same scroll.
-        report_time_profile(trace, galleries)
-    result = json.loads(result_file.read_text()) if result_file.exists() else {}
-    if result.get("stale"):
-        print("    Harness: this run left no result (the app did not run)")
-    elif result:
-        print(f"    Harness: {result['frames']} frames in {result['duration']:.1f} s, "
+        windows = scroll_windows(signpost_intervals(trace))
+        report_instruments_hitches(trace, windows)
+        # On a device the recording holds a time profile too, so the main thread's cost per
+        # row comes from the same scroll.
+        report_time_profile(trace, galleries, windows)
+    results = harness_results(result_file)
+    if not results:
+        print("    Harness: no result file")
+    if trace.exists() and results != [None] and len(results) != len(windows):
+        print(f"    (the trace holds {len(windows)} scrolls, the harness reported {len(results)})")
+    for scroll, result in enumerate(results, start=1):
+        label = f"Harness, scroll {scroll}" if len(results) > 1 else "Harness"
+        if result is None:
+            print("    Harness: this run left no result (the app did not run)")
+            continue
+        print(f"    {label}: {result['slot']}, {result['frames']} frames in {result['duration']:.1f} s, "
               f"hitch time ratio {result['hitchRatioMsPerS']:.1f} ms/s, "
               f"worst {result['worstHitchMs']:.0f} ms, "
               f"{result['longHitchesAfterFirstScreen']} frames of 3+ durations after the first screen, "
               f"{'reached the end' if result['reachedEnd'] else 'did NOT reach the end'}")
-        print(f"    Footprint at the end: {result['footprintMB']:.0f} MB (peak {result['peakFootprintMB']:.0f} MB), "
-              f"{result['coversServed']} covers served")
+        print(f"      Footprint at the end: {result['footprintMB']:.0f} MB (peak {result['peakFootprintMB']:.0f} MB), "
+              f"{result['coversServed']} covers served, {result.get('coversDecoded', 0)} decoded by CoverImage; "
+              f"main thread {result.get('mainThreadCPUMs', 0):.0f} ms of CPU for {result.get('cellsCreated', 0)} cells, "
+              f"{result.get('cpuPerCellMs', 0):.2f} ms a cell")
         note("Harness hitch time ratio ms/s", result["hitchRatioMsPerS"])
         note("Harness worst hitch ms", result["worstHitchMs"])
         note("Harness long hitches after the first screen", result["longHitchesAfterFirstScreen"])
         note("Footprint at the end of the scroll MB", result["footprintMB"])
         note("Peak footprint during the scroll MB", result["peakFootprintMB"])
-    else:
-        print("    Harness: no result file")
+        if result.get("cellsCreated"):
+            note("Harness main-thread CPU per created cell ms", result["cpuPerCellMs"])
+            note("Harness main-thread CPU during the scroll ms/s",
+                 result["mainThreadCPUMs"] / result["duration"] if result["duration"] else 0)
+            note("Covers decoded per cover served", result.get("coversDecoded", 0) / max(result["coversServed"], 1))
 
 
 # Three frames at 120 Hz.
 LONG_HITCH_NS = 25_000_000
 
 
-def report_instruments_hitches(trace):
-    intervals = signpost_intervals(trace)
-    window = scroll_window(intervals)
+def report_instruments_hitches(trace, windows):
     # "hitches" on a device with Xcode 26; the summary table of earlier versions as a fallback.
     rows = table_rows(trace, "hitches") or table_rows(trace, "hitches-summary")
-    hitches = []
-    for row in rows:
-        start = number(row.get("start"))
-        duration = number(row.get("duration"))
-        if window and not window[0] <= start <= window[1]:
-            continue
-        hitches.append(duration)
-    if window:
-        seconds = (window[1] - window[0]) / 1e9
-        total = sum(hitches) / 1e6
-        worst = max(hitches, default=0) / 1e6
-        long_hitches = sum(1 for hitch in hitches if hitch >= LONG_HITCH_NS)
-        print(f"    Instruments: scroll {seconds:.1f} s, {len(hitches)} hitches, "
+    hitches = [(number(row.get("start")), number(row.get("duration"))) for row in rows]
+    if not windows:
+        if rows:
+            print("    Instruments: no HarnessScroll interval in the trace; hitches not bounded to the run")
+        else:
+            print("    Instruments: no hitches table (the recording holds no hitches)")
+        return
+    for scroll, (begin, end) in enumerate(windows, start=1):
+        inside = [duration for start, duration in hitches if begin <= start <= end]
+        seconds = (end - begin) / 1e9
+        total = sum(inside) / 1e6
+        worst = max(inside, default=0) / 1e6
+        long_hitches = sum(1 for hitch in inside if hitch >= LONG_HITCH_NS)
+        label = f"Instruments, scroll {scroll}" if len(windows) > 1 else "Instruments"
+        print(f"    {label}: scroll {seconds:.1f} s, {len(inside)} hitches, "
               f"hitch time ratio {total / seconds:.1f} ms/s, worst hitch {worst:.0f} ms, "
               f"{long_hitches} of three frames or more")
         note("Instruments hitch time ratio ms/s", total / seconds)
         note("Instruments worst hitch ms", worst)
-        note("Instruments hitches", len(hitches))
+        note("Instruments hitches", len(inside))
         note("Instruments hitches of 3+ frames", long_hitches)
-    elif rows:
-        print("    Instruments: no HarnessScroll interval in the trace; hitches not bounded to the run")
-    else:
-        print("    Instruments: no hitches table (Animation Hitches recorded nothing here)")
+    if not rows:
+        print("    (the trace has no hitches table: no hitch, or the instrument recorded nothing)")
 
 
 APP_BINARIES = ("EhShoko", "EhShoko.debug.dylib")
 
 
-def report_time_profile(trace, galleries=0):
-    """The main thread's busy time during the scroll, the leaf functions it spent it in, and
+def report_time_profile(trace, galleries=0, windows=None):
+    """The main thread's busy time during each scroll, the leaf functions it spent it in, and
     the app's own functions nearest the leaf (where list and cell code shows up)."""
-    window = scroll_window(signpost_intervals(trace))
-    rows, resolve = table_rows(trace, "time-profile", with_resolver=True)
-    if not rows:
-        print(f"    {trace.name}: no time-profile table")
-        return
-    leaves, app_frames, total = {}, {}, 0
-    for row in rows:
-        if window and not window[0] <= number(row.get("time")) <= window[1]:
+    if windows is None:
+        windows = scroll_windows(signpost_intervals(trace))
+    leaves, app_frames, totals, seen = {}, {}, [0] * max(len(windows), 1), False
+    for row, resolve in iter_rows(trace, "time-profile"):
+        seen = True
+        time = number(row.get("time"))
+        scroll = next((index for index, (begin, end) in enumerate(windows) if begin <= time <= end), None)
+        if windows and scroll is None:
             continue
         if "Main Thread" not in text(row.get("thread")):
             continue
         weight = number(row.get("weight")) or 1_000_000
-        total += weight
+        totals[scroll or 0] += weight
         stack = row.get("stack")
         frames = [resolve(frame) for frame in stack.iter("frame")] if stack is not None else []
         leaf = frames[0].attrib.get("name", "?") if frames else "?"
@@ -221,17 +262,22 @@ def report_time_profile(trace, galleries=0):
                     name = "(system frameworks only, under main)"
                 app_frames[name] = app_frames.get(name, 0) + weight
                 break
-    seconds = (window[1] - window[0]) / 1e9 if window else 0
+    if not seen:
+        print(f"    {trace.name}: no time-profile table")
+        return
     print(f"  {trace.name}")
-    if seconds:
-        print(f"    Main thread busy {total / 1e6 / seconds:.0f} ms/s during the scroll "
-              f"({total / 1e6:.0f} ms in {seconds:.1f} s)")
+    for scroll, (begin, end) in enumerate(windows):
+        seconds, total = (end - begin) / 1e9, totals[scroll]
+        label = f"Scroll {scroll + 1}: main" if len(windows) > 1 else "Main"
+        line = (f"    {label} thread busy {total / 1e6 / seconds:.0f} ms/s during the scroll "
+                f"({total / 1e6:.0f} ms in {seconds:.1f} s)")
         note("Main thread busy during the scroll ms/s", total / 1e6 / seconds)
         if galleries:
             # Every row of the list appears once during the scroll, so this is the main thread's
             # whole cost per new row: the cell, and its share of scrolling and drawing.
-            print(f"    Per new row: {total / 1e6 / galleries:.2f} ms of main-thread time ({galleries} rows)")
+            line += f"; per new row {total / 1e6 / galleries:.2f} ms ({galleries} rows)"
             note("Main thread per new row ms", total / 1e6 / galleries)
+        print(line)
     print("    Heaviest leaf functions on the main thread:")
     for name, weight in sorted(leaves.items(), key=lambda item: -item[1])[:6]:
         print(f"      {weight / 1e6:7.0f} ms  {name[:100]}")
@@ -243,6 +289,22 @@ def report_time_profile(trace, galleries=0):
 def report_allocations(trace):
     print(f"  {trace.name}: open in Instruments for the cover check (one decoded bitmap per cover, "
           f"about 0.35 MB each: filter for CGImage / ImageIO)")
+
+
+# What a Response event's message starts with (PerformanceInterval.responseEvent).
+RESPONSE = "Response"
+
+
+def belongs(event, interval):
+    """Whether an event is one of this interval's. Several ListPage intervals run at once (the
+    first screen's lists), so a ListPage's Response event names its list."""
+    if event["name"] != interval["name"]:
+        return False
+    if not interval["start"] <= event["time"] <= interval["start"] + interval["duration"]:
+        return False
+    if interval["name"] == "ListPage" and event["message"].startswith(RESPONSE):
+        return event["message"] == f"{RESPONSE} {interval['begin']}"
+    return True
 
 
 def report_signposts(trace):
@@ -264,14 +326,39 @@ def report_signposts(trace):
             if interval["name"] == "Launch" and since_start:
                 note("Launch since process start ms", int(since_start.group(1)))
         end = interval["start"] + interval["duration"]
-        for event in events:
-            if event["name"] == interval["name"] and interval["start"] <= event["time"] <= end:
-                offset = (event["time"] - interval["start"]) / 1e6
-                print(f"      event {event['message']} at {offset:.1f} ms, {(end - event['time']) / 1e6:.1f} ms before the end")
-                if first:
-                    note(f"{interval['name']} event {event['message']} at ms", offset)
-                    note(f"{interval['name']} after event {event['message']} ms", (end - event["time"]) / 1e6)
+        own = [event for event in events if belongs(event, interval)]
+        for event in own:
+            offset = (event["time"] - interval["start"]) / 1e6
+            print(f"      event {event['message']} at {offset:.1f} ms, {(end - event['time']) / 1e6:.1f} ms before the end")
+        if not first or interval["end"] == "abandoned":
+            continue
+        # An operation that asked twice (an empty page skipped) has two answers; the last
+        # one is the answer that was applied.
+        latest = {}
+        for event in own:
+            latest[event["message"].split(" ")[0] if event["message"].startswith(RESPONSE) else event["message"]] = event
+        for message, event in latest.items():
+            note(f"{key} event {message} at ms", (event["time"] - interval["start"]) / 1e6)
+            note(f"{key} after event {message} ms", (end - event["time"]) / 1e6)
+    report_first_content_response(intervals, events)
     report_transition_hitches(trace, intervals)
+
+
+def report_first_content_response(intervals, events):
+    """How long after the site's answer the first screen's rows were in its model: from the
+    last Response of the list that ended FirstContent to FirstContent's end."""
+    first = next((interval for interval in intervals if interval["name"] == "FirstContent"), None)
+    if first is None or first["end"] == "abandoned":
+        return
+    end = first["start"] + first["duration"]
+    answers = [event for event in events
+               if event["name"] == "ListPage" and event["message"].startswith(f"{RESPONSE} {first['end']}")
+               and event["time"] <= end]
+    if not answers:
+        return
+    after = (end - max(event["time"] for event in answers)) / 1e6
+    print(f"    FirstContent: rows in the model {after:.1f} ms after the response ({first['end']})")
+    note("FirstContent after the response ms", after)
 
 
 def report_launch(trace):
@@ -365,7 +452,37 @@ def signpost_events(trace):
     return events
 
 
+def report_session(folder):
+    """One table for a session (measure_session.sh): a row per figure of each block, from the
+    summary.json measure_report.py wrote in each block's folder."""
+    session = folder / "session.tsv"
+    blocks = [line.split("\t") for line in session.read_text().splitlines()[1:]] if session.exists() else []
+    names = [block[0] for block in blocks] or sorted(path.parent.name for path in folder.glob("*/summary.json"))
+    print("| Block | Figure | Median | Range | Spread | Runs |")
+    print("|---|---|---|---|---|---|")
+    for name in names:
+        summary = folder / name / "summary.json"
+        if not summary.exists():
+            print(f"| {name} | (no report) | | | | |")
+            continue
+        for figure, values in json.loads(summary.read_text()).items():
+            median = statistics.median(values)
+            deviation = max(abs(value - median) for value in values)
+            spread = f"±{deviation / abs(median) * 100:.0f}%" if median else "—"
+            print(f"| {name} | {figure} | {median:.1f} | {min(values):.1f} – {max(values):.1f} | {spread} | {len(values)} |")
+    if blocks:
+        print()
+        print("| Block | Start | End | Seconds | Recordings |")
+        print("|---|---|---|---|---|")
+        for block in blocks:
+            print(f"| {block[0]} | {block[1]} | {block[2]} | {block[3]} | {block[4]} of {block[5]} |")
+        print(f"\nRecording time on the device: {sum(int(block[3]) for block in blocks) / 60:.1f} min")
+
+
 def main():
+    if len(sys.argv) == 3 and sys.argv[1] == "--session":
+        report_session(Path(sys.argv[2]))
+        return
     if len(sys.argv) != 2:
         sys.exit(__doc__)
     folder = Path(sys.argv[1])
@@ -388,6 +505,9 @@ def main():
     for trace in sorted(folder.glob("launch*.trace"), key=run_index):
         report_launch(trace)
         report_signposts(trace)
+        footprint = folder / f"footprint-{run_index(trace)}.json"
+        if footprint.exists():
+            report_footprint(footprint)
     for trace in sorted(folder.glob("signposts*.trace"), key=run_index):
         report_signposts(trace)
         footprint = folder / f"footprint-{run_index(trace)}.json"

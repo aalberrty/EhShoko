@@ -25,6 +25,16 @@ nonisolated enum ListHarnessSlot: String, CaseIterable, Identifiable, Sendable {
 
     var id: String { rawValue }
 
+    /// The design the slot's list belongs to, whose look it is drawn in unless `-HarnessLook`
+    /// asks for another.
+    var design: DesignStyle {
+        switch self {
+        case .shelf, .shelfRanked, .shelfHome: .shelf
+        case .wallLarge, .wallMedium, .wallSmall: .wall
+        case .ledger, .ledgerTitles: .ledger
+        }
+    }
+
     /// The density a Wall slot measures; `nil` for the other slots.
     var wallDensity: WallDensity? {
         switch self {

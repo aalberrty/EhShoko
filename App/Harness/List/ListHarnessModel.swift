@@ -23,14 +23,22 @@ final class ListHarnessModel {
     }
     private(set) var galleries: [Gallery] = []
     private(set) var phase = Phase.preparing
+    /// Which build of the list this is: every run after the first of an automatic series
+    /// builds the list again, from the top, as a new launch would.
+    private(set) var listID = 0
 
     /// The settings the list designs read, kept apart from the user's.
     @ObservationIgnored let settings: SettingsStore
     @ObservationIgnored let scroller = ListHarnessScroller()
-    /// New cover URLs on every launch of the harness, so covers are downloaded and decoded.
-    @ObservationIgnored private let session = UUID().uuidString.prefix(8).lowercased()
-    /// `CoverDecodeCounter` when the harness started, so a run reports only its own decodes.
+    /// New cover URLs on every launch of the harness, and on every run of a series, so covers
+    /// are downloaded and decoded.
+    @ObservationIgnored private var session = ListHarnessModel.newSession()
+    /// `CoverDecodeCounter` and the covers served when the run's list was built, so a run
+    /// reports only its own.
     @ObservationIgnored private var coverDecodesAtStart = 0
+    @ObservationIgnored private var coversServedAtStart = 0
+    /// The results of an automatic series so far, written together.
+    @ObservationIgnored private var results: [ListHarnessResult] = []
     @ObservationIgnored @Dependency(\.imageCacheClient) private var imageCache
 
     private static let settingsSuite = "app.ehshoko.list-harness"
@@ -59,9 +67,20 @@ final class ListHarnessModel {
         )
         phase = .ready
         guard options.runsAutomatically else { return }
-        try? await Task.sleep(for: .seconds(ListHarnessOptions.settleDelay))
-        guard !Task.isCancelled else { return }
-        await run()
+        for index in 1...options.runs {
+            if index > 1 {
+                await startOver()
+            }
+            try? await Task.sleep(for: .seconds(ListHarnessOptions.settleDelay))
+            guard !Task.isCancelled else { return }
+            await run()
+            guard case .finished = phase else { break }
+        }
+        if options.exitsWhenDone {
+            // Lets the last signposts reach the recording before the process goes away.
+            try? await Task.sleep(for: .milliseconds(500))
+            exit(0)
+        }
     }
 
     func run() async {
@@ -72,17 +91,33 @@ final class ListHarnessModel {
             return
         }
         let result = ListHarnessResult(
-            options: options, galleryCount: galleries.count, scroll: measured,
-            footprint: MemoryFootprint.current(), coversServed: ListHarnessURLProtocol.servedCount.withLock { $0 },
+            slot: options.slot.rawValue, options: options, galleryCount: galleries.count, scroll: measured,
+            footprint: MemoryFootprint.current(),
+            coversServed: ListHarnessURLProtocol.servedCount.withLock { $0 } - coversServedAtStart,
             coversDecoded: CoverDecodeCounter.value - coverDecodesAtStart
         )
         phase = .finished(result)
-        await result.write()
-        if options.exitsWhenDone {
-            // Lets the last signposts reach the recording before the process goes away.
-            try? await Task.sleep(for: .milliseconds(500))
-            exit(0)
-        }
+        results.append(result)
+        await ListHarnessResult.write(results)
+    }
+
+    /// Between two runs of a series: the next run starts as a launch does, with nothing in the
+    /// image cache, covers under URLs never asked for, and the list built from its first row.
+    private func startOver() async {
+        phase = .preparing
+        await HarnessImageCache.empty()
+        session = Self.newSession()
+        coverDecodesAtStart = CoverDecodeCounter.value
+        coversServedAtStart = ListHarnessURLProtocol.servedCount.withLock { $0 }
+        galleries = await ListHarnessGalleries.make(
+            count: options.galleryCount, session: session, coverLatency: options.coverLatency
+        )
+        listID += 1
+        phase = .ready
+    }
+
+    private static func newSession() -> String {
+        String(UUID().uuidString.prefix(8).lowercased())
     }
 
     func stop() {
@@ -140,10 +175,10 @@ nonisolated struct ListHarnessResult: Equatable, Sendable, Codable {
     var cpuPerCellMs: Double
 
     init(
-        options: ListHarnessOptions, galleryCount: Int, scroll: ListHarnessScroller.Result,
+        slot: String, options: ListHarnessOptions, galleryCount: Int, scroll: ListHarnessScroller.Result,
         footprint: MemoryFootprint?, coversServed: Int, coversDecoded: Int
     ) {
-        slot = options.slot.rawValue
+        self.slot = slot
         galleries = galleryCount
         tags = options.showsTags
         dock = options.showsDock
@@ -185,17 +220,25 @@ nonisolated struct ListHarnessResult: Equatable, Sendable, Codable {
         try? FileManager.default.removeItem(at: fileURL)
     }
 
-    /// Writes the result off the main actor and prints it once, for `simctl launch --console`.
+    /// Writes the results of the launch so far off the main actor, one entry per run under
+    /// `runs`, and prints the latest once, for `simctl launch --console`.
     @concurrent
-    func write() async {
+    static func write(_ results: [ListHarnessResult]) async {
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
-        guard let data = try? encoder.encode(self) else { return }
+        guard let data = try? encoder.encode(ListHarnessResults(runs: results)) else { return }
         let url = Self.fileURL
         try? FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
         try? data.write(to: url, options: .atomic)
-        print("ListHarness result: \(summary)")
+        if let latest = results.last {
+            print("ListHarness result \(results.count): \(latest.summary)")
+        }
     }
+}
+
+/// What `result.json` holds: every run of the launch, in order.
+nonisolated struct ListHarnessResults: Codable, Sendable {
+    var runs: [ListHarnessResult]
 }
 
 /// The process's memory footprint as the system counts it (what Xcode's gauge and jetsam use).
