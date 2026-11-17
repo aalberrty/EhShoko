@@ -52,6 +52,10 @@
 #   --gallery <url>    The gallery link the real app opens. Default: the one the baseline used.
 #   --page <url>       The link to that gallery's first image page.
 #   --uninstall        Remove the app from the device when the session is over.
+#   --after <command>  Run this (with sh -c) as soon as the last recording is made and the app
+#                      has ended, before the alert that says the device can be locked: for
+#                      what has to happen while the device is still awake and reachable, such
+#                      as installing another build over the measured one.
 #   --list             Print the blocks and their recordings, and do nothing.
 #
 # Writes into --out: one folder per block (traces, results; what measure.sh writes), the log
@@ -71,6 +75,7 @@ out=""
 quick=NO
 light=YES
 uninstall=NO
+after=""
 list_only=NO
 # The baseline's gallery (measurements: an old, small, Non-H art book that is likely to stay).
 gallery="https://e-hentai.org/g/80319/317c988b37/"
@@ -88,6 +93,7 @@ while [[ $# -gt 0 ]]; do
     --gallery) gallery="$2"; shift 2 ;;
     --page) page="$2"; shift 2 ;;
     --uninstall) uninstall=YES; shift ;;
+    --after) after="$2"; shift 2 ;;
     --list) list_only=YES; shift ;;
     -h|--help) sed -n '2,/^set -euo/p' "$0" | sed '$d'; exit 0 ;;
     --*) die "unknown option $1" ;;
@@ -273,6 +279,11 @@ echo "finished=$(date '+%Y-%m-%d %H:%M:%S')" >> "$out/session.txt"
 if [[ "$uninstall" == YES ]]; then
   xcrun devicectl device uninstall app --device "$device" "$bundle_id" > "$out/uninstall.log" 2>&1 \
     || echo "measure_session.sh: could not remove the app (uninstall.log)" >&2
+fi
+
+if [[ -n "$after" ]]; then
+  echo "[$(date +%H:%M:%S)] Running: $after" >&2
+  sh -c "$after" > "$out/after.log" 2>&1 || echo "measure_session.sh: the --after command failed (after.log)" >&2
 fi
 
 alert
