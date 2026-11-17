@@ -12,7 +12,8 @@ import UIKit
 ///   split view takes over the stack in its detail column and a host on that stack never
 ///   sees a pushed screen (`spikes/S5.md`).
 /// - While something is drawn over the stack (`isCovered`: the command bar's search surface,
-///   Ledger's Index laid over the list) the chrome fades out and the screens keep its room.
+///   Ledger's Index laid over the list; or the side pane laid over it, which the pane says
+///   through `\.isUnderSidePane`) the chrome fades out and the screens keep its room.
 ///
 /// It changes what it shows once per navigation: the path and the screens' entries change at
 /// different moments, so it decides in one place and only once the top route's entry has
@@ -34,6 +35,7 @@ struct BottomChrome<Content: View, Bar: View>: View {
     @State private var appearances = 0
     @State private var isKeyboardUp = false
     @State private var bottomSafeArea: CGFloat = 0
+    @Environment(\.isUnderSidePane) private var isUnderSidePane
 
     /// The bar is 52 pt high and reaches 8 pt below the safe area, so a screen keeps 44 free.
     private static var reserve: CGFloat { ActionDock.height - 8 }
@@ -57,8 +59,13 @@ struct BottomChrome<Content: View, Bar: View>: View {
         self.bar = bar
     }
 
+    /// Something is drawn over the stack, or the side pane lies over it.
+    private var isHidden: Bool { isCovered || isUnderSidePane }
+
     var body: some View {
         content
+            // A host further in (a sheet presented from the stack) is not under the pane.
+            .environment(\.isUnderSidePane, false)
             .onPreferenceChange(ChromeKey.self) { new in
                 entries = new
                 resolve(new)
@@ -134,10 +141,10 @@ struct BottomChrome<Content: View, Bar: View>: View {
         // where the bottom safe area is zero.
         .padding(.bottom, bottomSafeArea > 0 ? -8 : 8)
         // iOS 26's keyboard is translucent: chrome left under it shows through below the keys.
-        .opacity(isKeyboardUp || isCovered ? 0 : 1)
-        .animation(.smooth(duration: 0.3), value: isCovered)
-        .allowsHitTesting(shown != .hidden && !isKeyboardUp && !isCovered)
-        .accessibilityHidden(isCovered)
+        .opacity(isKeyboardUp || isHidden ? 0 : 1)
+        .animation(.smooth(duration: 0.3), value: isHidden)
+        .allowsHitTesting(shown != .hidden && !isKeyboardUp && !isHidden)
+        .accessibilityHidden(isHidden)
     }
 
     // MARK: Keyboard

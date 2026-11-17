@@ -72,6 +72,8 @@ struct Screens {
 
     /// Settings' "Customize" row, which opens Experience.
     static let customise = Target(matches: [.labelPrefix("Customize")])
+    /// The Settings sheet's root.
+    static let settingsBar = Target(matches: [.identifier("Settings")], type: .navigationBar)
     /// Experience's row for a part ("Lists", with its choice after it).
     static func partRow(_ part: Part) -> Target { Target(matches: [.labelPrefix(part.settingsTitle + ",")], type: .button) }
     /// An options screen's card: its label is the option's name.
@@ -88,13 +90,19 @@ struct Screens {
 
     // MARK: Lists
 
-    /// Toplists, the second list, from whichever bar.
+    /// The dimmed rest of the screen beside a column the system lays over it: Ledger's Index at
+    /// launch in portrait on an iPad on iOS 18. The bar under it is faded and takes no taps.
+    static let overlayDismissal = Target.id("PopoverDismissRegion")
+
+    /// Toplists, the second list, from whichever bar. An Index laid over the list is dismissed
+    /// first, as a person would to reach the list and its bar.
     var openSecondList: [Step] {
+        let reveal: [Step] = [.tapIfPresent(Self.overlayDismissal, within: 1), .pause(seconds: 1)]
         switch choices.bar {
         case .tabs:
-            Self.openTab("Top") + [.wait(Self.galleryInList)]
+            return reveal + Self.openTab("Top") + [.wait(Self.galleryInList)]
         case .command:
-            choosePlace("Toplists") + [.wait(Self.galleryInList)]
+            return reveal + choosePlace("Toplists") + [.wait(Self.galleryInList)]
         }
     }
 
@@ -133,9 +141,11 @@ struct Screens {
             .in(choices.bar == .tabs ? .tabBar : .container("Navigation"))
         // A gallery in the side pane (regular width) is closed with the pane's Close: with it
         // open, the bar's Search did not open search on the iPad after F23's chrome changes.
-        let paneClose = Target(matches: [.label("Close")], type: .button).in(.navigationBar)
+        // iOS 18's Close is the "xmark" fallback (`SheetButtons.swift`). Not scoped to a bar:
+        // the pane's is not the first navigation bar.
+        let paneClose = Target(matches: [.label("Close"), .identifier("xmark")], type: .button)
         return [
-            .ifPresent(search, within: 2, then: [.tapIfPresent(paneClose, within: 1)], else: [.back]),
+            .ifPresent(search, within: 2, then: [.tapIfPresent(paneClose, within: 3)], else: [.back]),
             .pause(seconds: 1),
         ]
     }
@@ -255,13 +265,22 @@ struct Screens {
         let open: [Step] = switch choices.bar {
         // The account button is on a tab's root: Wall's and Ledger's libraries push the folder
         // the walk opened, so it is taken from Home.
-        case .tabs: Self.openTab("Home") + [.pause(seconds: 1), .tap(Self.accountButton)]
+        // Beside Ledger's Index on an iPad, Home's account button is in the Index: shown again
+        // with the sidebar button if the walk dismissed it.
+        case .tabs: Self.openTab("Home") + [
+            .pause(seconds: 1),
+            .ifPresent(Self.accountButton, within: 2, then: [], else: [
+                .tapIfPresent(Target.button("Show Sidebar"), within: 2), .pause(seconds: 1),
+            ]),
+            .tap(Self.accountButton),
+        ]
         case .command: choosePlace("Settings")
         }
         let change = settingsChange
         return open + [
-            // In an iPad's form sheet the row is below the fold.
-            .wait(Self.customise), .scrollTo(Self.customise, screens: 3), .screenshot("settings"),
+            // In an iPad's form sheet the row is below the fold, and a list makes no row before
+            // it is near the screen: wait for the sheet, then scroll to the row.
+            .wait(Self.settingsBar), .pause(seconds: 1), .scrollTo(Self.customise, screens: 3), .screenshot("settings"),
             .tap(Self.customise), .wait(Self.experienceBar),
             .scrollTo(Self.partRow(change.part), screens: 6),
             .screenshot("experience"),

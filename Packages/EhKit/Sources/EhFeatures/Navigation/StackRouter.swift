@@ -15,6 +15,11 @@ public final class StackRouter {
     /// What the gallery in the side pane should do once it has opened.
     public private(set) var sideIntent: DetailIntent?
 
+    /// The leading column beside this stack on regular width (Ledger's Index, which holds
+    /// Continue) is hidden. The shell's column host sets it; under the tab bar, Continue shows
+    /// for this stack only while it is.
+    public var isLeadingColumnHidden = false
+
     @ObservationIgnored private var sideStorage: StackRouter?
 
     public init() {}

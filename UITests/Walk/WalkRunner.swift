@@ -198,6 +198,8 @@ final class WalkRunner {
             }
         case .back:
             try goBack()
+        case .backSwipe(let reach):
+            try backSwipe(reach: reach)
         case .pause(let seconds):
             Thread.sleep(forTimeInterval: seconds)
         case .screenshot(let name):
@@ -329,14 +331,42 @@ final class WalkRunner {
     /// The system back button (`BackButton` on iOS 26; on iOS 18 a SwiftUI stack's has no
     /// identifier, only the previous screen's title, so the leading button of a navigation
     /// bar), or the edge swipe where a page draws its own top bar.
+    private func backSwipe(reach: Double) throws {
+        let width = app.frame.width
+        // The column of the screen pushed last: the trailing-most bar.
+        let leadingEdge = app.navigationBars.allElementsBoundByIndex
+            .filter { !$0.frame.isEmpty && app.frame.intersects($0.frame) }
+            .map(\.frame.minX).max() ?? 0
+        // A drag from a column's edge (the side pane's) does not reach its back gesture on
+        // every system: there the walk goes back with the button, and says so.
+        if leadingEdge > 1 {
+            record.notes.append("\(currentStep): the screen is in a column at \(Int(leadingEdge)) pt; "
+                + (reach < 0.5 ? "no swipe" : "went back with the button"))
+            if reach >= 0.5 { try goBack() }
+            return
+        }
+        let start = app.coordinate(withNormalizedOffset: CGVector(dx: 2 / width, dy: 0.5))
+        let end = app.coordinate(withNormalizedOffset: CGVector(dx: reach, dy: 0.5))
+        // Slowly, and held before letting go, so the finger has no speed left that would finish
+        // the pop by itself.
+        start.press(forDuration: 0.05, thenDragTo: end, withVelocity: 80, thenHoldForDuration: 0.6)
+        Thread.sleep(forTimeInterval: 1.2)
+    }
+
     private func goBack() throws {
         let bars = app.navigationBars.allElementsBoundByIndex.filter { !$0.frame.isEmpty }
         let identified = app.navigationBars.buttons.matching(identifier: "BackButton").allElementsBoundByIndex
-            .first { !$0.frame.isEmpty && app.frame.intersects($0.frame) }
-        let leading = bars.lazy.compactMap { bar -> XCUIElement? in
+            .filter { !$0.frame.isEmpty && app.frame.intersects($0.frame) }
+        let leading = bars.compactMap { bar -> XCUIElement? in
             bar.buttons.allElementsBoundByIndex.first { $0.frame.minX - bar.frame.minX < 24 && !$0.frame.isEmpty }
-        }.first
-        if let button = identified ?? leading {
+        }
+        // On an iPad several columns have a bar: the screen pushed last is in the trailing one
+        // (the side pane's). A pane's Close is not a way back.
+        let closes = ["Close", "xmark"]
+        let button = (identified + leading)
+            .filter { !closes.contains($0.label) && !closes.contains($0.identifier) }
+            .max { $0.frame.minX < $1.frame.minX }
+        if let button {
             let frame = button.frame
             app.coordinate(withNormalizedOffset: .zero).withOffset(CGVector(dx: frame.midX, dy: frame.midY)).tap()
         } else {

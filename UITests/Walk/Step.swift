@@ -39,6 +39,10 @@ indirect enum Step: Sendable {
     case rotate(UIDeviceOrientation)
     /// Goes back one screen: the navigation bar's first button, or the edge swipe.
     case back
+    /// The interactive back swipe: drags slowly from the leading edge of the top screen's
+    /// column (on an iPad, the side pane's when it shows) to `reach` of the window's width and
+    /// lets go. Short of about half the system cancels the pop; past it the screen pops.
+    case backSwipe(reach: Double)
     case pause(seconds: Double)
     /// A screenshot with this name, attached to the result and exported by `run_walks.sh`.
     case screenshot(String)
@@ -91,6 +95,7 @@ indirect enum Step: Sendable {
         case .expect(let target): "expect \(target)"
         case .rotate(let orientation): "rotate to \(orientation.walkName)"
         case .back: "back"
+        case .backSwipe(let reach): "back swipe to \(reach)"
         case .pause(let seconds): "pause \(seconds) s"
         case .screenshot(let name): "screenshot \(name)"
         case .dump(let name): "dump \(name)"

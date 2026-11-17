@@ -82,13 +82,14 @@ private struct TabsBarLegacyCapsuleHost: ViewModifier {
 
     /// What the accessory host of the later systems decides (`TabsBarAccessoryHost`), for this
     /// tab: on while something is in progress and the top screen keeps the tab bar, off beside
-    /// a side gallery, while Ledger's Index column shows Continue itself, on the search
-    /// surface, and while a keyboard is up.
+    /// a side gallery, while Ledger's Index column shows Continue itself (on while the Index
+    /// is hidden), on the search surface, and while a keyboard is up.
     private var isVisible: Bool {
         guard continueModel.first != nil, !edge.isKeyboardUp else { return false }
         let stack = appRouter.stack(for: tab)
         let showsSearchSurface = tab == .search && stack.isAtRoot
         let showsLeadingColumn = tab == .home && sizeClass == .regular && StartStructure.hasLeadingColumn(settings)
+            && !stack.isLeadingColumnHidden
         return !stack.hidesBrowseChrome && stack.sideGallery == nil && !showsSearchSurface && !showsLeadingColumn
     }
 }
@@ -165,8 +166,9 @@ private struct TabsBarCapsuleRoom: ViewModifier {
     /// this screen's side. What is in progress is read last, and so only where a capsule can
     /// show: on gallery pages a change of it redraws no screen.
     private var room: CGFloat {
-        // Beside Ledger's Index column the column has Continue; beside a side gallery the
-        // capsule is off, as the accessory is on the later systems.
+        // Beside Ledger's Index column the column has Continue (`continueIsInChrome` is off
+        // until the Index is hidden); beside a side gallery the capsule is off, as the
+        // accessory is on the later systems.
         guard chrome.continueIsInChrome, !edge.isKeyboardUp, stack.sideGallery == nil else { return 0 }
         // The search surface is its stack's root, which nothing presents; a pushed screen
         // is presented.
