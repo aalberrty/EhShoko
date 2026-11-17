@@ -103,10 +103,10 @@ only=("$@")
 
 # How often each recording is made, and how often each list scrolls in one launch.
 if [[ "$quick" == YES ]]; then
-  launch_runs=1 gallery_runs=1 reader_runs=1
+  launch_runs=1 gallery_runs=1 reader_runs=1 shell_runs=2
   long_scrolls=2 short_scrolls=2
 else
-  launch_runs=6 gallery_runs=5 reader_runs=6
+  launch_runs=6 gallery_runs=5 reader_runs=6 shell_runs=3
   # A scroll of Shelf's rows or of Wall's largest covers takes three quarters of a minute, the
   # others a quarter to a half.
   long_scrolls=4 short_scrolls=6
@@ -230,10 +230,12 @@ session() {
     $list ${hitches[@]+"${hitches[@]}"} --scrolls "$long_scrolls" --bar list wall-large
   block list-shelf-tags-bar 1 "Shelf's list with tags under the command bar, $long_scrolls times" \
     $list ${hitches[@]+"${hitches[@]}"} --scrolls "$long_scrolls" --bar --tags list shelf
-  block shell-tabs-wall-small 1 "Wall's five columns in the shell under the tab bar, $short_scrolls times" \
-    ${hitches[@]+"${hitches[@]}"} --scrolls "$short_scrolls" shell -HarnessPreset shelf -HarnessList wall -HarnessDensity small
-  block shell-tabs-shelf 1 "Shelf's list in the shell under the tab bar, $long_scrolls times" \
-    ${hitches[@]+"${hitches[@]}"} --scrolls "$long_scrolls" shell -HarnessPreset shelf
+  # The part harness makes one scroll per launch (its stage, built again, is not found by
+  # the scroller in time), so these two repeat the launch instead.
+  block shell-tabs-wall-small "$shell_runs" "Wall's five columns in the shell under the tab bar, $shell_runs times" \
+    ${hitches[@]+"${hitches[@]}"} --runs "$shell_runs" shell -HarnessPreset shelf -HarnessList wall -HarnessDensity small
+  block shell-tabs-shelf "$shell_runs" "Shelf's list in the shell under the tab bar, $shell_runs times" \
+    ${hitches[@]+"${hitches[@]}"} --runs "$shell_runs" shell -HarnessPreset shelf
 
   block stage 1 "the moving preview playing in a sheet for 40 s" \
     ${hitches[@]+"${hitches[@]}"} --app-arg -Harness --app-arg previews --app-arg -HarnessPage --app-arg stage \
