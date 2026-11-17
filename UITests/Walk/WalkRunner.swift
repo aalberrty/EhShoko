@@ -200,8 +200,8 @@ final class WalkRunner {
             }
         case .back:
             try goBack()
-        case .backSwipe(let reach):
-            try backSwipe(reach: reach)
+        case .backSwipe(let swipe):
+            try backSwipe(swipe)
         case .pause(let seconds):
             Thread.sleep(forTimeInterval: seconds)
         case .screenshot(let name):
@@ -362,7 +362,7 @@ final class WalkRunner {
         }
     }
 
-    private func backSwipe(reach: Double) throws {
+    private func backSwipe(_ swipe: Step.BackSwipe) throws {
         let width = app.frame.width
         // The column of the screen pushed last.
         let leadingEdge = lastColumnMinX
@@ -370,12 +370,13 @@ final class WalkRunner {
         // every system: there the walk goes back with the button, and says so.
         if leadingEdge > 1 {
             record.notes.append("\(currentStep): the screen is in a column at \(Int(leadingEdge)) pt; "
-                + (reach < 0.5 ? "no swipe" : "went back with the button"))
-            if reach >= 0.5 { try goBack() }
+                + (swipe == .letGoEarly ? "no swipe" : "went back with the button"))
+            if swipe == .whole { try goBack() }
             return
         }
+        let reach = swipe == .whole ? width * 0.9 : 80
         let start = app.coordinate(withNormalizedOffset: CGVector(dx: 2 / width, dy: 0.5))
-        let end = app.coordinate(withNormalizedOffset: CGVector(dx: reach, dy: 0.5))
+        let end = app.coordinate(withNormalizedOffset: CGVector(dx: reach / width, dy: 0.5))
         // Slowly, and held before letting go, so the finger has no speed left that would finish
         // the pop by itself.
         start.press(forDuration: 0.05, thenDragTo: end, withVelocity: 80, thenHoldForDuration: 0.6)

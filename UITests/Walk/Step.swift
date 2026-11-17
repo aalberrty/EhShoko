@@ -44,9 +44,16 @@ indirect enum Step: Sendable {
     /// Goes back one screen: the navigation bar's first button, or the edge swipe.
     case back
     /// The interactive back swipe: drags slowly from the leading edge of the top screen's
-    /// column (on an iPad, the side pane's when it shows) to `reach` of the window's width and
-    /// lets go. Short of about half the system cancels the pop; past it the screen pops.
-    case backSwipe(reach: Double)
+    /// column (on an iPad, the side pane's when it shows), holds still and lets go, so the
+    /// finger has no speed left. Where it lets go decides: `.whole` pops the screen, and
+    /// `.letGoEarly` stops 80 pt from the edge, where the system cancels the pop. (The system
+    /// goes by distance rather than by a share of the width: on a 13-inch iPad a quarter of
+    /// the width, 258 pt, already pops, an eighth does not; on a phone a quarter does not.)
+    case backSwipe(BackSwipe)
+
+    enum BackSwipe: String, Sendable {
+        case letGoEarly, whole
+    }
     case pause(seconds: Double)
     /// A screenshot with this name, attached to the result and exported by `run_walks.sh`.
     case screenshot(String)
@@ -100,7 +107,7 @@ indirect enum Step: Sendable {
         case .expect(let target): "expect \(target)"
         case .rotate(let orientation): "rotate to \(orientation.walkName)"
         case .back: "back"
-        case .backSwipe(let reach): "back swipe to \(reach)"
+        case .backSwipe(let swipe): swipe == .whole ? "back swipe" : "back swipe, let go early"
         case .pause(let seconds): "pause \(seconds) s"
         case .screenshot(let name): "screenshot \(name)"
         case .dump(let name): "dump \(name)"
