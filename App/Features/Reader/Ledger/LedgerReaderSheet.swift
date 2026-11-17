@@ -38,6 +38,11 @@ struct LedgerReaderSheet: View {
                 }
         }
         .scrollBounceBehavior(.basedOnSize)
+        // Where the system put the sheet, for the closing page in regular width
+        // (`LedgerPageInset.coveredBottom`).
+        .onGeometryChange(for: CGFloat.self) { $0.frame(in: .global).minY.rounded() } action: { top in
+            sheet.top = top
+        }
         // The open rows are built once the sheet has come to rest, not with it and not under
         // the finger that pulls it up: built at the start of a pull, they cost it its first
         // frames.
