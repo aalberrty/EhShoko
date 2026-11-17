@@ -196,19 +196,14 @@ stamp="$(date +%Y%m%d-%H%M%S)"
 out="${out:-${TMPDIR:-/tmp/}ehshoko-measure/.scratch}"
 mkdir -p "$out"
 
-terminate() {
-  if is_simulator; then
-    xcrun simctl terminate "$device" "$bundle_id" >/dev/null 2>&1 || true
-    return
-  fi
-  # On a device: the processes whose executable is inside this bundle's install folder, so
-  # another build of the app (installed beside it under another bundle id) is never touched.
-  local apps processes pid
-  apps="$out/.apps.json"
-  processes="$out/.processes.json"
+# The pids of the app on a device: the processes whose executable is inside this bundle's
+# install folder, so another build of the app (installed beside it under another bundle id)
+# is never touched.
+device_pids() {
+  local apps="$out/.apps.json" processes="$out/.processes.json"
   xcrun devicectl device info apps --device "$device" --bundle-id "$bundle_id" --json-output "$apps" >/dev/null 2>&1 || return 0
   xcrun devicectl device info processes --device "$device" --json-output "$processes" >/dev/null 2>&1 || return 0
-  for pid in $(python3 -I - "$apps" "$processes" <<'PY'
+  python3 -I - "$apps" "$processes" <<'PY'
 import json, sys
 apps = json.load(open(sys.argv[1]))["result"]["apps"]
 folders = [app["url"] for app in apps if app.get("url")]
@@ -217,10 +212,32 @@ for process in json.load(open(sys.argv[2]))["result"]["runningProcesses"]:
     if folders and any(executable.startswith(folder) for folder in folders):
         print(process["processIdentifier"])
 PY
-  ); do
+  rm -f "$apps" "$processes"
+}
+
+terminate() {
+  if is_simulator; then
+    xcrun simctl terminate "$device" "$bundle_id" >/dev/null 2>&1 || true
+    return
+  fi
+  local pid
+  for pid in $(device_pids); do
     xcrun devicectl device process terminate --device "$device" --pid "$pid" >/dev/null 2>&1 || true
   done
-  rm -f "$apps" "$processes"
+}
+
+# Ends the app and makes sure of it: an app launched a moment ago (the rest screen) may not
+# be listed yet, and a rest screen left running keeps a device's screen awake for good.
+stop_for_good() {
+  local attempt
+  for attempt in 1 2 3 4 5 6; do
+    terminate
+    is_simulator && return 0
+    /bin/sleep 2
+    [[ -n "$(device_pids)" ]] || return 0
+  done
+  echo "measure.sh: the app is STILL RUNNING on the device; end it by hand" >&2
+  return 1
 }
 
 # show_rest <label>: the rest screen in place of whatever the device shows. On a simulator
@@ -350,8 +367,8 @@ case "$run" in
     exit 0
     ;;
   stop)
-    terminate
-    exit 0
+    stop_for_good
+    exit $?
     ;;
   list)
     slot="${1:-shelf}"

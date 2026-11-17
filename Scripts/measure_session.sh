@@ -267,7 +267,7 @@ echo "[$(date +%H:%M:%S)] $total blocks → $out" >&2
 wait_for_device "starting"
 echo "[$(date +%H:%M:%S)] The device shows the rest screen; recording starts" >&2
 session
-measure stop
+measure stop || { alert; alert; echo "[$(date +%H:%M:%S)] The app could not be ended: close it on the device by hand" >&2; }
 echo "finished=$(date '+%Y-%m-%d %H:%M:%S')" >> "$out/session.txt"
 
 if [[ "$uninstall" == YES ]]; then
