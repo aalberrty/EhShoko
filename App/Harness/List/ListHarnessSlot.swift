@@ -15,6 +15,9 @@ nonisolated enum ListHarnessSlot: String, CaseIterable, Identifiable, Sendable {
     case shelfRanked = "shelf-ranked"
     /// Shelf's Home: the same list under Home's header (title, Continue, Popular now).
     case shelfHome = "shelf-home"
+    /// Shelf's list in its lazy grid whatever the width: at a phone's width one column of the
+    /// same rows, where the app uses its `List`.
+    case shelfGrid = "shelf-grid"
     /// Wall's list as Front Page at each density.
     case wallLarge = "wall-large"
     case wallMedium = "wall-medium"
@@ -29,7 +32,7 @@ nonisolated enum ListHarnessSlot: String, CaseIterable, Identifiable, Sendable {
     /// asks for another.
     var design: DesignStyle {
         switch self {
-        case .shelf, .shelfRanked, .shelfHome: .shelf
+        case .shelf, .shelfRanked, .shelfHome, .shelfGrid: .shelf
         case .wallLarge, .wallMedium, .wallSmall: .wall
         case .ledger, .ledgerTitles: .ledger
         }
@@ -69,6 +72,9 @@ struct ListHarnessSlotView: View {
         switch slot {
         case .shelf, .shelfRanked:
             ShelfListHarnessSlot(feed: ListHarnessFeed.feed(for: galleries), isRanked: slot == .shelfRanked)
+        case .shelfGrid:
+            ShelfListHarnessSlot(feed: ListHarnessFeed.feed(for: galleries), isRanked: false)
+                .environment(\.shelfListAlwaysUsesGrid, true)
         case .shelfHome:
             ListHarnessShelfHome(feed: ListHarnessFeed.feed(for: galleries))
         case .wallLarge, .wallMedium, .wallSmall:
@@ -77,5 +83,9 @@ struct ListHarnessSlotView: View {
             LedgerListHarnessSlot(feed: ListHarnessFeed.feed(for: galleries))
         }
     }
+}
+extension EnvironmentValues {
+    /// The list harness's `shelf-grid` slot: Shelf's list draws its lazy grid at any width.
+    @Entry var shelfListAlwaysUsesGrid = false
 }
 #endif

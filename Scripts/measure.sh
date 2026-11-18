@@ -15,6 +15,12 @@
 #                              With --scrolls n the harness scrolls n times in one launch (new
 #                              covers and an empty image cache each time), so one recording and
 #                              one save stand for n; the report splits it by scroll.
+#   measure.sh hand [slot] [s] The list harness's list scrolled by a hand: the list is on the
+#                              screen for s seconds (default 30) and closes by itself; the
+#                              harness marks every stretch of movement, and the report sets
+#                              Instruments' hitches of those stretches beside a scripted
+#                              scroll's. Whoever holds the device flicks the list for as long
+#                              as it is there.
 #   measure.sh shell [args]    The same scripted scroll in the real shell: the part harness's
 #                              list (-Harness part -HarnessPart list) under the chosen bar, look
 #                              and designs, which the arguments name as the part harness reads
@@ -54,6 +60,14 @@
 #   --look <name>         list: the look the list is drawn in (shelf, wall, ledger; default the
 #                         slot's own design).
 #   --bar, --dock         list: the command bar, or a gallery dock, floats over the list.
+#   --width <pt>          list, hand: the list's width (430: a phone's list on an iPad).
+#   --awake               list, hand, shell: a thread keeps the performance cores at their top
+#                         speed while the list scrolls. A scripted scroll leaves the main
+#                         thread idle between rows, and the system then runs it slowly (on a
+#                         phone, on its efficiency cores); with --awake the figure is the
+#                         list's, without it the list's and the power management's. The
+#                         report says which cores the main thread ran on.
+#   --covers-ready        list: every cover is in memory before a scroll starts.
 #   --light               Record hitches with the Time Profiler template plus the Hitches
 #                         instrument instead of the Animation Hitches template, whose traces are
 #                         ten times the size and take as much longer to save.
@@ -113,6 +127,9 @@ extra_args=()
 signpost_template=Logging
 scrolls=1
 look=""
+width=""
+awake=NO
+covers_ready=NO
 bar=NO
 dock=NO
 light=NO
@@ -146,6 +163,9 @@ while [[ $# -gt 0 ]]; do
     --look) look="$2"; shift 2 ;;
     --bar) bar=YES; shift ;;
     --dock) dock=YES; shift ;;
+    --width) width="$2"; shift 2 ;;
+    --awake) awake=YES; shift ;;
+    --covers-ready) covers_ready=YES; shift ;;
     --light) light=YES; shift ;;
     --limit) limit="$2"; shift 2 ;;
     --no-report) report=NO; shift ;;
@@ -157,7 +177,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 run="${1:-}"
-[[ -n "$run" ]] || die "name a run: list, shell, signposts, launch, rest, stop or report (see --help)"
+[[ -n "$run" ]] || die "name a run: list, hand, shell, signposts, launch, rest, stop or report (see --help)"
 shift
 
 if [[ "$run" == report ]]; then
@@ -348,9 +368,10 @@ scroll_runs() {
   for ((index = 1; index <= runs; index++)); do
     if is_simulator; then
       # Instruments cannot record hitches on a simulator ("Hitches is not supported on
-      # this platform"), so the run is the harness alone and its frame timing is reported.
+      # this platform"), so the run is the harness alone: its footprint and its main
+      # thread's time, and no hitch figure.
       terminate
-      echo "Scrolling, run $index (the harness's own frame timing)" >&2
+      echo "Scrolling, run $index (the harness alone: no hitches on a simulator)" >&2
       xcrun simctl launch --console-pty "$device" "$bundle_id" "$@" "${tips_args[@]}" > "$out/console-$index.txt" 2>&1 \
         || echo "measure.sh: the launch failed (see console-$index.txt)" >&2
     else
@@ -376,9 +397,13 @@ case "$run" in
       -HarnessTags "$tags" -HarnessCoverLatency "$latency" -HarnessBar "$bar" -HarnessDock "$dock"
       -HarnessAutoRun YES -HarnessRuns "$scrolls" -HarnessExitWhenDone YES)
     [[ -z "$look" ]] || harness_args+=(-HarnessLook "$look")
+    [[ -z "$width" ]] || harness_args+=(-HarnessWidth "$width")
+    [[ "$awake" == NO ]] || harness_args+=(-HarnessCoresAwake YES)
+    [[ "$covers_ready" == NO ]] || harness_args+=(-HarnessCoversReady YES)
     harness_args+=(${extra_args[@]+"${extra_args[@]}"})
     printf '%s\n' "slot=$slot" "speed=$speed" "count=$count" "tags=$tags" "latency=$latency" \
-      "bar=$bar" "dock=$dock" "look=${look:-own}" "scrolls=$scrolls" "light=$light" "device=$device" > "$out/run.txt"
+      "bar=$bar" "dock=$dock" "look=${look:-own}" "width=${width:-window}" "awake=$awake" \
+      "covers_ready=$covers_ready" "scrolls=$scrolls" "light=$light" "device=$device" > "$out/run.txt"
     for template in ${templates//,/ }; do
       case "$template" in
         hitches) scroll_runs "${harness_args[@]}" ;;
@@ -391,12 +416,31 @@ case "$run" in
       esac
     done
     ;;
+  hand)
+    slot="${1:-shelf}"
+    seconds="${2:-30}"
+    harness_args=(-Harness list -HarnessSlot "$slot" -HarnessCount "$count" -HarnessTags "$tags"
+      -HarnessCoverLatency "$latency" -HarnessBar "$bar" -HarnessDock "$dock"
+      -HarnessObserve "$seconds" -HarnessExitWhenDone YES)
+    [[ -z "$look" ]] || harness_args+=(-HarnessLook "$look")
+    [[ -z "$width" ]] || harness_args+=(-HarnessWidth "$width")
+    [[ "$awake" == NO ]] || harness_args+=(-HarnessCoresAwake YES)
+    harness_args+=(${extra_args[@]+"${extra_args[@]}"})
+    printf '%s\n' "kind=hand" "slot=$slot" "seconds=$seconds" "count=$count" "tags=$tags" "latency=$latency" \
+      "bar=$bar" "dock=$dock" "look=${look:-own}" "width=${width:-window}" "awake=$awake" \
+      "light=$light" "device=$device" > "$out/run.txt"
+    is_simulator && die "hand records Instruments' hitches, which a simulator does not have"
+    # The list closes by itself; the limit is for a launch that never got that far.
+    limit="${limit:-$((seconds + 30))}"
+    scroll_runs "${harness_args[@]}"
+    ;;
   shell)
     harness_args=(-Harness part -HarnessPart list -HarnessPanel NO -HarnessCount "$count" -HarnessSpeed "$speed"
       -HarnessTags "$tags" -HarnessAutoRun YES -HarnessRuns "$scrolls" -HarnessExitWhenDone YES "$@"
       ${extra_args[@]+"${extra_args[@]}"})
+    [[ "$awake" == NO ]] || harness_args+=(-HarnessCoresAwake YES)
     printf '%s\n' "kind=shell" "arguments=$*" "speed=$speed" "count=$count" "tags=$tags" \
-      "scrolls=$scrolls" "light=$light" "device=$device" > "$out/run.txt"
+      "awake=$awake" "scrolls=$scrolls" "light=$light" "device=$device" > "$out/run.txt"
     scroll_runs "${harness_args[@]}"
     ;;
   signposts)
@@ -440,7 +484,7 @@ case "$run" in
       [[ -z "$exit_after" ]] || fetch_file footprint.json "$out/footprint-$index.json" "$out/footprint-$((index - 1)).json"
     done
     ;;
-  *) die "unknown run $run (list, shell, signposts, launch, rest, stop, report)" ;;
+  *) die "unknown run $run (list, hand, shell, signposts, launch, rest, stop, report)" ;;
 esac
 
 if [[ -n "$rest" ]]; then

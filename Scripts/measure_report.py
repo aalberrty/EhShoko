@@ -5,11 +5,22 @@
     measure_report.py --session <session folder>    one table of a session's blocks, each
                                                      reported before (measure_session_report.sh)
 
-Reads, when present: hitches-<n>.trace (Animation Hitches with os_signpost), result-<n>.json
-(the list harness's own result), time-<n>.trace (Time Profiler), alloc.trace (Allocations),
-signposts-<n>.trace (os_signpost) and footprint-<n>.json (the footprint a timed run ended
-with). With several runs it ends with the median and spread of each figure, and writes every
-figure of every run to summary.json in the run folder. Only the standard library is used.
+Reads, when present: hitches-<n>.trace (Animation Hitches, or Time Profiler with the Hitches
+instrument, with os_signpost), result-<n>.json (the list harness's own result), time-<n>.trace
+(Time Profiler), alloc.trace (Allocations), launch-<n>.trace (App Launch), signposts-<n>.trace
+(os_signpost) and footprint-<n>.json (the footprint a timed run ended with). A recording that
+holds several scripted scrolls (measure.sh --scrolls) is split by its HarnessScroll intervals,
+and every scroll counts as a run; a list scrolled by hand (measure.sh hand) is reported as one
+run over all its stretches of movement. With several runs it ends with the median and spread
+of each figure, and writes every figure of every run to summary.json in the run folder. Only
+the standard library is used.
+
+For a scroll it prints, from Instruments: the hitch time ratio and what kind the hitches are
+(the app's update, the render server, the GPU); how long each frame's update, render and GPU
+work took; and which cores the main thread ran on. The last matters as much as the first: a
+scroll that leaves the main thread idle between rows is run on slow cores (a phone's
+efficiency cores), and a row that takes 4 ms at speed takes 19 there. Compare figures taken
+in the same state (measure.sh --awake holds the fast cores).
 """
 
 import json
@@ -57,7 +68,7 @@ def export(trace, xpath, attempts=None):
 
 
 EXPORT_ATTEMPTS = 40
-PROFILE_ATTEMPTS = 6
+PROFILE_ATTEMPTS = 20
 
 
 def iter_rows(trace, schema, attempts=None):
@@ -165,18 +176,26 @@ def harness_results(result_file):
     return result.get("runs", [result])
 
 
-def report_hitches(trace, result_file, index, galleries=0):
+def report_hitches(trace, result_file, index, galleries=0, by_hand=False):
     print(f"  Run {index}")
+    results = harness_results(result_file)
+    made = [result for result in results if result]
+    frame_ms = next((result["frameDurationMs"] for result in made if result.get("frameDurationMs")), 1000 / 120)
     windows = []
     if trace.exists():
         windows = scroll_windows(signpost_intervals(trace))
-        report_instruments_hitches(trace, windows)
-        # On a device the recording holds a time profile too, so the main thread's cost per
-        # row comes from the same scroll.
-        report_time_profile(trace, galleries, windows)
-    results = harness_results(result_file)
+        # A hand's stretches differ in length and speed, so they are one run together; the
+        # scripted scrolls of a recording are the same scroll again and each is a run.
+        together = by_hand or len(windows) > 12
+        report_instruments_hitches(trace, windows, together)
+        report_frames(trace, windows, frame_ms)
+        cells = sum(result.get("cellsCreated", 0) for result in made) if by_hand else galleries
+        report_time_profile(trace, cells, windows, together)
     if not results:
         print("    Harness: no result file")
+    if by_hand:
+        report_hand(made)
+        return
     if trace.exists() and results != [None] and len(results) != len(windows):
         print(f"    (the trace holds {len(windows)} scrolls, the harness reported {len(results)})")
     for scroll, result in enumerate(results, start=1):
@@ -184,70 +203,149 @@ def report_hitches(trace, result_file, index, galleries=0):
         if result is None:
             print("    Harness: this run left no result (the app did not run)")
             continue
-        print(f"    {label}: {result['slot']}, {result['frames']} frames in {result['duration']:.1f} s, "
-              f"hitch time ratio {result['hitchRatioMsPerS']:.1f} ms/s, "
-              f"worst {result['worstHitchMs']:.0f} ms, "
-              f"{result['longHitchesAfterFirstScreen']} frames of 3+ durations after the first screen, "
-              f"{'reached the end' if result['reachedEnd'] else 'did NOT reach the end'}")
-        print(f"      Footprint at the end: {result['footprintMB']:.0f} MB (peak {result['peakFootprintMB']:.0f} MB), "
+        state = ", cores awake" if result.get("coresAwake") else ""
+        print(f"    {label}: {result['slot']}{state}, {result['frames']} frames in {result['duration']:.1f} s, "
+              f"{'reached the end' if result['reachedEnd'] else 'did NOT reach the end'}; "
+              f"footprint at the end {result['footprintMB']:.0f} MB (peak {result['peakFootprintMB']:.0f} MB), "
               f"{result['coversServed']} covers served, {result.get('coversDecoded', 0)} decoded by CoverImage; "
-              f"main thread {result.get('mainThreadCPUMs', 0):.0f} ms of CPU for {result.get('cellsCreated', 0)} cells, "
-              f"{result.get('cpuPerCellMs', 0):.2f} ms a cell")
-        note("Harness hitch time ratio ms/s", result["hitchRatioMsPerS"])
-        note("Harness worst hitch ms", result["worstHitchMs"])
-        note("Harness long hitches after the first screen", result["longHitchesAfterFirstScreen"])
+              f"main thread {result.get('mainThreadCPUMs', 0):.0f} ms of CPU for {result.get('cellsCreated', 0)} cells")
         note("Footprint at the end of the scroll MB", result["footprintMB"])
         note("Peak footprint during the scroll MB", result["peakFootprintMB"])
         if result.get("cellsCreated"):
-            note("Harness main-thread CPU per created cell ms", result["cpuPerCellMs"])
             note("Harness main-thread CPU during the scroll ms/s",
                  result["mainThreadCPUMs"] / result["duration"] if result["duration"] else 0)
             note("Covers decoded per cover served", result.get("coversDecoded", 0) / max(result["coversServed"], 1))
+
+
+def report_hand(stretches):
+    """A list scrolled by hand: how much it moved and how fast, over all stretches."""
+    if not stretches:
+        print("    By hand: the list was not moved")
+        return
+    seconds = sum(stretch["duration"] for stretch in stretches)
+    distance = sum(stretch["distance"] for stretch in stretches)
+    cells = sum(stretch.get("cellsCreated", 0) for stretch in stretches)
+    cpu = sum(stretch.get("mainThreadCPUMs", 0) for stretch in stretches)
+    if seconds <= 0:
+        return
+    print(f"    By hand: {len(stretches)} stretches, {seconds:.1f} s moving, {distance:.0f} pt "
+          f"({distance / seconds:.0f} pt/s), {cells} cells ({cells / seconds:.1f} a second); "
+          f"main thread {cpu / seconds:.0f} ms/s of CPU; footprint at the end {stretches[-1]['footprintMB']:.0f} MB")
+    note("Scroll speed pt/s", distance / seconds)
+    note("Cells per second", cells / seconds)
+    note("Harness main-thread CPU during the scroll ms/s", cpu / seconds)
+    note("Footprint at the end of the scroll MB", stretches[-1]["footprintMB"])
 
 
 # Three frames at 120 Hz.
 LONG_HITCH_NS = 25_000_000
 
 
-def report_instruments_hitches(trace, windows):
+def inside(time, windows):
+    return any(begin <= time <= end for begin, end in windows)
+
+
+def report_instruments_hitches(trace, windows, together=False):
     # "hitches" on a device with Xcode 26; the summary table of earlier versions as a fallback.
     rows = table_rows(trace, "hitches") or table_rows(trace, "hitches-summary")
-    hitches = [(number(row.get("start")), number(row.get("duration"))) for row in rows]
+    hitches = [(number(row.get("start")), number(row.get("duration")), text(row.get("narrative-description")))
+               for row in rows]
     if not windows:
         if rows:
             print("    Instruments: no HarnessScroll interval in the trace; hitches not bounded to the run")
         else:
             print("    Instruments: no hitches table (the recording holds no hitches)")
         return
-    for scroll, (begin, end) in enumerate(windows, start=1):
-        inside = [duration for start, duration in hitches if begin <= start <= end]
-        seconds = (end - begin) / 1e9
-        total = sum(inside) / 1e6
-        worst = max(inside, default=0) / 1e6
-        long_hitches = sum(1 for hitch in inside if hitch >= LONG_HITCH_NS)
-        label = f"Instruments, scroll {scroll}" if len(windows) > 1 else "Instruments"
-        print(f"    {label}: scroll {seconds:.1f} s, {len(inside)} hitches, "
+    spans = [windows] if together else [[window] for window in windows]
+    for scroll, span in enumerate(spans, start=1):
+        within = [duration for start, duration, _ in hitches if inside(start, span)]
+        seconds = sum(end - begin for begin, end in span) / 1e9
+        if seconds <= 0:
+            continue
+        total = sum(within) / 1e6
+        worst = max(within, default=0) / 1e6
+        long_hitches = sum(1 for hitch in within if hitch >= LONG_HITCH_NS)
+        label = f"Instruments, scroll {scroll}" if len(spans) > 1 else "Instruments"
+        print(f"    {label}: {seconds:.1f} s of scrolling, {len(within)} hitches, "
               f"hitch time ratio {total / seconds:.1f} ms/s, worst hitch {worst:.0f} ms, "
               f"{long_hitches} of three frames or more")
         note("Instruments hitch time ratio ms/s", total / seconds)
         note("Instruments worst hitch ms", worst)
-        note("Instruments hitches", len(inside))
+        note("Instruments hitches", len(within))
         note("Instruments hitches of 3+ frames", long_hitches)
     if not rows:
         print("    (the trace has no hitches table: no hitch, or the instrument recorded nothing)")
+        return
+    # What kind the hitches are, over all the scrolls: Instruments' own description of each.
+    seconds = sum(end - begin for begin, end in windows) / 1e9
+    kinds = {}
+    for start, duration, kind in hitches:
+        if inside(start, windows):
+            entry = kinds.setdefault(kind or "(not described)", [0, 0])
+            entry[0] += 1
+            entry[1] += duration
+    for kind, (count, duration) in sorted(kinds.items(), key=lambda item: -item[1][1]):
+        print(f"      {duration / 1e6 / seconds:7.1f} ms/s  {count:5d}  {kind}")
+    whole = sum(duration for _, duration in kinds.values())
+    if whole:
+        updates = sum(duration for kind, (_, duration) in kinds.items()
+                      if "app update" in kind and "render" not in kind and "GPU" not in kind)
+        note("Hitch time in app updates alone %", updates / whole * 100)
+
+
+def percentile(values, share):
+    ordered = sorted(values)
+    return ordered[min(len(ordered) - 1, int(len(ordered) * share))] if ordered else 0
+
+
+def report_frames(trace, windows, frame_ms):
+    """How long each frame's work took during the scrolls, from the Hitches instrument: the
+    app's update (its main thread, up to the commit), the render server's render with its
+    off-screen passes, and the GPU. An update over one frame is a hitch in the making."""
+    if not windows:
+        return
+    updates = [number(row.get("duration")) / 1e6 for row in table_rows(trace, "hitches-updates")
+               if inside(number(row.get("start")), windows) and text(row.get("containment-level")) in ("0", "")]
+    if updates:
+        over = sum(1 for update in updates if update > frame_ms)
+        print(f"    Update of a frame: median {statistics.median(updates):.2f} ms, 90th percentile "
+              f"{percentile(updates, 0.9):.2f}, 99th {percentile(updates, 0.99):.2f}, longest {max(updates):.2f}; "
+              f"over one frame ({frame_ms:.2f} ms): {over} of {len(updates)} ({over / len(updates) * 100:.0f}%)")
+        note("Update of a frame, median ms", statistics.median(updates))
+        note("Update of a frame, 90th percentile ms", percentile(updates, 0.9))
+        note("Update of a frame, 99th percentile ms", percentile(updates, 0.99))
+        note("Frames whose update is over one frame %", over / len(updates) * 100)
+    renders = [(number(row.get("duration")) / 1e6, number(row.get("offscreen-passes")))
+               for row in table_rows(trace, "hitches-renders") if inside(number(row.get("start")), windows)]
+    gpu = [number(row.get("duration")) / 1e6 for row in table_rows(trace, "hitches-gpu")
+           if inside(number(row.get("start")), windows)]
+    if renders:
+        times = [duration for duration, _ in renders]
+        passes = [count for _, count in renders]
+        seconds = sum(end - begin for begin, end in windows) / 1e9
+        line = (f"    Render of a frame: median {statistics.median(times):.2f} ms, 99th percentile "
+                f"{percentile(times, 0.99):.2f}, {statistics.median(passes):.0f} off-screen passes; "
+                f"{len(renders) / seconds:.0f} frames a second")
+        note("Render of a frame, median ms", statistics.median(times))
+        note("Off-screen passes of a frame, median", statistics.median(passes))
+        note("Frames a second", len(renders) / seconds)
+        if gpu:
+            line += f"; GPU median {statistics.median(gpu):.2f} ms, 99th percentile {percentile(gpu, 0.99):.2f}"
+            note("GPU of a frame, median ms", statistics.median(gpu))
+        print(line)
 
 
 APP_BINARIES = ("EhShoko", "EhShoko.debug.dylib")
 
 
-def report_time_profile(trace, galleries=0, windows=None):
-    """The main thread's busy time during each scroll, the leaf functions it spent it in, and
-    the app's own functions nearest the leaf (where list and cell code shows up)."""
+def report_time_profile(trace, galleries=0, windows=None, together=False):
+    """The main thread's busy time during each scroll, the cores it ran on, the leaf functions
+    it spent the time in, and the app's own functions nearest the leaf (where list and cell
+    code shows up)."""
     if windows is None:
         windows = scroll_windows(signpost_intervals(trace))
-    leaves, app_frames, totals, seen = {}, {}, [0] * max(len(windows), 1), False
-    # The time profile is the largest table and the one whose export fails most; the figures
-    # that matter come from the harness's own clock, so it is not retried for long.
+    leaves, app_frames, cores, totals, seen = {}, {}, {}, [0] * max(len(windows), 1), False
+    # The time profile is the largest table and the one whose export fails most.
     for row, resolve in iter_rows(trace, "time-profile", attempts=PROFILE_ATTEMPTS):
         seen = True
         time = number(row.get("time"))
@@ -258,6 +356,8 @@ def report_time_profile(trace, galleries=0, windows=None):
             continue
         weight = number(row.get("weight")) or 1_000_000
         totals[scroll or 0] += weight
+        core = text(row.get("core"))
+        cores[core] = cores.get(core, 0) + weight
         stack = row.get("stack")
         frames = [resolve(frame) for frame in stack.iter("frame")] if stack is not None else []
         leaf = frames[0].attrib.get("name", "?") if frames else "?"
@@ -272,21 +372,34 @@ def report_time_profile(trace, galleries=0, windows=None):
                 app_frames[name] = app_frames.get(name, 0) + weight
                 break
     if not seen:
-        print(f"    {trace.name}: no time-profile table")
+        print(f"    {trace.name}: no time-profile table (so no main-thread time and no cores)")
         return
     print(f"  {trace.name}")
-    for scroll, (begin, end) in enumerate(windows):
-        seconds, total = (end - begin) / 1e9, totals[scroll]
-        label = f"Scroll {scroll + 1}: main" if len(windows) > 1 else "Main"
+    indexed = list(enumerate(windows))
+    spans = [indexed] if together else [[item] for item in indexed]
+    for number_of, span in enumerate(spans, start=1):
+        seconds = sum(end - begin for _, (begin, end) in span) / 1e9
+        total = sum(totals[index] for index, _ in span)
+        if not seconds:
+            continue
+        label = f"Scroll {number_of}: main" if len(spans) > 1 else "Main"
         line = (f"    {label} thread busy {total / 1e6 / seconds:.0f} ms/s during the scroll "
                 f"({total / 1e6:.0f} ms in {seconds:.1f} s)")
         note("Main thread busy during the scroll ms/s", total / 1e6 / seconds)
         if galleries:
             # Every row of the list appears once during the scroll, so this is the main thread's
-            # whole cost per new row: the cell, and its share of scrolling and drawing.
+            # whole time per new row: the cell, and its share of scrolling and drawing. Time at
+            # the speed of the cores it ran on, which the next line gives.
             line += f"; per new row {total / 1e6 / galleries:.2f} ms ({galleries} rows)"
             note("Main thread per new row ms", total / 1e6 / galleries)
         print(line)
+    whole = sum(cores.values())
+    if whole and any(cores):
+        slow = sum(weight for core, weight in cores.items() if "E Core" in core)
+        named = ", ".join(f"{core or 'unknown'} {weight / whole * 100:.0f}%"
+                          for core, weight in sorted(cores.items(), key=lambda item: -item[1])[:6])
+        print(f"    Main thread on efficiency cores: {slow / whole * 100:.0f}% of its time ({named})")
+        note("Main thread on efficiency cores %", slow / whole * 100)
     print("    Heaviest leaf functions on the main thread:")
     for name, weight in sorted(leaves.items(), key=lambda item: -item[1])[:6]:
         print(f"      {weight / 1e6:7.0f} ms  {name[:100]}")
@@ -524,12 +637,13 @@ def main():
         print("  " + ", ".join(run.read_text().split()))
     indices = sorted({int(re.sub(r"\D", "", path.stem) or 0)
                       for path in [*folder.glob("hitches-*.trace"), *folder.glob("result-*.json")]})
-    galleries = 0
+    galleries, by_hand = 0, False
     if run.exists():
         match = re.search(r"^count=(\d+)$", run.read_text(), re.MULTILINE)
         galleries = int(match.group(1)) if match else 0
+        by_hand = re.search(r"^kind=hand$", run.read_text(), re.MULTILINE) is not None
     for index in indices:
-        report_hitches(folder / f"hitches-{index}.trace", folder / f"result-{index}.json", index, galleries)
+        report_hitches(folder / f"hitches-{index}.trace", folder / f"result-{index}.json", index, galleries, by_hand)
     for trace in sorted(folder.glob("time*.trace"), key=run_index):
         report_time_profile(trace, galleries)
     if (folder / "alloc.trace").exists():

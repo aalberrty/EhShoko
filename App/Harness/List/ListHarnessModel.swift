@@ -13,6 +13,8 @@ final class ListHarnessModel {
     enum Phase: Equatable {
         case preparing
         case ready
+        /// A hand is scrolling the list and the harness is watching (`-HarnessObserve`).
+        case observing
         case running
         case finished(ListHarnessResult)
         case failed(String)
@@ -39,6 +41,8 @@ final class ListHarnessModel {
     @ObservationIgnored private var coversServedAtStart = 0
     /// The results of an automatic series so far, written together.
     @ObservationIgnored private var results: [ListHarnessResult] = []
+    @ObservationIgnored private var observer: ListHarnessObserver?
+    @ObservationIgnored private var lastSave: Task<Void, Never>?
     @ObservationIgnored @Dependency(\.imageCacheClient) private var imageCache
 
     private static let settingsSuite = "app.ehshoko.list-harness"
@@ -66,15 +70,23 @@ final class ListHarnessModel {
             count: options.galleryCount, session: session, coverLatency: options.coverLatency
         )
         phase = .ready
-        guard options.runsAutomatically else { return }
-        for index in 1...options.runs {
-            if index > 1 {
-                await startOver()
+        if options.observedSeconds > 0 {
+            await observe()
+        } else if options.runsAutomatically {
+            for index in 1...options.runs {
+                if index > 1 {
+                    await startOver()
+                }
+                if options.hasCoversReady {
+                    await loadCovers()
+                }
+                try? await Task.sleep(for: .seconds(ListHarnessOptions.settleDelay))
+                guard !Task.isCancelled else { return }
+                await run()
+                guard case .finished = phase else { break }
             }
-            try? await Task.sleep(for: .seconds(ListHarnessOptions.settleDelay))
-            guard !Task.isCancelled else { return }
-            await run()
-            guard case .finished = phase else { break }
+        } else {
+            return
         }
         if options.exitsWhenDone {
             // Lets the last signposts reach the recording before the process goes away.
@@ -84,9 +96,13 @@ final class ListHarnessModel {
     }
 
     func run() async {
-        guard phase != .running, phase != .preparing else { return }
+        guard phase != .running, phase != .preparing, phase != .observing else { return }
         phase = .running
-        guard let measured = await scroller.run(speed: options.speed) else {
+        let awake = options.keepsCoresAwake ? ListHarnessAwake() : nil
+        awake?.start()
+        let measured = await scroller.run(speed: options.speed)
+        awake?.stop()
+        guard let measured else {
             phase = .failed("No scroll view with room to scroll was found in the slot.")
             return
         }
@@ -99,6 +115,61 @@ final class ListHarnessModel {
         phase = .finished(result)
         results.append(result)
         await ListHarnessResult.write(results)
+    }
+
+    /// Watches the list for `observedSeconds` while a hand scrolls it. Every stretch of
+    /// movement becomes a result, written as it ends, so that a watch cut short keeps what it
+    /// has.
+    private func observe() async {
+        phase = .observing
+        let awake = options.keepsCoresAwake ? ListHarnessAwake() : nil
+        awake?.start()
+        let observer = ListHarnessObserver(scroller: scroller) { [weak self] stretch in
+            guard let self else { return }
+            results.append(ListHarnessResult(
+                slot: options.slot.rawValue, options: options, galleryCount: galleries.count, stretch: stretch,
+                footprint: MemoryFootprint.current()
+            ))
+            save()
+        }
+        self.observer = observer
+        observer.begin()
+        try? await Task.sleep(for: .seconds(options.observedSeconds))
+        observer.end()
+        self.observer = nil
+        awake?.stop()
+        save()
+        await lastSave?.value
+        phase = .ready
+    }
+
+    /// Writes the results so far, after whatever write is still on its way: two writes at once
+    /// could leave the file half of each.
+    private func save() {
+        let results = results
+        let previous = lastSave
+        lastSave = Task {
+            await previous?.value
+            await ListHarnessResult.write(results)
+        }
+    }
+
+    /// Brings every cover into memory, a few at a time, before a scroll that is not to wait
+    /// for any (`-HarnessCoversReady`).
+    private func loadCovers() async {
+        let urls = galleries.compactMap(\.coverURL)
+        await withTaskGroup(of: Void.self) { group in
+            var next = urls.makeIterator()
+            for _ in 0..<8 {
+                guard let url = next.next() else { break }
+                group.addTask { _ = await CoverLoads.shared.load(url) }
+            }
+            while await group.next() != nil {
+                if let url = next.next() {
+                    group.addTask { _ = await CoverLoads.shared.load(url) }
+                }
+            }
+        }
     }
 
     /// Between two runs of a series: the next run starts as a launch does, with nothing in the
@@ -122,6 +193,7 @@ final class ListHarnessModel {
 
     func stop() {
         scroller.cancel()
+        observer?.end()
     }
 
     private func applyOptions(from old: ListHarnessOptions) {
@@ -154,19 +226,20 @@ nonisolated struct ListHarnessResult: Equatable, Sendable, Codable {
     var distance: Double
     var reachedEnd: Bool
     var frameDurationMs: Double
-    var hitches: Int
-    var hitchTimeMs: Double
-    var hitchRatioMsPerS: Double
-    var worstHitchMs: Double
-    var longHitchesAfterFirstScreen: Int
+    /// A stretch of a hand's scrolling (`-HarnessObserve`), not a scripted run.
+    var byHand: Bool
+    /// `-HarnessCoresAwake` and `-HarnessCoversReady`: the state the figures were taken in.
+    var coresAwake: Bool
+    var coversReady: Bool
     var footprintMB: Double
     var peakFootprintMB: Double
     var coversServed: Int
     /// Covers decoded by `CoverImage` during the harness; 0 for slots that do not use it.
     var coversDecoded: Int
     /// The main thread's CPU time from the scroll's first movement to its last (waiting for a
-    /// core is not in it), and the cells built meanwhile: what `spikes/S1.md` compares lists
-    /// by on a shared machine, where frame timing compares machine loads.
+    /// core is not in it), and the cells built meanwhile. CPU time at whatever speed the
+    /// system ran the thread at: on slow cores the same work is several times as much, so
+    /// this compares runs in the same state (`coresAwake`), not lists across states.
     var mainThreadCPUMs: Double
     var cellsCreated: Int
     /// Whether `cellsCreated` counts cell bodies (`ListHarnessCells`); for a list whose cells
@@ -188,11 +261,9 @@ nonisolated struct ListHarnessResult: Equatable, Sendable, Codable {
         distance = scroll.distance
         reachedEnd = scroll.reachedEnd
         frameDurationMs = scroll.frameDuration * 1_000
-        hitches = scroll.hitches
-        hitchTimeMs = scroll.hitchTime * 1_000
-        hitchRatioMsPerS = scroll.hitchRatio
-        worstHitchMs = scroll.worstHitch * 1_000
-        longHitchesAfterFirstScreen = scroll.longHitches
+        byHand = false
+        coresAwake = options.keepsCoresAwake
+        coversReady = options.hasCoversReady
         footprintMB = footprint.map { Double($0.current) / 1_048_576 } ?? 0
         peakFootprintMB = footprint.map { Double($0.peak) / 1_048_576 } ?? 0
         self.coversServed = coversServed
@@ -203,15 +274,44 @@ nonisolated struct ListHarnessResult: Equatable, Sendable, Codable {
         cpuPerCellMs = cellsCreated > 0 ? mainThreadCPUMs / Double(cellsCreated) : 0
     }
 
+    /// One stretch of a hand's scrolling.
+    init(
+        slot: String, options: ListHarnessOptions, galleryCount: Int, stretch: ListHarnessObserver.Stretch,
+        footprint: MemoryFootprint?
+    ) {
+        self.slot = slot
+        galleries = galleryCount
+        tags = options.showsTags
+        dock = options.showsDock
+        speed = stretch.duration > 0 ? stretch.distance / stretch.duration : 0
+        duration = stretch.duration
+        frames = stretch.frames
+        distance = stretch.distance
+        reachedEnd = false
+        frameDurationMs = stretch.frameDuration * 1_000
+        byHand = true
+        coresAwake = options.keepsCoresAwake
+        coversReady = options.hasCoversReady
+        footprintMB = footprint.map { Double($0.current) / 1_048_576 } ?? 0
+        peakFootprintMB = footprint.map { Double($0.peak) / 1_048_576 } ?? 0
+        coversServed = stretch.coversServed
+        coversDecoded = 0
+        mainThreadCPUMs = stretch.mainThreadCPU * 1_000
+        cellsCounted = stretch.cellBodies > 0
+        cellsCreated = cellsCounted ? stretch.cellBodies : stretch.coversServed
+        cpuPerCellMs = cellsCreated > 0 ? mainThreadCPUMs / Double(cellsCreated) : 0
+    }
+
     static var fileURL: URL {
         URL.cachesDirectory.appending(path: "ListHarness/result.json")
     }
 
     var summary: String {
         String(
-            format: "%@%@: %.1f s, %d frames, hitch ratio %.1f ms/s, worst %.0f ms, %d long after the first screen, footprint %.0f MB (peak %.0f MB), covers served %d, decoded by CoverImage %d, main thread %.0f ms for %d cells (%@), %.2f ms a cell",
-            slot, dock ? " + dock" : "", duration, frames, hitchRatioMsPerS, worstHitchMs, longHitchesAfterFirstScreen, footprintMB, peakFootprintMB,
-            coversServed, coversDecoded, mainThreadCPUMs, cellsCreated, cellsCounted ? "bodies" : "covers", cpuPerCellMs
+            format: "%@%@%@: %.1f s, %.0f pt, %d frames, footprint %.0f MB (peak %.0f MB), covers served %d, decoded by CoverImage %d, main thread %.0f ms for %d cells (%@), %.2f ms a cell%@",
+            slot, dock ? " + dock" : "", byHand ? ", by hand" : "", duration, distance, frames, footprintMB, peakFootprintMB,
+            coversServed, coversDecoded, mainThreadCPUMs, cellsCreated, cellsCounted ? "bodies" : "covers", cpuPerCellMs,
+            coresAwake ? ", cores awake" : ""
         )
     }
 

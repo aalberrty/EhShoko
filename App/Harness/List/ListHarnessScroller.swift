@@ -11,10 +11,14 @@ import UIKit
 /// offset follows the clock, not the frame count, so a late frame jumps further, as under a
 /// finger, and every run covers the same distance in the same time.
 ///
-/// While it runs it counts late frames from the display link, a rough estimate of what
-/// Instruments' Animation Hitches reports (it sees main-thread stalls, not render-server ones),
-/// and marks the run as the `HarnessScroll` signpost interval (category `Harness`), which
+/// It marks the run as the `HarnessScroll` signpost interval (category `Harness`), which
 /// `measure.sh` uses to bound the hitches it counts.
+///
+/// It also counts late display-link frames, for the probes that have nothing better
+/// (`SettingsProbe`, the previews harness). That count is no measure of a list: it misses
+/// every update that overruns its frame by less than half a frame, which is most of what a
+/// list does (it read 0 to 2 ms/s where Instruments counted 113), so the list harness's
+/// result and `measure.sh` no longer carry it.
 @MainActor
 final class ListHarnessScroller: NSObject {
     nonisolated struct Result: Sendable {
@@ -186,10 +190,13 @@ final class ListHarnessScroller: NSObject {
     /// The scroll view of the list: of the scroll views around the anchor with content taller
     /// than themselves, the tallest one under the nearest common ancestor. Going outward one
     /// ancestor at a time keeps the screen below a presented harness out of the search.
-    private func findScrollView() -> UIScrollView? {
+    func findScrollView() -> UIScrollView? {
         var container = anchor?.superview
+        // Half the list's own width (the anchor's), so a list narrower than its window is
+        // found and a strip of thumbnails is not.
+        let width = (anchor?.bounds.width ?? 0) / 2
         while let view = container {
-            if let found = tallestScrollView(in: view) {
+            if let found = tallestScrollView(in: view, atLeast: width > 0 ? width : view.bounds.width / 2) {
                 return found
             }
             container = view.superview
@@ -197,13 +204,13 @@ final class ListHarnessScroller: NSObject {
         return nil
     }
 
-    private func tallestScrollView(in root: UIView) -> UIScrollView? {
+    private func tallestScrollView(in root: UIView, atLeast width: CGFloat) -> UIScrollView? {
         var best: UIScrollView?
         var pending = [root]
         while let view = pending.popLast() {
             if let scrollView = view as? UIScrollView, !scrollView.isHidden,
                scrollView.contentSize.height > scrollView.bounds.height,
-               scrollView.bounds.width >= root.bounds.width / 2,
+               scrollView.bounds.width >= width,
                best.map({ scrollView.contentSize.height > $0.contentSize.height }) ?? true {
                 best = scrollView
             }
