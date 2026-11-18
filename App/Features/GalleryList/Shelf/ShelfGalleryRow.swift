@@ -71,7 +71,7 @@ struct ShelfGalleryRow: View, Equatable {
 
     var body: some View {
         #if DEBUG || HARNESS
-        let _ = ListHarnessCells.note()
+        let _ = ListHarnessCells.note(entry.id)
         #endif
         let texts = style.texts
         HStack(alignment: .top, spacing: Self.coverSpacing) {

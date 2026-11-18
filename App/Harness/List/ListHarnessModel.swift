@@ -69,6 +69,7 @@ final class ListHarnessModel {
         galleries = await ListHarnessGalleries.make(
             count: options.galleryCount, session: session, coverLatency: options.coverLatency
         )
+        ListHarnessCells.begin(galleries.map(\.gid))
         phase = .ready
         if options.observedSeconds > 0 {
             await observe()
@@ -183,6 +184,7 @@ final class ListHarnessModel {
         galleries = await ListHarnessGalleries.make(
             count: options.galleryCount, session: session, coverLatency: options.coverLatency
         )
+        ListHarnessCells.begin(galleries.map(\.gid))
         listID += 1
         phase = .ready
     }
@@ -245,6 +247,11 @@ nonisolated struct ListHarnessResult: Equatable, Sendable, Codable {
     /// Whether `cellsCreated` counts cell bodies (`ListHarnessCells`); for a list whose cells
     /// do not count themselves it is the covers served during the scroll, which undercounts.
     var cellsCounted: Bool
+    /// Of `cellsCreated`, the body runs for a cell the list had built before; and the cells
+    /// standing built beyond where the list had got to at the end (`ListHarnessCells.Tally`).
+    /// A list that builds what it shows has neither.
+    var cellsBuiltAgain: Int
+    var cellsBuiltAhead: Int
     var cpuPerCellMs: Double
 
     init(
@@ -271,6 +278,8 @@ nonisolated struct ListHarnessResult: Equatable, Sendable, Codable {
         mainThreadCPUMs = scroll.mainThreadCPU * 1_000
         cellsCounted = scroll.cellBodies > 0
         cellsCreated = cellsCounted ? scroll.cellBodies : scroll.coversServed
+        cellsBuiltAgain = scroll.cellsAgain
+        cellsBuiltAhead = scroll.cellsAhead
         cpuPerCellMs = cellsCreated > 0 ? mainThreadCPUMs / Double(cellsCreated) : 0
     }
 
@@ -299,6 +308,8 @@ nonisolated struct ListHarnessResult: Equatable, Sendable, Codable {
         mainThreadCPUMs = stretch.mainThreadCPU * 1_000
         cellsCounted = stretch.cellBodies > 0
         cellsCreated = cellsCounted ? stretch.cellBodies : stretch.coversServed
+        cellsBuiltAgain = stretch.cellsAgain
+        cellsBuiltAhead = stretch.cellsAhead
         cpuPerCellMs = cellsCreated > 0 ? mainThreadCPUMs / Double(cellsCreated) : 0
     }
 
@@ -308,9 +319,10 @@ nonisolated struct ListHarnessResult: Equatable, Sendable, Codable {
 
     var summary: String {
         String(
-            format: "%@%@%@: %.1f s, %.0f pt, %d frames, footprint %.0f MB (peak %.0f MB), covers served %d, decoded by CoverImage %d, main thread %.0f ms for %d cells (%@), %.2f ms a cell%@",
+            format: "%@%@%@: %.1f s, %.0f pt, %d frames, footprint %.0f MB (peak %.0f MB), covers served %d, decoded by CoverImage %d, main thread %.0f ms for %d cells (%@; %d built before, %d built ahead), %.2f ms a cell%@",
             slot, dock ? " + dock" : "", byHand ? ", by hand" : "", duration, distance, frames, footprintMB, peakFootprintMB,
-            coversServed, coversDecoded, mainThreadCPUMs, cellsCreated, cellsCounted ? "bodies" : "covers", cpuPerCellMs,
+            coversServed, coversDecoded, mainThreadCPUMs, cellsCreated, cellsCounted ? "bodies" : "covers", cellsBuiltAgain,
+            cellsBuiltAhead, cpuPerCellMs,
             coresAwake ? ", cores awake" : ""
         )
     }
