@@ -23,6 +23,11 @@ struct DesignSetupScreen: View {
     @State private var asksToDiscard = false
     @State private var choices = 0
     @State private var applied = 0
+    /// The step's scroll view's height inside the bars: a page's step fits its cards to it.
+    @State private var visibleHeight: CGFloat = 0
+
+    /// The space under a step's last piece.
+    static let bottomPadding = Tokens.Spacing.xLarge
 
     @Environment(\.dismiss) private var dismiss
     @Environment(\.look) private var look
@@ -79,13 +84,18 @@ struct DesignSetupScreen: View {
                 case .start:
                     DesignSetupStartStep(model: model, isCovered: asksToDiscard)
                 case .part(let part):
-                    DesignSetupPartStep(model: model, part: part) { choices += 1 }
+                    DesignSetupPartStep(model: model, part: part, visibleHeight: visibleHeight) { choices += 1 }
                 case .summary:
                     DesignSetupSummary(model: model) { move(.open($0)) }
                 }
             }
             .padding(.horizontal, Tokens.Spacing.large)
-            .padding(.bottom, Tokens.Spacing.xLarge)
+            .padding(.bottom, Self.bottomPadding)
+        }
+        .onScrollGeometryChange(for: CGFloat.self) { geometry in
+            geometry.containerSize.height - geometry.contentInsets.top - geometry.contentInsets.bottom
+        } action: { _, height in
+            visibleHeight = height
         }
     }
 
