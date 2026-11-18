@@ -37,6 +37,10 @@ final class ListHarnessScroller: NSObject {
         /// was built and served in that time.
         var mainThreadCPU: Double = 0
         var cellBodies = 0
+        /// Of the body runs, those for a cell built before; and the cells standing built
+        /// beyond where the list had got to when the scroll ended (`ListHarnessCells.Tally`).
+        var cellsAgain = 0
+        var cellsAhead = 0
         var coversServed = 0
 
         var hitchRatio: Double { duration > 0 ? hitchTime * 1_000 / duration : 0 }
@@ -181,6 +185,9 @@ final class ListHarnessScroller: NSObject {
         if let firstMove, let lastMove {
             result.mainThreadCPU = Double(lastMove.cpu - firstMove.cpu) / 1e9
             result.cellBodies = lastMove.cells - firstMove.cells
+            let tally = ListHarnessCells.tally(last: result.cellBodies)
+            result.cellsAgain = tally.again
+            result.cellsAhead = tally.ahead
             result.coversServed = lastMove.served - firstMove.served
         }
         continuation?.resume(returning: result)

@@ -21,6 +21,8 @@
 #   --count <n>           Galleries in the list (default 3000, enough for a minute of flicks).
 #   --flicks <n>          How many flicks (default 12).   --velocity <pt/s>   Their speed (default 3000).
 #   --awake               A thread keeps the performance cores awake (see measure.sh --awake).
+#   --app-arg <arg>       One more launch argument for the list, repeatable (for example
+#                         --app-arg -HarnessTags --app-arg YES for rows with their tags).
 #   --no-report           Record only; report later with measure.sh report <dir>.
 #   --chime               Sound the Mac's alert, three times, while the runner waits for the
 #                         device to allow UI automation (8 s after the runner is up, then
@@ -48,6 +50,7 @@ count=3000
 flicks=12
 velocity=3000
 awake=NO
+app_args=()
 report=YES
 chimes=NO
 
@@ -64,6 +67,7 @@ while [[ $# -gt 0 ]]; do
     --flicks) flicks="$2"; shift 2 ;;
     --velocity) velocity="$2"; shift 2 ;;
     --awake) awake=YES; shift ;;
+    --app-arg) app_args+=(--app-arg "$2"); shift 2 ;;
     --no-report) report=NO; shift ;;
     --chime) chimes=YES; shift ;;
     -h|--help) sed -n '2,/^set -euo/p' "$0" | sed '$d'; exit 0 ;;
@@ -161,6 +165,7 @@ attempt() {
   local options=(--device "$udid" --bundle-id "$bundle_id" --light --count "$count" --no-report --out "$out")
   [[ -z "$width" ]] || options+=(--width "$width")
   [[ "$awake" == NO ]] || options+=(--awake)
+  options+=(${app_args[@]+"${app_args[@]}"})
   "$here/measure.sh" "${options[@]}" hand "$slot" "$seconds" >&2 || true
   # The list has closed by itself; the test's last flicks find no app and end it.
   wait "$test_pid" 2>/dev/null || true

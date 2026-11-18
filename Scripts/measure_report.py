@@ -208,13 +208,31 @@ def report_hitches(trace, result_file, index, galleries=0, by_hand=False):
               f"{'reached the end' if result['reachedEnd'] else 'did NOT reach the end'}; "
               f"footprint at the end {result['footprintMB']:.0f} MB (peak {result['peakFootprintMB']:.0f} MB), "
               f"{result['coversServed']} covers served, {result.get('coversDecoded', 0)} decoded by CoverImage; "
-              f"main thread {result.get('mainThreadCPUMs', 0):.0f} ms of CPU for {result.get('cellsCreated', 0)} cells")
+              f"main thread {result.get('mainThreadCPUMs', 0):.0f} ms of CPU for {result.get('cellsCreated', 0)} cells"
+              f"{cells_unseen(result.get('cellsCreated', 0), [result])}")
         note("Footprint at the end of the scroll MB", result["footprintMB"])
         note("Peak footprint during the scroll MB", result["peakFootprintMB"])
         if result.get("cellsCreated"):
             note("Harness main-thread CPU during the scroll ms/s",
                  result["mainThreadCPUMs"] / result["duration"] if result["duration"] else 0)
             note("Covers decoded per cover served", result.get("coversDecoded", 0) / max(result["coversServed"], 1))
+
+
+def cells_unseen(bodies, results):
+    """The cells a list built without showing them, in words: body runs for a cell it had
+    built before, and cells left built beyond where it got to (the last result's count)."""
+    # A list whose cells do not count themselves reports covers served, which says nothing here.
+    if not results or "cellsBuiltAgain" not in results[-1] or not results[-1].get("cellsCounted", True):
+        return ""
+    again = sum(result.get("cellsBuiltAgain", 0) for result in results)
+    ahead = results[-1].get("cellsBuiltAhead", 0)
+    needed = bodies - again - ahead
+    if needed > 0:
+        note("Cell body runs per cell the scroll needed", bodies / needed)
+    if again == 0 and ahead == 0:
+        return ", each built once"
+    return (f", of which {again} for a cell built before and {ahead} left built ahead of the list"
+            + (f" ({bodies / needed:.2f} body runs per cell the scroll needed)" if needed > 0 else ""))
 
 
 def report_hand(stretches):
@@ -229,7 +247,8 @@ def report_hand(stretches):
     if seconds <= 0:
         return
     print(f"    By hand: {len(stretches)} stretches, {seconds:.1f} s moving, {distance:.0f} pt "
-          f"({distance / seconds:.0f} pt/s), {cells} cells ({cells / seconds:.1f} a second); "
+          f"({distance / seconds:.0f} pt/s), {cells} cells ({cells / seconds:.1f} a second)"
+          f"{cells_unseen(cells, stretches)}; "
           f"main thread {cpu / seconds:.0f} ms/s of CPU; footprint at the end {stretches[-1]['footprintMB']:.0f} MB")
     note("Scroll speed pt/s", distance / seconds)
     note("Cells per second", cells / seconds)

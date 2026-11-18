@@ -18,6 +18,10 @@ final class ListHarnessObserver: NSObject {
         var frameDuration: Double
         var mainThreadCPU: Double
         var cellBodies: Int
+        /// Of the body runs, those for a cell built before; and the cells standing built
+        /// beyond where the list had got to when the stretch ended (`ListHarnessCells.Tally`).
+        var cellsAgain: Int
+        var cellsAhead: Int
         var coversServed: Int
     }
 
@@ -100,11 +104,13 @@ final class ListHarnessObserver: NSObject {
             Self.signposter.endInterval("HarnessScroll", signpost)
             self.signpost = nil
         }
+        let bodies = ListHarnessCells.value - start.cells
+        let tally = ListHarnessCells.tally(last: bodies)
         stretchEnded(Stretch(
             duration: lastMove - start.time, distance: Double(distance), frames: frames - start.frames,
             frameDuration: frameDuration,
             mainThreadCPU: Double(clock_gettime_nsec_np(CLOCK_THREAD_CPUTIME_ID) - start.cpu) / 1e9,
-            cellBodies: ListHarnessCells.value - start.cells,
+            cellBodies: bodies, cellsAgain: tally.again, cellsAhead: tally.ahead,
             coversServed: ListHarnessURLProtocol.servedCount.withLock { $0 } - start.served
         ))
     }
