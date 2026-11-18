@@ -19,6 +19,8 @@ final class PartHarnessModel {
     @ObservationIgnored let app = AppModel()
     @ObservationIgnored let continueModel = ContinueModel()
     @ObservationIgnored let fixtures = PartHarnessFixtures()
+    /// The scripted scroll (`PartHarnessScroll`), which drives whichever list the stage shows.
+    @ObservationIgnored let scroller = ListHarnessScroller()
 
     private static let settingsSuite = "app.ehshoko.part-harness"
 
@@ -84,6 +86,47 @@ final class PartHarnessModel {
         }
     }
 
+    /// The scripted scroll (`-HarnessAutoRun YES`): scrolls the stage's list to its end, as the
+    /// list harness does, once per run, each run on a stage built again over an empty image
+    /// cache, and writes the list harness's `result.json`.
+    func runScroll() async {
+        guard let scroll = PartHarnessScroll.atLaunch else { return }
+        await ListHarnessResult.removeLast()
+        var results: [ListHarnessResult] = []
+        for index in 1...scroll.runs {
+            while !isReady {
+                try? await Task.sleep(for: .milliseconds(50))
+                guard !Task.isCancelled else { return }
+            }
+            if index > 1 {
+                await HarnessImageCache.empty()
+                fixtures.startOver()
+                app.router.resetNavigation()
+                selectPartTab()
+                stageID += 1
+            }
+            let decodes = CoverDecodeCounter.value
+            let served = ListHarnessURLProtocol.servedCount.withLock { $0 }
+            try? await Task.sleep(for: .seconds(ListHarnessOptions.settleDelay))
+            guard !Task.isCancelled, let measured = await scroller.run(speed: scroll.speed) else { break }
+            var listOptions = ListHarnessOptions()
+            listOptions.showsTags = options.showsTags
+            listOptions.speed = scroll.speed
+            results.append(ListHarnessResult(
+                slot: scroll.name(for: options), options: listOptions, galleryCount: fixtures.entries.count,
+                scroll: measured, footprint: MemoryFootprint.current(),
+                coversServed: ListHarnessURLProtocol.servedCount.withLock { $0 } - served,
+                coversDecoded: CoverDecodeCounter.value - decodes
+            ))
+            await ListHarnessResult.write(results)
+        }
+        if scroll.exitsWhenDone {
+            // Lets the last signposts reach the recording before the process goes away.
+            try? await Task.sleep(for: .milliseconds(500))
+            exit(0)
+        }
+    }
+
     /// Under `tabs`, selects the tab the part is in before the stage is drawn; resetting the
     /// navigation selects Home.
     private func selectPartTab() {
@@ -143,6 +186,45 @@ final class PartHarnessModel {
             selectPartTab()
             stageID += 1
         }
+    }
+}
+/// The scripted scroll of a part harness launched as the whole app, which measures a list
+/// where the list harness cannot put it: in the real shell, under the chosen bar (the tab bar
+/// with its accessory, the command bar), in the chosen look, on the stage's own stack.
+///
+/// | Argument | Default | Meaning |
+/// |---|---|---|
+/// | `-HarnessAutoRun YES` | NO | Scroll the stage's list to its end once it has settled, and write the list harness's `Library/Caches/ListHarness/result.json`. |
+/// | `-HarnessCount <n>` | 120 | The fixture's galleries; a list shows them 25 at a time, as pages arrive. |
+/// | `-HarnessRuns <n>` | 1 | Scroll n times in this launch, each on a stage built again over an empty image cache, with its own `HarnessScroll` interval. |
+/// | `-HarnessSpeed <pt/s>` | 2000 | Speed of the scroll. |
+/// | `-HarnessExitWhenDone YES` | NO | Quit after the last run, which ends an `xctrace` recording. |
+nonisolated struct PartHarnessScroll: Sendable {
+    var galleryCount: Int?
+    var runs = 1
+    var speed = 2_000.0
+    var exitsWhenDone = false
+
+    /// The scroll the launch arguments ask for; `nil` without `-HarnessAutoRun YES`.
+    static let atLaunch: PartHarnessScroll? = {
+        let defaults = UserDefaults.standard
+        guard defaults.bool(forKey: "HarnessAutoRun") else { return nil }
+        let list = ListHarnessOptions.atLaunch
+        let count = defaults.integer(forKey: "HarnessCount")
+        return PartHarnessScroll(
+            galleryCount: count > 0 ? min(count, 5_000) : nil, runs: list.runs, speed: list.speed,
+            exitsWhenDone: list.exitsWhenDone
+        )
+    }()
+
+    /// What the run is called in its result: the part and the designs around it.
+    func name(for options: PartHarnessOptions) -> String {
+        let choices = options.choices
+        var name = "\(options.part.rawValue) of \(choices.list.rawValue)"
+        if choices.list == .wall {
+            name += " \(options.density.rawValue)"
+        }
+        return name + " under \(choices.bar.rawValue), look \(choices.look.rawValue)"
     }
 }
 #endif

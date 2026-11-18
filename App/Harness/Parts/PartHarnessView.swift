@@ -44,6 +44,7 @@ struct PartHarnessView: View {
                     .modifier(PartHarnessWidthClass(width: options.width))
                     // Another part, bar or presentation is another stage, built from scratch.
                     .id(model.stageID)
+                    .background { ListHarnessAnchor(scroller: model.scroller) }
             } else {
                 ProgressView()
             }
@@ -84,6 +85,7 @@ struct PartHarnessView: View {
         .task { await model.prepare() }
         .task { await model.continueModel.observe() }
         .task { await model.runMemoryCheck() }
+        .task { await model.runScroll() }
         // As the shell does once its first screen is up, so the Favourite tip can show here.
         .task { await TipsConfiguration.configure() }
         .task {

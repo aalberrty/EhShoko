@@ -33,6 +33,7 @@ struct ListHarnessView: View {
                 }
         }
         .environment(stack)
+        .lookEnvironment(Look(model.options.look ?? model.options.slot.design), accent: model.settings.accentColor)
         .task { await model.start() }
         .onDisappear { model.stop() }
     }
@@ -43,6 +44,8 @@ struct ListHarnessView: View {
             ProgressView()
         } else {
             ListHarnessSlotView(slot: model.options.slot, galleries: model.galleries, settings: model.settings)
+                // A later run of a series is a list of its own, built from its first row.
+                .id(model.listID)
                 .background { ListHarnessAnchor(scroller: model.scroller) }
                 .overlay(alignment: .bottom) {
                     if model.options.showsDock {
