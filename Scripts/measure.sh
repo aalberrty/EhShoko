@@ -68,6 +68,9 @@
 #                         list's, without it the list's and the power management's. The
 #                         report says which cores the main thread ran on.
 #   --covers-ready        list: every cover is in memory before a scroll starts.
+#   --ready-sound <file>  hand: play this sound twice on the Mac when the list is on the
+#                         device's screen and can be flicked (two seconds after the recording
+#                         has launched the app), for whoever holds the device.
 #   --light               Record hitches with the Time Profiler template plus the Hitches
 #                         instrument instead of the Animation Hitches template, whose traces are
 #                         ten times the size and take as much longer to save.
@@ -130,6 +133,7 @@ look=""
 width=""
 awake=NO
 covers_ready=NO
+ready_sound=""
 bar=NO
 dock=NO
 light=NO
@@ -166,6 +170,7 @@ while [[ $# -gt 0 ]]; do
     --width) width="$2"; shift 2 ;;
     --awake) awake=YES; shift ;;
     --covers-ready) covers_ready=YES; shift ;;
+    --ready-sound) ready_sound="$2"; shift 2 ;;
     --light) light=YES; shift ;;
     --limit) limit="$2"; shift 2 ;;
     --no-report) report=NO; shift ;;
@@ -297,6 +302,15 @@ record() {
       ${instruments[@]+"${instruments[@]}"} --time-limit "$limit" --output "$trace" \
       --launch -- "$target" "$@" "${tips_args[@]}" >"$progress" 2>"$issues" &
     recorder=$!
+    if [[ -n "$ready_sound" ]]; then
+      # The app is launched when xctrace says how to stop it; the list is up a moment later.
+      (
+        while kill -0 "$recorder" 2>/dev/null && ! grep -q "Ctrl-C" "$progress" 2>/dev/null; do /bin/sleep 0.5; done
+        kill -0 "$recorder" 2>/dev/null || exit 0
+        /bin/sleep 2
+        afplay "$ready_sound"; afplay "$ready_sound"
+      ) >/dev/null 2>&1 &
+    fi
     if [[ -n "$rest" ]]; then
       # xctrace saves the trace before it returns, which takes from seconds to minutes; the
       # app has gone by then. The rest screen takes the device's screen for that time.
