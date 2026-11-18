@@ -221,7 +221,8 @@ def report_hitches(trace, result_file, index, galleries=0, by_hand=False):
 def cells_unseen(bodies, results):
     """The cells a list built without showing them, in words: body runs for a cell it had
     built before, and cells left built beyond where it got to (the last result's count)."""
-    if not results or "cellsBuiltAgain" not in results[-1]:
+    # A list whose cells do not count themselves reports covers served, which says nothing here.
+    if not results or "cellsBuiltAgain" not in results[-1] or not results[-1].get("cellsCounted", True):
         return ""
     again = sum(result.get("cellsBuiltAgain", 0) for result in results)
     ahead = results[-1].get("cellsBuiltAhead", 0)
