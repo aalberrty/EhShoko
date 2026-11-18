@@ -27,7 +27,6 @@ struct LedgerGalleryInfosView: View {
                             .font(.subheadline.weight(.semibold))
                             .foregroundStyle(row.value == nil ? look.tertiaryLabel : look.label)
                             .multilineTextAlignment(.leading)
-                            .lineLimit(4)
                             .fixedSize(horizontal: false, vertical: true)
                     }
                     .contentShape(.rect)
