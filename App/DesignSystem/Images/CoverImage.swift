@@ -117,6 +117,7 @@ struct CoverImage: View {
 
 /// The image of one cover, its placeholder and its failure. Holds the bitmap that arrived for
 /// its URL; a bitmap already in memory is not held but looked up, so it is drawn at once.
+/// Whatever the body drew decides whether a load starts (`Request`).
 private struct CoverBitmap: View {
     let url: URL?
     let contentMode: SwiftUI.ContentMode
@@ -143,6 +144,7 @@ private struct CoverBitmap: View {
         let image = held ?? CoverLoads.memoryImage(for: url)
         // A bitmap found in memory is there from the first frame; one that arrived fades in.
         let isVisible = image != nil && (held == nil || isShown)
+        let request = Request(url: url, isDrawn: image != nil)
         ZStack {
             placeholder
                 .modifier(CoverLayerCorners(radius: layerCorners))
@@ -158,11 +160,23 @@ private struct CoverBitmap: View {
                     .modifier(CoverLayerCorners(radius: layerCorners))
             }
         }
-        .task(id: url) { await load() }
+        .task(id: request) { await load(request) }
     }
 
-    private func load() async {
-        guard let url, arrived?.url != url, CoverLoads.memoryImage(for: url) == nil else { return }
+    /// What the load is for: the URL, and whether the body that asked drew a bitmap for it.
+    ///
+    /// A cover can reach memory between the body that found none and its task (a list's
+    /// prefetcher stores the covers it fetches there), and nothing would run the body again:
+    /// the cover stayed a placeholder until its cell was built again. So the task does not look
+    /// into memory itself; it loads whenever the body drew nothing, and a cover already in memory
+    /// comes back from there at once. A body that drew one starts no load, and runs no more often.
+    private struct Request: Equatable {
+        let url: URL?
+        let isDrawn: Bool
+    }
+
+    private func load(_ request: Request) async {
+        guard let url = request.url, !request.isDrawn else { return }
         isShown = false
         switch await CoverLoads.shared.load(url) {
         case .image(let image):
