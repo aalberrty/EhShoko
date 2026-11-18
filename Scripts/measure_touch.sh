@@ -20,6 +20,11 @@
 #   --width <pt>          The list's width (430: a phone's list on an iPad).
 #   --count <n>           Galleries in the list (default 3000, enough for a minute of flicks).
 #   --flicks <n>          How many flicks (default 12).   --velocity <pt/s>   Their speed (default 3000).
+#   --pace run            The test does not wait for the list to stop between two flicks (it
+#                         does by default, as XCUITest always does): the list is flicked while
+#                         it moves, as a hand does it, and goes several times as fast. Give
+#                         enough flicks for the seconds (about two a second).
+#   --pause <ms>          A pause after each flick, for a speed in between.
 #   --awake               A thread keeps the performance cores awake (see measure.sh --awake).
 #   --app-arg <arg>       One more launch argument for the list, repeatable (for example
 #                         --app-arg -HarnessTags --app-arg YES for rows with their tags).
@@ -49,6 +54,8 @@ width=""
 count=3000
 flicks=12
 velocity=3000
+pace=idle
+pause=0
 awake=NO
 app_args=()
 report=YES
@@ -66,6 +73,8 @@ while [[ $# -gt 0 ]]; do
     --count) count="$2"; shift 2 ;;
     --flicks) flicks="$2"; shift 2 ;;
     --velocity) velocity="$2"; shift 2 ;;
+    --pace) pace="$2"; shift 2 ;;
+    --pause) pause="$2"; shift 2 ;;
     --awake) awake=YES; shift ;;
     --app-arg) app_args+=(--app-arg "$2"); shift 2 ;;
     --no-report) report=NO; shift ;;
@@ -128,6 +137,7 @@ was_refused() {
 attempt() {
   local log="$out/test-$1.log" test_pid up="" last_chime=0 now
   export TEST_RUNNER_PROBE_FLICKS="$flicks" TEST_RUNNER_PROBE_VELOCITY="$velocity"
+  export TEST_RUNNER_PROBE_PACE="$pace" TEST_RUNNER_PROBE_PAUSE_MS="$pause"
   xcodebuild test-without-building -xctestrun "$xctestrun" -destination "$destination" \
     -only-testing:EhShokoUITests/ScrollProbeTests -resultBundlePath "$out/touch-$1.xcresult" > "$log" 2>&1 &
   test_pid=$!
@@ -181,5 +191,5 @@ if [[ $status -eq 2 ]]; then
 fi
 [[ $status -eq 0 ]] || die "nothing was recorded (see the test's log in $out)"
 
-printf '%s\n' "touch=ui-test" "flicks=$flicks" "velocity=$velocity" >> "$out/run.txt"
+printf '%s\n' "touch=ui-test" "flicks=$flicks" "velocity=$velocity" "pace=$pace" "pause=$pause" >> "$out/run.txt"
 [[ "$report" == NO ]] || python3 -I "$here/measure_report.py" "$out"

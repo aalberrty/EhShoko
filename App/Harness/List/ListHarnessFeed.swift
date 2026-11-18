@@ -71,8 +71,8 @@ nonisolated enum ListHarnessCells {
         var bodies = 0
         /// Of those, the runs for a gallery whose cell this list had built before.
         var again = 0
-        /// When the stretch ended: the galleries built beyond the furthest one the list has
-        /// reached without a gap from its first.
+        /// When the stretch ended: the galleries built where the list has not been. A list is
+        /// where its cells follow each other; a cell far beyond them (`reach`) was built ahead.
         var ahead = 0
     }
 
@@ -104,18 +104,39 @@ nonisolated enum ListHarnessCells {
         }
     }
 
+    /// How far beyond the furthest cell a list has reached its next cell may lie and still be
+    /// the list going on. A `List` scrolled fast leaves rows out, a handful at a time; the rows
+    /// a lazy grid builds ahead lie hundreds of cells further once it is a few screens down.
+    private static let reach = 60
+
     /// What the list's last `bodies` body runs built.
     static func tally(last bodies: Int) -> Tally {
         log.withLock { log in
             let first = max(log.runs.count - max(bodies, 0), 0)
-            var built = Set(log.runs[..<first])
+            var built = Set<Int>()
+            // The places built where the list was, the furthest of them, and the cells built in
+            // a row beyond its reach since.
+            var reached = Set<Int>()
+            var front = -1
+            var leap: [Int] = []
             var tally = Tally(bodies: log.runs.count - first)
-            for place in log.runs[first...] where !built.insert(place).inserted {
-                tally.again += 1
+            for (index, place) in log.runs.enumerated() {
+                if !built.insert(place).inserted, index >= first { tally.again += 1 }
+                if place <= front + reach {
+                    reached.insert(place)
+                    front = max(front, place)
+                    leap.removeAll(keepingCapacity: true)
+                } else {
+                    leap.append(place)
+                    // Nothing but these for so long: the list itself went there (a jump).
+                    if leap.count > reach {
+                        reached.formUnion(leap)
+                        front = leap.max() ?? front
+                        leap.removeAll(keepingCapacity: true)
+                    }
+                }
             }
-            var reached = 0
-            while built.contains(reached) { reached += 1 }
-            tally.ahead = built.count - reached
+            tally.ahead = built.subtracting(reached).count
             return tally
         }
     }

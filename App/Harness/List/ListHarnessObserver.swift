@@ -100,12 +100,17 @@ final class ListHarnessObserver: NSObject {
     private func endStretch() {
         guard let start else { return }
         self.start = nil
-        if let signpost {
-            Self.signposter.endInterval("HarnessScroll", signpost)
-            self.signpost = nil
-        }
         let bodies = ListHarnessCells.value - start.cells
         let tally = ListHarnessCells.tally(last: bodies)
+        if let signpost {
+            // The stretch's count ends its interval, so a recording holds it even when the
+            // result file does not come back from the device: body runs, those for a cell
+            // built before, cells left built ahead, points moved.
+            // As one string: Instruments groups the digits of a number it is given.
+            let count = "\(bodies) \(tally.again) \(tally.ahead) \(Int(distance))"
+            Self.signposter.endInterval("HarnessScroll", signpost, "\(count, privacy: .public)")
+            self.signpost = nil
+        }
         stretchEnded(Stretch(
             duration: lastMove - start.time, distance: Double(distance), frames: frames - start.frames,
             frameDuration: frameDuration,

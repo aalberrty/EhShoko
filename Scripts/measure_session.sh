@@ -45,6 +45,8 @@
 #   hand-shelf, hand-ledger, hand-wall-medium, hand-wall-small
 #                  Each list is on the screen for --seconds (default 30) and closes by itself.
 #                  Whoever holds the device flicks it up, fast, for as long as it is there.
+#                  The Mac plays a short sound twice when a list is up, and its alert three
+#                  times after a list that was not moved.
 #   hand-shelf-grid
 #                  Shelf's rows in its lazy grid in the same way; only when named.
 #   script-shelf, script-shelf-awake
@@ -175,6 +177,48 @@ alert() {
   afplay /System/Library/Sounds/Glass.aiff >/dev/null 2>&1 || true
 }
 
+# Whether the device can be recorded over the link it is on (its cable, or the local network):
+# a recording of two seconds. A device that is paired but cannot be recorded would otherwise
+# take the install and then make nothing.
+link_works() {
+  local probe="$out/.link-probe.trace" made=NO
+  rm -rf "$probe"
+  xcrun xctrace record --no-prompt --device "$device" --template "Time Profiler" --time-limit 2s \
+    --all-processes --output "$probe" >/dev/null 2>&1 || true
+  [[ ! -d "$probe" ]] || made=YES
+  rm -rf "$probe"
+  [[ "$made" == YES ]]
+}
+
+# The alert every twenty seconds for up to three minutes while the device cannot be recorded
+# (for a device off its cable: plug it in); then the session ends with nothing installed.
+wait_for_link() {
+  local tries=0
+  until link_works; do
+    (( tries < 9 )) || return 1
+    echo "[$(date +%H:%M:%S)] The device cannot be recorded over its link: connect its cable (waiting)" >&2
+    alert; alert; alert
+    tries=$((tries + 1))
+    /bin/sleep 20
+  done
+}
+
+# After a list meant for a hand: the alert, three times and at full volume, when the list was
+# on the screen and was not moved, so that a session does not run to its end unnoticed with
+# nothing in it. Read from the result the block brought back, after its recording is closed;
+# a result that did not come back says nothing, and nothing sounds.
+unmoved() {
+  local result="$1/result-1.json"
+  [[ -f "$result" ]] || return 1
+  [[ "$(tr -d ' \n\t' < "$result")" == '{"runs":[]}' ]]
+}
+
+warn_unmoved() {
+  echo "[$(date +%H:%M:%S)] $1: the list was not moved" >&2
+  osascript -e 'set volume output volume 100' -e 'set volume without output muted' >/dev/null 2>&1 || true
+  alert; alert; alert
+}
+
 measure() {
   "$here/measure.sh" --device "$device" --bundle-id "$bundle_id" "$@"
 }
@@ -221,6 +265,7 @@ block() {
     wait_for_device "waiting to repeat block $index of $total"
   done
   ended="$(date +%s)"
+  if [[ "$name" == hand-* ]] && unmoved "$folder"; then warn_unmoved "$name"; fi
   printf '%s\t%s\t%s\t%s\t%s\t%s\n' "$name" "$(/bin/date -r "$started" +%H:%M:%S)" "$(/bin/date -r "$ended" +%H:%M:%S)" \
     "$((ended - started))" "$made" "$expected" >> "$out/session.tsv"
 }
@@ -243,7 +288,9 @@ named() {
 # The finger check: the hand's lists first, so that whoever flicks them can leave after them.
 session_finger() {
   # Enough rows for the seconds at a fast hand's pace; five columns use up the most.
-  local hand="--count 3000"
+  # Each list is announced on the Mac when it is up, with a sound of its own (not the alert,
+  # not the one that ends the hand's part).
+  local hand="--count 3000 --ready-sound /System/Library/Sounds/Tink.aiff"
   block hand-shelf 1 "Shelf's list, to be flicked by hand for $hand_seconds s" \
     ${hitches[@]+"${hitches[@]}"} ${narrow[@]+"${narrow[@]}"} $hand hand shelf "$hand_seconds"
   # Only when named: the grid is not what a phone shows.
@@ -256,7 +303,7 @@ session_finger() {
   block hand-wall-medium 1 "Wall's wall, three columns, to be flicked by hand for $hand_seconds s" \
     ${hitches[@]+"${hitches[@]}"} ${narrow[@]+"${narrow[@]}"} $hand hand wall-medium "$hand_seconds"
   block hand-wall-small 1 "Wall's wall, five columns, to be flicked by hand for $hand_seconds s" \
-    ${hitches[@]+"${hitches[@]}"} ${narrow[@]+"${narrow[@]}"} --count 5000 hand wall-small "$hand_seconds"
+    ${hitches[@]+"${hitches[@]}"} ${narrow[@]+"${narrow[@]}"} --count 5000 --ready-sound /System/Library/Sounds/Tink.aiff hand wall-small "$hand_seconds"
   cue "The hand's part is over: the rest runs by itself"
   block script-shelf 1 "Shelf's list scrolled by the script, twice" \
     --templates hitches ${hitches[@]+"${hitches[@]}"} ${narrow[@]+"${narrow[@]}"} --scrolls 2 list shelf
@@ -331,6 +378,7 @@ printf 'block\tstart\tend\tseconds\trecordings\texpected\n' > "$out/session.tsv"
 printf '%s\n' "device=$device" "bundle_id=$bundle_id" "plan=$plan" "quick=$quick" "light=$light" \
   "started=$(date '+%Y-%m-%d %H:%M:%S')" "load=$(uptime | sed 's/.*load averages*: //')" > "$out/session.txt"
 
+wait_for_link || die "the device could not be recorded in three minutes; nothing was installed"
 if [[ -n "$app" ]]; then
   echo "[$(date +%H:%M:%S)] Installing $app" >&2
   xcrun devicectl device install app --device "$device" "$app" > "$out/install.log" 2>&1 \

@@ -165,6 +165,22 @@ def scroll_windows(intervals):
             for interval in intervals if interval["name"] == "HarnessScroll"]
 
 
+def stretches_in_trace(intervals):
+    """A hand's stretches as the recording holds them, for a run whose result file did not
+    come back: every HarnessScroll interval ends with "body runs, runs for a cell built
+    before, cells left built ahead, points moved"."""
+    stretches = []
+    for interval in intervals:
+        # Digits only: a number Instruments was given comes back with its thousands grouped.
+        parts = [re.sub(r"[^0-9]", "", part) for part in interval["end"].split()]
+        if interval["name"] != "HarnessScroll" or len(parts) != 4 or not all(parts):
+            continue
+        bodies, again, ahead, distance = (int(part) for part in parts)
+        stretches.append({"duration": interval["duration"] / 1e9, "distance": distance, "cellsCreated": bodies,
+                          "cellsCounted": True, "cellsBuiltAgain": again, "cellsBuiltAhead": ahead})
+    return stretches
+
+
 def harness_results(result_file):
     """The harness's results of one launch, one per scroll. A launch of an older build wrote
     one result at the top level."""
@@ -183,7 +199,12 @@ def report_hitches(trace, result_file, index, galleries=0, by_hand=False):
     frame_ms = next((result["frameDurationMs"] for result in made if result.get("frameDurationMs")), 1000 / 120)
     windows = []
     if trace.exists():
-        windows = scroll_windows(signpost_intervals(trace))
+        intervals = signpost_intervals(trace)
+        windows = scroll_windows(intervals)
+        if by_hand and not made:
+            made = stretches_in_trace(intervals)
+            if made:
+                print("    (no result file: the stretches are the recording's own)")
         # A hand's stretches differ in length and speed, so they are one run together; the
         # scripted scrolls of a recording are the same scroll again and each is a run.
         together = by_hand or len(windows) > 12
@@ -246,14 +267,18 @@ def report_hand(stretches):
     cpu = sum(stretch.get("mainThreadCPUMs", 0) for stretch in stretches)
     if seconds <= 0:
         return
+    # The recording's own stretches carry neither the thread's time nor the footprint.
+    whole = "footprintMB" in stretches[-1]
+    rest = (f"; main thread {cpu / seconds:.0f} ms/s of CPU; footprint at the end {stretches[-1]['footprintMB']:.0f} MB"
+            if whole else "")
     print(f"    By hand: {len(stretches)} stretches, {seconds:.1f} s moving, {distance:.0f} pt "
           f"({distance / seconds:.0f} pt/s), {cells} cells ({cells / seconds:.1f} a second)"
-          f"{cells_unseen(cells, stretches)}; "
-          f"main thread {cpu / seconds:.0f} ms/s of CPU; footprint at the end {stretches[-1]['footprintMB']:.0f} MB")
+          f"{cells_unseen(cells, stretches)}{rest}")
     note("Scroll speed pt/s", distance / seconds)
     note("Cells per second", cells / seconds)
-    note("Harness main-thread CPU during the scroll ms/s", cpu / seconds)
-    note("Footprint at the end of the scroll MB", stretches[-1]["footprintMB"])
+    if whole:
+        note("Harness main-thread CPU during the scroll ms/s", cpu / seconds)
+        note("Footprint at the end of the scroll MB", stretches[-1]["footprintMB"])
 
 
 # Three frames at 120 Hz.

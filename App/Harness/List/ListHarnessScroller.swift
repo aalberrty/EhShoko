@@ -175,10 +175,6 @@ final class ListHarnessScroller: NSObject {
     private func finish() {
         link?.invalidate()
         link = nil
-        if let signpost {
-            Self.signposter.endInterval("HarnessScroll", signpost)
-            self.signpost = nil
-        }
         if let startTime {
             result.duration = previousTimestamp - startTime
         }
@@ -189,6 +185,12 @@ final class ListHarnessScroller: NSObject {
             result.cellsAgain = tally.again
             result.cellsAhead = tally.ahead
             result.coversServed = lastMove.served - firstMove.served
+        }
+        if let signpost {
+            // The scroll's count ends its interval, as a hand's stretch does (`ListHarnessObserver`).
+            let count = "\(result.cellBodies) \(result.cellsAgain) \(result.cellsAhead) \(Int(result.distance))"
+            Self.signposter.endInterval("HarnessScroll", signpost, "\(count, privacy: .public)")
+            self.signpost = nil
         }
         continuation?.resume(returning: result)
         continuation = nil
