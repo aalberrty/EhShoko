@@ -131,6 +131,7 @@ private struct WallGalleryCredit: View {
             }
         }
         .buttonStyle(.plain)
+        .hitAreaOutsetReturned()
     }
 
     private var label: some View {
@@ -145,7 +146,7 @@ private struct WallGalleryCredit: View {
                 .foregroundStyle(look.tertiaryLabel)
                 .accessibilityHidden(true)
         }
-        .contentShape(.rect)
+        .hitAreaOutset()
     }
 
     private var searches: [GalleryCreditSearch] {

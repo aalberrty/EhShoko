@@ -1161,6 +1161,7 @@
 "settings.design.stage.pause" = "暫停";
 "settings.design.stage.play" = "播放";
 "settings.design.stage.a11y.shelf" = "底部是分頁列，上方有「繼續閱讀」列。捲動時分頁列會收起。輕按封面開啟畫廊，閱讀器上方有工具列，下方有面板。";
+"settings.design.stage.a11y.shelf.still" = "底部是分頁列，上方有「繼續閱讀」列。輕按封面開啟畫廊，閱讀器上方有工具列，下方有面板。";
 "settings.design.stage.a11y.wall" = "一整面封面牆，底部只有一條工具列。雙指開合改變封面大小，滑動工具列切換列表，進入畫廊後工具列變為操作按鈕。閱讀器只有一條可拖移翻頁的工具列。";
 "settings.design.stage.a11y.ledger" = "從列表索引進入緊湊的列表。滑動列表行顯示操作。畫廊像一頁文件，閱讀器的控制列是可以上拉的面板。";
 "offer.title" = "選擇你的體驗";

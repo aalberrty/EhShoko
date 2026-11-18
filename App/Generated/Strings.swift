@@ -2656,6 +2656,10 @@ internal enum L10n {
             internal static let shelf = L10n.tr("Localizable", "settings.design.stage.a11y.shelf", fallback: "Tabs at the bottom with a Continue bar above them. Scrolling tucks the bar away. A cover opens its gallery, and the reader has a bar at the top and a panel at the bottom.")
             /// A wall of covers and one bar at the bottom. Pinching changes the size of the covers, swiping the bar changes the list, and the bar turns into the gallery’s actions. The reader has one bar that scrubs through pages.
             internal static let wall = L10n.tr("Localizable", "settings.design.stage.a11y.wall", fallback: "A wall of covers and one bar at the bottom. Pinching changes the size of the covers, swiping the bar changes the list, and the bar turns into the gallery’s actions. The reader has one bar that scrubs through pages.")
+            internal enum Shelf {
+              /// Tabs at the bottom with a Continue bar above them. A cover opens its gallery, and the reader has a bar at the top and a panel at the bottom.
+              internal static let still = L10n.tr("Localizable", "settings.design.stage.a11y.shelf.still", fallback: "Tabs at the bottom with a Continue bar above them. A cover opens its gallery, and the reader has a bar at the top and a panel at the bottom.")
+            }
           }
           internal enum Ledger {
             /// From the Index into a list
