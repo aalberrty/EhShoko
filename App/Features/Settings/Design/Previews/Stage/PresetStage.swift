@@ -129,7 +129,7 @@ struct PresetStage: View {
         .onScrollVisibilityChange(threshold: 0.5) { isOnScreen = $0 }
         .accessibilityElement()
         .accessibilityLabel(Text(now.style.localizedName))
-        .accessibilityValue(Text(now.style.stageSummary))
+        .accessibilityValue(Text(now.style.stageSummary(tabBarTucks: playback.tabBarTucks)))
         .accessibilityAddTraits(.isImage)
         .accessibilityAdjustableAction(adjust)
     }

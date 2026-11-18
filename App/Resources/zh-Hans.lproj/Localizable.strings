@@ -1162,6 +1162,7 @@
 "settings.design.stage.pause" = "暂停";
 "settings.design.stage.play" = "播放";
 "settings.design.stage.a11y.shelf" = "底部是标签栏，上方有“继续阅读”栏。滚动时标签栏会收起。轻点封面打开画廊，阅读器上方有工具栏，下方有面板。";
+"settings.design.stage.a11y.shelf.still" = "底部是标签栏，上方有“继续阅读”栏。轻点封面打开画廊，阅读器上方有工具栏，下方有面板。";
 "settings.design.stage.a11y.wall" = "一整面封面墙，底部只有一条工具栏。双指开合改变封面大小，轻扫工具栏切换列表，进入画廊后工具栏变为操作按钮。阅读器只有一条可拖移翻页的工具栏。";
 "settings.design.stage.a11y.ledger" = "从列表索引进入紧凑的列表。轻扫列表行显示操作。画廊像一页文档，阅读器的控制栏是可以上拉的面板。";
 "offer.title" = "选择你的体验";
