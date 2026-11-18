@@ -42,11 +42,11 @@
 # With --plan finger the session is the finger check instead: four lists scrolled by a hand,
 # then the same scroll by the script, as it is and with the cores awake, to see what a real
 # scroll gets of the CPU and whether the script's figures stand for it:
-#   hand-shelf, hand-shelf-grid, hand-ledger, hand-wall-medium
+#   hand-shelf, hand-ledger, hand-wall-medium, hand-wall-small
 #                  Each list is on the screen for --seconds (default 30) and closes by itself.
 #                  Whoever holds the device flicks it up, fast, for as long as it is there.
-#   hand-wall-small
-#                  Wall's five columns in the same way; only when named.
+#   hand-shelf-grid
+#                  Shelf's rows in its lazy grid in the same way; only when named.
 #   script-shelf, script-shelf-awake
 #                  Shelf's list scrolled by the script, twice each; nobody is needed. The Mac
 #                  plays another sound than its alert when the hand's part is over.
@@ -242,20 +242,21 @@ named() {
 
 # The finger check: the hand's lists first, so that whoever flicks them can leave after them.
 session_finger() {
+  # Enough rows for the seconds at a fast hand's pace; five columns use up the most.
   local hand="--count 3000"
   block hand-shelf 1 "Shelf's list, to be flicked by hand for $hand_seconds s" \
     ${hitches[@]+"${hitches[@]}"} ${narrow[@]+"${narrow[@]}"} $hand hand shelf "$hand_seconds"
-  block hand-shelf-grid 1 "Shelf's list in its lazy grid, to be flicked by hand for $hand_seconds s" \
-    ${hitches[@]+"${hitches[@]}"} ${narrow[@]+"${narrow[@]}"} $hand hand shelf-grid "$hand_seconds"
+  # Only when named: the grid is not what a phone shows.
+  if named hand-shelf-grid; then
+    block hand-shelf-grid 1 "Shelf's list in its lazy grid, to be flicked by hand for $hand_seconds s" \
+      ${hitches[@]+"${hitches[@]}"} ${narrow[@]+"${narrow[@]}"} $hand hand shelf-grid "$hand_seconds"
+  fi
   block hand-ledger 1 "Ledger's list, to be flicked by hand for $hand_seconds s" \
     ${hitches[@]+"${hitches[@]}"} ${narrow[@]+"${narrow[@]}"} $hand hand ledger "$hand_seconds"
   block hand-wall-medium 1 "Wall's wall, three columns, to be flicked by hand for $hand_seconds s" \
     ${hitches[@]+"${hitches[@]}"} ${narrow[@]+"${narrow[@]}"} $hand hand wall-medium "$hand_seconds"
-  # Only when named: the list that builds the most cells a second.
-  if named hand-wall-small; then
-    block hand-wall-small 1 "Wall's wall, five columns, to be flicked by hand for $hand_seconds s" \
-      ${hitches[@]+"${hitches[@]}"} ${narrow[@]+"${narrow[@]}"} $hand hand wall-small "$hand_seconds"
-  fi
+  block hand-wall-small 1 "Wall's wall, five columns, to be flicked by hand for $hand_seconds s" \
+    ${hitches[@]+"${hitches[@]}"} ${narrow[@]+"${narrow[@]}"} --count 5000 hand wall-small "$hand_seconds"
   cue "The hand's part is over: the rest runs by itself"
   block script-shelf 1 "Shelf's list scrolled by the script, twice" \
     --templates hitches ${hitches[@]+"${hitches[@]}"} ${narrow[@]+"${narrow[@]}"} --scrolls 2 list shelf
