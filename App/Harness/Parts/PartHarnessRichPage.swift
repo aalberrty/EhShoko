@@ -18,8 +18,18 @@ import Foundation
 /// | `-HarnessRated <half stars>` | The user's own rating, 1 to 10. |
 /// | `-HarnessPages <n>` | The page count, 48 by default. |
 /// | `-HarnessProgress <page>` | The page last read, 23 by default; 0 for none. |
+/// | `-HarnessLongTitles YES` | Both titles about twice as long, for tables that show them whole. |
 enum PartHarnessRichPage {
     static let isRequested = UserDefaults.standard.bool(forKey: "HarnessRich")
+
+    private static let title =
+        "(C103) [Mizuiro Atelier (Hoshino Kanae)] Yoake no Hakoniwa ~Garden at Daybreak~ (Original) [English] [Digital]"
+    private static let japaneseTitle = "(C103) [水色アトリエ (星野かなえ)] 夜明けの箱庭 (オリジナル) [英訳] [DL版]"
+    private static let longTitle = "(C103) [Mizuiro Atelier (Hoshino Kanae, Tsukishiro Mei)] Yoake no Hakoniwa "
+        + "~The Little Garden We Kept at Daybreak, and the Promise Nobody Else Remembers~ Vol. 2 "
+        + "(Original) [English] [Translated by Morning Glass Scans] [Digital] [Decensored]"
+    private static let longJapaneseTitle = "(C103) [水色アトリエ (星野かなえ、月城めい)] 夜明けの箱庭 "
+        + "～ふたりで見上げた、まだ名前のない朝の色と、誰も覚えていない約束のゆくえ～ 第二巻 (オリジナル) [英訳] [DL版] [無修正]"
 
     /// Stores the page and its translations in the harness's database, then reads the
     /// translations in.
@@ -31,8 +41,8 @@ enum PartHarnessRichPage {
         let progress = defaults.object(forKey: "HarnessProgress") == nil ? 23 : defaults.integer(forKey: "HarnessProgress")
         let detail = GalleryDetail(
             gid: gallery.gid,
-            title: "(C103) [Mizuiro Atelier (Hoshino Kanae)] Yoake no Hakoniwa ~Garden at Daybreak~ (Original) [English] [Digital]",
-            jpnTitle: "(C103) [水色アトリエ (星野かなえ)] 夜明けの箱庭 (オリジナル) [英訳] [DL版]",
+            title: defaults.bool(forKey: "HarnessLongTitles") ? longTitle : title,
+            jpnTitle: defaults.bool(forKey: "HarnessLongTitles") ? longJapaneseTitle : japaneseTitle,
             isFavorited: defaults.bool(forKey: "HarnessFavorited"), visibility: .yes,
             rating: 4.72, userRating: Float(defaults.integer(forKey: "HarnessRated")) / 2, ratingCount: 318,
             category: .doujinshi, language: .english, uploader: uploader, postedDate: gallery.postedDate,
