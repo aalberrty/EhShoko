@@ -47,6 +47,7 @@ struct ListHarnessView: View {
                 // A later run of a series is a list of its own, built from its first row.
                 .id(model.listID)
                 .background { ListHarnessAnchor(scroller: model.scroller) }
+                .modifier(ListHarnessWidth(width: model.options.width))
                 .overlay(alignment: .bottom) {
                     if model.options.showsDock {
                         ListHarnessDock()
@@ -86,15 +87,32 @@ struct ListHarnessView: View {
             } label: {
                 Label { Text(verbatim: "Options") } icon: { Image(systemName: "slider.horizontal.3") }
             }
-            .disabled(model.phase == .running)
+            .disabled(model.phase == .running || model.phase == .observing)
         }
         ToolbarItem(placement: .confirmationAction) {
             if model.phase == .running {
                 Button { model.stop() } label: { Text(verbatim: "Stop") }
             } else {
                 Button { Task { await model.run() } } label: { Text(verbatim: "Run") }
-                    .disabled(model.phase == .preparing)
+                    .disabled(model.phase == .preparing || model.phase == .observing)
             }
+        }
+    }
+}
+
+/// A narrower list in a wide window, with the size class its width has: a phone's list on an
+/// iPad.
+private struct ListHarnessWidth: ViewModifier {
+    let width: Int
+
+    func body(content: Content) -> some View {
+        if width > 0 {
+            content
+                .frame(width: CGFloat(width))
+                .environment(\.horizontalSizeClass, width >= 700 ? .regular : .compact)
+                .frame(maxWidth: .infinity)
+        } else {
+            content
         }
     }
 }
@@ -120,6 +138,7 @@ private struct ListHarnessStatus: View {
         switch phase {
         case .preparing: return "Preparing \(setup)"
         case .ready: return "\(setup) · Run scrolls to the end"
+        case .observing: return "Flick the list up, fast, until it closes by itself"
         case .running: return "Scrolling \(setup)"
         case .finished(let result): return result.summary
         case .failed(let message): return message

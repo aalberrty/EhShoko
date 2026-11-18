@@ -108,10 +108,16 @@ final class PartHarnessModel {
             let decodes = CoverDecodeCounter.value
             let served = ListHarnessURLProtocol.servedCount.withLock { $0 }
             try? await Task.sleep(for: .seconds(ListHarnessOptions.settleDelay))
-            guard !Task.isCancelled, let measured = await scroller.run(speed: scroll.speed) else { break }
+            guard !Task.isCancelled else { break }
+            let awake = scroll.keepsCoresAwake ? ListHarnessAwake() : nil
+            awake?.start()
+            let run = await scroller.run(speed: scroll.speed)
+            awake?.stop()
+            guard let measured = run else { break }
             var listOptions = ListHarnessOptions()
             listOptions.showsTags = options.showsTags
             listOptions.speed = scroll.speed
+            listOptions.keepsCoresAwake = scroll.keepsCoresAwake
             results.append(ListHarnessResult(
                 slot: scroll.name(for: options), options: listOptions, galleryCount: fixtures.entries.count,
                 scroll: measured, footprint: MemoryFootprint.current(),
@@ -198,11 +204,13 @@ final class PartHarnessModel {
 /// | `-HarnessCount <n>` | 120 | The fixture's galleries; a list shows them 25 at a time, as pages arrive. |
 /// | `-HarnessRuns <n>` | 1 | Scroll n times in this launch, each on a stage built again over an empty image cache, with its own `HarnessScroll` interval. |
 /// | `-HarnessSpeed <pt/s>` | 2000 | Speed of the scroll. |
+/// | `-HarnessCoresAwake YES` | NO | A thread keeps the performance cores at their top speed while it scrolls (`ListHarnessAwake`). |
 /// | `-HarnessExitWhenDone YES` | NO | Quit after the last run, which ends an `xctrace` recording. |
 nonisolated struct PartHarnessScroll: Sendable {
     var galleryCount: Int?
     var runs = 1
     var speed = 2_000.0
+    var keepsCoresAwake = false
     var exitsWhenDone = false
 
     /// The scroll the launch arguments ask for; `nil` without `-HarnessAutoRun YES`.
@@ -213,7 +221,7 @@ nonisolated struct PartHarnessScroll: Sendable {
         let count = defaults.integer(forKey: "HarnessCount")
         return PartHarnessScroll(
             galleryCount: count > 0 ? min(count, 5_000) : nil, runs: list.runs, speed: list.speed,
-            exitsWhenDone: list.exitsWhenDone
+            keepsCoresAwake: list.keepsCoresAwake, exitsWhenDone: list.exitsWhenDone
         )
     }()
 

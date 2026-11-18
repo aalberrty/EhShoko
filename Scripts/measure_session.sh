@@ -39,7 +39,22 @@
 #                  cells per frame, and Shelf's own list.
 #   stage          The moving preview playing for 40 s.
 #
+# With --plan finger the session is the finger check instead: four lists scrolled by a hand,
+# then the same scroll by the script, as it is and with the cores awake, to see what a real
+# scroll gets of the CPU and whether the script's figures stand for it:
+#   hand-shelf, hand-shelf-grid, hand-ledger, hand-wall-medium
+#                  Each list is on the screen for --seconds (default 30) and closes by itself.
+#                  Whoever holds the device flicks it up, fast, for as long as it is there.
+#   hand-wall-small
+#                  Wall's five columns in the same way; only when named.
+#   script-shelf, script-shelf-awake
+#                  Shelf's list scrolled by the script, twice each; nobody is needed. The Mac
+#                  plays another sound than its alert when the hand's part is over.
+#
 # Options:
+#   --plan <name>      full (default): the blocks above. finger: the finger check.
+#   --seconds <s>      finger: how long each hand-scrolled list stays (default 30).
+#   --width <pt>       The lists' width (430: a phone's lists, for rehearsing on an iPad).
 #   --bundle-id <id>   The app to measure. Default: $APP_BUNDLE_ID. Required one way or the
 #                      other: a session never guesses which copy of the app it drives.
 #   --app <path>       Install this build first (a Release build with the HARNESS condition;
@@ -77,6 +92,9 @@ light=YES
 uninstall=NO
 after=""
 list_only=NO
+plan=full
+hand_seconds=30
+width=""
 # The baseline's gallery (measurements: an old, small, Non-H art book that is likely to stay).
 gallery="https://e-hentai.org/g/80319/317c988b37/"
 page="https://e-hentai.org/s/0c56814304/80319-1"
@@ -93,6 +111,9 @@ while [[ $# -gt 0 ]]; do
     --gallery) gallery="$2"; shift 2 ;;
     --page) page="$2"; shift 2 ;;
     --uninstall) uninstall=YES; shift ;;
+    --plan) plan="$2"; shift 2 ;;
+    --seconds) hand_seconds="$2"; shift 2 ;;
+    --width) width="$2"; shift 2 ;;
     --after) after="$2"; shift 2 ;;
     --list) list_only=YES; shift ;;
     -h|--help) sed -n '2,/^set -euo/p' "$0" | sed '$d'; exit 0 ;;
@@ -120,6 +141,10 @@ fi
 
 hitches=()
 [[ "$light" == NO ]] || hitches=(--light)
+[[ "$plan" == full || "$plan" == finger ]] || die "unknown plan $plan (full, finger)"
+# The lists' width, for the blocks that show the list harness.
+narrow=()
+[[ -z "$width" ]] || narrow=(--width "$width")
 
 out="${out:-${TMPDIR:-/tmp/}ehshoko-session/$(date +%Y%m%d-%H%M%S)}"
 
@@ -200,8 +225,50 @@ block() {
     "$((ended - started))" "$made" "$expected" >> "$out/session.tsv"
 }
 
+# Says, on the Mac, that the hand's part is over, with another sound than the alert (which
+# means "the device needs you"). Not a block.
+cue() {
+  [[ "$list_only" == NO ]] || return 0
+  echo "[$(date +%H:%M:%S)] $1" >&2
+  afplay /System/Library/Sounds/Hero.aiff >/dev/null 2>&1 || true
+}
+
+# Whether a block was asked for by name: for the blocks a plan leaves out unless named.
+named() {
+  local name
+  for name in ${only[@]+"${only[@]}"}; do [[ "$name" != "$1" ]] || return 0; done
+  return 1
+}
+
+# The finger check: the hand's lists first, so that whoever flicks them can leave after them.
+session_finger() {
+  local hand="--count 3000"
+  block hand-shelf 1 "Shelf's list, to be flicked by hand for $hand_seconds s" \
+    ${hitches[@]+"${hitches[@]}"} ${narrow[@]+"${narrow[@]}"} $hand hand shelf "$hand_seconds"
+  block hand-shelf-grid 1 "Shelf's list in its lazy grid, to be flicked by hand for $hand_seconds s" \
+    ${hitches[@]+"${hitches[@]}"} ${narrow[@]+"${narrow[@]}"} $hand hand shelf-grid "$hand_seconds"
+  block hand-ledger 1 "Ledger's list, to be flicked by hand for $hand_seconds s" \
+    ${hitches[@]+"${hitches[@]}"} ${narrow[@]+"${narrow[@]}"} $hand hand ledger "$hand_seconds"
+  block hand-wall-medium 1 "Wall's wall, three columns, to be flicked by hand for $hand_seconds s" \
+    ${hitches[@]+"${hitches[@]}"} ${narrow[@]+"${narrow[@]}"} $hand hand wall-medium "$hand_seconds"
+  # Only when named: the list that builds the most cells a second.
+  if named hand-wall-small; then
+    block hand-wall-small 1 "Wall's wall, five columns, to be flicked by hand for $hand_seconds s" \
+      ${hitches[@]+"${hitches[@]}"} ${narrow[@]+"${narrow[@]}"} $hand hand wall-small "$hand_seconds"
+  fi
+  cue "The hand's part is over: the rest runs by itself"
+  block script-shelf 1 "Shelf's list scrolled by the script, twice" \
+    --templates hitches ${hitches[@]+"${hitches[@]}"} ${narrow[@]+"${narrow[@]}"} --scrolls 2 list shelf
+  block script-shelf-awake 1 "Shelf's list scrolled by the script with the cores awake, twice" \
+    --templates hitches ${hitches[@]+"${hitches[@]}"} ${narrow[@]+"${narrow[@]}"} --scrolls 2 --awake list shelf
+}
+
 # Every block of the session, in order. Called twice: to count the selected ones, then to run.
 session() {
+  if [[ "$plan" == finger ]]; then
+    session_finger
+    return
+  fi
   preset shelf
   block warm-up 2 "the app; the test gallery and its first page open once" \
     --runs 2 --link "$page" --exit-after 12 "${preset_arguments[@]}" signposts 30
@@ -260,7 +327,7 @@ total="$(list_only=YES; session | grep -c 'recording(s)')"
 mkdir -p "$out"
 out="$(cd "$out" && pwd)"
 printf 'block\tstart\tend\tseconds\trecordings\texpected\n' > "$out/session.tsv"
-printf '%s\n' "device=$device" "bundle_id=$bundle_id" "quick=$quick" "light=$light" \
+printf '%s\n' "device=$device" "bundle_id=$bundle_id" "plan=$plan" "quick=$quick" "light=$light" \
   "started=$(date '+%Y-%m-%d %H:%M:%S')" "load=$(uptime | sed 's/.*load averages*: //')" > "$out/session.txt"
 
 if [[ -n "$app" ]]; then

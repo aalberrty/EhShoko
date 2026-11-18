@@ -33,6 +33,10 @@ struct ShelfListView<Header: View>: View {
     @Environment(\.dynamicTypeSize) private var typeSize
     @Environment(\.chrome) private var chrome
     @Environment(\.accessibilityVoiceOverEnabled) private var isVoiceOverOn
+    #if DEBUG || HARNESS
+    /// Set by the list harness alone, to measure the grid at a phone's width.
+    @Environment(\.shelfListAlwaysUsesGrid) private var alwaysUsesGrid
+    #endif
 
     var body: some View {
         content
@@ -57,7 +61,7 @@ struct ShelfListView<Header: View>: View {
             ShelfListState(input: input)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .background(look.background)
-        } else if columns > 1 {
+        } else if usesGrid {
             ShelfListGrid(
                 input: input, header: header, style: style, columns: columns, headerLine: headerLine,
                 prefetcher: prefetcher
@@ -69,6 +73,14 @@ struct ShelfListView<Header: View>: View {
 
     /// A first screen or the library passes a header; a list of its own passes none.
     private var hasHeader: Bool { !(Header.self is EmptyView.Type) }
+
+    /// The lazy grid from two columns on; one column is the `List`.
+    private var usesGrid: Bool {
+        #if DEBUG || HARNESS
+        if alwaysUsesGrid { return true }
+        #endif
+        return columns > 1
+    }
 
     /// One column under 700 pt, two from 700, three from 1,100 (`shelf.md` section 3).
     private var columns: Int {
