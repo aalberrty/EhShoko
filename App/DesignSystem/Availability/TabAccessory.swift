@@ -23,6 +23,13 @@ enum TabAccessoryKind {
     static var isIOS26_0: Bool {
         if #available(iOS 26, *) { !usesSystemAccessory } else { false }
     }
+
+    /// Whether the tab bar tucks away as a list scrolls down (`tabBarMinimizesOnScroll()`):
+    /// 26.1 and later. Shelf's moving preview shows it only where it happens. Read off the
+    /// main actor by the stage's playback.
+    nonisolated static var tabBarMinimizesOnScroll: Bool {
+        if #available(iOS 26.1, *) { true } else { false }
+    }
 }
 
 /// Tells an accessory's content whether it is in the bar's inline slot, where it lays out its
@@ -103,6 +110,7 @@ private struct TabAccessory<Accessory: View>: ViewModifier {
 }
 
 private struct TabBarMinimizesOnScroll: ViewModifier {
+    // The same system check as `TabAccessoryKind.tabBarMinimizesOnScroll`.
     func body(content: Content) -> some View {
         if #available(iOS 26.1, *) {
             content.tabBarMinimizeBehavior(.onScrollDown)
