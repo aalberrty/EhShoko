@@ -43,7 +43,10 @@ struct ListHarnessView: View {
         if model.phase == .preparing {
             ProgressView()
         } else {
-            ListHarnessSlotView(slot: model.options.slot, galleries: model.galleries, settings: model.settings)
+            ListHarnessSlotView(
+                slot: model.options.slot, galleries: model.galleries, pageSize: model.options.pageSize,
+                settings: model.settings
+            )
                 // A later run of a series is a list of its own, built from its first row.
                 .id(model.listID)
                 .background { ListHarnessAnchor(scroller: model.scroller) }

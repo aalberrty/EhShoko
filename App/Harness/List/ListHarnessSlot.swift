@@ -18,10 +18,12 @@ nonisolated enum ListHarnessSlot: String, CaseIterable, Identifiable, Sendable {
     /// Shelf's list in its lazy grid whatever the width: at a phone's width one column of the
     /// same rows, where the app uses its `List`.
     case shelfGrid = "shelf-grid"
-    /// Wall's list as Front Page at each density.
+    /// Wall's list as Front Page at each density, and at the middle one as Toplists, with
+    /// ranks.
     case wallLarge = "wall-large"
     case wallMedium = "wall-medium"
     case wallSmall = "wall-small"
+    case wallRanked = "wall-ranked"
     /// Ledger's list as Front Page, with day headings: with covers, and titles only.
     case ledger
     case ledgerTitles = "ledger-titles"
@@ -33,7 +35,7 @@ nonisolated enum ListHarnessSlot: String, CaseIterable, Identifiable, Sendable {
     var design: DesignStyle {
         switch self {
         case .shelf, .shelfRanked, .shelfHome, .shelfGrid: .shelf
-        case .wallLarge, .wallMedium, .wallSmall: .wall
+        case .wallLarge, .wallMedium, .wallSmall, .wallRanked: .wall
         case .ledger, .ledgerTitles: .ledger
         }
     }
@@ -42,7 +44,7 @@ nonisolated enum ListHarnessSlot: String, CaseIterable, Identifiable, Sendable {
     var wallDensity: WallDensity? {
         switch self {
         case .wallLarge: .large
-        case .wallMedium: .medium
+        case .wallMedium, .wallRanked: .medium
         case .wallSmall: .small
         default: nil
         }
@@ -53,6 +55,8 @@ nonisolated enum ListHarnessSlot: String, CaseIterable, Identifiable, Sendable {
 struct ListHarnessSlotView: View {
     let slot: ListHarnessSlot
     let galleries: [Gallery]
+    /// The galleries in each page of a ranked slot's list; 0 for one page.
+    var pageSize = 0
     /// The list designs read their own form settings from the environment, so the harness gives
     /// them a store of its own rather than the user's.
     let settings: SettingsStore
@@ -71,14 +75,19 @@ struct ListHarnessSlotView: View {
     private var content: some View {
         switch slot {
         case .shelf, .shelfRanked:
-            ShelfListHarnessSlot(feed: ListHarnessFeed.feed(for: galleries), isRanked: slot == .shelfRanked)
+            ShelfListHarnessSlot(
+                feed: ListHarnessFeed.feed(for: galleries, pageSize: slot == .shelfRanked ? pageSize : 0),
+                isRanked: slot == .shelfRanked
+            )
         case .shelfGrid:
             ShelfListHarnessSlot(feed: ListHarnessFeed.feed(for: galleries), isRanked: false)
                 .environment(\.shelfListAlwaysUsesGrid, true)
         case .shelfHome:
             ListHarnessShelfHome(feed: ListHarnessFeed.feed(for: galleries))
         case .wallLarge, .wallMedium, .wallSmall:
-            WallListHarnessSlot(feed: ListHarnessFeed.feed(for: galleries))
+            WallListHarnessSlot(feed: ListHarnessFeed.feed(for: galleries), isRanked: false)
+        case .wallRanked:
+            WallListHarnessSlot(feed: ListHarnessFeed.feed(for: galleries, pageSize: pageSize), isRanked: true)
         case .ledger, .ledgerTitles:
             LedgerListHarnessSlot(feed: ListHarnessFeed.feed(for: galleries))
         }
