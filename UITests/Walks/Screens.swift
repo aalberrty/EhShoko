@@ -55,11 +55,13 @@ struct Screens {
     /// iOS 26's system close and confirm buttons; on iOS 18 the fallbacks are an "xmark"
     /// and a "checkmark" (`SheetButtons.swift`), found by their symbols.
     static let close = Target(matches: [.label("Close"), .identifier("xmark")], type: .button)
-    /// The reader's own Close (`ReaderCloseControl`), while a touch can reach it: while the
-    /// reader's controls show. The hidden controls stay in the tree; and `close` cannot tell
-    /// at all, since the screen under the reader stays there too, with a "Close" or an "xmark"
-    /// of its own (Wall's gallery page, a side pane, a field's clear button).
-    static let readerClose = Target.id("reader.close", .button).reachable
+    /// The reader's own Close (`ReaderCloseControl`), in the tree for as long as the reader is
+    /// open, whether its controls show or not. `close` cannot stand for it: the screen under
+    /// the reader stays in the tree too, with a "Close" or an "xmark" of its own (Wall's
+    /// gallery page, a side pane, a field's clear button).
+    static let readerCloseInTree = Target.id("reader.close", .button)
+    /// The reader's Close while a touch can reach it: while the reader's controls show.
+    static let readerClose = readerCloseInTree.reachable
     static let searchField = Target(matches: [.field("Search")])
     static let backButton = Target(matches: [.identifier("BackButton")], type: .button)
     static let done = Target(matches: [.label("Done"), .identifier("checkmark")], type: .button)
@@ -197,9 +199,10 @@ struct Screens {
         .waitGone(readerClose, timeout: 5),
     ]
 
-    /// Leaves the reader by its Close, with its controls showing, and waits until it is gone:
-    /// what was under the reader is in the tree all the while and proves nothing.
-    static let closeReader: [Step] = [.tap(readerClose), .waitGone(readerClose, timeout: 10)]
+    /// Leaves the reader by its Close, with its controls showing, and waits until the reader is
+    /// gone: until its Close has left the tree. (What was under the reader is in the tree all
+    /// the while and proves nothing.)
+    static let closeReader: [Step] = [.tap(readerClose), .waitGone(readerCloseInTree, timeout: 10)]
 
     var favourite: [Step] {
         if environment.isSignedIn {

@@ -34,7 +34,8 @@ struct Target: CustomStringConvertible, Sendable {
     var picksLast = false
     /// Counts as there only while a touch can reach it. For a control that stays in the tree
     /// while it is hidden: the reader's controls are transparent and closed to touches then,
-    /// and XCTest lists them all the same.
+    /// and XCTest lists them all the same. Only for a control of a screen that stays
+    /// (`isReachable`).
     var mustBeReachable = false
 
     static func id(_ identifier: String, _ type: XCUIElement.ElementType = .any) -> Target {
@@ -111,7 +112,7 @@ struct Target: CustomStringConvertible, Sendable {
     func appears(in app: XCUIApplication, within timeout: Double) -> Bool {
         let element = element(in: app)
         guard mustBeReachable else { return element.waitForExistence(timeout: timeout) }
-        return Self.poll(for: timeout) { element.exists && element.isHittable }
+        return Self.poll(for: timeout) { Self.isReachable(element, in: app) }
     }
 
     /// Whether it is gone within `timeout` seconds: out of the tree or, if it must be
@@ -123,7 +124,21 @@ struct Target: CustomStringConvertible, Sendable {
             let expectation = XCTNSPredicateExpectation(predicate: NSPredicate(format: "exists == false"), object: element)
             return XCTWaiter.wait(for: [expectation], timeout: timeout) == .completed
         }
-        return Self.poll(for: timeout) { !(element.exists && element.isHittable) }
+        return Self.poll(for: timeout) { !Self.isReachable(element, in: app) }
+    }
+
+    /// Whether a touch reaches the element now.
+    ///
+    /// XCTest is asked only about an element with a frame on screen: when it cannot work out
+    /// an element's hittability it ends the test on the spot. That still happens to a control
+    /// of a screen that is on its way out, so a walk does not wait with a reachable target for
+    /// a screen to go: it waits for the control to leave the tree (`Screens.closeReader`).
+    @MainActor
+    private static func isReachable(_ element: XCUIElement, in app: XCUIApplication) -> Bool {
+        guard element.exists else { return false }
+        let frame = element.frame
+        guard frame.width >= 1, frame.height >= 1, app.frame.intersects(frame) else { return false }
+        return element.isHittable
     }
 
     /// Asks `holds` every quarter of a second until it is true or `timeout` seconds are over.
