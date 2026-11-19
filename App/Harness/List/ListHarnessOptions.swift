@@ -10,6 +10,7 @@ import Foundation
 /// | `-HarnessSlot <name>` | `shelf` | The list view under test (`ListHarnessSlot`). |
 /// | `-HarnessCount <n>` | 500 | Synthetic galleries. |
 /// | `-HarnessTags YES` | NO | Rows show their tags (the slots that have a tag line). |
+/// | `-HarnessPageSize <n>` | 0 | The ranked slots' list comes in pages of n galleries, each later page under its divider, as Toplists loads them (the site's pages hold 25); 0 is one page. |
 /// | `-HarnessDock YES` | NO | A gallery dock (`ActionDock`) floats over the list, as the shell places it. |
 /// | `-HarnessBar YES` | NO | The command bar floats over the list instead, as the shell places it (`command` also works, as in the part harness). |
 /// | `-HarnessSpeed <pt/s>` | 2000 | Speed of the scripted scroll. |
@@ -31,6 +32,8 @@ nonisolated struct ListHarnessOptions: Equatable, Sendable {
     var slot = ListHarnessSlot.shelf
     var galleryCount = 500
     var showsTags = false
+    /// The galleries in each page of a ranked slot's list; 0 for one page.
+    var pageSize = 0
     var showsDock = false
     var showsBar = false
     var speed: Double = 2_000
@@ -68,6 +71,7 @@ nonisolated struct ListHarnessOptions: Equatable, Sendable {
             options.galleryCount = min(count, 5_000)
         }
         options.showsTags = defaults.bool(forKey: "HarnessTags")
+        options.pageSize = min(max(defaults.integer(forKey: "HarnessPageSize"), 0), 5_000)
         options.showsDock = defaults.bool(forKey: "HarnessDock")
         options.showsBar = defaults.bool(forKey: "HarnessBar") || defaults.string(forKey: "HarnessBar") == "command"
         let speed = defaults.double(forKey: "HarnessSpeed")

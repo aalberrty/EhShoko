@@ -88,8 +88,11 @@ struct ShelfListFooterRow: View {
                     .accessibilityHidden(true)
             }
         }
-        .frame(maxWidth: .infinity, minHeight: 50)
+        .frame(maxWidth: .infinity, minHeight: Self.minimumHeight)
     }
+
+    /// The footer is this high at least, whatever it shows.
+    static let minimumHeight: CGFloat = 50
 }
 
 /// "Page 2" between Toplists' pages.

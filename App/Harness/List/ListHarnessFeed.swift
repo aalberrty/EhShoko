@@ -6,7 +6,8 @@ import Foundation
 import Synchronization
 
 /// The harness's galleries as one loaded list for a list design: every entry there, nothing
-/// more to come, Find narrowing the titles as a list's model does.
+/// more to come, Find narrowing the titles as a list's model does. For a ranked slot the
+/// entries can come in pages (`-HarnessPageSize`), as a numbered list's do.
 ///
 /// The entries are mapped at once, on the main actor, the first time a slot asks, unlike a
 /// list's own pages: the scripted scroll starts a fixed time after the slot appears, and on a
@@ -16,24 +17,31 @@ import Synchronization
 @Observable
 final class ListHarnessFeed: ListFeedSource {
     private let entries: [GalleryEntry]
+    private let pageSize: Int
+    /// Where each page starts; empty for a list of one page.
+    private let pageStarts: [PageStart]
     var feedFindText = ""
 
-    private init(entries: [GalleryEntry]) {
+    private init(entries: [GalleryEntry], pageSize: Int) {
         self.entries = entries
+        self.pageSize = pageSize
+        pageStarts = pageSize > 0
+            ? stride(from: 0, to: entries.count, by: pageSize).enumerated().map { PageStart(page: $0 + 1, index: $1) }
+            : []
     }
 
     private static var cached: ListHarnessFeed?
 
     /// The feed for `galleries`. Ages count to just after the newest gallery, so the rows read
     /// "28m ago" to "1w ago" whatever the day; History's opening dates follow the same clock.
-    static func feed(for galleries: [Gallery]) -> ListHarnessFeed {
+    static func feed(for galleries: [Gallery], pageSize: Int = 0) -> ListHarnessFeed {
         // A later run of the same launch has the same galleries under new cover URLs.
         if let cached, cached.entries.count == galleries.count, cached.entries.first?.id == galleries.first?.gid,
-           cached.entries.first?.gallery.coverURL == galleries.first?.coverURL {
+           cached.entries.first?.gallery.coverURL == galleries.first?.coverURL, cached.pageSize == pageSize {
             return cached
         }
         let now = (galleries.first?.postedDate ?? .now).addingTimeInterval(1_700)
-        let feed = ListHarnessFeed(entries: galleries.map { GalleryEntry(gallery: $0, now: now) })
+        let feed = ListHarnessFeed(entries: galleries.map { GalleryEntry(gallery: $0, now: now) }, pageSize: pageSize)
         cached = feed
         return feed
     }
@@ -45,7 +53,8 @@ final class ListHarnessFeed: ListFeedSource {
     func feedPhase(signIn: ListSignInState.Kind?) -> ListFeed.Phase { .content }
     var feedStaleError: AppError? { nil }
     var feedFooter: ListFeed.Footer { .end }
-    var feedPageStarts: [PageStart] { [] }
+    /// A list narrowed by Find is one run of rows, as a model's is.
+    var feedPageStarts: [PageStart] { feedFindText.isEmpty ? pageStarts : [] }
     var feedLoadTrigger: ListFeedTrigger { .count(0) }
     var feedNextPageTrigger: ListFeedTrigger { .count(0) }
     func feedLoad() async {}

@@ -24,8 +24,8 @@ struct WallListView<Header: View>: View {
     @State private var prefetcher = ListCoverPrefetcher()
     @State private var tracker = WallListTracker()
     @State private var position = ScrollPosition()
-    /// The density this wall is laid out in; `nil` until it changes one, when it is the
-    /// setting's.
+    /// The density this wall is laid out in: its own copy from its first appearance; until
+    /// then `nil`, when it is the setting's.
     @State private var density: WallDensity?
     @State private var cue = WallDensityCue.rest
     @State private var hint: WallDensityHint?
@@ -55,9 +55,17 @@ struct WallListView<Header: View>: View {
             .modifier(WallListChrome(input: input, density: density, ownFolder: input.ownFolder(hasHeader: hasHeader)) {
                 setDensity($0, from: density)
             })
-            .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { width = $0 }
-            // Another wall changed the setting (a tab's, or the list under a pushed one).
+            // On whole pixels: iOS 18 reports a width that differs in its last digits after a
+            // density change, which made another layout of the same wall and lost the row a
+            // change before it had kept.
+            .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { new in
+                width = displayScale > 0 ? (new * displayScale).rounded() / displayScale : new
+            }
+            // Another wall changed the setting (a tab's, or a list pushed over this one). A wall
+            // that is off screen follows when it is back: under a pushed screen its scroll
+            // view takes no offset, and it came back laid out anew at the offset it had.
             .onChange(of: settings.wallDensity) { old, new in
+                guard tracker.isOnScreen else { return }
                 setDensity(new, from: self.density ?? old, announces: false)
             }
             .task(id: hint) {
@@ -66,6 +74,15 @@ struct WallListView<Header: View>: View {
                 if !Task.isCancelled { hint = nil }
             }
             .onAppear {
+                tracker.isOnScreen = true
+                // Its own copy from here on: a wall that read the setting itself was laid out
+                // anew by another wall's change before `onChange` could move its scroll offset
+                // with it, and lost its row. Back on screen, it follows what changed meanwhile.
+                if let own = self.density {
+                    setDensity(settings.wallDensity, from: own, announces: false)
+                } else {
+                    self.density = settings.wallDensity
+                }
                 // Back from a gallery page pushed over the list, or from a reader it presented:
                 // entries read their reading progress when their page was mapped.
                 if hasAppeared {
@@ -73,7 +90,10 @@ struct WallListView<Header: View>: View {
                 }
                 hasAppeared = true
             }
-            .onDisappear { prefetcher.stop() }
+            .onDisappear {
+                tracker.isOnScreen = false
+                prefetcher.stop()
+            }
     }
 
     @ViewBuilder
@@ -188,9 +208,9 @@ struct WallListView<Header: View>: View {
         guard next != current else { return }
         let old = map(for: current)
         let new = map(for: next)
-        // The row an earlier change kept, until someone scrolls: taking the top row's first
-        // entry again at every step lets the place slip back a little each time.
-        let kept = tracker.kept.flatMap { $0.map == old ? $0 : nil }
+        // The row an earlier change kept, until the wall is somewhere else: taking the top
+        // row's first entry again at every step lets the place slip back a little each time.
+        let kept = tracker.kept(in: old)
         let change = old.offset(keeping: kept?.anchor, from: kept?.offset ?? tracker.offset, in: new)
         var transaction = Transaction(animation: nil)
         transaction.disablesAnimations = true
