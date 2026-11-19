@@ -120,21 +120,25 @@ struct WallListGrid<Header: View>: View {
     @Environment(\.look) private var look
 
     var body: some View {
+        // Two scroll views, not one whose content is either form: a numbered list's grid
+        // inside a condition lost its place more often when the list came back from under a
+        // gallery (it still does when a page arrived meanwhile, as it did before).
+        if let pages {
+            scroll { numbered(pages) }
+        } else {
+            scroll { plain(input.feed.entries, phase: input.feed.phase) }
+        }
+    }
+
+    private func scroll(@ViewBuilder content: () -> some View) -> some View {
         let feed = input.feed
         let entries = feed.entries
-        let phase = feed.phase
-        ScrollView {
-            Group {
-                if let pages {
-                    numbered(pages)
-                } else {
-                    plain(entries, phase: phase)
-                }
-            }
-            // Entries that change inside someone else's animation (the find field closing) take
-            // their places at once: what a lazy grid lays out must not be animated.
-            .transaction(value: ListEntriesKey(entries)) { $0.animation = nil }
-            .background { ScrollViewPinch(onStep: step) }
+        return ScrollView {
+            content()
+                // Entries that change inside someone else's animation (the find field closing)
+                // take their places at once: what a lazy grid lays out must not be animated.
+                .transaction(value: ListEntriesKey(entries)) { $0.animation = nil }
+                .background { ScrollViewPinch(onStep: step) }
         }
         .scrollPosition($position)
         // Only the scale and the fade move, and only here: no animation may reach what the
@@ -210,31 +214,52 @@ struct WallListGrid<Header: View>: View {
         .coordinateSpace(.named(WallListSpace.name))
     }
 
-    /// A numbered list's pages, in the form all lists had: sections of one grid.
-    private func numbered(_ pages: RankedPages) -> some View {
-        LazyVGrid(columns: columns, alignment: .leading, spacing: 0) {
+    /// A numbered list's pages, in the form all lists had, word for word: sections of one
+    /// grid, the first one's content chosen by the phase as it was.
+    private func numbered(_ pages: RankedPages?) -> some View {
+        let feed = input.feed
+        let entries = feed.entries
+        let phase = feed.phase
+        let isLoadingMore = phase == .content && feed.footer == .loading
+        return LazyVGrid(columns: columns, alignment: .leading, spacing: 0) {
             // A direct item of the grid, so a first screen's scroll to its top finds it, and
             // at full width: a header brings its own margins.
             Section {} header: {
                 header.padding(.horizontal, -WallGridLayout.margin)
             }
             Section {
-                rankedCells(pages.first)
+                switch phase {
+                case .loading:
+                    placeholders(layout.columns * Self.placeholderRows(layout.density))
+                case .content:
+                    if let pages {
+                        rankedCells(pages.first)
+                    } else {
+                        cells(entries[...])
+                        if isLoadingMore {
+                            placeholders(Self.nextPageTiles(after: entries.count, columns: layout.columns))
+                        }
+                    }
+                case .signedOut, .empty, .failed:
+                    EmptyView()
+                }
             } header: {
                 top
             }
-            ForEach(pages.later) { page in
-                Section {
-                    rankedCells(page.rows)
-                } header: {
-                    WallListPageDivider(page: page.number, height: style.texts.metrics.dividerHeight)
+            if let pages {
+                ForEach(pages.later) { page in
+                    Section {
+                        rankedCells(page.rows)
+                    } header: {
+                        WallListPageDivider(page: page.number, height: style.texts.metrics.dividerHeight)
+                    }
+                }
+                if isLoadingMore {
+                    Section { placeholders(layout.columns) }
                 }
             }
-            if input.feed.footer == .loading {
-                Section { placeholders(layout.columns) }
-            }
             Section {} footer: {
-                footer(.content)
+                footer(phase)
             }
         }
         .coordinateSpace(.named(WallListSpace.name))
