@@ -60,8 +60,8 @@ enum LookWalks {
         continueCard += [
             .pause(seconds: 1), .tap(Self.continueCard), .pause(seconds: 0.25), .screenshot("continue-zooming"),
             .pause(seconds: 2.5), .screenshot("continue-reader"),
-            .tapPoint(x: 0.5, y: 0.45), .tap(Screens.close), .pause(seconds: 1.5), .screenshot("continue-closed"),
         ]
+        continueCard += Screens.showReaderControls + Screens.closeReader + [.pause(seconds: 1.5), .screenshot("continue-closed")]
         return launch + [
             history,
             .group("filter pill", filterPill),

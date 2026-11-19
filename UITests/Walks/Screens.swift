@@ -55,6 +55,11 @@ struct Screens {
     /// iOS 26's system close and confirm buttons; on iOS 18 the fallbacks are an "xmark"
     /// and a "checkmark" (`SheetButtons.swift`), found by their symbols.
     static let close = Target(matches: [.label("Close"), .identifier("xmark")], type: .button)
+    /// The reader's own Close (`ReaderCloseControl`), while a touch can reach it: while the
+    /// reader's controls show. The hidden controls stay in the tree; and `close` cannot tell
+    /// at all, since the screen under the reader stays there too, with a "Close" or an "xmark"
+    /// of its own (Wall's gallery page, a side pane, a field's clear button).
+    static let readerClose = Target.id("reader.close", .button).reachable
     static let searchField = Target(matches: [.field("Search")])
     static let backButton = Target(matches: [.identifier("BackButton")], type: .button)
     static let done = Target(matches: [.label("Done"), .identifier("checkmark")], type: .button)
@@ -167,11 +172,34 @@ struct Screens {
             .swipe(.up, on: nil), .pause(seconds: 1),
             .swipe(.up, on: nil), .pause(seconds: 1),
             .screenshot("reader-page-3"),
-            .group("show the controls", .tapPoint(x: 0.5, y: 0.45), .wait(Self.close), .screenshot("reader-controls")),
-            .group("hide the controls", .tapPoint(x: 0.5, y: 0.45), .pause(seconds: 1.5), .screenshot("reader-hidden")),
-            .group("close", .tapPoint(x: 0.5, y: 0.45), .tap(Self.close), .wait(Self.readPill)),
+            .group("show the controls", Self.showReaderControls + [.screenshot("reader-controls")]),
+            .group("hide the controls", Self.hideReaderControls + [.pause(seconds: 1), .screenshot("reader-hidden")]),
+            .group("close", Self.showReaderControls + Self.closeReader + [.wait(Self.readPill)]),
         ]
     }
+
+    /// A tap on the page shows the reader's controls, and the next one hides them. The first
+    /// point is in the middle zone of every reading mode. But the fixture's pages do not load,
+    /// and a failed page's card has buttons that keep a tap for themselves: after the walk's
+    /// three swipes an iPhone 16 Pro Max rests with "Reload all failed pages" under that point,
+    /// and the controls never came. So each of these looks at what its tap did and, when it did
+    /// nothing, taps a second point, further from the first than a card's buttons are high and
+    /// nearer than the next card's.
+    static let showReaderControls: [Step] = [
+        .tapPoint(x: 0.5, y: 0.45),
+        .ifPresent(readerClose, within: 3, then: [], else: [.tapPoint(x: 0.5, y: 0.25)]),
+        .wait(readerClose),
+    ]
+
+    static let hideReaderControls: [Step] = [
+        .tapPoint(x: 0.5, y: 0.45), .pause(seconds: 0.6),
+        .ifPresent(readerClose, within: 0.2, then: [.tapPoint(x: 0.5, y: 0.25)], else: []),
+        .waitGone(readerClose, timeout: 5),
+    ]
+
+    /// Leaves the reader by its Close, with its controls showing, and waits until it is gone:
+    /// what was under the reader is in the tree all the while and proves nothing.
+    static let closeReader: [Step] = [.tap(readerClose), .waitGone(readerClose, timeout: 10)]
 
     var favourite: [Step] {
         if environment.isSignedIn {
