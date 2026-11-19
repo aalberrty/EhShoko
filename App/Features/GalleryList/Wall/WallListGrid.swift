@@ -2,74 +2,6 @@ import EhFeatures
 import EhModels
 import SwiftUI
 
-/// Where the wall is scrolled to, kept outside SwiftUI's state: the offset changes on every
-/// frame of a scroll and nothing must be invalidated by it. A plain class held as `@State`.
-final class WallListTracker {
-    /// The row a density change kept in place, for the next change to keep again.
-    struct Kept {
-        let anchor: Int
-        /// The offset that change asked for.
-        let offset: CGFloat
-        /// The layout it was made in: a later change in another one starts afresh.
-        let map: WallGridMap
-        /// The scroll view has been seen at `offset`.
-        var isSettled = false
-    }
-
-    /// How far the content is scrolled, 0 at its top under the bars: the value
-    /// `ScrollPosition.scrollTo(y:)` takes.
-    private(set) var offset: CGFloat = 0
-    /// Where the first row of covers starts in the content.
-    var cellsTop: CGFloat = 0
-    /// The wall has appeared and not disappeared since: not under a pushed screen, nor in a
-    /// tab that is not shown.
-    var isOnScreen = false
-    private var kept: Kept?
-
-    func moved(to offset: CGFloat) {
-        self.offset = offset
-        if let kept, abs(offset - kept.offset) < 1 {
-            self.kept?.isSettled = true
-        }
-    }
-
-    /// The row an earlier change kept, while the wall is laid out as `map` and still where
-    /// that change left it (or on its way there). It is judged when asked for, not when the
-    /// offset is reported: iOS 18 reports the offset before the change once more after the
-    /// new one, and a row forgotten for that slipped at the next change.
-    func kept(in map: WallGridMap) -> Kept? {
-        guard let kept, kept.map == map, !kept.isSettled || abs(offset - kept.offset) < 1 else { return nil }
-        return kept
-    }
-
-    func keep(_ anchor: Int?, at offset: CGFloat, in map: WallGridMap) {
-        kept = anchor.map { Kept(anchor: $0, offset: offset, map: map) }
-    }
-
-    /// Someone scrolls, or the entries are others: the row at the top is another.
-    func forget() {
-        kept = nil
-    }
-}
-
-/// The wall as a whole for a moment after a density change made at once: a little larger or
-/// smaller, as the covers were, and faded. One transform on one layer, in place of an
-/// animation of every cell, which a lazy grid cannot do (`spikes/S1.md`).
-struct WallDensityCue: Equatable {
-    var scale: CGFloat = 1
-    var opacity: Double = 1
-
-    static let rest = WallDensityCue()
-
-    /// - Parameter moves: false under Reduce Motion, where the change is a cross-fade.
-    init(from old: WallGridLayout, to new: WallGridLayout, moves: Bool) {
-        scale = moves ? min(max(old.pitch / new.pitch, 0.94), 1.06) : 1
-        opacity = 0.55
-    }
-
-    private init() {}
-}
-
 /// The wall (`wall.md` section 3): a lazy grid of `WallCoverCell` in a scroll view. The header
 /// a first screen passes comes first, across the width, then what stands between it and the
 /// covers, the covers, Toplists' later pages each under their divider, and the footer.
@@ -88,13 +20,14 @@ struct WallDensityCue: Equatable {
 /// grid has measured nothing and places its rows where they are. Its cells on screen are
 /// made again, once for each change.
 ///
-/// A numbered list's pages keep the form all lists had (`numbered`): one grid whose
-/// sections are the pages, each under its divider, with the header, the top line and the
-/// footer as sections of their own. Its cells are built ahead as described, and a density
-/// change several pages down lands rows from the row it kept. The dividers have to be among
-/// the grid's rows, and no other way to hold them worked: as headers of sections that hold
-/// nothing, with the cells as the grid's items, the grid on iOS 18 ends before its last
-/// row; a grid for each page keeps the cells of every page that has left the screen.
+/// A numbered list's pages each have a grid of their own, under the page's divider, in the
+/// stack (`numbered`, `WallListPage`). The dividers cannot be among one grid's items without
+/// the faults above, and as headers of sections that hold nothing the grid on iOS 18 ends
+/// before its last row. One grid whose sections were the pages, as it was before, also lost
+/// its place about every second time the list came back from under a gallery. A grid that
+/// has left the screen keeps every cell it built, so only the pages near the screen are
+/// grids, and the others blank space of their height: every height is given, and where a
+/// page stands is arithmetic (`ListPageSpans`).
 ///
 /// Inside each `ForEach` the cell and its modifiers are written out without a condition
 /// (`spikes/S1.md`, rule 1). The grid adds no spacing of its own: the space under a row is
@@ -116,21 +49,31 @@ struct WallListGrid<Header: View>: View {
     /// A pinch: `+1` for larger covers, `-1` for smaller.
     let step: (Int) -> Void
 
+    /// What a numbered list drew when a scroll last changed it: which pages, and whether it
+    /// asks for the next one. It is worked out from where the wall is whenever the wall is
+    /// drawn (`tracker`); a scroll changes nothing the wall is drawn from, so it writes its
+    /// answer here when it is another, which draws the wall again.
+    @State private var lastDrawn = ListPageSpans.Drawn()
+
     @Environment(\.openGallery) private var openGallery
     @Environment(\.look) private var look
 
     var body: some View {
-        // Two scroll views, not one whose content is either form: a numbered list's grid
-        // inside a condition lost its place more often when the list came back from under a
-        // gallery (it still does when a page arrived meanwhile, as it did before).
+        // Two scroll views, not one whose content is either form: the list is another one
+        // when its pages come or go, and starts at its top.
         if let pages {
-            scroll { numbered(pages) }
+            let spans = ListPageSpans(
+                pages: pages.sections, columns: layout.columns, rowHeight: layout.pitch,
+                dividerHeight: style.texts.metrics.dividerHeight
+            )
+            scroll(pages: spans) { numbered(pages, spans: spans) }
         } else {
-            scroll { plain(input.feed.entries, phase: input.feed.phase) }
+            scroll(pages: nil) { plain(input.feed.entries, phase: input.feed.phase) }
         }
     }
 
-    private func scroll(@ViewBuilder content: () -> some View) -> some View {
+    /// - Parameter pages: where a numbered list's pages stand; `nil` for every other list.
+    private func scroll(pages: ListPageSpans?, @ViewBuilder content: () -> some View) -> some View {
         let feed = input.feed
         let entries = feed.entries
         return ScrollView {
@@ -144,10 +87,13 @@ struct WallListGrid<Header: View>: View {
         // Only the scale and the fade move, and only here: no animation may reach what the
         // lazy grid lays out.
         .animation(.snappy(duration: 0.25)) { $0.scaleEffect(cue.scale).opacity(cue.opacity) }
-        .onScrollGeometryChange(for: CGFloat.self) { geometry in
-            geometry.contentOffset.y + geometry.contentInsets.top
-        } action: { [tracker] _, offset in
-            tracker.moved(to: offset)
+        .onScrollGeometryChange(for: WallListTracker.Place.self) { geometry in
+            WallListTracker.Place(geometry)
+        } action: { _, place in
+            tracker.moved(to: place)
+            guard let pages else { return }
+            let drawn = tracker.drawn(of: pages)
+            if drawn != lastDrawn { lastDrawn = drawn }
         }
         .onScrollPhaseChange { [tracker] _, phase in
             if phase == .interacting || phase == .decelerating { tracker.forget() }
@@ -214,56 +160,66 @@ struct WallListGrid<Header: View>: View {
         .coordinateSpace(.named(WallListSpace.name))
     }
 
-    /// A numbered list's pages, in the form all lists had, word for word: sections of one
-    /// grid, the first one's content chosen by the phase as it was.
-    private func numbered(_ pages: RankedPages?) -> some View {
-        let feed = input.feed
-        let entries = feed.entries
-        let phase = feed.phase
-        let isLoadingMore = phase == .content && feed.footer == .loading
-        return LazyVGrid(columns: columns, alignment: .leading, spacing: 0) {
-            // A direct item of the grid, so a first screen's scroll to its top finds it, and
-            // at full width: a header brings its own margins.
-            Section {} header: {
-                header.padding(.horizontal, -WallGridLayout.margin)
-            }
-            Section {
-                switch phase {
-                case .loading:
-                    placeholders(layout.columns * Self.placeholderRows(layout.density))
-                case .content:
-                    if let pages {
-                        rankedCells(pages.first)
-                    } else {
-                        cells(entries[...])
-                        if isLoadingMore {
-                            placeholders(Self.nextPageTiles(after: entries.count, columns: layout.columns))
-                        }
-                    }
-                case .signedOut, .empty, .failed:
-                    EmptyView()
-                }
-            } header: {
+    /// A numbered list's pages: the first page's covers, then each later page under its
+    /// divider, and the tiles of a page on its way.
+    private func numbered(_ pages: RankedPages, spans: ListPageSpans) -> some View {
+        // Worked out here, from where the wall is now: a page that arrived, or a density
+        // change, is drawn with the pages that are near it at once. `lastDrawn` is read so
+        // that a scroll's change draws the wall again, and follows what is drawn.
+        let drawn = tracker.drawn(of: spans)
+        let last = lastDrawn
+        return VStack(alignment: .leading, spacing: 0) {
+            // A child of the scroll view's content itself, so a first screen's scroll to its
+            // top finds it, and at full width: a header brings its own margins.
+            header
+            VStack(alignment: .leading, spacing: 0) {
                 top
-            }
-            if let pages {
-                ForEach(pages.later) { page in
-                    Section {
-                        rankedCells(page.rows)
-                    } header: {
-                        WallListPageDivider(page: page.number, height: style.texts.metrics.dividerHeight)
+                page(pages.first, number: nil, index: 0, of: spans, drawn: drawn)
+                ForEach(pages.later) { later in
+                    page(later.rows, number: later.number, index: later.index, of: spans, drawn: drawn)
+                }
+                if input.feed.footer == .loading {
+                    LazyVGrid(columns: columns, alignment: .leading, spacing: 0) {
+                        placeholders(layout.columns)
                     }
                 }
-                if isLoadingMore {
-                    Section { placeholders(layout.columns) }
+                if drawn.asksForMore {
+                    // The next page is asked for before the footer is reached (the footer
+                    // asks too, should this not have): a scroll that goes on finds it there,
+                    // as it did when one grid built its footer ahead.
+                    Color.clear
+                        .frame(height: 0)
+                        .loadsNextPage(of: input.feed)
                 }
+                // As in `plain`: in a lazy stack of its own, and as high as the footer is at
+                // least.
+                LazyVStack(spacing: 0) {
+                    footer(.content)
+                }
+                .frame(minHeight: Self.footerMinimum(.content), alignment: .top)
             }
-            Section {} footer: {
-                footer(phase)
-            }
+            .padding(.horizontal, WallGridLayout.margin)
         }
         .coordinateSpace(.named(WallListSpace.name))
-        .padding(.horizontal, WallGridLayout.margin)
+        // A page that becomes a grid or blank space inside someone else's animation does so
+        // at once, as entries do.
+        .transaction(value: drawn.pages) { $0.animation = nil }
+        .onChange(of: drawn) { _, drawn in
+            if drawn != last { lastDrawn = drawn }
+        }
+    }
+
+    /// A page as a view of its own, which the wall drawn again leaves alone when nothing of
+    /// the page changed (`WallListPage`).
+    private func page(
+        _ rows: ArraySlice<RankedEntry>, number: Int?, index: Int, of spans: ListPageSpans, drawn: ListPageSpans.Drawn
+    ) -> some View {
+        WallListPage(
+            rows: rows, number: number, isNear: drawn.pages.contains(index), height: spans.height(ofPage: index),
+            dividerHeight: spans.dividerHeight, layout: layout, style: style, selectedID: selectedID,
+            actions: input.actions, prefetcher: prefetcher
+        )
+        .equatable()
     }
 
     /// About a screenful on a phone while the first page loads.
@@ -300,17 +256,6 @@ struct WallListGrid<Header: View>: View {
         }
     }
 
-    private func rankedCells(_ rows: ArraySlice<RankedEntry>) -> some View {
-        ForEach(rows) { row in
-            WallCoverCell(entry: row.entry, rank: row.rank, isSelected: row.id == selectedID, style: style).equatable()
-                .contentShape(.rect)
-                .onTapGesture { openGallery(row.entry.gallery) }
-                .accessibilityAddTraits(.isButton)
-                .galleryContextMenu(row.entry, actions: input.actions)
-                .onAppear { prefetcher.appeared(row.id) }
-        }
-    }
-
     /// The least the footer of a phase is high.
     private static func footerMinimum(_ phase: ListFeed.Phase) -> CGFloat {
         switch phase {
@@ -339,17 +284,6 @@ struct WallListGrid<Header: View>: View {
 
     /// A state under a header takes at least this much of the wall.
     private static var stateHeight: CGFloat { 360 }
-}
-
-/// What a grid's rows depend on: which cells share a row, and the form they have.
-private struct WallArrangement: Hashable {
-    let density: WallDensity
-    let columns: Int
-
-    init(_ layout: WallGridLayout) {
-        density = layout.density
-        columns = layout.columns
-    }
 }
 
 /// The content's coordinate space, in which the top of the covers is measured.

@@ -29,6 +29,7 @@ import Testing
 
         #expect(pages.first.map(\.rank) == [1, 2, 3])
         #expect(pages.later.map(\.number) == [2, 3])
+        #expect(pages.later.map(\.index) == [1, 2])
         #expect(pages.later.map { $0.rows.map(\.rank) } == [[4, 5, 6], [7, 8]])
         #expect(pages.sections == [3, 3, 2])
         #expect(pages.later[1].rows.map(\.id) == ["6", "7"])

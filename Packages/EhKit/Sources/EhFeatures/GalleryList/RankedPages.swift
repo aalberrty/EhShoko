@@ -21,6 +21,9 @@ public nonisolated struct RankedEntry: Identifiable, Equatable, Sendable {
 public nonisolated struct RankedPages: Sendable {
     public struct Page: Identifiable, Sendable {
         public let number: Int
+        /// Its place among the list's loaded pages, the first page being 0: the index
+        /// `sections` and `ListPageSpans` know it by.
+        public let index: Int
         public let rows: ArraySlice<RankedEntry>
 
         public var id: Int { number }
@@ -65,7 +68,9 @@ public nonisolated struct RankedPages: Sendable {
             bounds.append((page.page, rowsStart..<rows.count))
         }
         first = rows[bounds.first?.range ?? 0..<0]
-        later = bounds.dropFirst().map { Page(number: $0.number, rows: rows[$0.range]) }
+        later = bounds.enumerated().dropFirst().map {
+            Page(number: $0.element.number, index: $0.offset, rows: rows[$0.element.range])
+        }
     }
 
     /// The galleries a page holds: as far apart as the first two loaded pages start, or the

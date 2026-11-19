@@ -87,12 +87,10 @@ nonisolated public struct WallGridMap: Sendable, Equatable {
     public let layout: WallGridLayout
     /// The top edge of the first row, in the content's coordinates.
     public let top: CGFloat
-    public let dividerHeight: CGFloat
-    /// The index of each section's first entry.
-    private let starts: [Int]
-    /// The top edge of each section's first row.
-    private let tops: [CGFloat]
-    private let count: Int
+    /// The sections, from the first row's top edge.
+    public let spans: ListPageSpans
+
+    public var dividerHeight: CGFloat { spans.dividerHeight }
 
     /// - Parameters:
     ///   - sections: how many entries each section holds, in order.
@@ -101,47 +99,33 @@ nonisolated public struct WallGridMap: Sendable, Equatable {
     public init(layout: WallGridLayout, sections: [Int], top: CGFloat, dividerHeight: CGFloat = 0) {
         self.layout = layout
         self.top = top
-        self.dividerHeight = dividerHeight
-        var starts: [Int] = []
-        var tops: [CGFloat] = []
-        var index = 0
-        var y = top
-        for (offset, section) in sections.enumerated() {
-            let entries = max(section, 0)
-            if offset > 0 { y += dividerHeight }
-            starts.append(index)
-            tops.append(y)
-            index += entries
-            y += CGFloat(Self.rows(entries, columns: layout.columns)) * layout.pitch
-        }
-        self.starts = starts
-        self.tops = tops
-        count = index
+        spans = ListPageSpans(
+            pages: sections, columns: layout.columns, rowHeight: layout.pitch, dividerHeight: dividerHeight
+        )
     }
 
     /// The top edge of the row that holds the entry at `index`.
     public func rowTop(ofEntry index: Int) -> CGFloat {
-        guard count > 0, let section = section(ofEntry: index) else { return top }
-        let local = min(max(index, 0), count - 1) - starts[section]
-        return tops[section] + CGFloat(local / layout.columns) * layout.pitch
+        guard spans.entryCount > 0, let section = spans.page(ofEntry: index) else { return top }
+        let local = min(max(index, 0), spans.entryCount - 1) - spans.starts[section]
+        return top + spans.tops[section] + CGFloat(local / layout.columns) * layout.pitch
     }
 
     /// The first entry of the row whose top edge is nearest `y`, or `nil` when `y` is above
     /// the first row by more than half a row: what is above the cells is at the top then, and
     /// there is no row to keep in place.
     public func anchor(at y: CGFloat) -> Int? {
-        guard count > 0, layout.pitch > 0, y > top - layout.pitch / 2 else { return nil }
+        guard spans.entryCount > 0, layout.pitch > 0, y > top - layout.pitch / 2 else { return nil }
         // The last section that starts at or above `y`, counting its divider as its own.
         var section = 0
-        for (offset, sectionTop) in tops.enumerated() where offset > 0 && y >= sectionTop - dividerHeight {
+        for (offset, sectionTop) in spans.tops.enumerated() where offset > 0 && y >= top + sectionTop - dividerHeight {
             section = offset
         }
-        let end = section + 1 < starts.count ? starts[section + 1] : count
-        let entries = end - starts[section]
-        guard entries > 0 else { return section > 0 ? starts[section] - 1 : nil }
-        let rows = Self.rows(entries, columns: layout.columns)
-        let row = min(max(Int(((y - tops[section]) / layout.pitch).rounded()), 0), rows - 1)
-        return starts[section] + row * layout.columns
+        let entries = spans.entries(inPage: section)
+        guard entries > 0 else { return section > 0 ? spans.starts[section] - 1 : nil }
+        let rows = ListPageSpans.rows(entries, columns: layout.columns)
+        let row = min(max(Int(((y - top - spans.tops[section]) / layout.pitch).rounded()), 0), rows - 1)
+        return spans.starts[section] + row * layout.columns
     }
 
     /// The scroll offset under `other`'s layout that shows the anchor row where it is at
@@ -153,19 +137,5 @@ nonisolated public struct WallGridMap: Sendable, Equatable {
     ) -> (offset: CGFloat, anchor: Int?) {
         guard let anchor = kept ?? anchor(at: offset) else { return (offset, nil) }
         return (max(offset - rowTop(ofEntry: anchor) + other.rowTop(ofEntry: anchor), 0), anchor)
-    }
-
-    private func section(ofEntry index: Int) -> Int? {
-        guard !starts.isEmpty else { return nil }
-        let clamped = min(max(index, 0), count - 1)
-        var found = 0
-        for (offset, start) in starts.enumerated() where start <= clamped {
-            found = offset
-        }
-        return found
-    }
-
-    private static func rows(_ entries: Int, columns: Int) -> Int {
-        (entries + columns - 1) / max(columns, 1)
     }
 }
