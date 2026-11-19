@@ -45,10 +45,10 @@ enum AccessibilityWalks {
             .group("gallery", screens.openGallery + [.pause(seconds: 1), .audit("gallery")]),
             .group(
                 "reader",
-                .tap(Screens.readPill), .pause(seconds: 3),
-                .tapPoint(x: 0.5, y: 0.45), .pause(seconds: 1), .audit("reader-controls"), .dump("reader-controls"),
-                .group("open sheet", readerSheetOpened(choices)),
-                .tap(Screens.close), .wait(Screens.readPill)
+                [.tap(Screens.readPill), .pause(seconds: 3)] + Screens.showReaderControls + [
+                    .pause(seconds: 1), .audit("reader-controls"), .dump("reader-controls"),
+                    .group("open sheet", readerSheetOpened(choices)),
+                ] + Screens.closeReader + [.wait(Screens.readPill)]
             ),
             .group("search", openSearch + [.wait(Screens.searchField), .pause(seconds: 1), .audit("search")] + screens.closeSearch),
             .group("library", screens.library + [.audit("library")]),

@@ -148,7 +148,7 @@ final class WalkRunner {
             _ = try find(target)
             try tap(target)
         case .tapIfPresent(let target, let within):
-            if target.element(in: app).waitForExistence(timeout: within) {
+            if target.appears(in: app, within: within) {
                 try tap(target)
             }
         case .tapPoint(let x, let y):
@@ -185,9 +185,7 @@ final class WalkRunner {
         case .wait(let target, let timeout):
             _ = try find(target, timeout: timeout)
         case .waitGone(let target, let timeout):
-            let gone = NSPredicate(format: "exists == false")
-            let expectation = XCTNSPredicateExpectation(predicate: gone, object: target.element(in: app))
-            if XCTWaiter.wait(for: [expectation], timeout: scaled(timeout)) != .completed {
+            if !target.disappears(from: app, within: scaled(timeout)) {
                 throw WalkFailure(step: currentStep, reason: "\(target) was still there after \(Int(scaled(timeout))) s")
             }
         case .expect(let target):
@@ -212,7 +210,7 @@ final class WalkRunner {
         case .audit(let name):
             audit(named: name)
         case .ifPresent(let target, let within, let then, let otherwise):
-            let present = target.element(in: app).waitForExistence(timeout: within)
+            let present = target.appears(in: app, within: within)
             for step in present ? then : otherwise { try perform(step) }
         case .group(_, let steps):
             for step in steps { try perform(step) }
@@ -253,7 +251,7 @@ final class WalkRunner {
     private func find(_ target: Target, timeout: Double = Step.patience) throws -> XCUIElement {
         let element = target.element(in: app)
         let wait = scaled(timeout)
-        guard element.waitForExistence(timeout: wait) else {
+        guard target.appears(in: app, within: wait) else {
             if app.state != .runningForeground {
                 throw WalkFailure(step: currentStep, reason: "the app is not running (state \(app.state.rawValue)) while looking for \(target)")
             }

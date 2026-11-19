@@ -105,10 +105,11 @@ extension View {
         modifier(ChromeMorph(slot: slot))
     }
 
-    /// An identifier the UI walks find a dock control by (`UITests/`), where its label is not
-    /// enough (Wall's More beside a list's More); only in builds with the harness.
+    /// An identifier the UI walks find a control by (`UITests/`), where its label is not enough
+    /// (Wall's More beside a list's More, the reader's Close over a gallery page's); only in
+    /// builds with the harness.
     @ViewBuilder
-    fileprivate func walkIdentifier(_ identifier: String) -> some View {
+    func walkIdentifier(_ identifier: String) -> some View {
         #if DEBUG || HARNESS
         accessibilityIdentifier(identifier)
         #else

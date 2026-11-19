@@ -81,6 +81,7 @@ struct ReaderCloseControl: View {
         }
         .buttonStyle(.plain)
         .accessibilityLabel(L10n.Localizable.Common.close)
+        .walkIdentifier("reader.close")
         .accessibilityShowsLargeContentViewer {
             Label(L10n.Localizable.Common.close, systemImage: "xmark")
         }

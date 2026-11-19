@@ -158,17 +158,15 @@ enum DeviceWalks {
                 .scroll(.down, screens: 1.5, on: nil), .screenshot("shelf-1-scrolled"),
                 ] + Screens.openTab("Top") + [.wait(Screens.galleryInList), .screenshot("shelf-2-tab"),
                 .tap(Screens.galleryInList), .wait(Screens.readPill), .screenshot("shelf-3-gallery"),
-                .tap(Screens.readPill), .pause(seconds: 3), .tapPoint(x: 0.5, y: 0.45), .pause(seconds: 1),
-                .screenshot("shelf-4-reader"), .tap(Screens.close),
-            ]
+                .tap(Screens.readPill), .pause(seconds: 3),
+            ] + Screens.showReaderControls + [.pause(seconds: 1), .screenshot("shelf-4-reader")] + Screens.closeReader
         case .wall:
             return relaunch + [
                 .pinch(scale: 1.6, on: nil), .pause(seconds: 1.5), .screenshot("wall-1-pinched"),
                 .swipe(.left, on: Screens.commandBar), .pause(seconds: 1.5), .screenshot("wall-2-next-list"),
                 .tap(Screens.galleryInList), .wait(Screens.readPill), .screenshot("wall-3-dock"),
-                .tap(Screens.readPill), .pause(seconds: 3), .tapPoint(x: 0.5, y: 0.45), .pause(seconds: 1),
-                .screenshot("wall-4-reader"), .tap(Screens.close),
-            ]
+                .tap(Screens.readPill), .pause(seconds: 3),
+            ] + Screens.showReaderControls + [.pause(seconds: 1), .screenshot("wall-4-reader")] + Screens.closeReader
         case .ledger:
             return relaunch + [
                 .tap(Target(matches: [.labelPrefix("Frontpage")], type: .button)), .wait(Screens.galleryInList),
@@ -176,9 +174,10 @@ enum DeviceWalks {
                 .swipe(.left, on: Screens.galleryInList), .pause(seconds: 1), .screenshot("ledger-2-row-actions"),
                 .swipe(.right, on: Screens.galleryInList), .pause(seconds: 1),
                 .tap(Screens.galleryInList), .wait(Screens.readPill), .screenshot("ledger-3-gallery"),
-                .tap(Screens.readPill), .pause(seconds: 3), .tapPoint(x: 0.5, y: 0.45), .pause(seconds: 1),
-                .swipe(.up, on: nil), .pause(seconds: 1), .screenshot("ledger-4-sheet"), .tap(Screens.close),
-            ]
+                .tap(Screens.readPill), .pause(seconds: 3),
+            ] + Screens.showReaderControls + [
+                .pause(seconds: 1), .swipe(.up, on: nil), .pause(seconds: 1), .screenshot("ledger-4-sheet"),
+            ] + Screens.closeReader
         }
     }
 
@@ -237,7 +236,7 @@ enum DeviceWalks {
                     // harness serves.
                     .tap(favoriteTile), .wait(favoritedTile, timeout: 15), .pause(seconds: 0.6),
                     .screenshot("closing-favorited"),
-                    .tapPoint(x: 0.5, y: 0.2), .tapIfPresent(Screens.close, within: 3), .pause(seconds: 1.5),
+                    .tapPoint(x: 0.5, y: 0.2), .tapIfPresent(Screens.readerClose, within: 3), .pause(seconds: 1.5),
                     .wait(readAgain), .screenshot("read-again"),
                     .tap(readAgain), .pause(seconds: 3), .screenshot("read-again-reader"),
                 ]
