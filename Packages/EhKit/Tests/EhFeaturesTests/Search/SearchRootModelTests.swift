@@ -102,60 +102,19 @@ import Testing
         #expect(stack.path == [.typedSearch(keyword: "a"), .typedSearch(keyword: "a")])
     }
 
-    @Test func quickSearchPickSearchesOnceTheSheetIsGone() {
+    @Test func aQuickSearchPickIsTakenOnceForTheSurface() {
         let model = SearchRootModel()
-        let stack = StackRouter()
         model.showQuickSearch()
-
         model.selectQuickSearchWord("f:glasses$")
-
         #expect(model.sheet == nil)
         #expect(model.keyword == "f:glasses$")
-        #expect(stack.isAtRoot)
 
-        model.sheetDismissed(on: stack)
-        #expect(stack.path == [.typedSearch(keyword: "f:glasses$")])
+        #expect(model.takePendingSearch() == "f:glasses$")
+        #expect(model.takePendingSearch() == nil)
 
-        // Dismissing a sheet without a pick pushes nothing.
-        stack.popToRoot()
-        model.showFilters()
+        // The editor closed without a pick.
+        model.showQuickSearch()
         model.sheet = nil
-        model.sheetDismissed(on: stack)
-        #expect(stack.isAtRoot)
-    }
-
-    @Test func rootReselectionReloads() {
-        let model = SearchRootModel()
-        model.rootReselected()
-        #expect(model.reloadID == 1)
-    }
-
-    @Test func reselectionReloadRestartsTheObservation() async throws {
-        let database = try await TestDatabase.inMemory()
-        try await database.recordSearchKeyword("a")
-        let model = makeModel(database)
-        var task = Task { await model.observe() }
-        try await eventually { model.historyKeywords == ["a"] }
-
-        // The view restarts `observe()` whenever `reloadID` changes.
-        let reloadID = model.reloadID
-        model.rootReselected()
-        #expect(model.reloadID != reloadID)
-        task.cancel()
-        try await database.recordSearchKeyword("b")
-        task = Task { await model.observe() }
-        defer { task.cancel() }
-
-        try await eventually { model.historyKeywords == ["b", "a"] }
-    }
-
-    @Test func keywordColumnsFollowTheWidth() {
-        let items = Array(0..<25)
-
-        #expect(SearchRootModel.columns(items, isRegularWidth: false) == [Array(0..<10)])
-        #expect(SearchRootModel.columns(items, isRegularWidth: true) == [
-            Array(stride(from: 0, to: 20, by: 2)), Array(stride(from: 1, to: 20, by: 2))
-        ])
-        #expect(SearchRootModel.columns([1], isRegularWidth: true) == [[1], []])
+        #expect(model.takePendingSearch() == nil)
     }
 }

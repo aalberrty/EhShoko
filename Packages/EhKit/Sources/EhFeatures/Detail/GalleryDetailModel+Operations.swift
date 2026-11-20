@@ -139,11 +139,6 @@ extension GalleryDetailModel {
         destination = .torrents
     }
 
-    public func showPostComment() {
-        guard isLoggedIn else { return }
-        destination = .postComment
-    }
-
     public func showTagDetail(_ detail: TagDetail) {
         destination = .tagDetail(detail)
     }

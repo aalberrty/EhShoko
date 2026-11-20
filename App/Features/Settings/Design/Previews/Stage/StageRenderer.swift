@@ -87,7 +87,7 @@ nonisolated enum StageRenderer {
     private static func draw(
         _ scene: StageScene, palette: SchematicPalette, stage: CGRect, unit: CGFloat, in context: GraphicsContext
     ) {
-        let storyboard = Storyboard.of(scene.style)
+        let storyboard = scene.storyboard
         let poses = storyboard.layers.map { $0.track.pose(at: scene.time) }
         // Nothing under the topmost layer that covers the stage can be seen.
         var lowest = 0

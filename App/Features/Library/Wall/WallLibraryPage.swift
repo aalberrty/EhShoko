@@ -7,12 +7,15 @@ import SwiftUI
 /// eleven piles, three across on a phone and five on a wider screen
 /// (`wall.md` section 7, `mockups/wall/06-library-light`).
 ///
-/// It draws the first page of All favourites that `list` holds. Before the page is here the
-/// piles are placeholders, already named, since the names are stored; a first page that
-/// failed is the shared error view in place of the piles.
+/// It draws the first page of All favourites that `list` holds, and the folders opened this
+/// session. Before the page is here the piles are placeholders, already named, since the
+/// names are stored; a first page that failed is the shared error view in place of the piles.
 struct WallLibraryPage: View {
     /// All favourites, the shared model's; `nil` until the library has chosen it.
     let list: GalleryListModel?
+    /// The galleries of each folder opened this session, by folder; their piles take their
+    /// covers from these rather than from All's page.
+    let folders: [Int: [GalleryEntry]]
     /// The total under the bar's title. Off under `tabs`, where the screen has no title.
     let showsSummary: Bool
     /// A folder's list; `WallPile.allFolders` is every folder.
@@ -22,8 +25,6 @@ struct WallLibraryPage: View {
     @Environment(\.dynamicTypeSize) private var typeSize
     /// The grid's width, which sets the number of columns and the piles' size.
     @State private var width: CGFloat = 0
-    /// The covers in two piles that the page has decoded itself (`WallPileCovers.shared(in:)`).
-    @State private var decodedShared: Set<URL> = []
 
     var body: some View {
         let phase = WallLibraryPhase(list)
@@ -47,8 +48,7 @@ struct WallLibraryPage: View {
             isLoaded = false
             stale = nil
         }
-        let covers = isLoaded ? WallPileCovers.covers(in: list?.entries ?? []) : [:]
-        let held = WallPileCovers.shared(in: covers).subtracting(decodedShared)
+        let covers = WallPileCovers.covers(in: isLoaded ? list?.entries ?? [] : [], folders: folders)
         let columns = columnCount
         let metrics = WallPileMetrics(
             columnWidth: columnWidth(columns), nameLines: typeSize.isAccessibilitySize ? 2 : 1
@@ -66,7 +66,7 @@ struct WallLibraryPage: View {
                         .padding(.vertical, 8)
                 }
                 LazyVGrid(columns: Self.columns(columns), spacing: 16) {
-                    ForEach(pileValues(covers, held: held, isLoaded: isLoaded)) { pile in
+                    ForEach(pileValues(covers, isLoaded: isLoaded)) { pile in
                         Button {
                             open(pile.folder)
                         } label: {
@@ -82,19 +82,18 @@ struct WallLibraryPage: View {
         }
         .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { width = $0 }
         .refreshable { await list?.refresh() }
-        .task(id: held) {
-            guard !held.isEmpty else { return }
-            await WallPileCovers.decode(held)
-            if !Task.isCancelled { decodedShared.formUnion(held) }
-        }
     }
 
     /// All, then the ten folders in the site's order. Names are the site's, stored from the
-    /// last favourites page; counts are absent until a page has been loaded this session.
-    private func pileValues(_ covers: [Int: [URL]], held: Set<URL>, isLoaded: Bool) -> [WallPile] {
+    /// last favourites page; counts are absent until a page has been loaded this session. A
+    /// folder opened this session has its own page, so its pile is complete without All's.
+    ///
+    /// A cover in two piles (All's newest are also their folders' newest) is loaded and
+    /// decoded once: `CoverImage` joins the two views' requests.
+    private func pileValues(_ covers: [Int: [URL]], isLoaded: Bool) -> [WallPile] {
         let counts = userStore.favoriteFolderCounts
         func cards(_ folder: Int) -> [WallPile.Card] {
-            WallPileCovers.cards(covers[folder] ?? [], held: held, isLoaded: isLoaded)
+            WallPileCovers.cards(covers[folder] ?? [], isLoaded: isLoaded || folders[folder] != nil)
         }
         let all = WallPile(
             folder: WallPile.allFolders, name: L10n.Localizable.Library.all,

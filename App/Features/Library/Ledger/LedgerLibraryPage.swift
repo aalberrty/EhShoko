@@ -16,7 +16,7 @@ struct LedgerLibraryPage: View {
         ScrollView {
             LazyVStack(alignment: .leading, spacing: 0) {
                 if showsTitle {
-                    LedgerLibraryTitle()
+                    LedgerTitle(L10n.Localizable.Shell.Place.favorites)
                         .padding(.horizontal, 20)
                         .padding(.bottom, 6)
                 }
@@ -28,8 +28,10 @@ struct LedgerLibraryPage: View {
             }
             .padding(.bottom, 24)
         }
-        .refreshable { await refresh() }
-        .ledgerLibraryBarTitle(isShown: showsTitle, isAlwaysVisible: false)
+        // Only the refresh: the navigation controller keeps the refresh control after the
+        // page has gone, and the page's other closures hold the library's screen.
+        .refreshable { [refresh] in await refresh() }
+        .ledgerBarTitle(showsTitle ? L10n.Localizable.Shell.Place.favorites : nil)
     }
 }
 
@@ -40,7 +42,7 @@ struct LedgerLibraryPage: View {
 private struct LedgerLibraryAllRow: View {
     let action: () -> Void
 
-    @ScaledMetric(relativeTo: .title3) private var markWidth = LedgerIndexLine.markWidth
+    @ScaledMetric(relativeTo: .title3) private var markWidth = LedgerLine.markWidth
     @Environment(UserStore.self) private var userStore
     @Environment(\.dynamicTypeSize) private var typeSize
     @Environment(\.look) private var look
@@ -50,7 +52,7 @@ private struct LedgerLibraryAllRow: View {
         let isStacked = typeSize.isAccessibilitySize
         Button(action: action) {
             VStack(alignment: .leading, spacing: 2) {
-                LedgerIndexLine(
+                LedgerLine(
                     mark: .allFolders, title: L10n.Localizable.Library.All.title, value: isStacked ? nil : total
                 )
                 if isStacked, let total {
@@ -59,7 +61,7 @@ private struct LedgerLibraryAllRow: View {
                         .monospacedDigit()
                         .foregroundStyle(look.secondaryLabel)
                         // Under the name: past the mark's column and its spacing.
-                        .padding(.leading, LedgerIndexLine.markColumn(markWidth) + LedgerIndexLine.markSpacing)
+                        .padding(.leading, LedgerLine.markColumn(markWidth) + LedgerLine.markSpacing)
                 }
             }
             .accessibilityElement(children: .combine)
@@ -68,7 +70,7 @@ private struct LedgerLibraryAllRow: View {
             .padding(.vertical, isStacked ? 8 : 0)
             .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
         }
-        .buttonStyle(LedgerIndexRowButtonStyle())
+        .buttonStyle(LedgerRowButtonStyle())
     }
 }
 
@@ -87,9 +89,10 @@ private struct LedgerLibraryFolderGrid: View {
     private static let oneColumn = [GridItem(.flexible())]
 
     var body: some View {
-        LazyVGrid(columns: typeSize.isAccessibilitySize ? Self.oneColumn : Self.fitting, spacing: 6) {
-            ForEach(userStore.ledgerIndexFolders) { folder in
-                LedgerIndexFolderCell(folder: folder) { open(folder.index) }
+        // One column from the largest standard size, where two cut folder names to a word.
+        LazyVGrid(columns: typeSize >= .xxxLarge ? Self.oneColumn : Self.fitting, spacing: 6) {
+            ForEach(userStore.libraryFolders) { folder in
+                LedgerFolderCell(folder: folder) { open(folder.index) }
             }
         }
     }

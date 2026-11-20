@@ -12,7 +12,7 @@ private typealias Action = L10n.Localizable.Gallery.Action
 struct WallGalleryActions: View {
     let model: GalleryDetailModel
     let metrics: WallGalleryMetrics
-    /// Asks the user to sign in: the page's prompt.
+    /// Opens sign-in (`AppRouter.presentSignIn`), through the page.
     let signIn: () -> Void
 
     @Environment(\.dynamicTypeSize) private var typeSize

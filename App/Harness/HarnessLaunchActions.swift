@@ -64,10 +64,7 @@ nonisolated struct HarnessLaunchRequest: Sendable {
         // A footprint left by an earlier run must not pass for this one's.
         await HarnessFootprint.removeLast()
         if clearsImageCache {
-            ImagePipeline.cache.clearMemoryCache()
-            await withCheckedContinuation { continuation in
-                ImagePipeline.cache.clearDiskCache { continuation.resume() }
-            }
+            await HarnessImageCache.empty()
         }
         if let link {
             open(link)
@@ -80,6 +77,17 @@ nonisolated struct HarnessLaunchRequest: Sendable {
         }
         await HarnessFootprint(MemoryFootprint.current()).write()
         exit(0)
+    }
+}
+
+/// Empties the image cache, memory and disk, so that what is shown next downloads and decodes
+/// again.
+enum HarnessImageCache {
+    static func empty() async {
+        ImagePipeline.cache.clearMemoryCache()
+        await withCheckedContinuation { continuation in
+            ImagePipeline.cache.clearDiskCache { continuation.resume() }
+        }
     }
 }
 
@@ -106,8 +114,23 @@ nonisolated struct HarnessFootprint: Codable, Sendable {
     func write() async {
         guard let data = try? JSONEncoder().encode(self) else { return }
         let url = Self.fileURL
+        HarnessFile.write(data, to: url)
+    }
+}
+
+/// Writes a file `measure.sh` fetches afterwards.
+nonisolated enum HarnessFile {
+    /// Atomically where it can. `measure.sh` puts a marker file there before a run, and on
+    /// some systems the device's copy service then creates the folder as its own (root's):
+    /// the app cannot add or replace a file in such a folder, only write into the marker
+    /// file, which is the app's. So a failed atomic write is tried again in place.
+    static func write(_ data: Data, to url: URL) {
         try? FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
-        try? data.write(to: url, options: .atomic)
+        do {
+            try data.write(to: url, options: .atomic)
+        } catch {
+            try? data.write(to: url)
+        }
     }
 }
 #endif

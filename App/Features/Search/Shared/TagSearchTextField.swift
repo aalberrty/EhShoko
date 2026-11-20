@@ -66,24 +66,30 @@ final class TagSearchTextField: UISearchTextField {
     }
 }
 
-/// A SwiftUI row on top of the keyboard: the field's input accessory, hosted in an input view
-/// with the keyboard's style, so it moves with the keyboard and the field bar sits on it
-/// (`spikes/S6.md` section 4). Ledger draws its keys in it. On iOS 18 the input view draws the
-/// keyboard's backdrop behind the row; on iOS 26 it draws none, so what the row holds must
-/// carry its own surfaces.
-final class TagSearchAccessoryView<Content: View>: UIInputView {
-    private let host: UIHostingController<Content>
+/// A SwiftUI row on top of the keyboard: the field's input accessory, so it moves with the
+/// keyboard and the field bar sits on it (`spikes/S6.md` section 4). Ledger draws its keys in
+/// it. What the row holds carries its own surfaces; behind them the view draws the keyboard's
+/// band on iOS 18 and nothing on iOS 26 (`KeyboardBand`).
+///
+/// A plain view, not a `UIInputView`: the keyboard keeps a `UIInputView` it has shown alive
+/// after its field has gone, with nothing pointing at it (two retains too many), one more for
+/// every field that showed one, while a plain view is freed with its field. And it lets go of
+/// the row's host when the field goes away (`releaseHost()`), so nothing of the design that
+/// drew the row outlives it.
+final class TagSearchAccessoryView: UIView {
+    /// The row's hosting controller, until `releaseHost()`.
+    private(set) var host: UIViewController?
 
     /// 48 pt, growing with Dynamic Type up to 60 pt.
     static var height: CGFloat {
         min(UIFontMetrics(forTextStyle: .body).scaledValue(for: 48), 60)
     }
 
-    init(content: Content) {
-        host = UIHostingController(rootView: content)
+    init(host: UIViewController) {
+        self.host = host
         let height = Self.height
-        super.init(frame: CGRect(x: 0, y: 0, width: 320, height: height), inputViewStyle: .keyboard)
-        allowsSelfSizing = true
+        super.init(frame: CGRect(x: 0, y: 0, width: 320, height: height))
+        backgroundColor = KeyboardBand.color
         host.view.backgroundColor = .clear
         host.view.maximumContentSizeCategory = .accessibilityMedium
         host.view.translatesAutoresizingMaskIntoConstraints = false
@@ -95,12 +101,26 @@ final class TagSearchAccessoryView<Content: View>: UIInputView {
             host.view.bottomAnchor.constraint(equalTo: bottomAnchor),
             heightAnchor.constraint(equalToConstant: height)
         ])
+        #if DEBUG || HARNESS
+        SearchAccessoryCensus.live += 1
+        SearchAccessoryCensus.views.add(self)
+        #endif
     }
 
     @available(*, unavailable)
     required init?(coder: NSCoder) { fatalError("not used") }
 
-    func update(_ content: Content) {
-        host.rootView = content
+    #if DEBUG || HARNESS
+    deinit {
+        // UIKit frees its views on the main thread.
+        MainActor.assumeIsolated { SearchAccessoryCensus.live -= 1 }
+    }
+    #endif
+
+    /// Takes the row out and lets go of its host, so the row and everything it holds are freed
+    /// with the field, whoever still holds this view.
+    func releaseHost() {
+        host?.view.removeFromSuperview()
+        host = nil
     }
 }

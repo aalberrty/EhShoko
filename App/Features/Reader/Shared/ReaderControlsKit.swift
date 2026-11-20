@@ -17,6 +17,13 @@ final class ReaderViewport {
     /// own size (spike S4). Change it inside one animation, so the engine follows it frame by
     /// frame, and set it back to 0 when the controls hide and when the design goes away.
     var bottomInset: CGFloat = 0
+
+    /// How much of the screen's bottom, measured from its edge, the controls cover while the
+    /// engine keeps drawing under them: Ledger's open sheet in the vertical direction, where
+    /// the strip scrolls behind it. Nothing indexed by page reads it; the closing page keeps
+    /// that much room under its column (`ReaderClosingPage.bottomReserve`). Set it back to 0
+    /// when the controls hide and when the design goes away.
+    var coveredBottom: CGFloat = 0
 }
 
 /// The layer a design's floating controls sit in (`Design/designs/README.md` section 13):
@@ -53,6 +60,10 @@ enum ReaderMetrics {
 /// Close, on a glass circle. The symbol carries the system's localized "Close" label.
 /// Closing is the presenter's dismissal, so it works the same whoever presented the reader;
 /// under Ledger it needs nothing taken down first (spike S4).
+///
+/// The circle keeps its size, so the symbol grows with the text size only as far as the
+/// largest standard size, where it still fits; beyond that the large content viewer shows it,
+/// as for the system's bar buttons.
 struct ReaderCloseControl: View {
     @Environment(\.dismiss) private var dismiss
     @State private var dismissals = 0
@@ -64,10 +75,15 @@ struct ReaderCloseControl: View {
         } label: {
             Image(systemName: "xmark")
                 .font(.title3.weight(.semibold))
+                .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
                 .frame(width: ReaderMetrics.closeSize, height: ReaderMetrics.closeSize)
                 .contentShape(.circle)
         }
         .buttonStyle(.plain)
+        .accessibilityLabel(L10n.Localizable.Common.close)
+        .accessibilityShowsLargeContentViewer {
+            Label(L10n.Localizable.Common.close, systemImage: "xmark")
+        }
         .glassSurface(in: .circle, isInteractive: true)
         .sensoryFeedback(.impact(weight: .light), trigger: dismissals)
     }

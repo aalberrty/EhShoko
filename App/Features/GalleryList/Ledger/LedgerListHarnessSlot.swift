@@ -1,89 +1,25 @@
 #if DEBUG || HARNESS
-import Dependencies
-import EhCore
 import EhFeatures
-import EhModels
 import SwiftUI
 
 /// Ledger's list in the list harness: the harness's galleries as one loaded Front Page, with
-/// its day headings, swipe actions and menu, in either row form. The harness's slot list
-/// (`ListHarnessSlot`) shows it with `LedgerListHarnessSlot(galleries:showsCovers:settings:)`;
-/// it brings the stores the list reads, so nothing else in the harness changes.
+/// its day headings, swipe actions and menu, in the row form of the harness's own settings
+/// (`ledgerShowsCovers`, which the harness sets from the slot). The harness's slot list
+/// (`ListHarnessSlot`) shows it with those settings and the stores the list reads in the
+/// environment.
 struct LedgerListHarnessSlot: View {
-    let galleries: [Gallery]
-    let showsCovers: Bool
-    /// The harness's own settings, which the list's covers choice is written to.
-    let settings: SettingsStore
+    let feed: ListHarnessFeed
 
-    @State private var feed = LedgerHarnessFeed()
     @State private var actions = GalleryActionsModel()
-    @Dependency(\.userStore) private var userStore
-    @Dependency(\.filterStore) private var filterStore
 
     var body: some View {
-        // The list is there from the first frame, empty until the rows arrive, as a list
-        // waiting for its first page is: the harness's anchor beside it stays where it is.
-        LedgerListView(
-            input: ListDesignInput(
-                context: .place(.frontpage), feed: ListFeed(feed),
-                controls: ListControls(menu: ListMenuControls(find: true, reload: true)),
-                perform: { _ in }, actions: actions
-            )
-        ) {
-            EmptyView()
-        }
-        .environment(settings)
-        .environment(userStore)
-        .environment(filterStore)
+        LedgerListView(input: ListDesignInput(
+            context: .place(.frontpage), feed: ListFeed(feed),
+            controls: ListControls(menu: ListMenuControls(find: true, reload: true)),
+            perform: { _ in }, actions: actions
+        )) { EmptyView() }
         // The look the Ledger preset comes with.
         .environment(\.look, .ledger)
-        .onAppear {
-            // At once, on the main actor, unlike a list's own pages: the scripted scroll starts
-            // a fixed time after the slot appears, and on a loaded machine rows mapped in the
-            // background were not there yet. The measurement starts with the scroll.
-            settings.ledgerShowsCovers = showsCovers
-            if feed.isEmpty {
-                feed.fill(Self.entries(for: galleries))
-            }
-        }
     }
-
-    /// Entries as a page maps them. Ages count to just after the newest gallery, so the rows
-    /// read "28m ago" to "1w ago" whatever the day.
-    private static func entries(for galleries: [Gallery]) -> [GalleryEntry] {
-        let now = (galleries.first?.postedDate ?? .now).addingTimeInterval(1_700)
-        return galleries.map { GalleryEntry(gallery: $0, now: now) }
-    }
-}
-
-/// A list that is all there once filled: every row loaded, nothing more to come.
-@Observable
-private final class LedgerHarnessFeed: ListFeedSource {
-    private var entries: [GalleryEntry] = []
-    var feedFindText = ""
-
-    var isEmpty: Bool { entries.isEmpty }
-
-    func fill(_ entries: [GalleryEntry]) {
-        self.entries = entries
-    }
-
-    var feedEntries: [GalleryEntry] {
-        feedFindText.isEmpty ? entries : entries.filter { $0.gallery.title.localizedCaseInsensitiveContains(feedFindText) }
-    }
-
-    func feedPhase(signIn: ListSignInState.Kind?) -> ListFeed.Phase { .content }
-    var feedStaleError: AppError? { nil }
-    var feedFooter: ListFeed.Footer { .end }
-    var feedPageStarts: [PageStart] { [] }
-    var feedLoadTrigger: ListFeedTrigger { .count(0) }
-    var feedNextPageTrigger: ListFeedTrigger { .count(0) }
-    func feedLoad() async {}
-    func feedLoadNextPage() async {}
-    func feedRefresh() async {}
-    func feedRetry() {}
-    func feedRetryNextPage() {}
-    func feedReload() {}
-    func feedRefreshReadingProgress() async {}
 }
 #endif

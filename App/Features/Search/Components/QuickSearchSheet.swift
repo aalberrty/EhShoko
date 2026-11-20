@@ -49,7 +49,7 @@ private struct QuickSearchList: View {
                     QuickSearchWordRow(word: word, showsDisclosure: !model.isEditing)
                 }
                 .tint(look.label)
-                .quickSearchRow()
+                .lookFormRow()
                 .swipeActions(edge: .trailing) {
                     Button(L10n.Localizable.ConfirmationDialog.Button.delete, systemImage: "trash") {
                         model.requestDeletion(of: word)
@@ -67,7 +67,7 @@ private struct QuickSearchList: View {
                 Task { await model.move(fromOffsets: source, toOffset: destination) }
             }
         }
-        .quickSearchFormStyle()
+        .lookFormStyle()
         .overlay {
             if model.words.isEmpty {
                 if model.isLoading {
@@ -158,10 +158,10 @@ private struct QuickSearchWordForm: View {
                     .submitLabel(.next)
                     .focused($focusedField, equals: .name)
                     .onSubmit { focusedField = .content }
-                    .quickSearchRow()
+                    .lookFormRow()
             } header: {
                 Text(L10n.Localizable.QuickSearchView.Title.name)
-                    .quickSearchSectionHeader()
+                    .lookFormHeader()
             }
             Section {
                 TextEditor(text: $model.draft.content)
@@ -172,13 +172,13 @@ private struct QuickSearchWordForm: View {
                     .scrollContentBackground(.hidden)
                     .focused($focusedField, equals: .content)
                     .frame(minHeight: 88)
-                    .quickSearchRow()
+                    .lookFormRow()
             } header: {
                 Text(L10n.Localizable.QuickSearchView.Title.content)
-                    .quickSearchSectionHeader()
+                    .lookFormHeader()
             }
         }
-        .quickSearchFormStyle()
+        .lookFormStyle()
         .navigationTitle(title)
         .toolbar {
             ToolbarItem(placement: .confirmationAction) {
@@ -195,58 +195,6 @@ private struct QuickSearchWordForm: View {
         case .newWord: L10n.Localizable.QuickSearchView.Title.newWord
         case .editWord: L10n.Localizable.QuickSearchView.Title.editWord
         }
-    }
-}
-
-// MARK: Look
-
-// The same grouped form on the look's tokens as the Filters sheet.
-
-private extension View {
-    func quickSearchFormStyle() -> some View {
-        modifier(QuickSearchFormStyle())
-    }
-
-    func quickSearchRow() -> some View {
-        modifier(QuickSearchRowStyle())
-    }
-
-    func quickSearchSectionHeader() -> some View {
-        modifier(QuickSearchSectionHeader())
-    }
-}
-
-/// The look's surface in place of the system's grouped background.
-private struct QuickSearchFormStyle: ViewModifier {
-    @Environment(\.look) private var look
-
-    func body(content: Content) -> some View {
-        content
-            .scrollContentBackground(.hidden)
-            .background(look.surface)
-    }
-}
-
-/// A row on the look's raised colour, with its separator and label colour.
-private struct QuickSearchRowStyle: ViewModifier {
-    @Environment(\.look) private var look
-
-    func body(content: Content) -> some View {
-        content
-            .foregroundStyle(look.label)
-            .listRowBackground(look.raised)
-            .listRowSeparatorTint(look.separator)
-    }
-}
-
-private struct QuickSearchSectionHeader: ViewModifier {
-    @Environment(\.look) private var look
-
-    func body(content: Content) -> some View {
-        content
-            .font(.footnote.weight(.semibold))
-            .textCase(.uppercase)
-            .foregroundStyle(look.secondaryLabel)
     }
 }
 

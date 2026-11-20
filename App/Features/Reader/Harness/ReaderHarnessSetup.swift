@@ -23,6 +23,15 @@ struct ReaderHarnessSetup: Equatable {
     /// The same delay for every page, so that two runs can be compared. By hand it varies.
     var hasFixedLatency = false
     var showsPanel = true
+    /// What fills the closing page's slot.
+    var slotContent = ReaderHarnessSlotContent.closingPage
+    /// Seconds an image takes to download; `nil`: as long as its URL took to resolve.
+    var downloadLatency: Double?
+    /// Pages that fail on every attempt; `nil`: every 7th page's URL fails to resolve once
+    /// and every 11th page's image fails to load once.
+    var failingPages: ReaderHarnessFailingPages?
+    /// The look of the page status views and the closing page; `nil`: the app's.
+    var look: Look?
 
     var configuration: ReaderConfiguration {
         ReaderConfiguration(
@@ -49,6 +58,20 @@ struct ReaderHarnessSetup: Equatable {
     }
 }
 
+/// What fills the closing page's slot in the harness.
+enum ReaderHarnessSlotContent: Equatable {
+    /// The closing page, on stand-in dependencies (`ReaderClosingHarness`).
+    case closingPage
+    /// `ReaderHarnessStandIn`, whose height a check changes from outside.
+    case standIn
+}
+
+/// Pages that fail on every attempt: their URL does not resolve, or their image does not load.
+struct ReaderHarnessFailingPages: Equatable {
+    var resolution: Set<Int> = []
+    var image: Set<Int> = []
+}
+
 /// What the harness is asked to do at launch (`-Harness reader`, or `-ReaderHarness YES`):
 ///
 /// | Argument | Meaning |
@@ -60,6 +83,8 @@ struct ReaderHarnessSetup: Equatable {
 /// | `-ReaderHarnessModes a,b` | Only these modes of `calls`. |
 /// | `-ReaderHarnessRepeat <n>` | Openings per case of `firstpage` (default 6). |
 /// | `-ReaderHarnessPose alone\|beside\|vertical` | Opens a short gallery on the closing page's slot: alone in the pager, beside the last page (landscape), or as the strip's block. |
+/// | `-ReaderHarnessPose status\|status-image` | Opens two pages side by side (landscape): a page that failed to resolve, or whose image failed, beside a page that downloads for two minutes, with a second failed page nearby: the page status views' reason, bytes and "Reload all". |
+/// | `-ReaderHarnessLook shelf\|wall\|ledger` | The look of the page status views and the closing page (the app's by default). |
 ///
 /// Reports and records go to `Library/Caches/ReaderHarness/` in the app's container; a report
 /// is complete when its last line is `##### done`.
@@ -68,6 +93,7 @@ struct ReaderHarnessOptions {
     var modes: [String] = []
     var repeatCount = 6
     var pose: String?
+    var look: Look?
 
     static var atLaunch: ReaderHarnessOptions {
         let defaults = UserDefaults.standard
@@ -80,8 +106,12 @@ struct ReaderHarnessOptions {
             options.repeatCount = min(count, 50)
         }
         options.pose = defaults.string(forKey: "ReaderHarnessPose")
+        options.look = Look.allCases.first { "\($0)" == defaults.string(forKey: "ReaderHarnessLook") }
         return options
     }
+
+    /// Whether the pose shows the page status views, which stay where the reader opened.
+    var posesPageStatus: Bool { pose?.hasPrefix("status") == true }
 
     /// The reader a pose opens, or `nil` for a name that is not a pose.
     func poseSetup() -> ReaderHarnessSetup? {
@@ -90,7 +120,26 @@ struct ReaderHarnessOptions {
         case "beside":
             .scripted("pose-beside", direction: .leftToRight, pageCount: 9, isDualPage: true, isLandscape: true)
         case "vertical": .scripted("pose-vertical", direction: .vertical, pageCount: 10)
+        // The spread of pages 2 and 3 (the cover is alone), the failed page leading.
+        case "status":
+            Self.statusSetup(startPage: 2, failing: ReaderHarnessFailingPages(resolution: [2, 4]))
+        // Pages 6 and 7, the failed image trailing (page 4, a long strip, is too narrow for the card).
+        case "status-image":
+            Self.statusSetup(startPage: 6, failing: ReaderHarnessFailingPages(resolution: [4], image: [7]))
         default: nil
+        }
+    }
+}
+
+extension ReaderHarnessOptions {
+    /// Two pages side by side, whose images take two minutes to download.
+    fileprivate static func statusSetup(startPage: Int, failing: ReaderHarnessFailingPages) -> ReaderHarnessSetup {
+        ReaderHarnessSetup.scripted(
+            "pose-status", direction: .leftToRight, pageCount: 10, isDualPage: true, exceptCover: true, isLandscape: true
+        ).with {
+            $0.startPage = startPage
+            $0.downloadLatency = 120
+            $0.failingPages = failing
         }
     }
 }

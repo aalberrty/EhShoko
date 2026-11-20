@@ -9,6 +9,8 @@ struct LedgerIndexNavigation {
     let appRouter: AppRouter
     /// The `home` stack: under `command` the only one, under `tabs` the Home tab's.
     let stack: StackRouter
+    /// Opens the reader from the Continue card, which it then zooms out of.
+    let openContinueReader: ContinueReaderOpener
 
     /// A list: pushed over the Index on a phone, the list column's root beside it.
     func open(_ kind: GalleryListKind) {
@@ -27,29 +29,14 @@ struct LedgerIndexNavigation {
         stack.push(SearchSurfaceModel.route(for: keyword, in: .everywhere))
     }
 
+    /// From the card, under either bar: under `tabs` it shows only beside the iPad column,
+    /// where the accessory is off, so the card is what the reader zooms out of.
     func continueReading(_ item: ContinueItem) {
-        appRouter.reading = ReadingRequest(gallery: item.gallery, page: item.page)
+        openContinueReader(item, from: .card)
     }
 
     func signIn() {
-        appRouter.presentSettings([.settings(.account), .settings(.login)])
-    }
-}
-
-/// What the iPad column shows as chosen: the place at the bottom of the stack, or Front
-/// Page, which the list column shows while no place is on the path.
-nonisolated enum LedgerIndexPlace: Hashable, Sendable {
-    case list(GalleryListKind)
-    case folder(Int)
-
-    init?(base route: Route?) {
-        switch route {
-        case nil: self = .list(.frontpage)
-        case .galleryList(.favorites): return nil
-        case .galleryList(let kind): self = .list(kind)
-        case .favoritesFolder(let index): self = .folder(index)
-        case .listSearch, .search, .typedSearch, .detail, .detailChild, .settings: self = .list(.frontpage)
-        }
+        appRouter.presentSignIn()
     }
 }
 
@@ -89,25 +76,5 @@ struct LedgerIndexListItem: Identifiable, Equatable {
             Self(kind: .toplists, value: nil),
             Self(kind: .history, value: historyCount.map { $0.formatted() }),
         ]
-    }
-}
-
-/// One favourites folder as the Index shows it.
-struct LedgerIndexFolder: Identifiable, Equatable {
-    /// 0...9, or -1 for every folder.
-    let index: Int
-    let name: String
-    /// `nil` until a favourites page said.
-    let count: Int?
-
-    var id: Int { index }
-}
-
-extension UserStore {
-    /// The ten folders with their names and the counts known this session.
-    var ledgerIndexFolders: [LedgerIndexFolder] {
-        (0...9).map { index in
-            LedgerIndexFolder(index: index, name: favoriteFolderTitle(index), count: favoriteFolderCounts[index])
-        }
     }
 }

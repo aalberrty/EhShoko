@@ -4,41 +4,31 @@ import SwiftUI
 // cards, its separator and its secondary colour for headings. The sheet is the system's
 // (`README.md` section 13): nothing here sets `presentationBackground`, and no row is glass.
 //
-// The ground and the headings are the shared sheets' (`FiltersFormStyle.swift`), so Settings,
-// Filters and quick searches look alike. Settings reaches them only through this file, so
-// when they move into `App/DesignSystem` only this file changes.
+// The ground, the rows and the headings are the shared sheets' form (`LookFormStyle.swift`),
+// so Settings, Filters and quick searches look alike. Settings reaches it only through this
+// file.
 
 extension View {
     /// The form's ground: the look's surface in place of the system's grouped background.
     func settingsFormStyle() -> some View {
-        filtersFormStyle()
+        lookFormStyle(sectionSpacing: .compact)
     }
 
     /// A section's heading: small, semibold, uppercase, in the look's secondary colour.
     func settingsSectionHeader() -> some View {
-        filtersSectionHeader()
+        lookFormHeader()
     }
 
     /// The rows of a card: the look's raised colour and separator. Unlike the Filters row it
     /// leaves the text colour to the control, so a button keeps its tint or its red; rows
     /// that draw their own text take it from the look (`SettingsRowLabel`).
     func settingsRow() -> some View {
-        modifier(SettingsRowStyle())
+        lookFormRow(.control)
     }
 
     /// A footnote under a card, in the look's secondary colour.
     func settingsFootnote() -> some View {
         modifier(SettingsFootnote())
-    }
-}
-
-private struct SettingsRowStyle: ViewModifier {
-    @Environment(\.look) private var look
-
-    func body(content: Content) -> some View {
-        content
-            .listRowBackground(look.raised)
-            .listRowSeparatorTint(look.separator)
     }
 }
 

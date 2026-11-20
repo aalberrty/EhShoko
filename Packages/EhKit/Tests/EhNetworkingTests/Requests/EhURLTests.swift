@@ -18,6 +18,18 @@ private typealias T = RequestTesting
         #expect(EhURL.resolvingAppScheme(T.url(string)).absoluteString == string)
     }
 
+    @Test func aGalleryLinkBecomesTheAppsOwnAndBack() throws {
+        let string = "https://exhentai.org/s/abcdef1234/2345678-3?nl=1#c12"
+        let link = try #require(EhURL.appLink(for: T.url(string)))
+        #expect(link.absoluteString == "ehshoko://exhentai.org/s/abcdef1234/2345678-3?nl=1#c12")
+        #expect(EhURL.resolvingAppScheme(link).absoluteString == string)
+    }
+
+    @Test(arguments: ["https://e-hentai.org/", "https://example.com/g/1/abc/", "ehshoko://e-hentai.org/g/1/abc/"])
+    func otherLinksHaveNoAppLink(string: String) {
+        #expect(EhURL.appLink(for: T.url(string)) == nil)
+    }
+
     // MARK: Handleable
 
     @Test(arguments: [

@@ -7,7 +7,6 @@ import SwiftUI
 struct LedgerRestRow: View {
     let model: ReaderModel
     let sheet: LedgerSheetState
-    let watch: LedgerPageWatch
 
     var body: some View {
         HStack(spacing: Tokens.Spacing.small) {
@@ -16,7 +15,7 @@ struct LedgerRestRow: View {
             // Translate and Compare lead the buttons once translation exists. Not in the
             // hierarchy until then.
             ReaderTranslationSlot(availability: model.translationAvailability) { EmptyView() }
-            LedgerRetryFailedButton(model: model, watch: watch)
+            LedgerRetryFailedButton(model: model)
             LedgerAutoPlayButton(model: model, sheet: sheet)
             Button {
                 model.showSettings()
@@ -60,16 +59,15 @@ private struct LedgerPageNumber: View {
     }
 }
 
-/// "Retry failed pages", there only while pages have failed.
+/// "Retry failed pages", there only while pages have failed. A view of its own, so a change
+/// of the count re-renders nothing else.
 private struct LedgerRetryFailedButton: View {
     let model: ReaderModel
-    let watch: LedgerPageWatch
 
     var body: some View {
-        if watch.failedPageCount > 0 {
+        if model.failedPageCount > 0 {
             Button {
                 model.retryAllFailedImages()
-                watch.lookAgain()
             } label: {
                 LedgerRoundLabel(symbol: "exclamationmark.arrow.triangle.2.circlepath")
             }

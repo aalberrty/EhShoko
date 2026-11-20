@@ -19,7 +19,6 @@ struct AppShellView: View {
     }()
 
     @Environment(\.scenePhase) private var scenePhase
-    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
 
     // The settings decide the first frame's colours. The other shared services are injected
     // by `ShellRoot`: the launch creates them off the main actor before the shell appears.
@@ -38,6 +37,8 @@ struct AppShellView: View {
         .animation(.easeOut(duration: 0.25), value: model.launchState == .ready)
         // The one place the look is set: every screen, sheet and cover below inherits it.
         .lookEnvironment(Look(settings.look), accent: settings.accentColor)
+        // And for the colours UIKit resolves itself: a list's separators (`LookTrait`).
+        .windowLook(Look(settings.look))
         .environment(model.router)
         .environment(settings)
         .background {
@@ -57,7 +58,7 @@ struct AppShellView: View {
             model.scenePhaseChanged(to: AppModel.ScenePhase(phase))
         }
         .task(id: model.launchAttempt) {
-            await model.launch(isRegularWidth: horizontalSizeClass == .regular)
+            await model.launch()
         }
         .task { await model.followDomainFrontingSetting() }
     }

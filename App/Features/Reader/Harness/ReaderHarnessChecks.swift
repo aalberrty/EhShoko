@@ -224,7 +224,9 @@ extension ReaderHarnessSession {
 
         status = "walk: height"
         report.section("vertical: the content asks for more height")
-        let strip = await open(.scripted("walk-height", direction: .vertical))
+        let strip = await open(ReaderHarnessSetup.scripted("walk-height", direction: .vertical).with {
+            $0.slotContent = .standIn
+        })
         await strip.settle()
         await strip.jump(to: 60)
         await strip.step(1, animated: false)

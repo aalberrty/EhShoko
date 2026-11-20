@@ -105,12 +105,13 @@ private struct DesignThemeRow: View {
             ? AnyLayout(VStackLayout(alignment: .leading, spacing: Tokens.Spacing.small))
             : AnyLayout(HStackLayout(spacing: Tokens.Spacing.medium))
         layout {
+            // The label takes the room the control leaves, with one gap between them and no
+            // spacer, which would add a second gap: iOS 18's segmented control is wider than
+            // iOS 26's and left the label too little room, so it broke inside the word.
             Text(L10n.Localizable.AppearanceSettingView.Title.theme)
                 .foregroundStyle(look.label)
+                .frame(maxWidth: .infinity, alignment: .leading)
                 .accessibilityHidden(true)
-            if !typeSize.isAccessibilitySize {
-                Spacer(minLength: 0)
-            }
             Picker(L10n.Localizable.AppearanceSettingView.Title.theme, selection: $settings.preferredColorScheme) {
                 ForEach(PreferredColorScheme.allCases) { scheme in
                     Text(scheme.localizedName).tag(scheme)
@@ -136,6 +137,8 @@ private struct DesignAccentRow: View {
         HStack(spacing: Tokens.Spacing.small) {
             Text(L10n.Localizable.Settings.Design.accent)
                 .foregroundStyle(look.label)
+                // The menu says it with its value; VoiceOver would read it twice.
+                .accessibilityHidden(true)
             Spacer(minLength: Tokens.Spacing.small)
             Circle()
                 .fill(tint)

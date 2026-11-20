@@ -47,13 +47,16 @@ nonisolated enum WallSearchMetrics {
     static let columnSpacing: CGFloat = 12
 }
 
-/// A group's label in the look's heading style, with a link trailing ("Edit", "Clear"). The
+/// A group's label in Wall's label style (13 pt bold, uppercase, tracked, secondary) in every
+/// look, with a link trailing ("Edit", "Clear"): a group's label above the field, not a page's
+/// section heading, as Shelf's and Ledger's searches keep their own labels in every look. The
 /// line is 44 pt high when it has a link, the link's target. At accessibility sizes the link
 /// goes under the label, so neither is cut short.
 struct WallSearchHeading<Trailing: View>: View {
     let title: String
     @ViewBuilder var link: Trailing
 
+    @Environment(\.look) private var look
     @Environment(\.dynamicTypeSize) private var typeSize
 
     private var hasLink: Bool { Trailing.self != EmptyView.self }
@@ -81,7 +84,11 @@ struct WallSearchHeading<Trailing: View>: View {
 
     private var label: some View {
         Text(title)
-            .lookSectionHeader()
+            .font(.footnote.bold())
+            .tracking(0.5)
+            .textCase(.uppercase)
+            .foregroundStyle(look.secondaryLabel)
+            .accessibilityAddTraits(.isHeader)
             .lineLimit(typeSize.isAccessibilitySize ? 2 : 1)
     }
 

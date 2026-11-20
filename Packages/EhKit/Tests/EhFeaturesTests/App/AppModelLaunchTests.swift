@@ -76,8 +76,8 @@ final class LaunchHarness {
         self.model = model
     }
 
-    func launch(isRegularWidth: Bool = false) async {
-        await model.launch(isRegularWidth: isRegularWidth)
+    func launch() async {
+        await model.launch()
     }
 }
 
@@ -147,15 +147,6 @@ final class LaunchHarness {
         await harness.model.links.handleRequest()
         #expect(harness.transport.requests.count == 1)
         #expect(harness.model.router.presentedGallery?.gid == "3103480")
-    }
-
-    @Test(arguments: [(true, ListDisplayMode.thumbnail), (false, .detail)])
-    func registersTheListDisplayModeForTheWidth(isRegularWidth: Bool, expected: ListDisplayMode) async {
-        let harness = LaunchHarness()
-
-        await harness.launch(isRegularWidth: isRegularWidth)
-
-        #expect(harness.settings.listDisplayMode == expected)
     }
 
     @Test func appliesDomainFrontingBeforeAnyRequest() async throws {

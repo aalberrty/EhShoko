@@ -25,7 +25,7 @@ struct FiltersSheet: View {
                 FiltersCategorySection(model: model)
                 FiltersNarrowingSection(model: model, focusedBound: $focusedBound)
             }
-            .filtersFormStyle()
+            .lookFormStyle(sectionSpacing: .compact)
             .navigationTitle(L10n.Localizable.FiltersView.Title.filters)
             .toolbarTitleDisplayMode(.inline)
             .toolbar {
@@ -47,12 +47,13 @@ struct FiltersSheet: View {
     }
 }
 
-/// Resets the edited range after a confirmation, from the bar's leading side.
+/// Resets the edited range after a confirmation, from the bar's leading side: "Reset", as
+/// drawn.
 private struct FiltersResetButton: View {
     @Bindable var model: FiltersModel
 
     var body: some View {
-        Button(L10n.Localizable.FiltersView.Button.resetFilters) {
+        Button(L10n.Localizable.ConfirmationDialog.Button.reset) {
             model.presentResetConfirmation()
         }
         .confirmationDialog(

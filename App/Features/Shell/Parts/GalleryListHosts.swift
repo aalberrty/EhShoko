@@ -161,25 +161,39 @@ extension RankedChoice {
     }
 }
 
-/// A favourites folder of a model the library owns.
+/// A favourites folder of a model the library owns: the folder the library shows in place,
+/// which follows its choice, or one pushed from it. Either way it is that folder's list in the
+/// model, so what the library loaded is shown and kept.
 struct FolderListHost<Header: View>: View {
     let context: ListContext
     let favorites: FavoritesModel
+    let folder: Int
     let header: Header
 
     var body: some View {
+        if let list = favorites.loadedList(for: folder) {
+            host(list)
+        } else {
+            // Whoever shows a folder of the model opens it first (the library chooses it, a
+            // push asks for its list), so this is only a route kept without its list. Made
+            // once the screen is up, not while it is drawn.
+            Color.clear.onAppear { _ = favorites.list(for: folder) }
+        }
+    }
+
+    private func host(_ list: GalleryListModel) -> some View {
         let orders = FavoritesSortOrder.allCases
         let sort = ListMenuPicker(
             title: L10n.Localizable.List.sort, systemImage: "arrow.up.arrow.down",
             options: orders.enumerated().map { ListMenuPicker.Option(id: $0.offset, title: $0.element.localizedName) },
-            selection: favorites.sortOrder.flatMap(orders.firstIndex(of:))
+            selection: list.favoritesSortOrder.flatMap(orders.firstIndex(of:))
         )
-        ListHost(
-            context: context, feed: ListFeed(favorites.list, signIn: .favorites),
+        return ListHost(
+            context: context, feed: ListFeed(list, signIn: .favorites),
             menu: ListMenuControls(sort: sort, quickSearch: true, reload: true), primary: .sort(sort),
             performOwn: { action in
                 if case .sort(let index) = action, orders.indices.contains(index) {
-                    favorites.setSortOrder(orders[index])
+                    favorites.setSortOrder(orders[index], in: folder)
                 }
             },
             header: header
@@ -205,7 +219,7 @@ struct OwnedFolderListHost<Header: View>: View {
     }
 
     var body: some View {
-        FolderListHost(context: context, favorites: favorites, header: header)
+        FolderListHost(context: context, favorites: favorites, folder: favorites.category, header: header)
     }
 }
 

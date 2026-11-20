@@ -17,20 +17,26 @@ struct ShelfLibraryView: View {
     @Environment(\.chrome) private var chrome
 
     var body: some View {
-        GalleryListScreen(context: ListContext(kind: .folder(model.category), title: title), favorites: model) {
+        let context = ListContext(kind: .folder(model.category), title: title, heading: heading)
+        GalleryListScreen(context: context, favorites: model) {
             ShelfLibraryHeader(model: model)
         }
     }
 
-    /// Under `command` the screen is "Favorites". Under `tabs` the Library tab draws the title
-    /// "Library" over its Favourites / History switch, and the title a list sets wins over its
-    /// tab's, so the list is given the tab's own title rather than one of its own: leaving it
-    /// out would also leave out the sort line, which the list ties to the title.
+    /// Under `command` the screen is "Favorites", the list's own title. Under `tabs` the
+    /// Library tab draws the title "Library" over its Favourites / History switch, and a title
+    /// the list set would win over it, so the list draws none and keeps its sort line. Its
+    /// title is still the screen's, for Back and for a list design whose title is its heading
+    /// (Ledger's).
     private var title: String {
         switch chrome.bar {
         case .tabs: L10n.Localizable.Shell.Tab.library
         case .command: L10n.Localizable.Shell.Place.favorites
         }
+    }
+
+    private var heading: ListHeading {
+        chrome.bar == .tabs ? .screen : .list
     }
 }
 

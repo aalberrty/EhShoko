@@ -17,11 +17,12 @@ import SwiftUI
 ///
 /// Close and Share are toolbar items, so the system draws them: Close, a chevron down, stands
 /// where Back would be, because the card is put away downwards (the zoom's own pull). In the
-/// side pane the shell's Close is there instead.
+/// side pane and the gallery sheet the shell's Close is there instead.
 struct WallGalleryView: View {
     let model: GalleryDetailModel
 
     @Environment(StackRouter.self) private var stack: StackRouter?
+    @Environment(AppRouter.self) private var appRouter: AppRouter?
     @Environment(\.chrome) private var chrome
     @Environment(\.look) private var look
     @Environment(\.verticalSizeClass) private var verticalSizeClass
@@ -31,7 +32,6 @@ struct WallGalleryView: View {
     /// crossing that line draws the cover again and nothing else.
     @State private var coverage = WallCoverCoverage()
     @State private var hud: HUDConfiguration?
-    @State private var asksToSignIn = false
     @State private var searchCount = 0
     @State private var copyCount = 0
 
@@ -65,17 +65,17 @@ struct WallGalleryView: View {
         .wallGalleryDock(model, signIn: signIn, search: search)
         .hud($hud)
         .galleryFavoriteHUD(model, hud: $hud)
-        .gallerySignInAlert(isPresented: $asksToSignIn)
         .sensoryFeedback(.success, trigger: copyCount)
         .sensoryFeedback(.impact(flexibility: .soft), trigger: searchCount)
     }
 
     // MARK: Top bar
 
-    /// The card's own Close: wherever nothing else closes it. The side pane's root has the
-    /// shell's Close, and a page pushed inside the pane keeps the system's Back.
+    /// The card's own Close: wherever nothing else closes it. The side pane's root and the
+    /// gallery sheet's have the shell's Close, and a page pushed inside either keeps the
+    /// system's Back.
     private var showsClose: Bool {
-        !chrome.isSidePane
+        !chrome.isSidePane && !chrome.isSheet
     }
 
     @ToolbarContentBuilder
@@ -96,7 +96,7 @@ struct WallGalleryView: View {
     }
 
     private func signIn() {
-        asksToSignIn = true
+        appRouter?.presentSignIn()
     }
 
     private func search(_ keyword: String) {
@@ -111,7 +111,7 @@ struct WallGalleryView: View {
     }
 }
 
-/// What the panel's parts ask the page to do: the page owns the sign-in prompt, the stack and
+/// What the panel's parts ask the page to do: the page opens sign-in and owns the stack and
 /// the HUD, which would scroll away inside the panel.
 struct WallGalleryPanelActions {
     let signIn: () -> Void
@@ -119,9 +119,9 @@ struct WallGalleryPanelActions {
     let copy: (String) -> Void
 }
 
-/// The card's Close, a chevron down where Back would be. It puts the card away: back to the
-/// list it was opened from, or, as the root of a sheet, the sheet. A modifier of its own, so
-/// that only this follows the presentation's state.
+/// The card's Close, a chevron down where Back would be. It puts the card away, back to the
+/// screen it was pushed from. A modifier of its own, so that only this follows the
+/// presentation's state.
 private struct WallGalleryClose: ViewModifier {
     let isShown: Bool
 
@@ -138,6 +138,7 @@ private struct WallGalleryClose: ViewModifier {
                         } label: {
                             Image(systemName: "chevron.down")
                         }
+                        .accessibilityLabel(L10n.Localizable.Common.close)
                     }
                 }
             }

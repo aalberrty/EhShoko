@@ -91,7 +91,7 @@ private struct GalleryPageHost: ViewModifier {
         case .search(let keyword):
             stack?.push(.search(keyword: keyword))
         case .signIn:
-            appRouter?.presentSettings([.settings(.account), .settings(.login)])
+            appRouter?.presentSignIn()
         }
     }
 }

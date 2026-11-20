@@ -104,7 +104,7 @@ func waitUntil(_ condition: () -> Bool) async {
     }
 }
 
-/// Stands in for `PagedGalleryList`'s `.task(id: model.loadTrigger) { await model.loadIfNeeded() }`:
+/// Stands in for the list wrapper's `.task(id: feed.source.feedLoadTrigger) { await feed.source.feedLoad() }`:
 /// like SwiftUI, it runs the load when first rendered and again only when the id changed. Tests
 /// that switch lists render through it instead of calling `loadIfNeeded()`, so a switch the view
 /// would not notice leaves the new list unloaded here too.

@@ -152,7 +152,7 @@ struct ShelfRecentlySeen: View {
         let galleries = model.root.recentGalleries
         if !galleries.isEmpty {
             ShelfSearchHeading(title: L10n.Localizable.SearchView.Section.Title.recentlySeen)
-            ShelfRecentlySeenShelf(galleries: galleries) { openGallery($0) }
+            ShelfRecentlySeenShelf(galleries: galleries) { openGallery($0, from: .recentlySeen) }
                 .shelfSearchRow(insets: EdgeInsets(top: 4, leading: 0, bottom: 16, trailing: 0))
         }
     }
@@ -170,7 +170,7 @@ private struct ShelfRecentlySeenShelf: View {
                 ForEach(galleries) { gallery in
                     Button { open(gallery) } label: {
                         CoverImage(url: gallery.coverURL, size: Self.cover, cornerRadius: 8)
-                            .zoomSource(gallery.gid)
+                            .galleryZoomSource(gallery.gid, from: .recentlySeen)
                     }
                     .buttonStyle(.plain)
                     .accessibilityLabel(gallery.trimmedTitle)

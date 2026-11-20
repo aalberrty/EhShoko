@@ -4,7 +4,7 @@ import SwiftUI
 
 /// The moving preview of the three presets (`Design/designs/settings.md`, "The moving
 /// preview"): a 150 × 240 pt stage that plays each preset's storyboard, the preset's name,
-/// the caption of the beat, four beat marks, and the three presets as still tiles that choose.
+/// the caption of the beat, a mark for each beat, and the three presets as still tiles that choose.
 /// The wizard's first step and the offer after install host it; it has no other home.
 ///
 /// - At first it plays Shelf, Wall and Ledger in turn. A tap on a tile selects that preset
@@ -129,7 +129,7 @@ struct PresetStage: View {
         .onScrollVisibilityChange(threshold: 0.5) { isOnScreen = $0 }
         .accessibilityElement()
         .accessibilityLabel(Text(now.style.localizedName))
-        .accessibilityValue(Text(now.style.stageSummary))
+        .accessibilityValue(Text(now.style.stageSummary(tabBarTucks: playback.tabBarTucks)))
         .accessibilityAddTraits(.isImage)
         .accessibilityAdjustableAction(adjust)
     }
@@ -164,11 +164,12 @@ struct PresetStage: View {
         .accessibilityHidden(true)
     }
 
-    /// Four beat marks, the current one in the tint. Under Reduce Motion they are the pager's
+    /// A mark for each beat the preset plays (four, or three where Shelf skips its first), the
+    /// current one in the tint. Under Reduce Motion they are the pager's
     /// marks and a tap on one turns to that beat.
     private func marks(_ now: StageBeat) -> some View {
         HStack(spacing: 0) {
-            ForEach(0..<Storyboard.beats, id: \.self) { beat in
+            ForEach(playback.storyboard(now.style).playedBeats, id: \.self) { beat in
                 Capsule()
                     .fill(beat == now.beat ? tint : look.fill)
                     .frame(width: 16, height: 4)
@@ -228,9 +229,9 @@ extension PresetStage {
             pin(selection)
         } else {
             pinned = nil
-            let beat = Int(page.rounded())
+            let showing = StagePager.beat(at: page, of: playback)
             playback.takeTurns(at: .now)
-            page = Double((beat % Storyboard.beats + Storyboard.beats) % Storyboard.beats)
+            page = Double(StagePager.page(of: showing, in: playback))
         }
     }
 

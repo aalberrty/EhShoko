@@ -62,6 +62,7 @@ struct ReaderSettingsSheet: View {
                         } label: {
                             Image(systemName: "chevron.down")
                         }
+                        .accessibilityLabel(L10n.Localizable.Common.close)
                     }
                 }
             }

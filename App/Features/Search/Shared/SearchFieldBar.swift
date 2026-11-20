@@ -74,7 +74,8 @@ struct SearchFieldMagnifier: View {
     }
 }
 
-/// A round glass button beside the capsule: Filters, Close, Clear.
+/// A round glass button beside the capsule: Filters, Close, Clear. `title` is what VoiceOver
+/// and the large content viewer say. Disabled, its symbol is dimmed.
 struct SearchFieldCircleButton: View {
     let systemImage: String
     let title: String
@@ -83,13 +84,14 @@ struct SearchFieldCircleButton: View {
 
     @ScaledMetric(relativeTo: .body) private var height = SearchFieldControl.height
     @Environment(\.look) private var look
+    @Environment(\.isEnabled) private var isEnabled
 
     var body: some View {
         let size = SearchFieldControl.size(scaled: height)
         Button(action: action) {
             Image(systemName: systemImage)
                 .font(.body.weight(.semibold))
-                .foregroundStyle(look.label)
+                .foregroundStyle(isEnabled ? look.label : look.tertiaryLabel)
                 .frame(width: size, height: size)
                 .overlay(alignment: .topTrailing) {
                     if showsDot {

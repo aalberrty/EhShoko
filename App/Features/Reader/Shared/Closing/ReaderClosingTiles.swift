@@ -68,9 +68,11 @@ private struct ReaderClosingFavoriteTile: View {
                 tile(isFavorited: false).opacity(0.4)
             }
         } else {
-            tile(isFavorited: false)
-                .opacity(0.4)
-                .allowsHitTesting(false)
+            // A disabled button, so VoiceOver says it is one and that it is dimmed.
+            Button {} label: {
+                tile(isFavorited: false).opacity(0.4)
+            }
+            .disabled(true)
         }
     }
 
