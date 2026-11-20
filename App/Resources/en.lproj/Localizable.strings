@@ -1224,8 +1224,10 @@
 "settings.translation.headline" = "Japanese → %1$@, on this %2$@";
 "settings.translation.status.none" = "Not downloaded";
 "settings.translation.status.downloading" = "Downloading · %1$@ of %2$@";
+"settings.translation.status.paused" = "Paused · %1$@ of %2$@";
 "settings.translation.status.preparing" = "Preparing";
 "settings.translation.status.ready" = "Ready · works offline";
+"settings.translation.status.no_source" = "Enter a private model source below first";
 "settings.translation.pair" = "This pair read %1$d of %2$d lines exactly on our %3$d test pages";
 "settings.translation.pair.not_measured" = "This pair was not tested together";
 "settings.translation.models" = "Models";
@@ -1258,7 +1260,7 @@
 "settings.translation.value.milliseconds" = "%@ ms";
 "settings.translation.value.not_measured" = "Not measured";
 "settings.translation.value.heat_cool" = "Stays cool for %d pages in a row";
-"settings.translation.value.heat_hot" = "Hot from page %d in a row";
+"settings.translation.value.heat_hot" = "Gets hot within %d pages in a row";
 "settings.translation.basis.pages" = "On our %d test pages";
 "settings.translation.basis.pages_mac" = "On our %d test pages, run on a Mac";
 "settings.translation.basis.phone" = "On %@";
@@ -1273,7 +1275,9 @@
 "settings.translation.storage.delete_all.message" = "Translation stops working until the models are downloaded again.";
 "settings.translation.source" = "Private model source";
 "settings.translation.source.address" = "Address";
+"settings.translation.source.address.invalid" = "Not valid";
 "settings.translation.source.token" = "Access token";
+"settings.translation.source.token.kept" = "Saved";
 "settings.translation.source.footer" = "Optional. For models this project may not pass on, and for your own copies. Everything else comes from public sources.";
 "settings.translation.licences" = "Models and licenses";
 "settings.translation.credit.author" = "Author";

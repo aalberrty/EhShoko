@@ -1224,8 +1224,10 @@
 "settings.translation.headline" = "日语 → %1$@，在此 %2$@ 上";
 "settings.translation.status.none" = "未下载";
 "settings.translation.status.downloading" = "正在下载 · %1$@ / %2$@";
+"settings.translation.status.paused" = "已暂停 · %1$@ / %2$@";
 "settings.translation.status.preparing" = "正在准备";
 "settings.translation.status.ready" = "已就绪 · 可离线使用";
+"settings.translation.status.no_source" = "请先在下方填写私有模型来源";
 "settings.translation.pair" = "此组合在我们的 %3$d 张测试页上准确读出了 %2$d 行中的 %1$d 行";
 "settings.translation.pair.not_measured" = "此组合未经共同测试";
 "settings.translation.models" = "模型";
@@ -1257,8 +1259,8 @@
 "settings.translation.value.seconds" = "%@ 秒";
 "settings.translation.value.milliseconds" = "%@ 毫秒";
 "settings.translation.value.not_measured" = "未测量";
-"settings.translation.value.heat_cool" = "连续 %d 页都不发热";
-"settings.translation.value.heat_hot" = "连续第 %d 页起发热";
+"settings.translation.value.heat_cool" = "连续翻译 %d 页都不发热";
+"settings.translation.value.heat_hot" = "连续翻译 %d 页内就会发热";
 "settings.translation.basis.pages" = "在我们的 %d 张测试页上";
 "settings.translation.basis.pages_mac" = "在我们的 %d 张测试页上，于 Mac 运行";
 "settings.translation.basis.phone" = "在 %@ 上";
@@ -1273,7 +1275,9 @@
 "settings.translation.storage.delete_all.message" = "在重新下载模型之前，页面翻译将无法使用。";
 "settings.translation.source" = "私有模型来源";
 "settings.translation.source.address" = "地址";
+"settings.translation.source.address.invalid" = "无效";
 "settings.translation.source.token" = "访问令牌";
+"settings.translation.source.token.kept" = "已保存";
 "settings.translation.source.footer" = "可选。用于本项目无权分发的模型，以及你自己的副本。其他一切都来自公开来源。";
 "settings.translation.licences" = "模型与许可";
 "settings.translation.credit.author" = "作者";

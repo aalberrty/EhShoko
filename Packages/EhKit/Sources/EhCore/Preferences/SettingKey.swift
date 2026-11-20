@@ -26,6 +26,8 @@ enum SettingKey: String, CaseIterable, Sendable {
     // Page translation
     case pageTranslationDetector, pageTranslationReader, pageTranslationTranslator, pageTranslationRepaint
     case pageTranslationSourceAddress
+    case pageTranslationPendingDetector, pageTranslationPendingReader, pageTranslationPendingTranslator
+    case pageTranslationPendingRepaint
 
     var name: String {
         self == .galleryHost ? "galleryHost" : "settings.\(rawValue)"

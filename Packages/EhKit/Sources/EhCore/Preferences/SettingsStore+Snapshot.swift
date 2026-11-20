@@ -50,6 +50,10 @@ extension SettingsStore {
         setting.pageTranslationTranslator = pageTranslationTranslator
         setting.pageTranslationRepaint = pageTranslationRepaint
         setting.pageTranslationSourceAddress = pageTranslationSourceAddress
+        setting.pageTranslationPendingDetector = pageTranslationPendingDetector
+        setting.pageTranslationPendingReader = pageTranslationPendingReader
+        setting.pageTranslationPendingTranslator = pageTranslationPendingTranslator
+        setting.pageTranslationPendingRepaint = pageTranslationPendingRepaint
         return setting
     }
 
@@ -105,5 +109,9 @@ extension SettingsStore {
         pageTranslationTranslator = setting.pageTranslationTranslator
         pageTranslationRepaint = setting.pageTranslationRepaint
         pageTranslationSourceAddress = setting.pageTranslationSourceAddress
+        pageTranslationPendingDetector = setting.pageTranslationPendingDetector
+        pageTranslationPendingReader = setting.pageTranslationPendingReader
+        pageTranslationPendingTranslator = setting.pageTranslationPendingTranslator
+        pageTranslationPendingRepaint = setting.pageTranslationPendingRepaint
     }
 }

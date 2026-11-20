@@ -76,6 +76,13 @@ public struct Setting: Sendable, Equatable {
     /// The address of the private store the app's own model files come from; empty until
     /// the user enters one. Its access token is kept in the Keychain, not here.
     public var pageTranslationSourceAddress = ""
+    /// A model of each kind the user chose while it was not installed: it is downloading and
+    /// replaces the current one when its install finishes. Kept so the choice survives the
+    /// app being closed before that; `nil` when nothing of the kind waits.
+    public var pageTranslationPendingDetector: TextDetectorChoice?
+    public var pageTranslationPendingReader: TextReaderChoice?
+    public var pageTranslationPendingTranslator: TranslatorChoice?
+    public var pageTranslationPendingRepaint: RepaintChoice?
 
     public init() {}
 

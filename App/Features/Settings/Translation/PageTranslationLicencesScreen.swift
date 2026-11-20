@@ -1,13 +1,13 @@
 import EhCore
 import EhFeatures
-import EhLlama
 import EhModels
 import SwiftUI
 
 /// Settings › Translation › Models and licences (`README.md` section 15.4): for every model of
 /// the catalog its name, author, source, licence (opening its full text), what this project
-/// changed and whether it is for non-commercial use only; then llama.cpp's notice. Names,
-/// authors and legal texts are data and are not translated; the labels are.
+/// changed and whether it is for non-commercial use only; then the notices of llama.cpp and of
+/// the three fonts translated pages are lettered in, which their licences ask to go with every
+/// copy. Names, authors and legal texts are data and are not translated; the labels are.
 struct PageTranslationLicencesScreen: View {
     @Bindable var model: PageTranslationSettingsModel
 
@@ -18,10 +18,9 @@ struct PageTranslationLicencesScreen: View {
                     Task { await model.showLicence(of: credit.id) }
                 }
             }
-            NoticeSection(
-                name: "\(LlamaLicense.name) \(LlamaLicense.version)", source: URL(string: LlamaLicense.source),
-                notice: LlamaLicense.notice
-            )
+            ForEach(model.notices) { notice in
+                NoticeSection(notice: notice)
+            }
         }
         .settingsFormStyle()
         .navigationTitle(L10n.Localizable.Settings.Translation.licences)
@@ -29,6 +28,7 @@ struct PageTranslationLicencesScreen: View {
         .sheet(item: $model.licence) { licence in
             LicenceSheet(licence: licence)
         }
+        .task { await model.loadNotices() }
     }
 }
 
@@ -110,21 +110,25 @@ private struct CreditLine: View {
     }
 }
 
-/// A library's notice, which its licence asks to go with every copy of the app.
+/// A library's or a font's notice, which its licence asks to go with every copy of the app.
 private struct NoticeSection: View {
-    let name: String
-    let source: URL?
-    let notice: String
+    let notice: PageTranslationNotice
 
     @Environment(\.look) private var look
 
     var body: some View {
         Section {
-            Text(verbatim: name)
+            Text(verbatim: notice.name)
                 .font(.headline)
                 .foregroundStyle(look.label)
                 .accessibilityAddTraits(.isHeader)
-            if let source {
+            if let copyright = notice.copyright {
+                Text(verbatim: copyright)
+                    .font(.footnote)
+                    .foregroundStyle(look.label)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            if let source = notice.source {
                 Link(destination: source) {
                     CreditLine(
                         label: L10n.Localizable.Settings.Translation.Credit.source, value: source.absoluteString,
@@ -132,7 +136,7 @@ private struct NoticeSection: View {
                     )
                 }
             }
-            Text(verbatim: notice)
+            Text(verbatim: notice.text)
                 .font(.caption.monospaced())
                 .foregroundStyle(look.secondaryLabel)
                 .fixedSize(horizontal: false, vertical: true)

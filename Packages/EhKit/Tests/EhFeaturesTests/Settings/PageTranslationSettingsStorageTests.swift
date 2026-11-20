@@ -144,6 +144,21 @@ import Testing
         #expect(model.licence == nil)
     }
 
+    @Test func theNoticesAreLlamaCppsAndTheFonts() async {
+        let model = TranslationStoreHarness().makeModel()
+        #expect(model.notices.isEmpty)
+
+        await model.loadNotices()
+
+        #expect(model.notices.first == .llama)
+        let fonts = model.notices.dropFirst()
+        #expect(fonts.map(\.name) == ["Noto Sans SC", "Noto Serif SC", "EhShoko Kai"])
+        for font in fonts {
+            #expect(font.copyright?.hasPrefix("Copyright") == true)
+            #expect(font.text.contains("SIL OPEN FONT LICENSE Version 1.1"))
+        }
+    }
+
     @Test func childRoutesAreEqualForTheSameModelAndDestination() {
         let harness = TranslationStoreHarness()
         let model = harness.makeModel()

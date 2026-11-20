@@ -86,6 +86,10 @@ extension Setting {
         setting.pageTranslationTranslator = .hyMT2
         setting.pageTranslationRepaint = .off
         setting.pageTranslationSourceAddress = "https://models.example/store"
+        setting.pageTranslationPendingDetector = .v4s
+        setting.pageTranslationPendingReader = .cpt2
+        setting.pageTranslationPendingTranslator = .qwen35_4B
+        setting.pageTranslationPendingRepaint = .bigLama
         return setting
     }()
 }

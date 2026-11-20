@@ -21,8 +21,9 @@ import Foundation
 /// | `partial` | The default set without its detector |
 /// | `empty` | Nothing |
 /// | `preparing` | The default set, each model loading once for 20 s |
+/// | `paused` | The default set without its detector, whose download is paused a third of the way |
 enum PageTranslationSample: String {
-    case ready, partial, empty, preparing
+    case ready, partial, empty, preparing, paused
 
     static let atLaunch = UserDefaults.standard.string(forKey: "PageTranslationSample").flatMap(Self.init)
 
@@ -68,10 +69,11 @@ enum PageTranslationSample: String {
         let defaultSet: [ModelArtifactID] = [.k2xl, .cpt2, .jmtFast1, .lamaManga]
         let installed: [ModelArtifactID] = switch state {
         case .ready: defaultSet + [.v4s, .hyMT2]
-        case .partial: [.cpt2, .jmtFast1, .lamaManga]
+        case .partial, .paused: [.cpt2, .jmtFast1, .lamaManga]
         case .empty: []
         case .preparing: defaultSet
         }
+        if state == .paused { writePausedDownload(of: .k2xl, catalog: catalog, root: root) }
         for id in installed {
             guard let artifact = catalog.artifact(id) else { continue }
             let folder = root.appending(path: id.rawValue, directoryHint: .isDirectory)
@@ -91,6 +93,24 @@ enum PageTranslationSample: String {
             if let data = try? JSONSerialization.data(withJSONObject: record) {
                 files.createFile(atPath: folder.appending(path: "installed.json").path(percentEncoded: false), contents: data)
             }
+        }
+    }
+
+    /// A download the store finds paused when it reads the folder: what was asked for, and a
+    /// sparse part of the first file, a third of it.
+    private nonisolated static func writePausedDownload(of id: ModelArtifactID, catalog: ModelCatalog, root: URL) {
+        guard let file = catalog.artifact(id)?.files.first else { return }
+        let files = FileManager()
+        let part = root.appending(path: id.rawValue, directoryHint: .isDirectory).appending(path: file.path + ".part")
+        try? files.createDirectory(at: part.deletingLastPathComponent(), withIntermediateDirectories: true)
+        files.createFile(atPath: part.path(percentEncoded: false), contents: nil)
+        if let handle = try? FileHandle(forWritingTo: part) {
+            try? handle.truncate(atOffset: UInt64(file.size / 3))
+            try? handle.close()
+        }
+        let intent: [String: Any] = ["artifacts": [id.rawValue], "isPaused": true]
+        if let data = try? JSONSerialization.data(withJSONObject: intent) {
+            files.createFile(atPath: root.appending(path: "downloads.json").path(percentEncoded: false), contents: data)
         }
     }
 

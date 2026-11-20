@@ -150,6 +150,19 @@ public final class SettingsStore {
     public var pageTranslationSourceAddress: String {
         didSet { persist(.pageTranslationSourceAddress, pageTranslationSourceAddress, oldValue) }
     }
+    /// A choice of each kind that waits for its model's install (Settings › Translation).
+    public var pageTranslationPendingDetector: TextDetectorChoice? {
+        didSet { persistOptional(.pageTranslationPendingDetector, pageTranslationPendingDetector, oldValue) }
+    }
+    public var pageTranslationPendingReader: TextReaderChoice? {
+        didSet { persistOptional(.pageTranslationPendingReader, pageTranslationPendingReader, oldValue) }
+    }
+    public var pageTranslationPendingTranslator: TranslatorChoice? {
+        didSet { persistOptional(.pageTranslationPendingTranslator, pageTranslationPendingTranslator, oldValue) }
+    }
+    public var pageTranslationPendingRepaint: RepaintChoice? {
+        didSet { persistOptional(.pageTranslationPendingRepaint, pageTranslationPendingRepaint, oldValue) }
+    }
     /// The detector, reader and translator the settings choose. Reading it observes those three.
     public var pageTranslationModelSet: PageTranslationModelSet {
         PageTranslationModelSet(
@@ -215,6 +228,10 @@ public final class SettingsStore {
         _pageTranslationTranslator = setting.pageTranslationTranslator
         _pageTranslationRepaint = setting.pageTranslationRepaint
         _pageTranslationSourceAddress = setting.pageTranslationSourceAddress
+        _pageTranslationPendingDetector = setting.pageTranslationPendingDetector
+        _pageTranslationPendingReader = setting.pageTranslationPendingReader
+        _pageTranslationPendingTranslator = setting.pageTranslationPendingTranslator
+        _pageTranslationPendingRepaint = setting.pageTranslationPendingRepaint
     }
 
     /// Reads the selected host off the main actor from the same defaults this store writes.
@@ -224,6 +241,12 @@ public final class SettingsStore {
 
     /// Writes `key` only when the value really changed; `didSet` also runs for equal values.
     private func persist<Value: PreferenceValue>(_ key: SettingKey, _ value: Value, _ oldValue: Value) {
+        guard value != oldValue else { return }
+        storage.set(value, for: key)
+    }
+
+    /// Writes or removes an optional setting's key when its value really changed.
+    private func persistOptional<Value: PreferenceValue>(_ key: SettingKey, _ value: Value?, _ oldValue: Value?) {
         guard value != oldValue else { return }
         storage.set(value, for: key)
     }
@@ -289,5 +312,11 @@ extension Setting {
         pageTranslationSourceAddress = storage.value(
             .pageTranslationSourceAddress, fallback: defaults.pageTranslationSourceAddress
         )
+        pageTranslationPendingDetector = storage.optionalValue(.pageTranslationPendingDetector, as: TextDetectorChoice.self)
+        pageTranslationPendingReader = storage.optionalValue(.pageTranslationPendingReader, as: TextReaderChoice.self)
+        pageTranslationPendingTranslator = storage.optionalValue(
+            .pageTranslationPendingTranslator, as: TranslatorChoice.self
+        )
+        pageTranslationPendingRepaint = storage.optionalValue(.pageTranslationPendingRepaint, as: RepaintChoice.self)
     }
 }

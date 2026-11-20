@@ -2917,14 +2917,28 @@ internal enum L10n {
           internal static let footer = L10n.tr("Localizable", "settings.translation.source.footer", fallback: "Optional. For models this project may not pass on, and for your own copies. Everything else comes from public sources.")
           /// Access token
           internal static let token = L10n.tr("Localizable", "settings.translation.source.token", fallback: "Access token")
+          internal enum Address {
+            /// Not valid
+            internal static let invalid = L10n.tr("Localizable", "settings.translation.source.address.invalid", fallback: "Not valid")
+          }
+          internal enum Token {
+            /// Saved
+            internal static let kept = L10n.tr("Localizable", "settings.translation.source.token.kept", fallback: "Saved")
+          }
         }
         internal enum Status {
           /// Downloading · %1$@ of %2$@
           internal static func downloading(_ p1: Any, _ p2: Any) -> String {
             return L10n.tr("Localizable", "settings.translation.status.downloading", String(describing: p1), String(describing: p2), fallback: "Downloading · %1$@ of %2$@")
           }
+          /// Enter a private model source below first
+          internal static let noSource = L10n.tr("Localizable", "settings.translation.status.no_source", fallback: "Enter a private model source below first")
           /// Not downloaded
           internal static let `none` = L10n.tr("Localizable", "settings.translation.status.none", fallback: "Not downloaded")
+          /// Paused · %1$@ of %2$@
+          internal static func paused(_ p1: Any, _ p2: Any) -> String {
+            return L10n.tr("Localizable", "settings.translation.status.paused", String(describing: p1), String(describing: p2), fallback: "Paused · %1$@ of %2$@")
+          }
           /// Preparing
           internal static let preparing = L10n.tr("Localizable", "settings.translation.status.preparing", fallback: "Preparing")
           /// Ready · works offline
@@ -2951,9 +2965,9 @@ internal enum L10n {
           internal static func heatCool(_ p1: Int) -> String {
             return L10n.tr("Localizable", "settings.translation.value.heat_cool", p1, fallback: "Stays cool for %d pages in a row")
           }
-          /// Hot from page %d in a row
+          /// Gets hot within %d pages in a row
           internal static func heatHot(_ p1: Int) -> String {
-            return L10n.tr("Localizable", "settings.translation.value.heat_hot", p1, fallback: "Hot from page %d in a row")
+            return L10n.tr("Localizable", "settings.translation.value.heat_hot", p1, fallback: "Gets hot within %d pages in a row")
           }
           /// %@ ms
           internal static func milliseconds(_ p1: Any) -> String {

@@ -103,13 +103,13 @@ private struct PageTranslationTopCard: View {
                 .accessibilityElement(children: .ignore)
                 .accessibilityLabel(Text(headline))
                 .accessibilityAddTraits(.isHeader)
-                Text(state.statusText)
+                Text(state.settingsStatusText)
                     .font(.subheadline)
                     .foregroundStyle(look.secondaryLabel)
                 if let progress = state.progress {
                     ProgressView(value: progress.fraction)
                 }
-                if let detail = state.detail(isConnected: model.isConnected) {
+                if let detail = state.settingsDetail(isConnected: model.isConnected) {
                     Text(detail)
                         .font(.footnote)
                         .foregroundStyle(look.secondaryLabel)
@@ -228,7 +228,6 @@ private struct PageTranslationSourceSection: View {
     @Environment(\.look) private var look
 
     private typealias Source = L10n.Localizable.Settings.Translation.Source
-    private typealias Missing = L10n.Localizable.Struct.CookieValue.LocalizedString
 
     var body: some View {
         Section {
@@ -270,7 +269,7 @@ private struct PageTranslationSourceSection: View {
             }
             if model.addressState == .invalid {
                 // Inline, not a `Label`: a list puts a label's symbol in its icon column.
-                Text("\(Image(systemName: "exclamationmark.triangle.fill")) \(Missing.mystery)")
+                Text("\(Image(systemName: "exclamationmark.triangle.fill")) \(Source.Address.invalid)")
                     .font(.footnote)
                     .foregroundStyle(.red)
             }
@@ -281,8 +280,10 @@ private struct PageTranslationSourceSection: View {
         LabeledContent {
             SecureField(
                 Source.token, text: $token,
-                prompt: model.hasToken ? Text(verbatim: "••••••••") : Text(Missing.none)
+                prompt: model.hasToken ? Text(verbatim: "••••••••") : Text(L10n.Localizable.Struct.CookieValue.LocalizedString.none)
             )
+            // VoiceOver would read the bullets of the prompt one by one.
+            .accessibilityValue(model.hasToken && token.isEmpty ? Text(Source.Token.kept) : Text(verbatim: ""))
             .textInputAutocapitalization(.never)
             .autocorrectionDisabled()
             .multilineTextAlignment(.trailing)
