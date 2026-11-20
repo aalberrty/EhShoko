@@ -25,13 +25,13 @@ struct SettingsScreen: View {
     }
 }
 
-/// General, Reading, Laboratory and About. Translation's row goes between Reading and
-/// Laboratory once reader translation exists.
+/// General, Reading, Translation, Laboratory and About.
 private struct SettingsScreensSection: View {
     var body: some View {
         Section {
             row(.general, symbol: "gearshape", description: L10n.Localizable.Settings.Row.General.desc)
             row(.reading, symbol: "book", description: L10n.Localizable.Settings.Row.Reading.desc)
+            row(.pageTranslation, symbol: "translate", description: L10n.Localizable.Settings.Translation.desc)
             row(.laboratory, symbol: "flask", description: L10n.Localizable.Settings.Row.Laboratory.desc)
             row(.about, symbol: "info.circle", description: Self.version)
         }
@@ -59,6 +59,7 @@ private extension SettingsRoute {
         return switch self {
         case .general: Value.general
         case .reading: Value.reading
+        case .pageTranslation: L10n.Localizable.Settings.translation
         case .laboratory: Value.laboratory
         case .about: Value.about
         default: ""
