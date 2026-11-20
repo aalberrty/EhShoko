@@ -17,6 +17,12 @@ nonisolated public enum SettingsRoute: Hashable, Sendable {
     /// the offer after install opens it with the preset it had selected.
     case designSetup(start: DesignStyle? = nil)
     case reading
+    /// Translation: the page translation models and their download, storage, the private
+    /// model source.
+    case pageTranslation
+    /// A screen pushed from Translation (a selection screen, Models and licences), with the
+    /// Translation screen's model.
+    case pageTranslationChild(PageTranslationChildRoute)
     case laboratory
     case logs
     /// One log file in the log viewer.
