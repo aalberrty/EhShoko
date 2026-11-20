@@ -66,7 +66,14 @@ enum ResearchReferences {
     /// The reference detections of `page` as blocks: text boxes after the removal of
     /// duplicates, each with the balloon whose mask holds its centre. With `withMasks` false
     /// a balloon carries its box alone, as a page drawn again from its stored text does.
-    static func blocks(of page: String, bitmap: PageBitmap, in folder: PrivateFolder, withMasks: Bool) throws -> [TextBlock] {
+    ///
+    /// The detector calls about a fifth of the dialogue it finds a sound effect. With
+    /// `includingSoundEffects` those boxes are blocks too, of the kind `.soundEffect`: the
+    /// research counted them when it measured how much ink the detector's masks cover.
+    static func blocks(
+        of page: String, bitmap: PageBitmap, in folder: PrivateFolder, withMasks: Bool,
+        includingSoundEffects: Bool = false
+    ) throws -> [TextBlock] {
         let all = try JSONDecoder().decode(Detections.self, from: Data(contentsOf: folder.url(detections)))
         let rows = all.pages[page] ?? []
         let width = Double(bitmap.width), height = Double(bitmap.height)
@@ -95,15 +102,64 @@ enum ResearchReferences {
             }
             if !duplicate { kept.append(row) }
         }
-        return kept.filter { Int($0[5]) == 0 }.map { row in
+        return kept.filter { includingSoundEffects || Int($0[5]) == 0 }.map { row in
             let rect = box(row)
             let centre = (Int(rect.midX), Int(rect.midY))
             let balloon = balloons.first { $0.mask?.contains(centre.0, centre.1) ?? false }
+            let kind: RegionKind = Int(row[5]) == 1 ? .soundEffect : (balloon == nil ? .aside : .dialogue)
             return TextBlock(
-                box: rect, kind: balloon == nil ? .aside : .dialogue, isVertical: rect.height > rect.width,
-                score: Float(row[4]), balloon: balloon.map { withMasks ? $0 : Balloon(box: $0.box) }
+                box: rect, kind: kind, isVertical: rect.height > rect.width, score: Float(row[4]),
+                balloon: balloon.map { withMasks ? $0 : Balloon(box: $0.box) }
             )
         }
+    }
+
+    /// Gives each block the Japanese of the truth item it lies on, standing in for the reader,
+    /// and with `translations` (Japanese without spaces to Chinese) its Chinese. Where the
+    /// detector cut one item into several boxes, the item's text is shared out among them by
+    /// their size, in reading order.
+    ///
+    /// - Returns: how many blocks got `filler` cut to length instead of a translation,
+    ///   because the research translated no such line.
+    @discardableResult
+    static func assignText(
+        to blocks: inout [TextBlock], truth: Truth, translations: [String: String] = [:], filler: [Character] = []
+    ) -> Int {
+        let items = truth.items.filter { $0.type == "bubble" || $0.type == "free" }
+        var members = [[Int]](repeating: [], count: items.count)
+        for (index, block) in blocks.enumerated() {
+            let box = PixelRect(covering: block.box)
+            guard let best = items.indices.max(by: { items[$0].rect.intersection(box).area < items[$1].rect.intersection(box).area }),
+                  items[best].rect.intersection(box).area > 0
+            else { continue }
+            members[best].append(index)
+        }
+        var standIns = 0
+        for (item, indices) in zip(items, members) where !indices.isEmpty {
+            let source = Array(item.text ?? "")
+            let known = translations[normalised(item.text ?? "")].map(Array.init)
+            // Columns are read from the right.
+            let ordered = indices.sorted { blocks[$0].box.midX > blocks[$1].box.midX }
+            let total = ordered.reduce(0.0) { $0 + Double(blocks[$1].box.width * blocks[$1].box.height) }
+            var seen = 0.0
+            for index in ordered {
+                let from = seen / max(1, total)
+                seen += Double(blocks[index].box.width * blocks[index].box.height)
+                let to = seen / max(1, total)
+                func part(_ text: [Character]) -> String {
+                    String(text[Int((Double(text.count) * from).rounded())..<Int((Double(text.count) * to).rounded())])
+                }
+                blocks[index].source = part(source)
+                if let known, !known.isEmpty {
+                    blocks[index].translation = part(known)
+                } else if !filler.isEmpty {
+                    let length = max(2, min(filler.count, part(source).count * 4 / 5))
+                    blocks[index].translation = String(filler.prefix(length))
+                    standIns += 1
+                }
+            }
+        }
+        return standIns
     }
 
     /// The default translator's Chinese for each line of `page` the research translated, by

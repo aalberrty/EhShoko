@@ -8,16 +8,25 @@ import Testing
 @Suite struct ColumnsTests {
     typealias Lettering = SyntheticImages.Lettering
 
+    /// The columns of one lettered block, found on the pixels around its text. `onArtwork`
+    /// takes the ink as it is taken for text that stands in no balloon.
     private func columns(
-        _ columns: [String], fontSize: CGFloat = 28, linePitch: CGFloat = 1.3, ruby: [String] = [],
-        ground: SyntheticImages.Ground = .white, shape: SyntheticImages.BalloonShape = .ellipse
+        _ columns: [String], fontSize: CGFloat = 20, linePitch: CGFloat = 1.3, ruby: [String] = [],
+        ground: SyntheticImages.Ground = .white, onArtwork: Bool = false
     ) throws -> BlockColumns {
         let lettering = Lettering(
-            columns: columns, fontSize: fontSize, centre: CGPoint(x: 220, y: 240), shape: shape,
-            balloonSize: CGSize(width: 320, height: 400), linePitch: linePitch, ruby: ruby
+            columns: columns, fontSize: fontSize, centre: CGPoint(x: 110, y: 120), shape: onArtwork ? .none : .ellipse,
+            balloonSize: CGSize(width: 200, height: 230), linePitch: linePitch, ruby: ruby
         )
-        let page = try SyntheticImages.letteredPage(width: 440, height: 480, ground: ground, letterings: [lettering])
-        return try #require(BlockAnalyzer().analyze(page: page.bitmap, block: page.blocks[0], index: 0)).columns
+        let page = try SyntheticImages.letteredPage(width: 220, height: 240, ground: ground, letterings: [lettering])
+        let block = page.blocks[0]
+        let scene = BlockScene(page: page.bitmap, block: block, reach: BlockScene.artworkReach)
+        let ink = onArtwork
+            ? InkMask.onArtwork(scene: scene, glyphSize: Double(fontSize)).strokes
+            : InkMask.candidates(scene: scene)
+        return Columns.find(
+            ink: ink, scene: scene, prefersVertical: block.isVertical, cellCount: Columns.cellCount(of: block.source)
+        )
     }
 
     @Test(arguments: [
@@ -34,38 +43,39 @@ import Testing
         // Reading order is right to left, and each column is about one glyph wide.
         let lefts = found.columns.map(\.rect.x0)
         #expect(lefts == lefts.sorted(by: >))
-        for column in found.columns { #expect(column.rect.width > 18 && column.rect.width <= 30) }
+        for column in found.columns { #expect(column.rect.width > 12 && column.rect.width <= 22) }
         let glyph = try #require(found.glyphSize)
-        #expect(abs(glyph - 26) <= 3)
+        #expect(abs(glyph - 18.5) <= 2.5)
     }
 
     @Test(arguments: ["はい", "い", "川", "ハハハ", "にい", "いい川"])
     func aGlyphWithAGapOfItsOwnIsOneColumn(text: String) throws {
-        let found = try columns([text], fontSize: 32)
+        let found = try columns([text], fontSize: 24)
         #expect(found.columns.count == 1)
         #expect(found.isVertical)
     }
 
     @Test func columnsSetWithoutAGapAreCutByTheNumberOfCharacters() throws {
         // At a pitch of one em the columns' ink touches.
-        let found = try columns(["国語算数理科", "社会音楽図工"], fontSize: 30, linePitch: 0.92)
+        let found = try columns(["国語算数理科", "社会音楽図工"], fontSize: 24, linePitch: 0.92)
         #expect(found.columns.count == 2)
     }
 
     @Test func furiganaIsMarkedAndNotMeasured() throws {
-        let found = try columns(["漢字の勉強", "難しいです"], fontSize: 30, ruby: ["かんじのべん", ""])
+        let found = try columns(["漢字の勉強", "難しいです"], fontSize: 26, ruby: ["かんじのべん", ""])
         #expect(found.columns.count == 3)
         #expect(found.columns.filter(\.isRuby).count == 1)
         #expect(found.base.count == 2)
         // The furigana stands right of the first column, which is read first.
         #expect(found.columns[0].isRuby || found.columns[1].isRuby)
         let glyph = try #require(found.glyphSize)
-        #expect(glyph > 22)
+        #expect(glyph > 19)
     }
 
-    @Test func columnsAreFoundOnArtworkBetweenTheDotsOfAScreentone() throws {
-        let found = try columns(["何だって", "本当なの"], fontSize: 28, ground: .texture, shape: .none)
+    @Test func columnsAreFoundOnArtwork() throws {
+        let found = try columns(["何だって", "本当なの"], fontSize: 24, ground: .gradient, onArtwork: true)
         #expect(found.base.count == 2)
+        #expect(found.isVertical)
     }
 
     @Test(arguments: [

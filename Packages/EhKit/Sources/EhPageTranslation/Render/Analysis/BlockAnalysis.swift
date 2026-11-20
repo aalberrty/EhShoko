@@ -30,7 +30,13 @@ struct BlockAnalyzer: Sendable {
 
     /// `nil` for a block with no box on the page or no ink in it.
     func analyze(page: PageBitmap, block: TextBlock, index: Int) -> BlockAnalysis? {
-        let scene = BlockScene(page: page, block: block)
+        // A block without a balloon gets a close look first. Only on a light ground can it
+        // stand in a balloon the detector missed, and only then is the wide window that
+        // would hold one worth making.
+        var scene = BlockScene(page: page, block: block, reach: block.balloon == nil ? BlockScene.artworkReach : nil)
+        if block.balloon == nil, scene.background.luma >= balloons.minimumBackgroundLuma {
+            scene = BlockScene(page: page, block: block)
+        }
         guard scene.textRect.width >= 2, scene.textRect.height >= 2 else { return nil }
         let cells = Columns.cellCount(of: block.source)
         let candidates = InkMask.candidates(scene: scene)
@@ -43,7 +49,14 @@ struct BlockAnalyzer: Sendable {
             ink = InkMask.insideBalloon(candidates, scene: scene, interior: balloon.filled)
             strokes = ink
         } else {
-            (strokes, ink) = InkMask.onArtwork(candidates, scene: scene, glyphSize: roughGlyph)
+            // On artwork the first guess at the glyphs' size is not to be trusted: the shape
+            // of the box and the number of characters give a sturdier one.
+            let box = scene.textRect
+            let fromText = Columns.expectedGlyphSize(
+                extent: block.isVertical ? box.width : box.height, length: block.isVertical ? box.height : box.width,
+                cellCount: cells
+            )
+            (strokes, ink) = InkMask.onArtwork(scene: scene, glyphSize: fromText ?? roughGlyph)
         }
         let columns = strokes == candidates
             ? rough
@@ -55,6 +68,7 @@ struct BlockAnalyzer: Sendable {
         let near = BlockScene(cropping: scene, to: InkMask.nearRect(scene, reach: reach))
         let nearStrokes = scene.window.crop(strokes, to: near.window.rect)
         var style = StyleEstimator.estimate(scene: near, ink: nearStrokes, columns: columns, cellCount: cells)
+        if balloon == nil { style = sanityChecked(style, block: block, textRect: scene.textRect, cellCount: cells) }
 
         var kind = block.kind
         let erase: RegionMask?
@@ -79,6 +93,26 @@ struct BlockAnalyzer: Sendable {
             index: index, textRect: scene.textRect, kind: kind, background: scene.background,
             interior: interior, erase: erase, columns: columns, style: style
         )
+    }
+
+    /// On artwork the measures can go far wrong: the ink may be part of the drawing. Where
+    /// the measured size is nowhere near what the box and the number of characters allow,
+    /// the size the text itself gives stands in, with the usual pitches.
+    private func sanityChecked(_ style: TextStyle, block: TextBlock, textRect: PixelRect, cellCount: Int) -> TextStyle {
+        var style = style
+        style.weight = min(0.25, max(0.02, style.weight))
+        let isVertical = style.isVertical
+        guard let glyph = Columns.expectedGlyphSize(
+            extent: isVertical ? textRect.width : textRect.height, length: isVertical ? textRect.height : textRect.width,
+            cellCount: cellCount
+        ) else { return style }
+        let expected = glyph / StyleEstimator.inkShare
+        guard style.fontSize < 0.55 * expected || style.fontSize > 1.8 * expected else { return style }
+        style.fontSize = expected
+        style.characterPitch = expected
+        style.linePitch = expected * 1.35
+        style.strokeWidth = expected * style.weight
+        return style
     }
 
     /// The erase mask and the interior of a block in a balloon.

@@ -8,26 +8,32 @@ import Testing
 @Suite struct StyleTests {
     typealias Lettering = SyntheticImages.Lettering
 
+    /// The style of one lettered block, measured on the pixels around its text.
     private func style(_ lettering: Lettering, ground: SyntheticImages.Ground = .white) throws -> TextStyle {
-        let page = try SyntheticImages.letteredPage(width: 440, height: 480, ground: ground, letterings: [lettering])
-        return try #require(BlockAnalyzer().analyze(page: page.bitmap, block: page.blocks[0], index: 0)).style
+        let page = try SyntheticImages.letteredPage(width: 260, height: 320, ground: ground, letterings: [lettering])
+        let block = page.blocks[0]
+        let scene = BlockScene(page: page.bitmap, block: block, reach: BlockScene.artworkReach)
+        let ink = InkMask.candidates(scene: scene)
+        let cells = Columns.cellCount(of: block.source)
+        let columns = Columns.find(ink: ink, scene: scene, prefersVertical: block.isVertical, cellCount: cells)
+        return StyleEstimator.estimate(scene: scene, ink: ink, columns: columns, cellCount: cells)
     }
 
     private func lettering(_ columns: [String], size: CGFloat, font: String = "HiraginoSans-W4") -> Lettering {
         Lettering(
-            columns: columns, fontSize: size, centre: CGPoint(x: 220, y: 240),
-            balloonSize: CGSize(width: 300, height: 420), fontName: font
+            columns: columns, fontSize: size, centre: CGPoint(x: 130, y: 160),
+            balloonSize: CGSize(width: 230, height: 300), fontName: font
         )
     }
 
     @Test(arguments: [
-        (["今日は良い天気", "ですね散歩に", "行きましょう"], 20.0),
-        (["今日は良い天気", "ですね散歩に", "行きましょう"], 28.0),
-        (["今日は良い天気", "ですね散歩に", "行きましょう"], 40.0),
-        (["明日の朝早く駅前で"], 30.0),
-        (["はい"], 32.0),
-        (["え？"], 44.0),
-        (["漢字"], 36.0)
+        (["今日は良い天気", "ですね散歩に", "行きましょう"], 16.0),
+        (["今日は良い天気", "ですね散歩に", "行きましょう"], 22.0),
+        (["今日は良い天気", "ですね散歩に", "行きましょう"], 30.0),
+        (["明日の朝早く駅前で"], 24.0),
+        (["はい"], 26.0),
+        (["え？"], 34.0),
+        (["漢字"], 28.0)
     ])
     func theSizeIsMeasuredWithinFifteenPercent(columns: [String], size: Double) throws {
         let style = try style(lettering(columns, size: CGFloat(size)))
@@ -37,23 +43,23 @@ import Testing
 
     @Test(arguments: [SyntheticImages.Ground.gradient, .texture])
     func theSizeIsMeasuredInABalloonOnEveryGround(ground: SyntheticImages.Ground) throws {
-        let style = try style(lettering(["今日は良い天気", "ですね散歩に"], size: 30), ground: ground)
-        #expect(abs(style.fontSize / 30 - 1) < 0.15)
+        let style = try style(lettering(["今日は良い天気", "ですね散歩に"], size: 24), ground: ground)
+        #expect(abs(style.fontSize / 24 - 1) < 0.15)
     }
 
     @Test func thePitchOfCharactersAndOfColumns() throws {
-        var lettering = lettering(["今日は良い天気", "ですね散歩に", "行きましょう"], size: 30)
+        var lettering = lettering(["今日は良い天気", "ですね散歩に", "行きましょう"], size: 24)
         lettering.linePitch = 1.5
         let style = try style(lettering)
-        #expect(abs(style.characterPitch / 30 - 1) < 0.08)
-        #expect(abs(style.linePitch / 45 - 1) < 0.08)
+        #expect(abs(style.characterPitch / 24 - 1) < 0.08)
+        #expect(abs(style.linePitch / 36 - 1) < 0.08)
         // One column has no pitch to measure: the usual one stands in.
-        let single = try self.style(self.lettering(["今日は良い天気"], size: 30))
+        let single = try self.style(self.lettering(["今日は良い天気"], size: 24))
         #expect(abs(single.linePitch / (single.fontSize * 1.35) - 1) < 0.001)
     }
 
     @Test func theInkColourIsTheGlyphsOwn() throws {
-        var lettering = lettering(["今日は良い天気", "ですね散歩に"], size: 30)
+        var lettering = lettering(["今日は良い天気", "ですね散歩に"], size: 24)
         lettering.inkGray = 0.3
         let style = try style(lettering)
         #expect(abs(style.ink.luma - 77) <= 6)
@@ -61,24 +67,24 @@ import Testing
     }
 
     @Test func heavyLetteringIsAShout() throws {
-        let light = try style(lettering(["今日は良い天気", "ですね散歩に"], size: 34, font: "HiraginoSans-W3"))
-        let heavy = try style(lettering(["今日は良い天気", "ですね散歩に"], size: 34, font: "HiraginoSans-W8"))
+        let light = try style(lettering(["今日は良い天気", "ですね散歩に"], size: 28, font: "HiraginoSans-W3"))
+        let heavy = try style(lettering(["今日は良い天気", "ですね散歩に"], size: 28, font: "HiraginoSans-W8"))
         #expect(light.face == .dialogue && light.weight < TextStyle.boldWeight)
         #expect(heavy.face == .bold && heavy.weight >= TextStyle.boldWeight)
         #expect(heavy.strokeWidth > light.strokeWidth * 1.8)
     }
 
     @Test func columnsThatStartTogetherAreStartAligned() throws {
-        let start = try style(lettering(["今日は良い天気です", "散歩に行き", "ましょうね"], size: 26))
+        let start = try style(lettering(["今日は良い天気です", "散歩に行き", "ましょうね"], size: 20))
         #expect(start.alignment == .start)
-        let single = try style(lettering(["今日は良い天気"], size: 26))
+        let single = try style(lettering(["今日は良い天気"], size: 20))
         #expect(single.alignment == .center)
     }
 
     @Test func aBandAroundTheGlyphsIsAnOutline() throws {
         // Dark glyphs with a white band, on mid grey: the band is the outline.
-        let width = 240, height = 300
-        let lettering = Lettering(columns: ["今日は良い", "天気ですね"], fontSize: 36, centre: CGPoint(x: 120, y: 150), shape: .none)
+        let width = 200, height = 240
+        let lettering = Lettering(columns: ["今日は良い", "天気ですね"], fontSize: 30, centre: CGPoint(x: 100, y: 120), shape: .none)
         let plain = try SyntheticImages.letteredPage(width: width, height: height, letterings: [lettering])
         let glyphs = plain.glyphs[0]
         let band = Morphology.dilate(glyphs.plane(in: PixelWindow(page: plain.bitmap, rect: PixelRect(x: 0, y: 0, width: width, height: height))),

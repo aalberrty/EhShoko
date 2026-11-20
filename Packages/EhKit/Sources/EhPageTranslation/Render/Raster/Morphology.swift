@@ -3,25 +3,50 @@
 enum Morphology {
     /// The squared distance from every pixel to the nearest pixel that is set (or, with
     /// `toSet` false, the nearest that is not), in linear time (Felzenszwalb and Huttenlocher).
+    ///
+    /// The plane is binary, so the first of the two passes, down the columns, is two sweeps
+    /// that count the rows since the last feature; only the pass along the rows needs the
+    /// lower envelope of parabolas.
     static func squaredDistance(_ plane: [UInt8], width: Int, height: Int, toSet: Bool = true) -> [Float] {
         let infinity: Float = 1e20
         var distance = [Float](repeating: infinity, count: width * height)
         guard width > 0, height > 0 else { return distance }
-        let longest = max(width, height)
-        var values = [Float](repeating: 0, count: longest), result = [Float](repeating: 0, count: longest)
-        var parabolas = [Int](repeating: 0, count: longest), bounds = [Float](repeating: 0, count: longest + 1)
+        let far = Int32(1 << 20)
+        var rowsSince = [Int32](repeating: far, count: width)
+        var values = [Float](repeating: 0, count: width), result = [Float](repeating: 0, count: width)
+        var parabolas = [Int](repeating: 0, count: width), bounds = [Float](repeating: 0, count: width + 1)
         plane.withUnsafeBufferPointer { bits in
             distance.withUnsafeMutableBufferPointer { grid in
+                rowsSince.withUnsafeMutableBufferPointer { since in
+                    for y in 0..<height {
+                        let row = y * width
+                        for x in 0..<width {
+                            if (bits[row + x] != 0) == toSet {
+                                since[x] = 0
+                            } else if since[x] < far {
+                                since[x] += 1
+                            }
+                            if since[x] < far { grid[row + x] = Float(since[x] * since[x]) }
+                        }
+                    }
+                    for x in 0..<width { since[x] = far }
+                    for y in stride(from: height - 1, through: 0, by: -1) {
+                        let row = y * width
+                        for x in 0..<width {
+                            if (bits[row + x] != 0) == toSet {
+                                since[x] = 0
+                            } else if since[x] < far {
+                                since[x] += 1
+                                let below = Float(since[x] * since[x])
+                                if below < grid[row + x] { grid[row + x] = below }
+                            }
+                        }
+                    }
+                }
                 values.withUnsafeMutableBufferPointer { f in
                     result.withUnsafeMutableBufferPointer { d in
                         parabolas.withUnsafeMutableBufferPointer { v in
                             bounds.withUnsafeMutableBufferPointer { z in
-                                for index in 0..<(width * height) where (bits[index] != 0) == toSet { grid[index] = 0 }
-                                for x in 0..<width {
-                                    for y in 0..<height { f[y] = grid[y * width + x] }
-                                    lowerEnvelope(f, d, v, z, count: height, infinity: infinity)
-                                    for y in 0..<height { grid[y * width + x] = d[y] }
-                                }
                                 for y in 0..<height {
                                     let row = y * width
                                     for x in 0..<width { f[x] = grid[row + x] }

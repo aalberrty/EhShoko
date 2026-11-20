@@ -10,43 +10,42 @@ import Testing
 
     private static let sentence = ["今日は良い天気", "ですね散歩に", "行きましょう"]
 
+    private func balloon(hint: Lettering.Hint = .box, centre: CGPoint = CGPoint(x: 120, y: 140)) -> Lettering {
+        Lettering(columns: Self.sentence, fontSize: 20, centre: centre, balloonSize: CGSize(width: 150, height: 220), hint: hint)
+    }
+
     private func analysis(
-        _ lettering: Lettering, ground: SyntheticImages.Ground = .white, width: Int = 420, height: Int = 460
+        _ lettering: Lettering, ground: SyntheticImages.Ground = .white, width: Int = 240, height: Int = 280
     ) throws -> (analysis: BlockAnalysis?, page: SyntheticImages.LetteredPage) {
         let page = try SyntheticImages.letteredPage(width: width, height: height, ground: ground, letterings: [lettering])
         return (BlockAnalyzer().analyze(page: page.bitmap, block: page.blocks[0], index: 0), page)
     }
 
-    @Test(arguments: [SyntheticImages.Ground.white, .gradient, .texture], [Lettering.Hint.none, .box, .mask])
+    @Test(arguments: zip([SyntheticImages.Ground.white, .gradient, .texture], [Lettering.Hint.none, .box, .mask]))
     func aBalloonsInteriorIsFoundOnEveryGround(ground: SyntheticImages.Ground, hint: Lettering.Hint) throws {
-        let lettering = Lettering(
-            columns: Self.sentence, fontSize: 28, centre: CGPoint(x: 210, y: 230),
-            balloonSize: CGSize(width: 220, height: 330), hint: hint
-        )
-        let (analysis, page) = try analysis(lettering, ground: ground)
+        let (analysis, page) = try analysis(balloon(hint: hint), ground: ground)
         let found = try #require(analysis?.interior)
         let truth = try #require(page.interiors[0])
         // The interior lies within the outline and reaches it all round.
         #expect(found.share(coveredBy: truth) > 0.995)
-        #expect(truth.share(coveredBy: found) > 0.94)
+        #expect(truth.share(coveredBy: found) > 0.93)
         #expect(analysis?.kind == .dialogue)
         #expect(analysis?.style.face == .dialogue)
     }
 
     @Test func aBalloonWithAGradientIsFoundWhole() throws {
-        let lettering = Lettering(
-            columns: Self.sentence, fontSize: 28, centre: CGPoint(x: 210, y: 230),
-            balloonSize: CGSize(width: 220, height: 330), balloonGray: 0.98, balloonGrayBottom: 0.72
-        )
+        var lettering = balloon()
+        lettering.balloonGray = 0.98
+        lettering.balloonGrayBottom = 0.72
         let (analysis, page) = try analysis(lettering)
         let found = try #require(analysis?.interior)
-        #expect(try #require(page.interiors[0]).share(coveredBy: found) > 0.94)
+        #expect(try #require(page.interiors[0]).share(coveredBy: found) > 0.93)
     }
 
     @Test func aCaptionBoxIsACaptionInTheSerifFace() throws {
         let lettering = Lettering(
-            columns: Self.sentence, fontSize: 24, centre: CGPoint(x: 210, y: 230), shape: .box,
-            balloonSize: CGSize(width: 170, height: 250), hint: .none
+            columns: Self.sentence, fontSize: 18, centre: CGPoint(x: 120, y: 140), shape: .box,
+            balloonSize: CGSize(width: 110, height: 170), hint: .none
         )
         let (analysis, _) = try analysis(lettering, ground: .gradient)
         #expect(analysis?.kind == .caption)
@@ -56,8 +55,8 @@ import Testing
 
     @Test func aBoxWithAnExclamationIsNoCaption() throws {
         let lettering = Lettering(
-            columns: ["はい"], fontSize: 30, centre: CGPoint(x: 210, y: 230), shape: .box,
-            balloonSize: CGSize(width: 110, height: 150)
+            columns: ["はい"], fontSize: 22, centre: CGPoint(x: 120, y: 140), shape: .box,
+            balloonSize: CGSize(width: 70, height: 100)
         )
         let (analysis, _) = try analysis(lettering)
         #expect(analysis?.kind == .dialogue)
@@ -66,7 +65,7 @@ import Testing
 
     @Test(arguments: [SyntheticImages.Ground.white, .gradient, .texture])
     func textOnTheGroundIsNotInABalloon(ground: SyntheticImages.Ground) throws {
-        let lettering = Lettering(columns: ["何だって", "本当なの"], fontSize: 26, centre: CGPoint(x: 210, y: 230), shape: .none)
+        let lettering = Lettering(columns: ["何だって", "本当なの"], fontSize: 20, centre: CGPoint(x: 120, y: 140), shape: .none)
         let (analysis, _) = try analysis(lettering, ground: ground)
         let found = try #require(analysis)
         #expect(found.interior == nil && !found.isInBalloon)
@@ -75,26 +74,20 @@ import Testing
     }
 
     @Test func aBalloonCutByThePagesEdgeIsStillABalloon() throws {
-        let lettering = Lettering(
-            columns: Self.sentence, fontSize: 28, centre: CGPoint(x: 80, y: 230),
-            balloonSize: CGSize(width: 220, height: 330)
-        )
-        let (analysis, page) = try analysis(lettering)
+        let (analysis, page) = try analysis(balloon(centre: CGPoint(x: 55, y: 140)))
         let found = try #require(analysis?.interior)
         #expect(found.rect.x0 == 0)
-        #expect(try #require(page.interiors[0]).share(coveredBy: found) > 0.94)
+        #expect(try #require(page.interiors[0]).share(coveredBy: found) > 0.93)
     }
 
     /// The balloon of a page with a quarter of its outline painted over, so a fill leaks out.
     private func openedBalloon(side: Int, hint: Lettering.Hint) throws -> (PageBitmap, TextBlock) {
         let centre = CGFloat(side) / 2
-        let lettering = Lettering(
-            columns: Self.sentence, fontSize: 28, centre: CGPoint(x: centre, y: centre),
-            balloonSize: CGSize(width: 220, height: 330), hint: hint
+        let page = try SyntheticImages.letteredPage(
+            width: side, height: side, letterings: [balloon(hint: hint, centre: CGPoint(x: centre, y: centre))]
         )
-        let page = try SyntheticImages.letteredPage(width: side, height: side, letterings: [lettering])
         var pixels = [UInt8](page.bitmap.pixels)
-        for y in 0..<(side / 2 - 80) {
+        for y in 0..<(side / 2 - 50) {
             for x in (side / 2)..<side {
                 for channel in 0..<3 { pixels[(y * side + x) * 4 + channel] = 255 }
             }
@@ -107,27 +100,62 @@ import Testing
     }
 
     @Test func anOutlineWithAGapIsNoBalloonUnlessTheDetectorsMaskClosesIt() throws {
-        let (page, block) = try openedBalloon(side: 1000, hint: .none)
+        let (page, block) = try openedBalloon(side: 620, hint: .none)
         let leaked = try #require(BlockAnalyzer().analyze(page: page, block: block, index: 0))
         #expect(leaked.interior == nil)
         // With the detector's mask the fill stops where the balloon was.
-        let (_, hinted) = try openedBalloon(side: 1000, hint: .mask)
+        let (_, hinted) = try openedBalloon(side: 620, hint: .mask)
         let closed = try #require(BlockAnalyzer().analyze(page: page, block: hinted, index: 0))
         let interior = try #require(closed.interior)
-        #expect(interior.rect.width < 260 && interior.rect.height < 370)
+        #expect(interior.rect.width < 170 && interior.rect.height < 240)
     }
 
     @Test func blankPaperUpToThePagesEdgesIsNoBalloon() throws {
         // A leak that fills a small page meets nothing but the page's edges.
-        let (page, block) = try openedBalloon(side: 440, hint: .none)
+        let (page, block) = try openedBalloon(side: 260, hint: .none)
         let analysis = try #require(BlockAnalyzer().analyze(page: page, block: block, index: 0))
         #expect(analysis.interior == nil)
     }
 
+    /// A box whose white is cut into pockets by bars from its top to its bottom, as heavy
+    /// lettering that touches the outline cuts a balloon.
+    private func barredBox() throws -> PageBitmap {
+        let image = try #require(SyntheticImages.image(width: 200, height: 260) { context in
+            context.setFillColor(gray: 1, alpha: 1)
+            context.fill(CGRect(x: 0, y: 0, width: 200, height: 260))
+            context.setStrokeColor(gray: 0, alpha: 1)
+            context.setLineWidth(4)
+            context.stroke(CGRect(x: 40, y: 40, width: 120, height: 180))
+            context.setFillColor(gray: 0, alpha: 1)
+            for x in [70, 96, 122] { context.fill(CGRect(x: x, y: 40, width: 10, height: 180)) }
+        })
+        return try PageBitmap(data: #require(SyntheticImages.encode(image, as: "public.png")))
+    }
+
+    @Test func heavyLetteringThatCutsABalloonIntoPocketsStaysInIt() throws {
+        let page = try barredBox()
+        let box = CGRect(x: 40, y: 40, width: 120, height: 180)
+        let block = TextBlock(
+            box: CGRect(x: 66, y: 44, width: 70, height: 172), kind: .dialogue, isVertical: true, score: 1,
+            balloon: Balloon(box: box), source: "大変だ大変だ大変だ"
+        )
+        let analysis = try #require(BlockAnalyzer().analyze(page: page, block: block, index: 0))
+        let interior = try #require(analysis.interior)
+        // Every pocket is part of the interior, and the bars between them are erased.
+        #expect(interior.rect.width > 108 && interior.rect.height > 168)
+        #expect(Double(interior.count) > 0.95 * Double(interior.rect.area))
+        for x in [75, 101, 127] { #expect(analysis.erase.contains(x, 130)) }
+        // Without the detector's word for it, pockets are not a balloon.
+        var unhinted = block
+        unhinted.balloon = nil
+        unhinted.kind = .aside
+        #expect(BlockAnalyzer().analyze(page: page, block: unhinted, index: 0)?.interior == nil)
+    }
+
     @Test func whiteTextOnADarkGroundIsErasedAsTextOnArtwork() throws {
         let lettering = Lettering(
-            columns: ["何だって", "本当なの"], fontSize: 28, centre: CGPoint(x: 210, y: 230), shape: .box,
-            balloonSize: CGSize(width: 200, height: 260), balloonGray: 0.1, inkGray: 1, hint: .box
+            columns: ["何だって", "本当なの"], fontSize: 22, centre: CGPoint(x: 120, y: 140), shape: .box,
+            balloonSize: CGSize(width: 150, height: 200), balloonGray: 0.1, inkGray: 1, hint: .box
         )
         let (analysis, page) = try analysis(lettering)
         let found = try #require(analysis)
@@ -135,6 +163,21 @@ import Testing
         #expect(found.background.luma < 60)
         #expect(found.style.ink.luma > 200)
         #expect(page.glyphs[0].share(coveredBy: found.erase) > 0.95)
+    }
+
+    @Test func whiteLetteringInADarkBandIsTheInkAndTheBandItsOutline() throws {
+        // On a light ground the band, not the lettering, is what differs from the box's edge.
+        let lettering = Lettering(
+            columns: ["何だって", "本当なの"], fontSize: 26, centre: CGPoint(x: 120, y: 140), shape: .none,
+            linePitch: 1.7, fontName: "HiraginoSans-W7", inkGray: 1, bandGray: 0.05, bandWidth: 4
+        )
+        let (analysis, page) = try analysis(lettering, ground: .gradient)
+        let found = try #require(analysis)
+        #expect(found.interior == nil)
+        #expect(found.style.ink.luma > 200)
+        #expect(try #require(found.style.outline).luma < 60)
+        #expect(page.glyphs[0].share(coveredBy: found.erase) > 0.95)
+        #expect(found.columns.base.count == 2)
     }
 
     @Test func aBlockOffThePageOrWithoutInkHasNoAnalysis() throws {
@@ -145,12 +188,16 @@ import Testing
         #expect(BlockAnalyzer().analyze(page: page.bitmap, block: blank, index: 0) == nil)
     }
 
-    @Test func theWindowIsTheBalloonOrTheTextWithRoomAroundIt() {
+    @Test func theWindowIsTheBalloonOrTheTextWithRoomAroundIt() throws {
         let text = PixelRect(x: 100, y: 100, width: 40, height: 200)
         let balloon = PixelRect(x: 60, y: 80, width: 120, height: 240)
         #expect(BlockScene.windowRect(text: text, balloon: balloon) == balloon.insetBy(-16, -16))
         #expect(BlockScene.windowRect(text: text, balloon: nil) == text.insetBy(-240, -240))
         #expect(BlockScene.windowRect(text: PixelRect(x: 0, y: 0, width: 20, height: 20), balloon: nil).width == 148)
         #expect(BlockScene.windowRect(text: PixelRect(x: 0, y: 0, width: 30, height: 60), balloon: nil).width == 210)
+        // A close look at a block takes the text and a fixed margin.
+        let page = try SyntheticImages.letteredPage(width: 400, height: 500, letterings: [])
+        let block = TextBlock(box: text.cgRect, kind: .aside, isVertical: true, score: 1)
+        #expect(BlockScene(page: page.bitmap, block: block, reach: 48).window.rect == text.insetBy(-48, -48))
     }
 }

@@ -80,9 +80,12 @@ actor StubInpainter: Inpainter {
 }
 
 @Suite struct TiledRepaintTests {
+    /// A page of plain grey: the stub paints over whatever is there.
     private func page(width: Int, height: Int) throws -> PageBitmap {
-        let image = try #require(SyntheticImages.page(width: width, height: height))
-        return try PageBitmap(data: #require(SyntheticImages.encode(image, as: "public.png")))
+        try PageBitmap(
+            width: width, height: height, originalWidth: width, originalHeight: height,
+            pixels: Data(repeating: 150, count: width * height * 4), colorSpace: SyntheticImages.sRGB
+        )
     }
 
     /// A mask of `rect` with every other pixel set, so that pasting through it can be seen.

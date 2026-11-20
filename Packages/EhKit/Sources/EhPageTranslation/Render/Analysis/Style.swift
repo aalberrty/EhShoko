@@ -144,18 +144,22 @@ enum StyleEstimator {
     /// of the distance to the ink's edge.
     static func inkColorAndStrokes(scene: BlockScene, ink: [UInt8]) -> (PixelColor, [Double]) {
         let window = scene.window, width = window.width, height = window.height
-        var byDifference = [[Int32]](repeating: [], count: 256)
+        // The difference at which the most distinct third of the ink begins.
+        var histogram = [Int](repeating: 0, count: 256)
         var total = 0
         for index in 0..<ink.count where ink[index] != 0 {
-            byDifference[Int(scene.difference[index])].append(Int32(index))
+            histogram[Int(scene.difference[index])] += 1
             total += 1
         }
-        var colors = ColorHistogram()
         let wanted = max(1, total / 3)
-        for difference in stride(from: 255, through: 0, by: -1) where colors.count < wanted {
-            for index in byDifference[difference] where colors.count < wanted {
-                colors.add(window.color(Int(index)))
-            }
+        var cutoff = 255, seen = 0
+        while cutoff > 0, seen + histogram[cutoff] < wanted {
+            seen += histogram[cutoff]
+            cutoff -= 1
+        }
+        var colors = ColorHistogram()
+        for index in 0..<ink.count where ink[index] != 0 && Int(scene.difference[index]) >= cutoff {
+            colors.add(window.color(index))
         }
         return (colors.median ?? .black, strokeSamples(ink, width: width, height: height))
     }
@@ -186,13 +190,36 @@ enum StyleEstimator {
     private static func rings(scene: BlockScene, ink: [UInt8], reach: Int) -> [PixelColor?] {
         let window = scene.window
         let distance = Morphology.squaredDistance(ink, width: window.width, height: window.height)
-        var rings = [ColorHistogram](repeating: ColorHistogram(), count: reach + 1)
+        // One histogram of 256 bins for each ring and channel, in one array.
+        var bins = [Int32](repeating: 0, count: (reach + 1) * 3 * 256)
+        var counts = [Int](repeating: 0, count: reach + 1)
         let limit = Float(reach * reach)
-        for index in 0..<distance.count where distance[index] > 0 && distance[index] <= limit {
-            let ring = Int(Double(distance[index]).squareRoot().rounded(.up))
-            if ring <= reach { rings[ring].add(window.color(index)) }
+        distance.withUnsafeBufferPointer { distance in
+            window.rgba.withUnsafeBufferPointer { rgba in
+                bins.withUnsafeMutableBufferPointer { bins in
+                    for index in 0..<distance.count where distance[index] > 0 && distance[index] <= limit {
+                        let ring = Int(distance[index].squareRoot().rounded(.up))
+                        guard ring <= reach else { continue }
+                        let base = ring * 768
+                        bins[base + Int(rgba[index * 4])] += 1
+                        bins[base + 256 + Int(rgba[index * 4 + 1])] += 1
+                        bins[base + 512 + Int(rgba[index * 4 + 2])] += 1
+                        counts[ring] += 1
+                    }
+                }
+            }
         }
-        return rings.map(\.median)
+        func median(_ ring: Int, _ channel: Int) -> UInt8 {
+            var seen = 0
+            for value in 0..<256 {
+                seen += Int(bins[ring * 768 + channel * 256 + value])
+                if seen * 2 >= counts[ring] { return UInt8(value) }
+            }
+            return 255
+        }
+        return (0...reach).map { ring in
+            counts[ring] > 0 ? PixelColor(red: median(ring, 0), green: median(ring, 1), blue: median(ring, 2)) : nil
+        }
     }
 
     /// A band of one colour around the glyphs that differs from both the ink and what lies

@@ -8,46 +8,32 @@ import Testing
 @Suite struct EraserTests {
     typealias Lettering = SyntheticImages.Lettering
 
-    private static let letterings: [Lettering] = [
-        Lettering(columns: ["今日は良い天気", "ですね散歩に", "行きましょう"], fontSize: 28, centre: CGPoint(x: 170, y: 220),
-                  balloonSize: CGSize(width: 220, height: 330)),
-        Lettering(columns: ["漢字の勉強", "難しいです"], fontSize: 30, centre: CGPoint(x: 450, y: 220),
-                  balloonSize: CGSize(width: 200, height: 300), ruby: ["かんじのべん", ""], balloonGray: 0.96, balloonGrayBottom: 0.74,
-                  hint: .mask),
-        Lettering(columns: ["え？"], fontSize: 44, centre: CGPoint(x: 700, y: 180), balloonSize: CGSize(width: 140, height: 190),
-                  fontName: "HiraginoSans-W8", hint: .none),
-        Lettering(columns: ["昨日の夜から", "ずっと雨が", "降っている"], fontSize: 24, centre: CGPoint(x: 700, y: 480), shape: .box,
-                  balloonSize: CGSize(width: 160, height: 220))
-    ]
-
     @Test(arguments: [SyntheticImages.Ground.white, .gradient, .texture])
-    func theEraseMaskCoversTheGlyphs(ground: SyntheticImages.Ground) throws {
-        let page = try SyntheticImages.letteredPage(width: 840, height: 640, ground: ground, letterings: Self.letterings)
-        for (index, block) in page.blocks.enumerated() {
-            let analysis = try #require(BlockAnalyzer().analyze(page: page.bitmap, block: block, index: index))
-            #expect(page.glyphs[index].share(coveredBy: analysis.erase) >= 0.95, "block \(index) on \(ground)")
+    func theEraseMaskCoversTheGlyphsAndStaysInTheBalloon(ground: SyntheticImages.Ground) async throws {
+        let drawn = try await DrawnPages.shared.drawn(ground)
+        for analysis in drawn.analysis.blocks {
+            guard let interior = drawn.page.interiors[analysis.index] else { continue }
+            #expect(drawn.page.glyphs[analysis.index].share(coveredBy: analysis.erase) >= 0.95, "block \(analysis.index) on \(ground)")
             // The mask stays inside the balloon and off its outline.
-            let interior = try #require(page.interiors[index])
-            #expect(analysis.erase.share(coveredBy: interior) == 1, "block \(index) on \(ground)")
+            #expect(analysis.erase.share(coveredBy: interior) == 1, "block \(analysis.index) on \(ground)")
         }
     }
 
-    @Test func theEraseMaskCoversGlyphsOnArtwork() throws {
-        let lettering = Lettering(columns: ["何だって", "本当なの"], fontSize: 26, centre: CGPoint(x: 150, y: 150), shape: .none)
-        let page = try SyntheticImages.letteredPage(width: 300, height: 300, ground: .gradient, letterings: [lettering])
-        let analysis = try #require(BlockAnalyzer().analyze(page: page.bitmap, block: page.blocks[0], index: 0))
-        #expect(page.glyphs[0].share(coveredBy: analysis.erase) >= 0.95)
+    @Test func theEraseMaskCoversGlyphsOnArtwork() async throws {
+        let drawn = try await DrawnPages.shared.drawn(.gradient)
+        let analysis = try #require(drawn.analysis.blocks.last)
+        #expect(!analysis.isInBalloon)
+        #expect(drawn.page.glyphs[analysis.index].share(coveredBy: analysis.erase) >= 0.95)
         // The mask is the ink with a margin, not the whole box.
         #expect(Double(analysis.erase.count) < 0.9 * Double(analysis.erase.rect.area))
     }
 
     @Test(arguments: [SyntheticImages.Ground.white, .gradient, .texture])
-    func nothingDarkIsLeftInsideAnErasedBalloon(ground: SyntheticImages.Ground) throws {
-        let page = try SyntheticImages.letteredPage(width: 840, height: 640, ground: ground, letterings: Self.letterings)
-        for (index, block) in page.blocks.enumerated() {
-            let analysis = try #require(BlockAnalyzer().analyze(page: page.bitmap, block: block, index: index))
-            let interior = try #require(analysis.interior)
-            var canvas = PixelWindow(page: page.bitmap, rect: interior.rect.insetBy(-12, -12))
+    func nothingDarkIsLeftInsideAnErasedBalloon(ground: SyntheticImages.Ground) async throws {
+        let drawn = try await DrawnPages.shared.drawn(ground)
+        for analysis in drawn.analysis.blocks {
+            guard let interior = analysis.interior else { continue }
+            var canvas = PixelWindow(page: drawn.page.bitmap, rect: interior.rect.insetBy(-12, -12))
             Eraser.pushPull(&canvas, mask: analysis.erase, known: interior)
             var darkest = 255
             for y in interior.rect.y0..<interior.rect.y1 {
@@ -56,7 +42,7 @@ import Testing
                 }
             }
             // The darkest balloon here is filled with 74% grey.
-            #expect(darkest > 170, "block \(index) on \(ground): \(darkest)")
+            #expect(darkest > 170, "block \(analysis.index) on \(ground): \(darkest)")
         }
     }
 

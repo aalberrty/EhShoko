@@ -30,15 +30,24 @@ import Testing
 
     /// The share of the truth's ink that the erase masks cover, for balloon text and for
     /// notes, with the masks made from the page's pixels inside the detector's reference
-    /// boxes. The detector's own masks cover 78% of the balloon ink on the Neural Engine and
-    /// 91% where they are exact.
-    private func coverage(withMasks: Bool) throws -> [String: Coverage] {
+    /// boxes. Each block has the text of the truth item it lies on, as it would have the
+    /// reader's.
+    ///
+    /// With `countingSoundEffects` the boxes the detector labelled sound effects are analysed
+    /// too. That is how the research measured the detector's own masks, which cover 78% of
+    /// the balloon ink on the Neural Engine and 91% where they are exact: the detector calls
+    /// about a fifth of the dialogue it finds a sound effect, and its masks for those boxes
+    /// counted.
+    private func coverage(withMasks: Bool, countingSoundEffects: Bool) throws -> [String: Coverage] {
         let folder = try PrivateFolder.required()
         var result: [String: Coverage] = ["bubble": Coverage(), "free": Coverage()]
         for name in try ResearchReferences.pageNames(in: folder) {
             let bitmap = try ResearchReferences.bitmap(of: name, in: folder)
             let truth = try ResearchReferences.truth(of: name, in: folder)
-            let blocks = try ResearchReferences.blocks(of: name, bitmap: bitmap, in: folder, withMasks: withMasks)
+            var blocks = try ResearchReferences.blocks(
+                of: name, bitmap: bitmap, in: folder, withMasks: withMasks, includingSoundEffects: countingSoundEffects
+            )
+            ResearchReferences.assignText(to: &blocks, truth: truth)
             let analyzer = BlockAnalyzer()
             let erased = blocks.enumerated().compactMap { analyzer.analyze(page: bitmap, block: $1, index: $0)?.erase }
             let boxes = blocks.map { PixelRect(covering: $0.box) }
@@ -61,15 +70,21 @@ import Testing
 
     @Test func thePixelMasksCoverTheBalloonInkOfTheTestPages() throws {
         let folder = try PrivateFolder.required()
-        let withMasks = try coverage(withMasks: true)
-        let boxesOnly = try coverage(withMasks: false)
-        let report = ["withBalloonMasks": withMasks, "withBalloonBoxesOnly": boxesOnly]
+        let withMasks = try coverage(withMasks: true, countingSoundEffects: true)
+        let boxesOnly = try coverage(withMasks: false, countingSoundEffects: true)
+        let report = [
+            "allBoxes.withBalloonMasks": withMasks, "allBoxes.withBalloonBoxesOnly": boxesOnly,
+            "textBoxesOnly.withBalloonMasks": try coverage(withMasks: true, countingSoundEffects: false)
+        ]
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
         try encoder.encode(report).write(to: Self.reports(folder).appending(path: "coverage.json"))
+        // One of the research's 18 pages is not in the folder; the others hold 77 of its 93
+        // balloon texts.
         let balloons = try #require(withMasks["bubble"]), stored = try #require(boxesOnly["bubble"])
-        #expect(balloons.items >= 85)
+        #expect(balloons.items >= 77)
         #expect(balloons.share >= 0.90, "balloon ink covered \(balloons.share), in the boxes \(balloons.ceiling)")
+        // A page drawn again from its stored text has the balloons' boxes and no masks.
         #expect(stored.share >= 0.90, "without masks \(stored.share)")
     }
 
@@ -170,22 +185,8 @@ import Testing
             let truth = try ResearchReferences.truth(of: name, in: folder)
             let known = try ResearchReferences.translations(of: name, in: folder)
             var blocks = try ResearchReferences.blocks(of: name, bitmap: bitmap, in: folder, withMasks: true)
-            var standIns = 0
-            for index in blocks.indices {
-                // The truth item the block lies on gives its Japanese, and that its Chinese.
-                let box = PixelRect(covering: blocks[index].box)
-                let item = truth.items.filter { $0.type == "bubble" || $0.type == "free" }
-                    .max { $0.rect.intersection(box).area < $1.rect.intersection(box).area }
-                let source = item.flatMap { $0.rect.intersection(box).area > 0 ? $0.text : nil } ?? ""
-                blocks[index].source = source
-                if let translation = known[ResearchReferences.normalised(source)], !translation.isEmpty {
-                    blocks[index].translation = translation
-                } else {
-                    let length = max(2, min(Self.filler.count, Columns.cellCount(of: source) * 4 / 5))
-                    blocks[index].translation = String(Self.filler.prefix(length))
-                    standIns += 1
-                }
-            }
+            let standIns = ResearchReferences.assignText(to: &blocks, truth: truth, translations: known, filler: Self.filler)
+            let translated = blocks.filter { !$0.translation.isEmpty }.count
             let render = try await PageRenderer().render(page: bitmap, blocks: blocks, inpainter: inpainter)
             let image = try #require(render.composited(over: bitmap))
             try #require(PatchBuilder.pngData(of: image)).write(to: reports.appending(path: "pages/\(name).png"))
@@ -203,7 +204,7 @@ import Testing
                 ]
             ))
             #expect(render.failedRepaints == 0)
-            #expect(render.blocks.count == blocks.count, "\(name): \(render.blocks.count) of \(blocks.count) drawn")
+            #expect(render.blocks.count == translated, "\(name): \(render.blocks.count) of \(translated) drawn")
         }
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]

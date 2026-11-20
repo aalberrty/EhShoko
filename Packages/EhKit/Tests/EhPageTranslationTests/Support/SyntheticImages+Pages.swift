@@ -33,7 +33,7 @@ extension SyntheticImages {
         /// The centre of the text and of its balloon.
         var centre: CGPoint
         var shape: BalloonShape = .ellipse
-        var balloonSize: CGSize = CGSize(width: 220, height: 300)
+        var balloonSize: CGSize = CGSize(width: 150, height: 220)
         /// The distance between columns, in ems.
         var linePitch: CGFloat = 1.3
         var fontName = "HiraginoSans-W4"
@@ -43,6 +43,9 @@ extension SyntheticImages {
         var balloonGray: CGFloat = 1
         var balloonGrayBottom: CGFloat?
         var inkGray: CGFloat = 0
+        /// A band of this grey and width drawn round the glyphs, as outlined lettering has.
+        var bandGray: CGFloat?
+        var bandWidth: CGFloat = 0
         var translation = "这是一段译文。"
         /// Whether the block carries the detector's balloon, and its mask as well.
         var hint: Hint = .box
@@ -53,36 +56,61 @@ extension SyntheticImages {
             CGRect(x: centre.x - balloonSize.width / 2, y: centre.y - balloonSize.height / 2,
                    width: balloonSize.width, height: balloonSize.height)
         }
+
+        /// A box that holds the text however it is set.
+        var textBounds: CGRect {
+            let halfWidth = (CGFloat(columns.count) * linePitch / 2 + 1.5) * fontSize
+            let halfHeight = (CGFloat(columns.map(\.count).max() ?? 0) / 2 + 1) * fontSize
+            return CGRect(x: centre.x - halfWidth, y: centre.y - halfHeight, width: halfWidth * 2, height: halfHeight * 2)
+        }
     }
 
-    struct LetteredPage {
+    struct LetteredPage: Sendable {
         var bitmap: PageBitmap
-        var image: CGImage
         /// One block for each lettering that has text, in order.
         var blocks: [TextBlock]
         /// The pixels of each block's glyphs, ruby included.
         var glyphs: [RegionMask]
         /// The inside of each balloon, within its outline; `nil` for text without one.
         var interiors: [RegionMask?]
+
+        var image: CGImage { bitmap.cgImage }
     }
 
     static let outlineWidth: CGFloat = 3
 
+    /// Draws the page straight into a page bitmap, with no file in between, and each mask in
+    /// a small bitmap of its own: these pages are made many times in a test run.
     static func letteredPage(
         width: Int, height: Int, ground: Ground = .white, letterings: [Lettering]
     ) throws -> LetteredPage {
-        guard let image = image(width: width, height: height, draw: { context in
+        var pixels = Data(count: width * height * 4)
+        let drawn = pixels.withUnsafeMutableBytes { raw -> Bool in
+            guard let context = CGContext(
+                data: raw.baseAddress, width: width, height: height, bitsPerComponent: 8, bytesPerRow: width * 4,
+                space: sRGB, bitmapInfo: CGImageAlphaInfo.noneSkipLast.rawValue
+            ) else { return false }
+            context.translateBy(x: 0, y: CGFloat(height))
+            context.scaleBy(x: 1, y: -1)
             draw(ground, in: context, width: width, height: height)
             for lettering in letterings {
                 drawBalloon(lettering, in: context)
                 drawText(lettering, in: context, gray: lettering.inkGray)
             }
-        }), let data = encode(image, as: "public.png") else { throw SyntheticPageError.drawing }
+            return true
+        }
+        guard drawn else { throw SyntheticPageError.drawing }
+        let bitmap = try PageBitmap(
+            width: width, height: height, originalWidth: width, originalHeight: height, pixels: pixels, colorSpace: sRGB
+        )
+        let page = PixelRect(x: 0, y: 0, width: width, height: height)
         var blocks: [TextBlock] = [], glyphs: [RegionMask] = [], interiors: [RegionMask?] = []
         // A lettering without text draws its balloon alone and gives no block.
         for lettering in letterings where !lettering.columns.isEmpty {
-            let glyphMask = try mask(width: width, height: height) { drawText(lettering, in: $0, gray: 0) }
-            let interior = lettering.shape == .none ? nil : try mask(width: width, height: height) { context in
+            let area = PixelRect(covering: lettering.balloonRect.union(lettering.textBounds).insetBy(dx: -6, dy: -6))
+                .intersection(page)
+            let glyphMask = try mask(in: area) { drawText(lettering, in: $0, gray: 0, band: false) }
+            let interior = lettering.shape == .none ? nil : try mask(in: area) { context in
                 context.setFillColor(gray: 0, alpha: 1)
                 addShape(lettering, to: context, inset: outlineWidth / 2 + 1)
                 context.fillPath()
@@ -99,9 +127,7 @@ extension SyntheticImages {
             glyphs.append(glyphMask)
             interiors.append(interior)
         }
-        return LetteredPage(
-            bitmap: try PageBitmap(data: data), image: image, blocks: blocks, glyphs: glyphs, interiors: interiors
-        )
+        return LetteredPage(bitmap: bitmap, blocks: blocks, glyphs: glyphs, interiors: interiors)
     }
 
     enum SyntheticPageError: Error { case drawing }
@@ -169,23 +195,33 @@ extension SyntheticImages {
 
     /// Sets the columns with Core Text, one character to a square, top-aligned, and the ruby
     /// at half size to the right of its column.
-    private static func drawText(_ lettering: Lettering, in context: CGContext, gray: CGFloat) {
+    private static func drawText(_ lettering: Lettering, in context: CGContext, gray: CGFloat, band: Bool = true) {
         let size = lettering.fontSize, pitch = size * lettering.linePitch
         let font = CTFontCreateWithName(lettering.fontName as CFString, size, nil)
         let small = CTFontCreateWithName(lettering.fontName as CFString, size / 2, nil)
         let longest = lettering.columns.map(\.count).max() ?? 0
         let top = lettering.centre.y - CGFloat(longest) * size / 2
         let count = lettering.columns.count
-        context.setFillColor(gray: gray, alpha: 1)
         // The helper's contexts have their origin at the top left, so glyphs are flipped back.
         context.textMatrix = CGAffineTransform(scaleX: 1, y: -1)
-        for (index, column) in lettering.columns.enumerated() {
-            let x = lettering.centre.x + (CGFloat(count - 1) / 2 - CGFloat(index)) * pitch
-            draw(column, font: font, size: size, centreX: x, top: top, in: context)
-            if index < lettering.ruby.count, !lettering.ruby[index].isEmpty {
-                draw(lettering.ruby[index], font: small, size: size / 2, centreX: x + size * 0.78, top: top, in: context)
+        // The band first, under every glyph, then the glyphs.
+        var passes: [(mode: CGTextDrawingMode, gray: CGFloat)] = [(.fill, gray)]
+        if band, let grey = lettering.bandGray, lettering.bandWidth > 0 { passes.insert((.fillStroke, grey), at: 0) }
+        for pass in passes {
+            context.setTextDrawingMode(pass.mode)
+            context.setFillColor(gray: pass.gray, alpha: 1)
+            context.setStrokeColor(gray: pass.gray, alpha: 1)
+            context.setLineWidth(lettering.bandWidth * 2)
+            context.setLineJoin(.round)
+            for (index, column) in lettering.columns.enumerated() {
+                let x = lettering.centre.x + (CGFloat(count - 1) / 2 - CGFloat(index)) * pitch
+                draw(column, font: font, size: size, centreX: x, top: top, in: context)
+                if index < lettering.ruby.count, !lettering.ruby[index].isEmpty {
+                    draw(lettering.ruby[index], font: small, size: size / 2, centreX: x + size * 0.78, top: top, in: context)
+                }
             }
         }
+        context.setTextDrawingMode(.fill)
     }
 
     private static func draw(_ text: String, font: CTFont, size: CGFloat, centreX: CGFloat, top: CGFloat, in context: CGContext) {
@@ -201,18 +237,40 @@ extension SyntheticImages {
         }
     }
 
-    /// The pixels `draw` paints dark on white paper, as a mask cut to their bounds.
-    private static func mask(width: Int, height: Int, draw: (CGContext) -> Void) throws -> RegionMask {
-        guard let image = image(width: width, height: height, draw: { context in
-            context.setFillColor(gray: 1, alpha: 1)
-            context.fill(CGRect(x: 0, y: 0, width: width, height: height))
+    /// The pixels `draw` paints dark inside `area` of the page, as a mask cut to their bounds.
+    private static func mask(in area: PixelRect, draw: (CGContext) -> Void) throws -> RegionMask {
+        let width = area.width, height = area.height
+        var grey = [UInt8](repeating: 255, count: width * height)
+        let drawn = grey.withUnsafeMutableBytes { raw -> Bool in
+            guard width > 0, height > 0, let context = CGContext(
+                data: raw.baseAddress, width: width, height: height, bitsPerComponent: 8, bytesPerRow: width,
+                space: CGColorSpaceCreateDeviceGray(), bitmapInfo: CGImageAlphaInfo.none.rawValue
+            ) else { return false }
+            // Page coordinates, origin at the top left, moved to the area's corner.
+            context.translateBy(x: 0, y: CGFloat(height))
+            context.scaleBy(x: 1, y: -1)
+            context.translateBy(x: -CGFloat(area.x0), y: -CGFloat(area.y0))
             draw(context)
-        }), let data = encode(image, as: "public.png") else { throw SyntheticPageError.drawing }
-        let bitmap = try PageBitmap(data: data)
-        let window = PixelWindow(page: bitmap, rect: PixelRect(x: 0, y: 0, width: width, height: height))
-        let plane = window.lumaPlane().map { $0 < 128 ? UInt8(1) : 0 }
-        guard let mask = RegionMask(plane: plane, in: window) else { throw SyntheticPageError.drawing }
-        return mask
+            return true
+        }
+        guard drawn else { throw SyntheticPageError.drawing }
+        var x0 = width, y0 = height, x1 = 0, y1 = 0
+        for y in 0..<height {
+            for x in 0..<width where grey[y * width + x] < 128 {
+                x0 = min(x0, x)
+                x1 = max(x1, x + 1)
+                y0 = min(y0, y)
+                y1 = y + 1
+            }
+        }
+        guard x1 > x0, y1 > y0 else { throw SyntheticPageError.drawing }
+        var bits = [UInt8](repeating: 0, count: (x1 - x0) * (y1 - y0))
+        for y in y0..<y1 {
+            for x in x0..<x1 where grey[y * width + x] < 128 { bits[(y - y0) * (x1 - x0) + x - x0] = 1 }
+        }
+        return RegionMask(
+            rect: PixelRect(x0: area.x0 + x0, y0: area.y0 + y0, x1: area.x0 + x1, y1: area.y0 + y1), bits: bits
+        )
     }
 }
 

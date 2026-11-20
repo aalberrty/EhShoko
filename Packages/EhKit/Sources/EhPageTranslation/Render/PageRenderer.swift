@@ -29,10 +29,21 @@ public struct PageRenderer: Sendable {
         page: PageBitmap, blocks: [TextBlock], inpainter: (any Inpainter)? = nil
     ) async throws -> PageRender {
         let clock = ContinuousClock()
-        var timings = RenderTimings()
-        var start = clock.now
+        let start = clock.now
         let analysis = try analyzer.analyze(page: page, blocks: blocks)
+        var timings = RenderTimings()
         timings.analysis = clock.now - start
+        return try await draw(analysis, page: page, blocks: blocks, inpainter: inpainter, timings: timings)
+    }
+
+    /// Erases and letters the blocks of `analysis`, which was made of `page` and `blocks`.
+    func draw(
+        _ analysis: PageAnalysis, page: PageBitmap, blocks: [TextBlock], inpainter: (any Inpainter)? = nil,
+        timings: RenderTimings = RenderTimings()
+    ) async throws -> PageRender {
+        let clock = ContinuousClock()
+        var timings = timings
+        var start = clock.now
         let boxes = blocks.map { PixelRect(covering: $0.box) }
         var rendered: [RenderedBlock] = []
         var failedRepaints = 0
