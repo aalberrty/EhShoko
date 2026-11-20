@@ -19,6 +19,7 @@ struct WallSearchView: View {
     /// suggestions. It changes when typing starts or stops, not per keystroke.
     @State private var isTyping = false
     @Environment(\.searchSurfacePresentation) private var presentation
+    @Environment(\.searchFieldController) private var field
     @Environment(\.look) private var look
     @Environment(\.accessibilityReduceTransparency) private var reducesTransparency
 
@@ -40,14 +41,17 @@ struct WallSearchView: View {
                 }
                 // Under `tabs` the surface is the tab's root and there is nothing to close.
                 if presentation.canClose {
-                    WallSearchCloseButton()
+                    SearchFieldCircleButton(systemImage: "xmark", title: L10n.Localizable.Common.close) {
+                        field.close()
+                    }
                 }
             }
+            // On iOS 18 the field bar's gradient would lay a band of the look's background over
+            // the material; on the look's own ground it fades the rows as on every screen.
+            .legacyBottomBarFade(presentation.canClose ? .hidden : .automatic)
             .searchSurfaceDrawsClose()
             #if DEBUG || HARNESS
-            // `-HarnessSearchWords YES`: G1's sample quick and recent searches, until they move
-            // to `Search/Shared/Harness`.
-            .task { await ShelfSearchSampleWords.addIfRequested(hasQuickSearches: !model.root.quickSearchWords.isEmpty) }
+            .searchDesignHarness(model: model)
             #endif
     }
 
@@ -74,32 +78,5 @@ private struct WallSearchTypingProbe: View {
             .onChange(of: typing, initial: true) { _, typing in
                 if isTyping != typing { isTyping = typing }
             }
-    }
-}
-
-/// The Close circle beside the field under `command`: puts the keyboard away and closes the
-/// surface. The same glass circle as the shared ones (`SearchFieldCircleButton`: 52 pt,
-/// growing to 64 pt), but labelled by its symbol, whose "Close" the system translates; the
-/// app has no string of its own for it.
-private struct WallSearchCloseButton: View {
-    @ScaledMetric(relativeTo: .body) private var height: CGFloat = 52
-    @Environment(\.searchFieldController) private var field
-    @Environment(\.look) private var look
-
-    var body: some View {
-        let size = min(height, 64)
-        Button {
-            field.close()
-        } label: {
-            Image(systemName: "xmark")
-                .font(.body.weight(.semibold))
-                .foregroundStyle(look.label)
-                .frame(width: size, height: size)
-                .contentShape(.circle)
-        }
-        .buttonStyle(.plain)
-        .glassSurface(in: .circle, isInteractive: true)
-        .dynamicTypeSize(...DynamicTypeSize.accessibility1)
-        .accessibilityShowsLargeContentViewer()
     }
 }

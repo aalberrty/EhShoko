@@ -13,6 +13,7 @@ extension View {
 
 private struct HUDModifier: ViewModifier {
     @Binding var configuration: HUDConfiguration?
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     func body(content: Content) -> some View {
         content
@@ -25,7 +26,8 @@ private struct HUDModifier: ViewModifier {
                                 Color.clear.contentShape(.rect).ignoresSafeArea()
                             }
                         }
-                        .transition(.scale(scale: 0.85).combined(with: .opacity))
+                        // Reduce Motion: it fades in place.
+                        .transition(reduceMotion ? .opacity : .scale(scale: 0.85).combined(with: .opacity))
                 }
             }
             .animation(.spring(duration: 0.3), value: configuration)

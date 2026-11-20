@@ -22,7 +22,7 @@ struct ShelfHomeHeader: View {
                 .padding(.bottom, 8)
             ShelfContinueSection(margins: margins, open: actions.openReader, openHistory: actions.openHistory)
             ShelfPopularSection(model: popular, margins: margins, open: actions.openGallery, showAll: actions.showPopular)
-            ShelfHomeHeading(title: GalleryListKind.frontpage.title, margins: margins)
+            ShelfFrontPageHeading(margins: margins)
                 .padding(.top, ShelfHomeHeading.spaceAbove)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -46,6 +46,7 @@ struct ShelfHomeMargins: Equatable {
 /// The date in small capitals over "Home". The date follows midnight while the screen is up.
 struct ShelfHomeTitle: View {
     @Environment(\.look) private var look
+    @Environment(\.dynamicTypeSize) private var typeSize
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -59,9 +60,12 @@ struct ShelfHomeTitle: View {
             Text(L10n.Localizable.HomeView.Title.home)
                 .font(.largeTitle.bold())
                 .foregroundStyle(look.label)
-                .accessibilityAddTraits(.isHeader)
+                // The navigation bar keeps "Home" as the screen's title (`hiddenBarTitle`) and
+                // VoiceOver reads it there, as a heading: read here too, it came twice.
+                .accessibilityHidden(true)
         }
-        .lineLimit(1)
+        // At the accessibility sizes the date and "Home" wrap rather than end in "…".
+        .lineLimit(typeSize.isAccessibilitySize ? 2 : 1)
         .minimumScaleFactor(0.8)
     }
 }
@@ -87,6 +91,34 @@ private nonisolated struct ShelfMidnightSchedule: TimelineSchedule {
 
 // MARK: Headings
 
+/// "Front Page" with the filter summary pill trailing, where the bar does not hold the filter
+/// (`shelf.md` section 2, item 4): the list's wrapper hands the header the list's control. It
+/// opens Filters on the Front Page's set.
+private struct ShelfFrontPageHeading: View {
+    let margins: ShelfHomeMargins
+
+    @Environment(\.listHeadingControl) private var control
+    @Environment(\.dynamicTypeSize) private var typeSize
+
+    var body: some View {
+        let stacks = typeSize.isAccessibilitySize
+        let layout = ShelfHomeHeading.layout(stacks: stacks)
+        layout {
+            Text(GalleryListKind.frontpage.title)
+                .lookSectionHeader()
+                .lineLimit(stacks ? 2 : 1)
+            if !stacks { Spacer(minLength: 0) }
+            if let control, case .filter(let summary) = control.control {
+                ShelfListFilterPill(summary: summary) { control.perform(.filters) }
+                    .layoutPriority(1)
+            }
+        }
+        .frame(minHeight: 44)
+        .padding(.leading, margins.leading)
+        .padding(.trailing, margins.trailing)
+    }
+}
+
 /// A section's heading line: the title in the look's section style and, trailing, a link in
 /// the tint ("History ›", "See all ›"). The line is 44 pt high, the link's target.
 struct ShelfHomeHeading: View {
@@ -99,12 +131,24 @@ struct ShelfHomeHeading: View {
     /// line adds above a 30 pt one.
     static let spaceAbove: CGFloat = 11
 
+    @Environment(\.dynamicTypeSize) private var typeSize
+
+    /// A heading's line: the title and what trails it side by side or, at the accessibility
+    /// sizes, where side by side would cut both to a word, the second under the first.
+    static func layout(stacks: Bool) -> AnyLayout {
+        stacks
+            ? AnyLayout(VStackLayout(alignment: .leading, spacing: 0))
+            : AnyLayout(HStackLayout(alignment: .firstTextBaseline, spacing: 8))
+    }
+
     var body: some View {
-        HStack(alignment: .firstTextBaseline, spacing: 8) {
+        let stacks = typeSize.isAccessibilitySize
+        let layout = Self.layout(stacks: stacks)
+        layout {
             Text(title)
                 .lookSectionHeader()
-                .lineLimit(1)
-            Spacer(minLength: 0)
+                .lineLimit(stacks ? 2 : 1)
+            if !stacks { Spacer(minLength: 0) }
             if let link {
                 Button(action: action) {
                     HStack(spacing: 2) {
@@ -115,7 +159,7 @@ struct ShelfHomeHeading: View {
                     }
                     .font(.subheadline.weight(.medium))
                     .lineLimit(1)
-                    .padding(.leading, 8)
+                    .padding(.leading, stacks ? 0 : 8)
                     .frame(minHeight: 44)
                     .contentShape(.rect)
                 }

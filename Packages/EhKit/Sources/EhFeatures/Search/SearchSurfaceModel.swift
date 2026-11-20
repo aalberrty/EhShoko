@@ -14,25 +14,30 @@ import Observation
 ///
 /// **Driving it from a view.** `.task { await model.observe() }` keeps the lists current;
 /// `.task { await model.checkForLink() }` when the surface appears looks for a link.
+///
+/// **The field leads; the model follows** (`spikes/S6.md` section 11). Every edit the field
+/// makes is reported with `fieldDidEdit(_:)`, and nothing is written back to the field on a
+/// keystroke. Content goes the other way only through `replaceKeyword(_:)`, which bumps
+/// `revision`: a field shows the model's content again when that changes.
 @Observable
 public final class SearchSurfaceModel {
     /// Where results go: Everywhere is the site's search, the others search a list.
     public var scope: SearchScope
     /// The accepted tags, shown as tokens before the text.
     public private(set) var tokens: [SearchToken] = []
-    /// What is typed after the tokens.
-    public var text = "" {
-        didSet {
-            if text != oldValue { suggestions.textDidChange(TagSuggestionModel.normalize(text)) }
-        }
-    }
+    /// What is typed after the tokens. Read it in one small view only: it changes with every
+    /// keystroke.
+    public private(set) var text = ""
+    /// Bumped each time the model replaces the field's content (`replaceKeyword(_:)`), and
+    /// only then.
+    public private(set) var revision = 0
     /// Whether the clipboard probably holds a link and "Detects links from clipboard" is on.
     /// The link itself is read only by `openLink()`, so no paste prompt shows before a tap.
     public private(set) var hasLinkOffer = false
 
     /// Quick-search words, the search history and the recently seen galleries.
     public let root: SearchRootModel
-    /// Tag suggestions for `text`.
+    /// Tag suggestions for the word at the caret.
     public let suggestions: TagSuggestionModel
 
     @ObservationIgnored @Dependency(\.settings) private var settings
@@ -71,6 +76,14 @@ public final class SearchSurfaceModel {
         }
     }
 
+    /// Recent searches that contain the text ("Recent" while typing), newest first; all of
+    /// them before anything is typed.
+    public var matchingRecentSearches: [String] {
+        let text = text.trimmingCharacters(in: .whitespaces)
+        guard !text.isEmpty else { return root.historyKeywords }
+        return root.historyKeywords.filter { $0.localizedCaseInsensitiveContains(text) }
+    }
+
     // MARK: Lifecycle
 
     /// Keeps the quick searches, recent searches and recently seen galleries current until the
@@ -86,40 +99,31 @@ public final class SearchSurfaceModel {
 
     // MARK: Editing
 
-    /// A tag suggestion was chosen: the fragment it matched becomes its token.
-    public func accept(_ suggestion: SearchTagSuggestion) {
-        let completed = TagSuggestionModel.complete(text, with: suggestion.suggestion)
-        let split = SearchTokens.split(completed)
-        appendTokens(split.tokens)
-        text = split.remainder
+    /// Every edit the field reports: its tokens and text become the model's, and suggestions
+    /// are looked up for the text before the caret, without the last word's mark. Never
+    /// writes back to the field.
+    public func fieldDidEdit(_ edit: TagSearchFieldEdit) {
+        let tookToken = edit.tokens.count > tokens.count
+        if tokens != edit.tokens { tokens = edit.tokens }
+        if text != edit.text { text = edit.text }
+        // The suggestions for the text that became a token go at once, so a second tap cannot
+        // take a row for text that is gone.
+        if tookToken { suggestions.textDidChange("") }
+        // Each call cancels the lookup before it.
+        suggestions.textDidChange(TagSuggestionModel.normalize(SearchTokens.lookupText(beforeCaret: edit.beforeCaret)))
     }
 
-    public func removeToken(_ token: SearchToken) {
-        tokens.removeAll { $0 == token }
-    }
-
-    /// The backspace at the start of the text.
-    public func removeLastToken() {
-        if !tokens.isEmpty { tokens.removeLast() }
-    }
-
-    /// Fills the field with `keyword` (a recent search, a quick search), its tags as tokens.
-    public func use(_ keyword: String) {
+    /// New content for the field (a recent search, a quick search, the keyword of the results
+    /// the surface was opened from; `""` empties it): its tags as tokens, the rest as text.
+    /// The only way content goes in; it bumps `revision`. Suggestions are for typing, so a
+    /// keyword handed in shows none until the next keystroke.
+    public func replaceKeyword(_ keyword: String) {
         let split = SearchTokens.split(TagSuggestionModel.normalize(keyword))
-        tokens = []
-        appendTokens(split.tokens)
+        var seen = Set<SearchToken>()
+        tokens = split.tokens.filter { seen.insert($0).inserted }
         text = split.remainder
-    }
-
-    public func clear() {
-        tokens = []
-        text = ""
-    }
-
-    private func appendTokens(_ new: [SearchToken]) {
-        for token in new where !tokens.contains(token) {
-            tokens.append(token)
-        }
+        revision += 1
+        suggestions.textDidChange("")
     }
 
     // MARK: Submitting
@@ -159,10 +163,11 @@ public final class SearchSurfaceModel {
         if hasLinkOffer != found { hasLinkOffer = found }
     }
 
-    /// "Open": reads the link (the system may ask to paste) and withdraws the offer. The caller
-    /// opens it as any gallery link.
+    /// "Open": reads the link (the system may ask to paste) and withdraws the offer. Returns
+    /// the app's own link for it (`EhURL.appLink`), which the caller opens as a shared link
+    /// opens; `nil` when the clipboard held no link to a gallery, which a design may say.
     public func openLink() -> URL? {
         hasLinkOffer = false
-        return clipboard.url()
+        return clipboard.url().flatMap(EhURL.appLink(for:))
     }
 }

@@ -1,7 +1,7 @@
 import SwiftUI
 
-/// Closes a sheet: the system close button on iOS 26, an "xmark" on iOS 18. The symbol carries
-/// the system's localized "Close" label for VoiceOver.
+/// Closes a sheet: the system close button on iOS 26, an "xmark" on iOS 18, named "Close" for
+/// VoiceOver (a bare symbol is read by its symbol's name).
 struct SheetCloseButton: View {
     let action: () -> Void
 
@@ -12,11 +12,13 @@ struct SheetCloseButton: View {
             Button(action: action) {
                 Image(systemName: "xmark")
             }
+            .accessibilityLabel(L10n.Localizable.Common.close)
         }
     }
 }
 
-/// Confirms a sheet: the system confirm button on iOS 26, a "checkmark" on iOS 18.
+/// Confirms a sheet: the system confirm button on iOS 26, a "checkmark" on iOS 18, named
+/// "Done" for VoiceOver, which reads the bare checkmark as "Selected".
 struct SheetConfirmButton: View {
     let action: () -> Void
 
@@ -28,6 +30,7 @@ struct SheetConfirmButton: View {
                 Image(systemName: "checkmark")
                     .fontWeight(.semibold)
             }
+            .accessibilityLabel(L10n.Localizable.EhSettingView.ToolbarItem.Button.done)
         }
     }
 }

@@ -15,17 +15,20 @@ struct ShelfReaderControls: View {
     let viewport: ReaderViewport
 
     @Environment(SettingsStore.self) private var settings
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var frame = ShelfReaderFrame()
 
     var body: some View {
         let isShown = model.showsPanel
+        // Reduce Motion: they fade in place.
+        let slide = reduceMotion ? 0 : ShelfReaderMetrics.slide
         VStack(spacing: 0) {
             ReaderControlsLayer(isShown: isShown, spacing: ShelfReaderMetrics.topSpacing) {
                 ShelfReaderTopBar(model: model, spreads: spreads)
             }
             .padding(.horizontal, ReaderMetrics.edgeInset)
             .padding(.top, ReaderMetrics.topInset)
-            .offset(y: isShown ? 0 : -ShelfReaderMetrics.slide)
+            .offset(y: isShown ? 0 : -slide)
 
             Spacer(minLength: 0)
 
@@ -35,8 +38,11 @@ struct ShelfReaderControls: View {
             .frame(maxWidth: ShelfReaderMetrics.panelMaximumWidth)
             .padding(.horizontal, ShelfReaderMetrics.panelInset)
             .padding(.bottom, frame.panelBottom)
-            .offset(y: isShown ? 0 : ShelfReaderMetrics.slide)
+            .offset(y: isShown ? 0 : slide)
         }
+        // The groups keep their size, as the other designs' controls do: their text stops
+        // growing at the largest standard size, and the large content viewer names a button.
+        .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
         // The panel sits as far from the bottom edge as from the sides where the screen has
         // room below the home indicator, so it measures from the edge itself.
         .ignoresSafeArea(.container, edges: .bottom)
@@ -48,8 +54,8 @@ struct ShelfReaderControls: View {
 
     /// Two pages side by side, as the engine decides it (`ReaderConfiguration.usesDualPage`):
     /// in a paged direction, with the setting on, on a screen wider than tall.
-    private var spreads: ShelfReaderSpreads {
-        ShelfReaderSpreads(
+    private var spreads: ReaderSpreads {
+        ReaderSpreads(
             offersDualPage: frame.isLandscape && settings.readingDirection != .vertical,
             enablesDualPage: settings.enablesDualPageMode,
             exceptCover: settings.exceptCover

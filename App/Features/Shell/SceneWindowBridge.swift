@@ -38,6 +38,8 @@ struct SceneWindowBridge: UIViewRepresentable {
             // The look's tint, not the stored colour: a user who never chose an accent gets
             // the look's own, in UIKit's alerts and menus too.
             tint: look.tint(for: accentColor).uiTint,
+            look: look,
+            accentColor: accentColor,
             showsPrivacyOverlay: isPrivacyOverlayVisible
         )
     }
@@ -63,10 +65,14 @@ struct SceneWindowBridge: UIViewRepresentable {
         private let snapshot = PrivacySnapshot()
         private weak var hostWindow: UIWindow?
         private var overlayWindow: UIWindow?
+        private weak var overlayController: PrivacyOverlayController?
         private var pendingHide: Task<Void, Never>?
 
         private var style: UIUserInterfaceStyle = .unspecified
         private var tint: UIColor?
+        private var look: Look = .shelf
+        // Set by the first `update`, before any overlay exists.
+        private var accentColor = RGBColor.systemBlue
         private var showsOverlay = false
         private var wasLocked = false
 
@@ -81,11 +87,23 @@ struct SceneWindowBridge: UIViewRepresentable {
             apply()
         }
 
-        func update(style: UIUserInterfaceStyle, tint: UIColor, showsPrivacyOverlay: Bool) {
+        func update(
+            style: UIUserInterfaceStyle, tint: UIColor, look: Look, accentColor: RGBColor, showsPrivacyOverlay: Bool
+        ) {
             self.style = style
             self.tint = tint
+            if look != self.look || accentColor != self.accentColor {
+                self.look = look
+                self.accentColor = accentColor
+                // The overlay's window is outside the root, so it gets the new look from here.
+                overlayController?.rootView = overlayView
+            }
             showsOverlay = showsPrivacyOverlay
             apply()
+        }
+
+        private var overlayView: PrivacyOverlayView {
+            PrivacyOverlayView(lock: lock, snapshot: snapshot, unlock: unlock, look: look, accentColor: accentColor)
         }
 
         private func apply() {
@@ -133,12 +151,10 @@ struct SceneWindowBridge: UIViewRepresentable {
             window.windowLevel = Self.overlayLevel
             window.overrideUserInterfaceStyle = style
             window.tintColor = tint
-            let root = PrivacyOverlayController(
-                rootView: PrivacyOverlayView(lock: lock, snapshot: snapshot, unlock: unlock),
-                snapshot: snapshot
-            )
+            let root = PrivacyOverlayController(rootView: overlayView, snapshot: snapshot)
             root.view.backgroundColor = .clear
             window.rootViewController = root
+            overlayController = root
             window.isHidden = true
             overlayWindow = window
             return window

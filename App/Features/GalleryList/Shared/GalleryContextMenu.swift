@@ -19,10 +19,26 @@ extension View {
     ///   - actions: the list's actions model; it performs Read and the favourite actions.
     ///   - offersMove: whether the list shows favourites, where Move to folder is offered.
     func galleryContextMenu(_ entry: GalleryEntry, actions: GalleryActionsModel, offersMove: Bool = false) -> some View {
-        contextMenu {
+        modifier(GalleryContextMenuModifier(entry: entry, actions: actions, offersMove: offersMove))
+    }
+}
+
+private struct GalleryContextMenuModifier: ViewModifier {
+    let entry: GalleryEntry
+    let actions: GalleryActionsModel
+    let offersMove: Bool
+
+    // The preview is hosted outside the screen and gets none of its environment's objects
+    // (reading one there stops the app), so it is handed the two it needs. Only the
+    // references are read here, no property of either, so a row observes nothing.
+    @Environment(SettingsStore.self) private var settings: SettingsStore?
+    @Environment(TagTranslationService.self) private var tagTranslations: TagTranslationService?
+
+    func body(content: Content) -> some View {
+        content.contextMenu {
             GalleryContextMenu(entry: entry, actions: actions, offersMove: offersMove)
         } preview: {
-            GalleryMenuPreview(entry: entry)
+            GalleryMenuPreview(entry: entry, settings: settings, tagTranslations: tagTranslations)
         }
     }
 }
@@ -97,9 +113,12 @@ struct GalleryContextMenu: View {
 }
 
 /// The menu's preview: the cover beside the full title, the credit and the tags, which is how
-/// a one-line caption is read in full.
+/// a one-line caption is read in full. Tags are translated while tag translation is on, as the
+/// rows translate theirs: a lookup in the translations table, made when the menu opens.
 private struct GalleryMenuPreview: View {
     let entry: GalleryEntry
+    let settings: SettingsStore?
+    let tagTranslations: TagTranslationService?
     @Environment(\.look) private var look
 
     private static let coverSize = CGSize(width: 104, height: 149)
@@ -122,53 +141,23 @@ private struct GalleryMenuPreview: View {
                     }
                 }
             }
+            // Read by the preview's body, which runs when the menu opens, not while rows scroll.
+            let translations = settings?.translatesTags == true ? tagTranslations : nil
             ForEach(entry.gallery.tags.prefix(6)) { tag in
                 TagText(
                     namespace: tag.namespace?.localizedName ?? tag.rawNamespace,
                     color: tag.namespace?.markColor ?? look.secondaryLabel,
-                    tags: tag.contents.map { TagText.Tag($0.text, isWeak: $0.isWeak) }
+                    tags: tag.contents.map { content in
+                        // Without emoji, as a row's tag line shows it.
+                        let translation = translations?.display(forKey: content.id)
+                        return TagText.Tag(content.chipText(translation: translation, showsImages: false), isWeak: content.isWeak)
+                    }
                 )
             }
         }
         .padding(Tokens.Spacing.large)
         .frame(width: 340, alignment: .leading)
         .background(look.background)
-    }
-}
-
-/// The circle and the artists a parsed title names, each as a search.
-nonisolated struct GalleryCreditSearch: Identifiable, Equatable {
-    let name: String
-    let keyword: String
-    let systemImage: String
-
-    var id: String { keyword }
-
-    /// At most the circle and three artists. A name that matches one of the gallery's tags in
-    /// the same namespace searches that tag exactly; otherwise the name in quotes.
-    static func targets(for entry: GalleryEntry) -> [GalleryCreditSearch] {
-        let title = entry.title
-        let tags = entry.gallery.tags
-        var targets: [GalleryCreditSearch] = []
-        if let circle = title.circle, !circle.isEmpty {
-            targets.append(target(circle, namespace: .group, systemImage: "person.2", tags: tags))
-        }
-        for artist in title.artists.prefix(3) where !artist.isEmpty {
-            targets.append(target(artist, namespace: .artist, systemImage: "paintbrush.pointed", tags: tags))
-        }
-        // A circle named after its one artist would otherwise appear twice.
-        var seen = Set<String>()
-        return targets.filter { seen.insert($0.keyword).inserted }
-    }
-
-    private static func target(
-        _ name: String, namespace: TagNamespace, systemImage: String, tags: [GalleryTag]
-    ) -> GalleryCreditSearch {
-        let lowered = name.lowercased()
-        let match = tags.first { $0.namespace == namespace }.flatMap { tag in
-            tag.contents.first { $0.text.lowercased() == lowered }.map { $0.searchKeyword(tag: tag) }
-        }
-        return GalleryCreditSearch(name: name, keyword: match ?? "\"\(name)\"", systemImage: systemImage)
     }
 }
 
@@ -182,13 +171,5 @@ extension ParsedTitle {
         case (nil, false): return names
         case (nil, true): return nil
         }
-    }
-}
-
-extension UserStore {
-    /// The folder's name on the site, or "Favorites n" when it has none of its own.
-    func favoriteFolderName(_ index: Int) -> String {
-        customFavoriteCategoryName(index: index)
-            ?? L10n.Localizable.Struct.User.FavoriteCategory.default("\(index)")
     }
 }

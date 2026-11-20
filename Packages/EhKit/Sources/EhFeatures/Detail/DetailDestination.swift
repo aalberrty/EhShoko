@@ -17,8 +17,6 @@ nonisolated public enum DetailDestination: Hashable, Sendable {
     /// Sheet.
     case torrents
     /// Sheet.
-    case postComment
-    /// Sheet.
     case tagDetail(TagDetail)
     /// Full screen. `page` is 1-based; `nil` opens at the stored reading progress.
     case reader(page: Int?)
@@ -32,7 +30,7 @@ nonisolated public enum DetailDestination: Hashable, Sendable {
     public var presentation: Presentation {
         switch self {
         case .comments, .previews, .galleryInfos: .push
-        case .archives, .torrents, .postComment, .tagDetail: .sheet
+        case .archives, .torrents, .tagDetail: .sheet
         case .reader: .fullScreen
         }
     }

@@ -11,16 +11,37 @@ nonisolated struct ListContext: Hashable, Sendable {
     /// Toplists only: what the period control offers, in order. The Top tab offers Popular
     /// first; the Toplists place offers the four periods.
     var rankedChoices: [RankedChoice]
-    /// A first screen or the library passes a header and draws the screen's title itself: the
-    /// list shows no large title of its own.
-    var embedsInStart: Bool
+    /// Who draws the list's title and its heading line.
+    var heading: ListHeading
 
-    init(kind: ListKind, title: String, rankedChoices: [RankedChoice] = [], embedsInStart: Bool = false) {
+    init(kind: ListKind, title: String, rankedChoices: [RankedChoice] = [], heading: ListHeading = .list) {
         self.kind = kind
         self.title = title
         self.rankedChoices = rankedChoices
-        self.embedsInStart = embedsInStart
+        self.heading = heading
     }
+
+    /// Whether the list puts its own title in the top bar.
+    var showsTitle: Bool { heading == .list }
+
+    /// Whether the list draws its heading line: the primary control where the bar does not
+    /// hold it (Shelf's pill or sort line, Wall's pill, Ledger's subtitle). A first screen's
+    /// header draws it instead.
+    var drawsHeadingLine: Bool { heading != .header }
+}
+
+/// Who draws a list's title and its heading line, the line with the primary control where
+/// the bar does not hold it (`Design/designs/README.md` section 5.3).
+nonisolated enum ListHeading: Hashable, Sendable {
+    /// The list: a screen of its own.
+    case list
+    /// The screen around the list draws the title (the Library tab, above its switch); the
+    /// list keeps its heading line and its More menu. The context's title is still the
+    /// screen's, for Back and for a design whose title and heading are one item (Ledger).
+    case screen
+    /// A first screen's header draws the title and the list's heading, with the primary
+    /// control `ListHost` hands it (`\.listHeadingControl`); the list draws neither.
+    case header
 }
 
 nonisolated enum ListKind: Hashable, Sendable {
@@ -48,12 +69,16 @@ nonisolated enum RankedChoice: Hashable, Sendable {
 
 extension ListContext {
     /// The list of `place`, titled as the place is. `.favorites` has no list of its own.
-    static func place(_ place: GalleryListKind, embedsInStart: Bool = false) -> ListContext {
+    static func place(_ place: GalleryListKind, heading: ListHeading = .list) -> ListContext {
         ListContext(
             kind: .place(place), title: place.title,
-            rankedChoices: place == .toplists ? RankedChoice.periods : [],
-            embedsInStart: embedsInStart
+            rankedChoices: place == .toplists ? RankedChoice.periods : [], heading: heading
         )
+    }
+
+    /// The list of `place` in a first screen, whose header draws the title and the heading.
+    static func place(_ place: GalleryListKind, embedsInStart: Bool) -> ListContext {
+        .place(place, heading: embedsInStart ? .header : .list)
     }
 
     /// The Top tab: Toplists with Popular as the first of its five choices.

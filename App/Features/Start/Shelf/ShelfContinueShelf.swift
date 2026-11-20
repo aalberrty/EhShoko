@@ -163,7 +163,10 @@ private struct ShelfContinuePlaceholders: View {
         }
         .padding(.leading, margins.leading)
         .padding(.top, 1)
-        .frame(maxWidth: .infinity, alignment: .leading)
+        // As wide as the shelf it stands for, whose scroll view takes the width it is given:
+        // without the zero minimum the cards' 900 pt would widen the header, and a list
+        // centres a row wider than itself (`ShelfPopularPlaceholders` the same).
+        .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
         .clipped()
         .shimmering()
         .accessibilityHidden(true)

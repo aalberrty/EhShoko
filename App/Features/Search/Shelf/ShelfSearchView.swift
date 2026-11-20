@@ -36,13 +36,17 @@ struct ShelfSearchView: View {
                 SearchFieldCapsule {
                     SearchFieldMagnifier()
                 } field: {
-                    TagSearchField(model: model, prompt: model.scope.localizedPrompt, tokenStyle: .tint)
+                    // The clear circle beside the capsule clears; the field's own button would
+                    // double it while typing.
+                    TagSearchField(
+                        model: model, prompt: model.scope.localizedPrompt, tokenStyle: .tint, showsClearButton: false
+                    )
                 }
                 ShelfSearchClearButton(model: model, isTyping: isTyping)
             }
             .hud($notice)
             #if DEBUG || HARNESS
-            .task { await ShelfSearchSampleWords.addIfRequested(hasQuickSearches: !model.root.quickSearchWords.isEmpty) }
+            .searchDesignHarness(model: model)
             #endif
     }
 }

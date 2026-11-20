@@ -50,7 +50,7 @@ struct LedgerLooseningState: View {
                     .foregroundStyle(look.secondaryLabel)
                     .multilineTextAlignment(.center)
                     .padding(.top, Tokens.Spacing.small)
-                ways(SearchLoosening.actions(for: keyword, filter: filter), filter: filter)
+                ways(SearchLoosening.actions(for: keyword, filter: filter))
                     .padding(.top, Tokens.Spacing.large)
                 Text(L10n.Localizable.List.Search.Empty.note)
                     .font(.footnote)
@@ -85,10 +85,10 @@ struct LedgerLooseningState: View {
         }
     }
 
-    private func ways(_ loosenings: [SearchLoosening], filter: Filter) -> some View {
+    private func ways(_ loosenings: [SearchLoosening]) -> some View {
         VStack(spacing: 0) {
             ForEach(Array(loosenings.enumerated()), id: \.element) { offset, loosening in
-                Button { apply(loosening, filter: filter) } label: {
+                Button { apply(loosening) } label: {
                     HStack(spacing: Tokens.Spacing.medium) {
                         Image(systemName: Self.symbol(of: loosening))
                             .foregroundStyle(tint)
@@ -119,14 +119,13 @@ struct LedgerLooseningState: View {
         }
     }
 
-    private func apply(_ loosening: SearchLoosening, filter: Filter) {
-        let loosened = loosening.applied(to: keyword, filter: filter)
-        switch loosening {
-        case .dropMinimumRating, .includeAllCategories:
-            filterStore[.search] = loosened.filter
+    /// The model says what loosening does; the view only goes where it says.
+    private func apply(_ loosening: SearchLoosening) {
+        switch loosening.perform(on: keyword, filterStore: filterStore) {
+        case .reload:
             perform(.reload)
-        case .dropTag:
-            stack.push(.search(keyword: loosened.keyword))
+        case .search(let keyword):
+            stack.push(.search(keyword: keyword))
         }
     }
 
@@ -195,7 +194,7 @@ struct LedgerInlineState: View {
         switch phase {
         case .signedOut:
             Button(L10n.Localizable.NotLoginView.Button.login) {
-                appRouter.presentSettings([.settings(.account), .settings(.login)])
+                appRouter.presentSignIn()
             }
         case .failed(let error) where error.isRetryable:
             Button(L10n.Localizable.ErrorView.Button.retry) { feed.retry() }

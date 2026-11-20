@@ -13,8 +13,9 @@ nonisolated public enum SettingsRoute: Hashable, Sendable {
     case design
     /// Experience › one page's options.
     case designPart(DesignPart)
-    /// Experience › the setup wizard.
-    case designSetup
+    /// Experience › the setup wizard, starting from the current choices, or from `start` when
+    /// the offer after install opens it with the preset it had selected.
+    case designSetup(start: DesignStyle? = nil)
     case reading
     case laboratory
     case logs
@@ -35,21 +36,42 @@ nonisolated public enum Route: Hashable, Sendable {
     /// Search results within favourites or Watched, submitted from the search surface.
     /// Everywhere is `typedSearch`.
     case listSearch(SearchScope, keyword: String)
-    /// One favourites folder's list (0...9), pushed from Ledger's Index and Wall's piles.
-    case favoritesFolder(Int)
+    /// One favourites folder's list, pushed from Ledger's Index, Ledger's folder grid and
+    /// Wall's piles. `Route.favoritesFolder(_:library:)` builds it from a folder's number.
+    case favoritesFolder(FavoritesFolderRoute)
     /// Search results for a keyword built from a tag, an uploader or a title ("detail
     /// search"). Unlike `typedSearch`, it is not added to the search history.
     case search(keyword: String)
     /// Search results for a keyword typed or picked in the Search tab; recorded in the history.
     case typedSearch(keyword: String)
-    /// A gallery's detail screen. `intent` is what it should do once it has opened.
-    case detail(Gallery, intent: DetailIntent? = nil)
+    /// A gallery's detail screen. `intent` is what it should do once it has opened; `origin`
+    /// is the cover it was opened from, which its zoom comes out of and returns to.
+    case detail(Gallery, intent: DetailIntent? = nil, origin: GalleryOrigin = .list)
     /// A child screen of a gallery's detail screen (comments, previews, gallery infos).
     case detailChild(DetailChildRoute)
     case settings(SettingsRoute)
 }
 
+/// Which of a screen's covers a gallery was opened from, where one gallery can be on screen
+/// twice: a cover in the first screen's shelf above the Front Page's row of the same gallery,
+/// or a recently seen cover on the search surface over a list. Each kind of cover is its own
+/// zoom source, so the page zooms back into the cover it came out of.
+nonisolated public enum GalleryOrigin: Hashable, Sendable {
+    /// A list's row or cell, and wherever a screen does not say.
+    case list
+    /// A shelf of covers above a list (Home's Popular).
+    case coverShelf
+    /// The search surface's recently seen galleries.
+    case recentlySeen
+}
+
 extension Route {
+    /// Folder `folder`'s list (0...9, or -1 for every folder). Pushed from a library, it shows
+    /// that folder's list in the library's model (`FavoritesFolderRoute.library`).
+    public static func favoritesFolder(_ folder: Int, library: FavoritesModel? = nil) -> Route {
+        .favoritesFolder(FavoritesFolderRoute(folder: folder, library: library))
+    }
+
     /// Whether the browse bar (the tab bar and its accessory, or the command bar) is hidden
     /// while this route is the top screen of its stack.
     ///
@@ -85,5 +107,32 @@ nonisolated public struct DetailChildRoute: Hashable, Sendable {
     public func hash(into hasher: inout Hasher) {
         hasher.combine(ObjectIdentifier(parent))
         hasher.combine(destination)
+    }
+}
+
+/// A favourites folder's screen. Pushed from a library it carries the library's model, as a
+/// gallery's child screen carries the gallery's, so the folder's list is the one the library
+/// keeps (`FavoritesModel.list(for:)`): a folder it has loaded, or All after the page its
+/// folders and counts came with, shows what is there and asks for nothing. Without one (the
+/// Index) the screen has a model of its own.
+///
+/// Two values are equal when they show the same folder of the same model instance.
+nonisolated public struct FavoritesFolderRoute: Hashable, Sendable {
+    /// 0...9, or -1 for every folder.
+    public let folder: Int
+    public let library: FavoritesModel?
+
+    public init(folder: Int, library: FavoritesModel? = nil) {
+        self.folder = folder
+        self.library = library
+    }
+
+    public static func == (lhs: Self, rhs: Self) -> Bool {
+        lhs.folder == rhs.folder && lhs.library === rhs.library
+    }
+
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(folder)
+        hasher.combine(library.map(ObjectIdentifier.init))
     }
 }

@@ -18,15 +18,11 @@ extension AppModel {
     static let dropDelay: Duration = .milliseconds(500)
 
     /// Runs the launch sequence. Call from the root view's `.task(id: launchAttempt)`.
-    ///
-    /// - Parameter isRegularWidth: whether the window is regular width; lists default to the
-    ///   thumbnail mode there (legacy: iPad-width screens).
-    public func launch(isRegularWidth: Bool) async {
+    public func launch() async {
         guard launchState != .ready else { return }
         launchState = .launching
         guard await dropDatabaseIfRequested() else { return }
 
-        settings.registerDefaultListDisplayMode(isRegularWidth ? .thumbnail : .detail)
         applyDomainFronting(settings.bypassesSNIFiltering)
         application.setOrientationLock(application.isPad() ? .unlocked : .portrait)
 

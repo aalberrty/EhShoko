@@ -8,7 +8,7 @@ import UIKit
 @Observable
 final class ReaderHarnessSession {
     private(set) var model: ReaderHarnessModel?
-    /// A new value is a new reader: model, engine and stand-in.
+    /// A new value is a new reader: model, engine and closing page.
     private(set) var readerID = 0
     /// What a running check is doing, shown over the reader.
     var status: String?
@@ -21,7 +21,7 @@ final class ReaderHarnessSession {
     init() {
         // A check or a pose opens its own readers.
         if options.check == nil, options.pose == nil {
-            model = ReaderHarnessModel()
+            model = ReaderHarnessModel(setup: ReaderHarnessSetup().with { $0.look = options.look })
         }
     }
 
@@ -52,7 +52,7 @@ final class ReaderHarnessSession {
         // The last engine and the pages it decoded are gone before this one starts.
         ImagePipeline.cache.clearMemoryCache()
         try? await Task.sleep(for: .milliseconds(300))
-        let model = ReaderHarnessModel(setup: setup)
+        let model = ReaderHarnessModel(setup: setup.with { $0.look = $0.look ?? options.look })
         let run = ReaderHarnessRun(model: model)
         self.model = model
         readerID += 1
@@ -83,6 +83,13 @@ final class ReaderHarnessSession {
     /// for touches.
     private func pose(_ setup: ReaderHarnessSetup) async {
         let run = await open(setup)
+        if options.posesPageStatus {
+            // The reader stays where it opened, its pages loading or failed: waiting for rest
+            // would wait for the slow download.
+            try? await Task.sleep(for: .seconds(2))
+            ReaderHarnessFiles.log("\(setup.name): \(run.state), \(run.model.failedPageCount) pages failed")
+            return
+        }
         await run.settle()
         await run.jump(to: setup.pageCount)
         if !setup.isLandscape {

@@ -1,4 +1,5 @@
 import EhFeatures
+import EhModels
 import UIKit
 
 // The reader engine's boundary. `ReaderEngineViewController` is the engine; SwiftUI hosts it
@@ -20,6 +21,15 @@ protocol ReaderEngineDataSource: AnyObject {
     /// before its image arrives.
     func aspectRatio(at page: Int) -> CGFloat?
 
+    /// Why a page whose state is `.failed` could not be resolved, for the line under "This
+    /// page didn't load"; `nil` when there is nothing to say. Asked when such a page is shown.
+    func failureReason(at page: Int) -> AppError?
+
+    /// How many pages have failed in all, counting images that did not load. A failed page
+    /// offers to reload them all from two on. Read after every page reload and failure, so it
+    /// must cost nothing.
+    var failedPageCount: Int { get }
+
     /// Whether something that is not a page follows the last page: the trailer, which holds
     /// the closing page. Read together with `pageCount`, on every reload and long before
     /// anything of it is shown, so answering must cost nothing and create nothing.
@@ -38,6 +48,10 @@ protocol ReaderEngineDataSource: AnyObject {
 }
 
 extension ReaderEngineDataSource {
+    func failureReason(at page: Int) -> AppError? { nil }
+
+    var failedPageCount: Int { 0 }
+
     var hasTrailer: Bool { false }
 
     func makeTrailerViewController() -> UIViewController? { nil }
@@ -63,6 +77,10 @@ protocol ReaderEngineDelegate: AnyObject {
     /// not, then call `reloadPage(_:)`, which also clears an image failure and loads again.
     func readerDidRequestRetry(page: Int)
 
+    /// "Reload all N failed pages" on a failed page was tapped. As with a single retry, the
+    /// engine does nothing by itself: retry what failed, then call `reloadPage(_:)` for each.
+    func readerDidRequestRetryAllFailed()
+
     /// A page's image is on screen. `pixelSize` is the size it was decoded at, which has the
     /// image's proportions but can be smaller than the original. Reported once per page and
     /// again only if the size changes.
@@ -85,5 +103,7 @@ protocol ReaderEngineDelegate: AnyObject {
 }
 
 extension ReaderEngineDelegate {
+    func readerDidRequestRetryAllFailed() {}
+
     func readerDidChangeTrailerVisibility(_ isCurrent: Bool) {}
 }

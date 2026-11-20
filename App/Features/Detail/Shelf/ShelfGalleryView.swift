@@ -16,11 +16,11 @@ struct ShelfGalleryView: View {
     let model: GalleryDetailModel
 
     @Environment(StackRouter.self) private var stack: StackRouter?
+    @Environment(AppRouter.self) private var appRouter: AppRouter?
     @Environment(\.horizontalSizeClass) private var sizeClass
     @Environment(\.look) private var look
     @State private var width: CGFloat?
     @State private var hud: HUDConfiguration?
-    @State private var asksToSignIn = false
 
     var body: some View {
         ScrollView {
@@ -32,14 +32,13 @@ struct ShelfGalleryView: View {
         }
         .background(look.background)
         .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { width = $0 }
-        .navigationBarTitleDisplayMode(.inline)
+        .modifier(ShelfGalleryBarTitle(model: model))
         .toolbar {
             ShelfGalleryToolbar(model: model) { keyword in stack?.push(.search(keyword: keyword)) }
         }
         .shelfGalleryDock(model, signIn: signIn)
         .hud($hud)
         .galleryFavoriteHUD(model, hud: $hud)
-        .gallerySignInAlert(isPresented: $asksToSignIn)
     }
 
     /// Before the first layout the size class decides, so an iPad opens in two columns.
@@ -66,9 +65,13 @@ struct ShelfGalleryView: View {
                 ShelfGalleryMain(model: model, signIn: signIn)
             }
             .frame(maxWidth: .infinity, alignment: .top)
-            ShelfGalleryMore(model: model)
-                .frame(maxWidth: .infinity, alignment: .top)
-                .padding(.top, -18)
+            // One column: the tags and the comments are two views, which an `HStack` would
+            // otherwise lay out side by side.
+            VStack(alignment: .leading, spacing: 0) {
+                ShelfGalleryMore(model: model)
+            }
+            .frame(maxWidth: .infinity, alignment: .top)
+            .padding(.top, -18)
         }
         .padding(.horizontal, Tokens.Spacing.small)
         .padding(.top, Tokens.Spacing.small)
@@ -80,7 +83,7 @@ struct ShelfGalleryView: View {
     }
 
     private func signIn() {
-        asksToSignIn = true
+        appRouter?.presentSignIn()
     }
 }
 
@@ -137,5 +140,20 @@ private struct ShelfGalleryMore: View {
             ShelfGalleryTags(model: model)
             ShelfGalleryComments(model: model)
         }
+    }
+}
+
+/// The page's heading as the bar's title, which the bar does not draw: VoiceOver, Back and the
+/// app switcher name the page by it instead of by its hosting type. A modifier of its own, so
+/// the titles' arrival and the title setting re-evaluate only it.
+private struct ShelfGalleryBarTitle: ViewModifier {
+    let model: GalleryDetailModel
+
+    @Environment(SettingsStore.self) private var settings
+
+    func body(content: Content) -> some View {
+        content.hiddenBarTitle(
+            ShelfGalleryTitles(model.titles.shown(prefersJapanese: settings.displaysJapaneseTitle)).heading
+        )
     }
 }

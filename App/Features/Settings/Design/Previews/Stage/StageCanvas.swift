@@ -42,18 +42,19 @@ struct StageStill: View, Animatable {
     }
 }
 
-/// The stills of the pager: four per preset, the beats' moments of its storyboard. Taking
-/// turns, the pages run through the three presets; staying on one, through its four.
+/// The stills of the pager: one per beat a preset plays, the beats' moments of its
+/// storyboard. Taking turns, the pages run through the three presets; staying on one, through
+/// its own.
 nonisolated enum StagePager {
-    static func pageCount(of playback: StagePlayback) -> Int {
-        Storyboard.beats * (playback.takesTurns ? StagePlayback.order.count : 1)
+    static func pages(of playback: StagePlayback) -> [StageBeat] {
+        playback.turns.flatMap { style in
+            playback.storyboard(style).playedBeats.map { StageBeat(style: style, beat: $0) }
+        }
     }
 
     static func scene(_ page: Int, of playback: StagePlayback, opacity: Double = 1) -> StageScene {
-        let count = pageCount(of: playback)
-        let page = (page % count + count) % count
-        let style = playback.style(at: Double(page / Storyboard.beats) * Storyboard.duration)
-        return StageScene(style: style, time: Storyboard.of(style).stills[page % Storyboard.beats], opacity: opacity)
+        let beat = beat(page, of: playback)
+        return playback.scene(beat.style, at: playback.storyboard(beat.style).stills[beat.beat], opacity: opacity)
     }
 
     static func frame(at position: Double, of playback: StagePlayback) -> StageFrame {
@@ -66,9 +67,18 @@ nonisolated enum StagePager {
 
     /// The preset and beat of the page nearest `position`.
     static func beat(at position: Double, of playback: StagePlayback) -> StageBeat {
-        let scene = scene(Int(position.rounded()), of: playback)
-        let beat = Storyboard.of(scene.style).stills.firstIndex(of: scene.time) ?? 0
-        return StageBeat(style: scene.style, beat: beat)
+        beat(Int(position.rounded()), of: playback)
+    }
+
+    /// The page that shows `beat`, or the first.
+    static func page(of beat: StageBeat, in playback: StagePlayback) -> Int {
+        pages(of: playback).firstIndex(of: beat) ?? 0
+    }
+
+    private static func beat(_ page: Int, of playback: StagePlayback) -> StageBeat {
+        let pages = pages(of: playback)
+        let count = pages.count
+        return pages[(page % count + count) % count]
     }
 }
 

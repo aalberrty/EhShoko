@@ -46,6 +46,7 @@ struct ReaderClosingColumn: View {
             .font(.title2.bold())
             .lookTitleDesign()
             .foregroundStyle(look.label)
+            .accessibilityAddTraits(.isHeader)
             .padding(.top, 4)
             Text(shown.credit ?? " ")
                 .font(.subheadline)

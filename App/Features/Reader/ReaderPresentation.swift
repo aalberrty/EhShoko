@@ -6,6 +6,7 @@ extension ReaderAutoPlayPolicy {
     var localizedName: String {
         switch seconds {
         case nil: L10n.Localizable.Enum.AutoPlayPolicy.Value.off
+        case 1?: L10n.Localizable.Common.Value.second("1")
         case let seconds?: L10n.Localizable.Common.Value.seconds("\(seconds)")
         }
     }
