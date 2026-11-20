@@ -75,11 +75,10 @@ extension AppDatabase {
         }
     }
 
-    /// Deletes every stored page of every gallery.
+    /// Deletes every stored page of every gallery, leaving no trace of their text in the
+    /// database's files, as Clear History does.
     public func deleteAllPageTranslations() async throws {
-        try await writer.write { db in
-            try db.execute(sql: "DELETE FROM \(Schema.pageTranslation)")
-        }
+        try await deleteLeavingNoTrace([Schema.pageTranslation])
     }
 
     /// Deletes, in one transaction, the rows of every model set but `modelSetKey`, and the rows

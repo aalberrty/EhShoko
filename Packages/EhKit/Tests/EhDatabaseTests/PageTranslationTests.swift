@@ -101,6 +101,24 @@ import Testing
         #expect(try await database.rowCount("pageTranslation") == 0)
     }
 
+    @Test func deletingEverythingLeavesNoTextInTheDatabaseFiles() async throws {
+        let (database, directory) = try await TestDatabase.onDisk()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let marker = "UNIQUE-SETTINGS-CLEAR-MARKER-4D8E"
+        try await database.savePageTranslations((1...10).map { Self.page(gid: "1", index: $0, translation: marker) })
+        try await database.recordOpened(SampleData.gallery("1"))
+        #expect(try HistoryTests.filesHold(marker, in: directory))
+
+        try await database.deleteAllPageTranslations()
+
+        for file in try FileManager.default.contentsOfDirectory(at: directory, includingPropertiesForKeys: nil) {
+            let data = try Data(contentsOf: file)
+            #expect(data.range(of: Data(marker.utf8)) == nil, "\(file.lastPathComponent) still holds a page's text")
+        }
+        // Only the translations go.
+        #expect(try await database.rowCount("gallery") == 1)
+    }
+
     @Test func expiryKeepsOnlyTheCurrentModelSetOfGalleriesOpenedOrTranslatedLately() async throws {
         let database = try await TestDatabase.inMemory()
         let now = SampleData.date(100 * Self.day)
