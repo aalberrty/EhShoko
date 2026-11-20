@@ -38,6 +38,7 @@ extension EhClient {
         let trace = OperationTrace.current
         trace?.willSend(request)
         let response = try await transport.send(request)
+        ResponseArrival.observer?()
         trace?.didReceive(response, for: request)
         return response
     }

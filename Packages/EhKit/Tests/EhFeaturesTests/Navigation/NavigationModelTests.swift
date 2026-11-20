@@ -100,6 +100,9 @@ import Testing
         router.home.popToRoot()
         router.home.push(.favoritesFolder(3))
         #expect(router.place == .list(.favorites))
+        router.home.popToRoot()
+        router.home.push(.favoritesFolder(3, library: FavoritesModel()))
+        #expect(router.place == .list(.favorites))
 
         // A quick search from the Index is a search, not a place.
         router.home.popToRoot()
@@ -169,6 +172,29 @@ import Testing
         #expect(stack.path == [.galleryList(.popular)])
         #expect(stack.sideGallery == gallery)
         #expect(stack.sideIntent == .read(page: 3))
+    }
+
+    @Test func aPushedGalleryKeepsTheCoverItWasOpenedFrom() {
+        let stack = StackRouter()
+        let gallery = makeGallery()
+
+        stack.open(gallery, origin: .coverShelf, inSidePane: false)
+        stack.open(gallery, inSidePane: false)
+
+        // The same gallery from the shelf and from the list below it: two screens, each
+        // zooming back into its own cover.
+        #expect(stack.path == [.detail(gallery, origin: .coverShelf), .detail(gallery, origin: .list)])
+        #expect(stack.path[0] != stack.path[1])
+    }
+
+    @Test func theSidePaneKeepsNoOrigin() {
+        let stack = StackRouter()
+        let gallery = makeGallery()
+        stack.open(gallery, intent: .read(page: 2), origin: .recentlySeen, inSidePane: true)
+
+        stack.moveSidePaneOntoStack()
+
+        #expect(stack.path == [.detail(gallery, intent: .read(page: 2), origin: .list)])
     }
 
     @Test func anotherGalleryInTheSidePaneStartsOnAFreshPaneStack() {
@@ -263,6 +289,19 @@ import Testing
         #expect(!Route.search(keyword: "a").hidesBrowseChrome)
         #expect(!Route.typedSearch(keyword: "a").hidesBrowseChrome)
         #expect(!Route.settings(.general).hidesBrowseChrome)
+    }
+
+    /// A folder pushed from a library is another screen than the same folder of another
+    /// library, or of none.
+    @Test func aFoldersRouteIsTheFolderAndTheLibrarysModel() {
+        let library = FavoritesModel()
+        #expect(Route.favoritesFolder(3) == .favoritesFolder(FavoritesFolderRoute(folder: 3)))
+        #expect(Route.favoritesFolder(3, library: library) == .favoritesFolder(3, library: library))
+        #expect(Route.favoritesFolder(3, library: library) != .favoritesFolder(3))
+        #expect(Route.favoritesFolder(3, library: library) != .favoritesFolder(3, library: FavoritesModel()))
+        #expect(Route.favoritesFolder(3, library: library) != .favoritesFolder(4, library: library))
+        #expect(Set<Route>([.favoritesFolder(3, library: library), .favoritesFolder(3, library: library)]).count == 1)
+        #expect(!Route.favoritesFolder(-1, library: library).hidesBrowseChrome)
     }
 
     @Test func theTopScreenAloneDecidesTheBarAtAnyDepth() {
@@ -367,7 +406,9 @@ import Testing
     @Test func settingsRoutesForExperience() {
         #expect(Route.settings(.designPart(.list)) != .settings(.designPart(.gallery)))
         #expect(Set(DesignPart.allCases.map { SettingsRoute.designPart($0) }).count == DesignPart.allCases.count)
-        #expect(SettingsRoute.design != .designSetup)
+        #expect(SettingsRoute.design != .designSetup())
+        #expect(SettingsRoute.designSetup() == .designSetup(start: nil))
+        #expect(SettingsRoute.designSetup(start: .wall) != .designSetup(start: .ledger))
     }
 
     // MARK: Presented over everything
@@ -391,6 +432,23 @@ import Testing
 
         router.offer = false
         #expect(!router.showsOffer(isUnlocked: true))
+    }
+
+    /// The offer is presented from the same place as the Settings sheet and the reader opened
+    /// from Continue, which can show one at a time.
+    @Test func theOfferWaitsForSettingsAndTheReader() {
+        let router = AppRouter()
+        router.offer = true
+
+        router.presentSettings([.settings(.design)])
+        #expect(!router.showsOffer(isUnlocked: true))
+        router.dismissSettings()
+        #expect(router.showsOffer(isUnlocked: true))
+
+        router.reading = ReadingRequest(gallery: makeGallery(), page: 1)
+        #expect(!router.showsOffer(isUnlocked: true))
+        router.reading = nil
+        #expect(router.showsOffer(isUnlocked: true))
     }
 
     @Test func aReadingRequestIsIdentifiedByItsGallery() {

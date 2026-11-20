@@ -78,6 +78,7 @@ struct ShelfListFooterRow: View {
                 Color.clear
             case .loading:
                 ProgressView()
+                    .accessibilityLabel(L10n.Localizable.LoadingView.Title.loading)
             case .failed:
                 ListLoadMoreFailedRow(retry: retry)
             case .end:
@@ -87,8 +88,11 @@ struct ShelfListFooterRow: View {
                     .accessibilityHidden(true)
             }
         }
-        .frame(maxWidth: .infinity, minHeight: 50)
+        .frame(maxWidth: .infinity, minHeight: Self.minimumHeight)
     }
+
+    /// The footer is this high at least, whatever it shows.
+    static let minimumHeight: CGFloat = 50
 }
 
 /// "Page 2" between Toplists' pages.
@@ -147,9 +151,11 @@ struct ShelfListHeaderLine: View {
                         Text(L10n.Localizable.List.sort)
                     }
                     .font(.subheadline.weight(.medium))
+                    .hitAreaOutset()
                 }
                 .menuStyle(.button)
                 .buttonStyle(.borderless)
+                .hitAreaOutsetReturned()
             }
         }
     }

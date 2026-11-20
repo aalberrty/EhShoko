@@ -45,11 +45,6 @@ final class LedgerListLayout {
     private var key: Key?
     private var days = DaySections()
     private var indexByID: [String: Int] = [:]
-    /// The covers in list order, for the prefetcher.
-    private(set) var coverURLs: [URL?] = []
-
-    /// The site's Toplists show 50 galleries a page.
-    static let toplistsPageSize = 50
 
     /// The index of the entry with `id` in the entries last given to `update`.
     func index(of id: String) -> Int? {
@@ -100,25 +95,23 @@ final class LedgerListLayout {
     private func updateIndex(_ entries: [GalleryEntry], from start: Int) {
         if start == 0 {
             indexByID.removeAll(keepingCapacity: true)
-            coverURLs.removeAll(keepingCapacity: true)
         }
         indexByID.reserveCapacity(entries.count)
-        coverURLs.reserveCapacity(entries.count)
         for index in start..<entries.count {
             indexByID[entries[index].id] = index
-            coverURLs.append(entries[index].gallery.coverURL)
         }
     }
 
     /// One run per loaded page, headed "Page n". Without page starts (a narrowed list) there
     /// are no runs and no ranks.
     static func pageSections(_ starts: [PageStart], count: Int) -> [LedgerSection] {
-        starts.enumerated().compactMap { offset, start in
+        let pageSize = RankedPages.pageSize(of: starts)
+        return starts.enumerated().compactMap { offset, start in
             let end = offset + 1 < starts.count ? starts[offset + 1].index : count
             guard start.index < end, end <= count else { return nil }
             return LedgerSection(
                 id: start.page, title: L10n.Localizable.List.Page.divider(start.page), rows: start.index..<end,
-                firstRank: (start.page - 1) * toplistsPageSize + 1
+                firstRank: RankedPages.firstRank(ofPage: start.page, pageSize: pageSize)
             )
         }
     }

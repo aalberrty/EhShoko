@@ -20,8 +20,9 @@ struct RatingControl: View {
     }
 
     var body: some View {
+        // Symbols, so that the stars bounce when a rating is committed.
         RatingStars(
-            rating: Double(rating) / 2,
+            rating: Double(rating) / 2, form: .symbols,
             accessibilityLabel: L10n.Localizable.DetailView.ActionSection.Button.giveARating
         )
         .symbolEffect(.bounce, value: commitCount)

@@ -57,61 +57,6 @@ struct ReaderClosingRating: View {
     }
 }
 
-/// What the rating shows, from the detail model's state.
-nonisolated enum ReaderClosingRatingState: Equatable {
-    /// The detail is not known yet.
-    case placeholder
-    case signedOut
-    /// Nothing is known and the load failed: "Couldn't load · Try again".
-    case failed
-    case rated(average: Float, count: Int)
-    case unrated(average: Float, count: Int)
-
-    /// How the stars take touches in this state.
-    enum StarsMode: Equatable {
-        /// A tap or a sideways drag rates.
-        case rates
-        /// Dimmed; a tap asks the user to sign in.
-        case signsIn
-        /// Dimmed, and touches pass through.
-        case inactive
-    }
-
-    @MainActor
-    init(detail model: GalleryDetailModel?) {
-        guard let model else {
-            self = .placeholder
-            return
-        }
-        self.init(
-            isLoggedIn: model.isLoggedIn, detail: model.detail, loadFailed: model.loadingState.failed != nil,
-            userRating: model.userRating
-        )
-    }
-
-    init(isLoggedIn: Bool, detail: GalleryDetail?, loadFailed: Bool, userRating: Int) {
-        if detail == nil, loadFailed {
-            self = .failed
-        } else if !isLoggedIn {
-            self = .signedOut
-        } else if let detail {
-            self = userRating > 0
-                ? .rated(average: detail.rating, count: detail.ratingCount)
-                : .unrated(average: detail.rating, count: detail.ratingCount)
-        } else {
-            self = .placeholder
-        }
-    }
-
-    var starsMode: StarsMode {
-        switch self {
-        case .rated, .unrated: .rates
-        case .signedOut: .signsIn
-        case .placeholder, .failed: .inactive
-        }
-    }
-}
-
 /// Five stars, 38 pt, that follow a sideways drag in half steps and commit on release, or take
 /// a tap (`closing-page.md`). Not `RatingControl`: its drag starts on any touch, so in the
 /// vertical strip a scroll that began on the stars would rate instead of scrolling (spikes S4

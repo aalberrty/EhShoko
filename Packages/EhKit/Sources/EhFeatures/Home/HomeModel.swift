@@ -53,7 +53,7 @@ public final class HomeModel {
         let fetch = fetch()
         let signpost = PerformanceSignposts.begin(.listPage, "home popular")
         let task = tasks.run(TaskKey.popular) { [weak self] in
-            let outcome = await Outcome.of { try await fetch() }
+            let outcome = await Outcome.of { try await signpost.markingResponses(fetch) }
             self?.finish(with: outcome)
             signpost.end(outcome.signpostOutcome { "\($0.count) galleries" })
         }

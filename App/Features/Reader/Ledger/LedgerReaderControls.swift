@@ -63,6 +63,10 @@ final class LedgerSheetState {
     private(set) var isLandscape = false
     /// Auto-play's interval while it is off: the switch turns it on at this.
     private(set) var autoPlayInterval: ReaderAutoPlayPolicy = .fiveSeconds
+    /// Where the sheet's top edge is in the window, in whole points; `nil` until it is laid
+    /// out. In regular width the system floats the sheet as a card above the screen's bottom
+    /// edge, where its own heights do not say what it covers.
+    var top: CGFloat?
 
     private let defaultOpenHeight: CGFloat
     private let minimumOpenHeight: CGFloat
@@ -113,8 +117,8 @@ final class LedgerSheetState {
 /// How much of the screen's bottom the page gives up (spike S4): what the open sheet covers,
 /// and only while the controls show, at the open height, in a paged direction, in portrait on
 /// a screen of compact width. Otherwise nothing: at rest the sheet covers the page's foot, in
-/// the vertical direction the strip scrolls behind the sheet, and in landscape there is no
-/// room above it.
+/// the vertical direction the strip scrolls behind the sheet (and only the closing page makes
+/// room, `coveredBottom`), and in landscape there is no room above it.
 ///
 /// What the sheet covers is its open height and the safe area under it: sizes, never the
 /// sheet's position, which has values in flight while the system moves it. So the inset has
@@ -129,10 +133,29 @@ nonisolated struct LedgerPageInset: Equatable {
     var isCompactWidth: Bool
     var openHeight: CGFloat
     var safeAreaBottom: CGFloat
+    /// In regular width: from the sheet's top edge to the screen's bottom edge, at rest or
+    /// open, wherever the system has put the card. Unused in compact width.
+    var floatingCover: CGFloat = 0
 
     var value: CGFloat {
-        isShown && isOpen && isPaged && isPortrait && isCompactWidth ? (openHeight + safeAreaBottom).rounded() : 0
+        isShown && isOpen && isPaged && isPortrait && isCompactWidth ? covered : 0
     }
+
+    /// What the sheet covers while the engine keeps drawing under it, which the closing page
+    /// keeps as room under its column so that it rises above the sheet.
+    ///
+    /// - Compact width: the open sheet in the vertical direction, in portrait, where the strip
+    ///   scrolls behind it. In landscape the open sheet leaves no room above it.
+    /// - Regular width: the floating card, at rest or open, in every direction and
+    ///   orientation. The engine is never shortened there, and the card sits higher than the
+    ///   room the closing page keeps for controls resting at the bottom.
+    var coveredBottom: CGFloat {
+        guard isShown else { return 0 }
+        guard isCompactWidth else { return floatingCover }
+        return isOpen && !isPaged && isPortrait ? covered : 0
+    }
+
+    private var covered: CGFloat { (openHeight + safeAreaBottom).rounded() }
 }
 
 /// Sets the viewport's inset: one animated change whenever what decides it changes, and back
@@ -148,11 +171,17 @@ private struct LedgerPageInsetDriver: View {
     @State private var screen = LedgerScreenShape()
 
     var body: some View {
-        let inset = LedgerPageInset(
+        let isCompactWidth = horizontalSizeClass == .compact
+        let page = LedgerPageInset(
             isShown: model.showsPanel, isOpen: sheet.isOpen, isPaged: settings.readingDirection != .vertical,
-            isPortrait: !screen.isLandscape, isCompactWidth: horizontalSizeClass == .compact,
-            openHeight: sheet.openHeight, safeAreaBottom: screen.safeAreaBottom
-        ).value
+            isPortrait: !screen.isLandscape, isCompactWidth: isCompactWidth,
+            openHeight: sheet.openHeight, safeAreaBottom: screen.safeAreaBottom,
+            // Read only in regular width, so that the sheet's top moving under a finger
+            // re-renders nothing on a phone.
+            floatingCover: isCompactWidth ? 0 : screen.cover(below: sheet.top)
+        )
+        let inset = page.value
+        let covered = page.coveredBottom
         Color.clear
             .allowsHitTesting(false)
             .accessibilityHidden(true)
@@ -163,7 +192,14 @@ private struct LedgerPageInsetDriver: View {
             .onChange(of: inset, initial: true) { _, inset in
                 set(inset)
             }
-            .onDisappear { set(0) }
+            // Not animated: only the closing page reads it, and the strip moves to keep it in view.
+            .onChange(of: covered, initial: true) { _, covered in
+                viewport.coveredBottom = covered
+            }
+            .onDisappear {
+                set(0)
+                viewport.coveredBottom = 0
+            }
     }
 
     private func set(_ inset: CGFloat) {
@@ -174,17 +210,26 @@ private struct LedgerPageInsetDriver: View {
     }
 }
 
-/// What the controls take from the reader's screen: whether it is wider than tall, and the
-/// safe area at its bottom, which is also under the sheet. Changes only when the screen turns.
+/// What the controls take from the reader's screen: whether it is wider than tall, the safe
+/// area at its bottom, which is also under the sheet, and where its bottom edge is in the
+/// window. Changes only when the screen turns.
 nonisolated struct LedgerScreenShape: Equatable {
     var isLandscape = false
     var safeAreaBottom: CGFloat = 0
+    var bottom: CGFloat = 0
 
     init() {}
 
     init(_ geometry: GeometryProxy) {
         isLandscape = geometry.size.width > geometry.size.height
         safeAreaBottom = geometry.safeAreaInsets.bottom
+        bottom = (geometry.frame(in: .global).maxY + geometry.safeAreaInsets.bottom).rounded()
+    }
+
+    /// From a sheet's top edge, in the window, to the screen's bottom edge.
+    func cover(below top: CGFloat?) -> CGFloat {
+        guard let top, bottom > 0 else { return 0 }
+        return max(bottom - top, 0)
     }
 }
 

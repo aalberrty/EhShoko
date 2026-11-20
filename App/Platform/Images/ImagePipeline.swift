@@ -62,11 +62,13 @@ nonisolated enum ImagePipeline {
     /// - Parameters:
     ///   - keepsInMemory: Whether to keep the result in the memory cache. Pass `false` for
     ///     one-off decodes such as a zoomed-in page.
-    ///   - progress: Download progress from 0 to 1. Not called when the data is already on disk.
+    ///   - progress: The bytes received and expected (`ImageLoadProgress`), each time data
+    ///     arrives. Not called when the data is already on disk, nor while the server has not
+    ///     said how large the image is.
     @concurrent
     static func image(
         for url: URL, target: ImageDecodeTarget, displayScale: CGFloat, keepsInMemory: Bool = true,
-        progress: (@MainActor @Sendable (Double) -> Void)? = nil
+        progress: (@MainActor @Sendable (ImageLoadProgress) -> Void)? = nil
     ) async throws -> UIImage {
         let isRemote = !url.isFileURL
         var downloaded: Data?
@@ -196,18 +198,19 @@ nonisolated enum ImagePipeline {
     /// is already downloading share that download.
     @concurrent
     private static func download(
-        _ url: URL, priority: Float, progress: (@MainActor @Sendable (Double) -> Void)?
+        _ url: URL, priority: Float, progress: (@MainActor @Sendable (ImageLoadProgress) -> Void)?
     ) async throws -> Data {
         var progressBlock: DownloadProgressBlock?
         if let progress {
-            // Kingfisher reports progress on the main queue.
+            // Kingfisher reports progress on the main queue, for every piece of data that
+            // arrives. Whoever shows it decides how often (`ImageLoadProgressGate`).
             progressBlock = { received, total in
                 guard total > 0 else { return }
-                let fraction = min(max(Double(received) / Double(total), 0), 1)
+                let update = ImageLoadProgress(receivedBytes: received, expectedBytes: total)
                 if Thread.isMainThread {
-                    MainActor.assumeIsolated { progress(fraction) }
+                    MainActor.assumeIsolated { progress(update) }
                 } else {
-                    Task { @MainActor in progress(fraction) }
+                    Task { @MainActor in progress(update) }
                 }
             }
         }

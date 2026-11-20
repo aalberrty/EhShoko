@@ -85,12 +85,17 @@ enum PartHarnessHeap {
 
     /// How many blocks in use start with each of `classes`, which must be sorted.
     private static func scan(for classes: [UInt]) -> [Int] {
-        let pointers = UnsafeMutablePointer<UInt>.allocate(capacity: classes.count)
+        // The table is itself a block in use. Starting with the first class, it was counted as
+        // an object of it: the class at the lowest address was listed once whether or not one
+        // existed. So it starts with a word that is no class.
+        let block = UnsafeMutablePointer<UInt>.allocate(capacity: classes.count + 1)
         let counts = UnsafeMutablePointer<Int>.allocate(capacity: classes.count)
         defer {
-            pointers.deallocate()
+            block.deallocate()
             counts.deallocate()
         }
+        block.initialize(to: 0)
+        let pointers = block + 1
         pointers.initialize(from: classes, count: classes.count)
         counts.initialize(repeating: 0, count: classes.count)
         var scan = HeapScan(pointers: pointers, counts: counts, count: classes.count)

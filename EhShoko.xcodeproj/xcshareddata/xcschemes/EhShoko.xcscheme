@@ -89,6 +89,17 @@
                ReferencedContainer = "container:Packages/EhKit">
             </BuildableReference>
          </TestableReference>
+         <TestableReference
+            skipped = "NO"
+            parallelizable = "NO">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E10000000000000000000A03"
+               BuildableName = "EhShokoUITests.xctest"
+               BlueprintName = "EhShokoUITests"
+               ReferencedContainer = "container:EhShoko.xcodeproj">
+            </BuildableReference>
+         </TestableReference>
       </Testables>
    </TestAction>
    <LaunchAction

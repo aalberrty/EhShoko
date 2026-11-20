@@ -84,7 +84,7 @@ struct ShelfPopularCell: View {
         let gallery = entry.gallery
         VStack(alignment: .leading, spacing: 0) {
             CoverImage(url: gallery.coverURL, size: Self.cover, cornerRadius: 10)
-                .zoomSource(entry.id)
+                .galleryZoomSource(entry.id, from: .coverShelf)
             Text(entry.title.core)
                 .font(.caption.weight(.semibold))
                 .lookTitleDesign()
@@ -117,13 +117,17 @@ private struct ShelfPopularFailed: View {
     let retry: () -> Void
 
     @Environment(\.look) private var look
+    @Environment(\.dynamicTypeSize) private var typeSize
 
     var body: some View {
-        HStack(alignment: .firstTextBaseline, spacing: 8) {
+        let stacks = typeSize.isAccessibilitySize
+        let layout = ShelfHomeHeading.layout(stacks: stacks)
+        layout {
             Text(L10n.Localizable.Start.Shelf.popularFailed)
                 .font(.subheadline)
                 .foregroundStyle(look.secondaryLabel)
-            Spacer(minLength: 0)
+                .fixedSize(horizontal: false, vertical: true)
+            if !stacks { Spacer(minLength: 0) }
             Button(L10n.Localizable.ErrorView.Button.retry, action: retry)
                 .font(.subheadline.weight(.medium))
                 .frame(minHeight: 44)
@@ -156,7 +160,8 @@ private struct ShelfPopularPlaceholders: View {
         }
         .padding(.leading, margins.leading)
         .padding(.top, 1)
-        .frame(maxWidth: .infinity, alignment: .leading)
+        // As wide as the shelf it stands for, not as its five covers (`ShelfContinuePlaceholders`).
+        .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
         .clipped()
         .shimmering()
         .accessibilityHidden(true)

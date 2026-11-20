@@ -16,6 +16,8 @@ import Testing
         )
 
         let model = harness.makeModel(gallery: gallery)
+        // Parsed off the main actor when the reader starts.
+        await model.start()
 
         #expect(model.shortTitle(prefersJapanese: false) == "Yoake no Hakoniwa")
         #expect(model.shortTitle(prefersJapanese: true) == "Yoake no Hakoniwa")

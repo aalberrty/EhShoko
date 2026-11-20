@@ -19,7 +19,7 @@ struct FiltersCategorySection: View {
                     FilterSummary(model.filter).categoriesShown, FilterSummary.categoryCount
                 )
             )
-            .filtersSectionHeader()
+            .lookFormHeader()
         }
         .listRowBackground(Color.clear)
         .listRowInsets(EdgeInsets())

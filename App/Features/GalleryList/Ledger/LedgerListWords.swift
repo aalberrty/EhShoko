@@ -3,14 +3,13 @@ import EhModels
 import SwiftUI
 
 /// The words a Ledger list shows, looked up instead of formatted while it scrolls
-/// (`ledger.md` section 3). An entry carries its ages as a count and a unit and its page
-/// count as a number; this turns them into "2h ago", "added 2d ago", "48 p", once per value,
-/// and keeps each row's line of facts until the values in it change.
+/// (`ledger.md` section 3): each row's line of facts, kept until the values in it change, and
+/// the day headings. The words in a line ("2h ago", "added 2d ago", "48 p") are the ones every
+/// list makes once per value (`ListRowWords`).
 ///
 /// One per list screen, held as `@State` of `LedgerListView`, so it goes with the screen and
 /// no other design pays for it. It is a plain class: filling it while the list builds rows
-/// invalidates nothing. Nothing here would differ between the three lists but the line's
-/// layout, so the age and page texts could move to a shared place later.
+/// invalidates nothing.
 final class LedgerListWords {
     /// Which age a row's line ends with.
     nonisolated enum AgeKind: Hashable {
@@ -37,20 +36,11 @@ final class LedgerListWords {
         let rank: Int?
     }
 
-    private var ages: [AgeKey: String] = [:]
-    private var pages: [Int: String] = [:]
-    private var categories: [Category: String] = [:]
+    private let words = ListRowWords()
     private var facts: [String: (key: FactsKey, line: AttributedString)] = [:]
     private var dayTitles: [Date: String] = [:]
     /// The day "Today" meant when `dayTitles` was filled.
     private var today: Date?
-
-    private lazy var relativeFormatter: RelativeDateTimeFormatter = {
-        let formatter = RelativeDateTimeFormatter()
-        formatter.unitsStyle = .abbreviated
-        formatter.dateTimeStyle = .numeric
-        return formatter
-    }()
 
     private lazy var dayFormatter: DateFormatter = {
         let formatter = DateFormatter()
@@ -69,11 +59,7 @@ final class LedgerListWords {
     /// neither the tags nor the title name one.
     func facts(for entry: GalleryEntry, ending kind: AgeKind, rank: Int?) -> AttributedString {
         let gallery = entry.gallery
-        let age: AgeKey = switch kind {
-        case .added: entry.addedAge.map { AgeKey(age: $0, kind: .added) } ?? AgeKey(age: entry.postedAge, kind: .posted)
-        case .opened: entry.openedAge.map { AgeKey(age: $0, kind: .opened) } ?? AgeKey(age: entry.postedAge, kind: .posted)
-        case .posted: AgeKey(age: entry.postedAge, kind: .posted)
-        }
+        let age = ageKey(of: entry, ending: kind)
         let key = FactsKey(
             category: gallery.category, language: entry.languageCode, pages: gallery.pageCount,
             rating: entry.ratingText, age: age, rank: rank
@@ -82,6 +68,28 @@ final class LedgerListWords {
         let line = makeFacts(key)
         facts[entry.id] = (key, line)
         return line
+    }
+
+    /// What VoiceOver reads for a row, everything it shows in words: "credit, title, No. 4,
+    /// Doujinshi, Japanese, 48 pages, 4.5 stars, 2 hours ago". Asked for only while VoiceOver
+    /// is on; its words are made once per value.
+    func spokenLine(for entry: GalleryEntry, ending kind: AgeKind, rank: Int?) -> String {
+        var parts: [String] = []
+        if let credit = entry.credit { parts.append(credit) }
+        parts.append(entry.title.core)
+        if let rank { parts.append(L10n.Localizable.List.rank(rank)) }
+        parts.append(words.categoryName(entry.gallery.category))
+        if let code = entry.languageCode { parts.append(words.languageName(code: code)) }
+        parts.append(words.pages(entry.gallery.pageCount))
+        parts.append(words.spokenRating(entry.ratingText))
+        let age = ageKey(of: entry, ending: kind)
+        let spokenAge = switch age.kind {
+        case .posted: words.spokenAgo(age.age)
+        case .added: words.spokenAdded(age.age)
+        case .opened: words.spokenOpened(age.age)
+        }
+        parts.append(spokenAge)
+        return parts.joined(separator: ", ")
     }
 
     /// "Today", "Yesterday", then the date: "Thursday, 12 November", with the year when it is
@@ -116,14 +124,14 @@ final class LedgerListWords {
         if let rank = key.rank {
             parts.append(L10n.Localizable.List.rank(rank))
         }
-        var name = AttributedString(categoryName(key.category))
+        var name = AttributedString(words.categoryName(key.category))
         name.swiftUI.foregroundColor = key.category.markColor
         name.swiftUI.font = LedgerGalleryRow.factsEmphasisFont
         var rest = [String]()
         if let language = key.language {
             rest.append(language)
         }
-        rest.append(pageText(key.pages))
+        rest.append(words.shortPages(key.pages))
         rest.append("★ " + key.rating)
         rest.append(ageText(key.age))
         let separator = " · "
@@ -133,42 +141,21 @@ final class LedgerListWords {
         return line
     }
 
-    private func categoryName(_ category: Category) -> String {
-        if let name = categories[category] { return name }
-        let name = category.localizedName
-        categories[category] = name
-        return name
-    }
-
-    private func pageText(_ count: Int) -> String {
-        if let text = pages[count] { return text }
-        let text = L10n.Localizable.List.Pages.short(count)
-        pages[count] = text
-        return text
+    /// The age a row's line ends with: the one `kind` asks for, or when the gallery was
+    /// posted where the page did not say.
+    private func ageKey(of entry: GalleryEntry, ending kind: AgeKind) -> AgeKey {
+        switch kind {
+        case .added: entry.addedAge.map { AgeKey(age: $0, kind: .added) } ?? AgeKey(age: entry.postedAge, kind: .posted)
+        case .opened: entry.openedAge.map { AgeKey(age: $0, kind: .opened) } ?? AgeKey(age: entry.postedAge, kind: .posted)
+        case .posted: AgeKey(age: entry.postedAge, kind: .posted)
+        }
     }
 
     private func ageText(_ key: AgeKey) -> String {
-        if let text = ages[key] { return text }
-        let relative = relativeFormatter.localizedString(from: Self.past(key.age))
-        let text = switch key.kind {
-        case .posted: relative
-        case .added: L10n.Localizable.List.added(relative)
-        case .opened: L10n.Localizable.List.opened(relative)
-        }
-        ages[key] = text
-        return text
-    }
-
-    /// The age as components counting back from now, which the relative formatter words as
-    /// "… ago".
-    private static func past(_ age: GalleryEntry.Age) -> DateComponents {
-        switch age.unit {
-        case .minute: DateComponents(minute: -age.count)
-        case .hour: DateComponents(hour: -age.count)
-        case .day: DateComponents(day: -age.count)
-        case .week: DateComponents(weekOfMonth: -age.count)
-        case .month: DateComponents(month: -age.count)
-        case .year: DateComponents(year: -age.count)
+        switch key.kind {
+        case .posted: words.ago(key.age)
+        case .added: words.added(key.age)
+        case .opened: words.opened(key.age)
         }
     }
 }

@@ -1,0 +1,66 @@
+import EhModels
+import Foundation
+
+/// What the controls show of the page states, as last published.
+nonisolated public struct ReaderPageSummary: Equatable, Sendable {
+    public var failedPageCount = 0
+    public var currentPageHasImage = false
+}
+
+// What the controls show of the page states: the failed-page count and whether the current
+// page has its image.
+//
+// The page states stay out of observation (a page that resolves touches that page's view and
+// nothing in SwiftUI); these two summaries are observable instead. Each is worked out again
+// after whatever can change it and written only when it changed, so pages resolving one after
+// another touch SwiftUI only when the current page gets its image.
+//
+// A copy outside observation (`pageSummary`) is what new values are compared with and what
+// the engine reads. The engine asks for the count while SwiftUI makes it, and SwiftUI ties a
+// representable to every observable property read then: an observed read would update the
+// engine whenever a page failed.
+extension ReaderModel {
+    /// Why a page could not be resolved, for the line under "This page didn't load": what the
+    /// site's request for it ended with. `nil` for a page that has not failed that way. Why an
+    /// image did not load is the engine's to know: it loads the images.
+    public func failureReason(at page: Int) -> AppError? {
+        resolver.failure(of: page)
+    }
+
+    /// Counts the failed pages again: those that could not be resolved and those whose image
+    /// did not load, a page that failed both ways once. A pass over the pages the resolver
+    /// knows, a few microseconds for a long gallery, after a failure, a recovery or a command.
+    func refreshFailedPageCount() {
+        var count = failedImagePages.count
+        for (page, status) in resolver.statuses where !failedImagePages.contains(page) {
+            if case .failed = status {
+                count += 1
+            }
+        }
+        if count != pageSummary.failedPageCount {
+            pageSummary.failedPageCount = count
+            failedPageCount = count
+        }
+    }
+
+    func refreshCurrentPageHasImage() {
+        let hasImage = resolver.image(of: currentPage) != nil
+        if hasImage != pageSummary.currentPageHasImage {
+            pageSummary.currentPageHasImage = hasImage
+            currentPageHasImage = hasImage
+        }
+    }
+
+    /// A page's state changed: only the current page's matters to the image summary.
+    func pageDidChange(_ page: Int) {
+        if page == currentPage {
+            refreshCurrentPageHasImage()
+        }
+    }
+
+    /// Both summaries again, after a command that changed many pages at once.
+    func refreshPageSummary() {
+        refreshFailedPageCount()
+        refreshCurrentPageHasImage()
+    }
+}

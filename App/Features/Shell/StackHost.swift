@@ -9,12 +9,14 @@ import SwiftUI
 struct StackHost<Root: View, Bar: View>: View {
     let router: StackRouter
     let hasBar: Bool
+    /// Something is drawn over the stack: the command bar's search surface.
+    var isCovered = false
     @ViewBuilder var root: Root
     @ViewBuilder var bar: (BarControl?, @escaping (BarAction) -> Void) -> Bar
 
     var body: some View {
         BottomChrome(
-            router: router, hasBar: hasBar,
+            router: router, hasBar: hasBar, isCovered: isCovered,
             content: { RoutedStack(router: router) { root } },
             bar: bar
         )
@@ -40,6 +42,8 @@ extension StackHost where Bar == EmptyView {
 struct HomeStackHost<Bar: View>: View {
     let router: StackRouter
     let hasBar: Bool
+    /// Something is drawn over the stack: the command bar's search surface.
+    var isCovered = false
     @ViewBuilder var bar: (BarControl?, @escaping (BarAction) -> Void) -> Bar
 
     @Environment(SettingsStore.self) private var settings
@@ -47,10 +51,10 @@ struct HomeStackHost<Bar: View>: View {
 
     var body: some View {
         if StartStructure.hasLeadingColumn(settings), sizeClass == .regular {
-            LeadingColumnHost(router: router, hasBar: hasBar, bar: bar)
+            LeadingColumnHost(router: router, hasBar: hasBar, isCovered: isCovered, bar: bar)
         } else {
             StackHost(
-                router: router, hasBar: hasBar,
+                router: router, hasBar: hasBar, isCovered: isCovered,
                 root: { StartScreen().tabsAccountButton() },
                 bar: bar
             )
@@ -69,30 +73,34 @@ extension HomeStackHost where Bar == EmptyView {
 private struct LeadingColumnHost<Bar: View>: View {
     let router: StackRouter
     let hasBar: Bool
+    let isCovered: Bool
     let bar: (BarControl?, @escaping (BarAction) -> Void) -> Bar
 
     @State private var visibility = NavigationSplitViewVisibility.all
+    /// Where the list column starts, and the column's visibility when the list loses the room
+    /// beside it (`LeadingColumnLayout`, in the package with its tests).
+    @State private var layout = LeadingColumnLayout()
     @Environment(\.chrome) private var chrome
-
-    /// The split view keeps reporting `.all` while it is collapsed; this host exists only on
-    /// regular width, where the column is beside the list whenever it is visible.
-    private var columnIsBeside: Bool {
-        visibility == .all || visibility == .doubleColumn
-    }
 
     var body: some View {
         BottomChrome(
             router: router, hasBar: hasBar,
-            leadingInset: columnIsBeside ? StartStructure.leadingColumnWidth : 0,
+            leadingInset: layout.listInset,
+            // The column lies over the list, and the list's chrome would show through its glass.
+            isCovered: isCovered || layout.isColumnOverList,
             content: { columns },
             bar: bar
         )
         .opensGalleries(on: router)
         .environment(\.chrome, columnChrome(isLeadingColumn: false))
+        .onChange(of: visibility == .detailOnly, initial: true) { _, isHidden in
+            router.isLeadingColumnHidden = isHidden
+        }
+        .onDisappear { router.isLeadingColumnHidden = false }
     }
 
     private var columns: some View {
-        NavigationSplitView(columnVisibility: $visibility) {
+        NavigationSplitView(columnVisibility: userVisibility) {
             StartScreen()
                 .tabsAccountButton()
                 .environment(\.chrome, columnChrome(isLeadingColumn: true))
@@ -102,16 +110,50 @@ private struct LeadingColumnHost<Bar: View>: View {
                 .environment(\.chromeReserve, 0)
                 .transformPreference(ChromeKey.self) { $0 = [] }
                 .navigationSplitViewColumnWidth(StartStructure.leadingColumnWidth)
+                .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { apply(layout.measured(column: $0)) }
         } detail: {
-            PlaceRootedStack(router: router) {
+            // Widths, not positions: the system moves a column without a new layout of what is
+            // in it, but a column that changes width lays out its top screen again.
+            PlaceRootedStack(
+                router: router,
+                rootBesideSidebarButton: chrome.bar == .tabs && visibility == .detailOnly,
+                columnWidth: { apply(layout.measured(list: $0)) }
+            ) {
                 GalleryListScreen(context: .place(.frontpage))
             }
         }
+        .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { apply(layout.measured(split: $0)) }
+        // Before the pane takes its room: hidden in the update that opens the pane, the Index
+        // is never laid over the list for a layout.
+        .onSidePaneWidthChange { apply(layout.sidePane(width: $0)) }
     }
 
-    /// The tab bar's accessory is off while the column shows, so the column keeps Continue.
+    private func apply(_ change: LeadingColumnVisibility?) {
+        switch change {
+        case .shown: visibility = .all
+        case .hidden: visibility = .detailOnly
+        case nil: break
+        }
+    }
+
+    /// The column's visibility, as the user changes it with the sidebar button or by
+    /// dismissing the column laid over the list.
+    private var userVisibility: Binding<NavigationSplitViewVisibility> {
+        Binding(
+            get: { visibility },
+            set: { new in
+                guard new != visibility else { return }
+                visibility = new
+                layout.userChose(isShown: new == .all || new == .doubleColumn)
+            }
+        )
+    }
+
+    /// The column keeps Continue while it shows; while it is hidden, the tab bar's Continue is
+    /// on for the list beside it, as for any other first screen.
     private func columnChrome(isLeadingColumn: Bool) -> ChromeContext {
-        ChromeContext(bar: chrome.bar, continueIsInChrome: false, isLeadingColumn: isLeadingColumn)
+        let continueIsInChrome = !isLeadingColumn && chrome.bar == .tabs && visibility == .detailOnly
+        return ChromeContext(bar: chrome.bar, continueIsInChrome: continueIsInChrome, isLeadingColumn: isLeadingColumn)
     }
 }
 

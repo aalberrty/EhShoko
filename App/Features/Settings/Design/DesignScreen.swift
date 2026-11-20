@@ -82,11 +82,17 @@ private struct DesignPictures: View {
                 .frame(width: Self.size.width, height: Self.size.height)
             Text(caption)
                 .font(.caption2)
+                // A caption under a picture of fixed width: beyond this size its words break
+                // in the middle. The row above says the same in full.
+                .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
                 .foregroundStyle(look.secondaryLabel)
                 .multilineTextAlignment(.center)
                 .accessibilityHidden(true)
         }
         .frame(minWidth: Self.size.width)
+        // One element, the picture's, over the caption too: hidden text outside every element
+        // is what the accessibility audit reports as "potentially inaccessible text".
+        .accessibilityElement(children: .combine)
     }
 }
 

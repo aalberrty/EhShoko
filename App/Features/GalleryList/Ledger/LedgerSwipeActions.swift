@@ -51,8 +51,8 @@ struct LedgerSwipeActions: View {
             more
         case .folder:
             if actions.isLoggedIn, folder != nil {
-                // Not `.destructive`: the row stays until the list is read again, so it must
-                // not be animated away.
+                // Not `.destructive`: the row leaves only once the site has accepted the change
+                // (the list's model drops it then), so it must not be animated away before.
                 Button(L10n.Localizable.List.Action.remove, systemImage: "heart.slash") {
                     actions.unfavorite(gallery)
                 }

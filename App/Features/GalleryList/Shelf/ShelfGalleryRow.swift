@@ -20,6 +20,9 @@ struct ShelfRowStyle: Equatable {
     var footer: Footer
     /// Chips on the tag line: the smaller of the setting and what fits the row; 0 hides it.
     var tagLimit: Int
+    /// VoiceOver is on: a row then reads its words in full ("48 pages", "2 hours ago") in
+    /// place of what it shows ("48 p", "2h"). Building that line costs every row, so only then.
+    var isSpoken = false
     /// The row's height at the current text size: one of two, with or without the tag line,
     /// so the list never measures text to size a row.
     var height: CGFloat
@@ -35,7 +38,7 @@ struct ShelfRowStyle: Equatable {
 
     static func == (lhs: Self, rhs: Self) -> Bool {
         lhs.isRanked == rhs.isRanked && lhs.footer == rhs.footer && lhs.tagLimit == rhs.tagLimit
-            && lhs.height == rhs.height && lhs.zoom == rhs.zoom && lhs.texts === rhs.texts
+            && lhs.isSpoken == rhs.isSpoken && lhs.height == rhs.height && lhs.zoom == rhs.zoom && lhs.texts === rhs.texts
             && lhs.textsRevision == rhs.textsRevision
     }
 }
@@ -67,6 +70,9 @@ struct ShelfGalleryRow: View, Equatable {
     }
 
     var body: some View {
+        #if DEBUG || HARNESS
+        let _ = ListHarnessCells.note(entry.id)
+        #endif
         let texts = style.texts
         HStack(alignment: .top, spacing: Self.coverSpacing) {
             if style.isRanked {
@@ -99,7 +105,13 @@ struct ShelfGalleryRow: View, Equatable {
         }
         .frame(height: style.height, alignment: .top)
         .contentShape(.rect)
-        .accessibilityElement(children: .combine)
+        // Without VoiceOver the row's texts, combined (Voice Control and the walks name rows
+        // by them); with it, the same in words.
+        .accessibilityElement(children: style.isSpoken ? .ignore : .combine)
+        .accessibilityLabel(
+            Text(verbatim: style.isSpoken ? texts.spokenLine(for: entry, rank: rank, footer: style.footer) : ""),
+            isEnabled: style.isSpoken
+        )
     }
 }
 

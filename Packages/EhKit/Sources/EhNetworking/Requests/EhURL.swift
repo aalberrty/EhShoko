@@ -20,10 +20,21 @@ public struct EhLinkAnalysis: Sendable, Equatable {
 /// Pure helpers for recognising and rewriting the site's URLs, for deep links,
 /// clipboard detection and links inside comments.
 public enum EhURL {
+    /// The app's own scheme, which the share extension rewrites links to.
+    public static let appScheme = "ehshoko"
+
     /// Rewrites the app's own `ehshoko://` scheme to `https://`; other URLs are returned as is.
     public static func resolvingAppScheme(_ url: URL) -> URL {
-        guard url.scheme == "ehshoko" else { return url }
+        guard url.scheme == appScheme else { return url }
         return replacing(url) { $0.scheme = "https" } ?? url
+    }
+
+    /// A link the app can open (`isHandleable`) as the app's own link, which the shell opens
+    /// the way it opens a shared one (a link read from the clipboard, a pasted link); `nil`
+    /// for any other link. `resolvingAppScheme` turns it back.
+    public static func appLink(for url: URL) -> URL? {
+        guard isHandleable(url) else { return nil }
+        return replacing(url) { $0.scheme = appScheme }
     }
 
     /// Whether the app can open the link: an `https` gallery (`/g/<gid>/<token>`) or image

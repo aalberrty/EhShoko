@@ -5,7 +5,7 @@ import Foundation
 import Observation
 
 /// The app around the features: the launch sequence, the scene lifecycle, the app lock, links
-/// from outside the app and the daily greeting.
+/// from outside the app, the daily greeting and the offer after install.
 ///
 /// The shell owns one with `@State` and renders `launchState`. Feature screens are created only
 /// once it is `.ready`, which is after the database has been installed for `\.database`.
@@ -50,6 +50,8 @@ public final class AppModel {
     public let router: AppRouter
     public let lock: AppLockModel
     public let links: DeepLinkModel
+    /// The offer after install, which the shell presents.
+    public let experienceOffer: ExperienceOfferModel
     let greeting: GreetingModel
 
     @ObservationIgnored var scenePhase: ScenePhase?
@@ -75,6 +77,7 @@ public final class AppModel {
         self.router = router
         lock = AppLockModel()
         links = DeepLinkModel(router: router)
+        experienceOffer = ExperienceOfferModel(router: router, lock: lock)
         greeting = GreetingModel(router: router)
     }
 
@@ -135,10 +138,16 @@ public final class AppModel {
         activationRequest = ActivationRequest(id: activationCount, work: work)
     }
 
-    /// Legacy `AppReducer` `.appLock(.unlockApp)`: the greeting, then the clipboard.
+    /// Legacy `AppReducer` `.appLock(.unlockApp)`: the greeting, then the clipboard. Then the
+    /// offer after install, so that it queues behind the greeting; a link being opened, from
+    /// the clipboard or from outside, goes first.
     private func runUnlockFollowUps() async {
         links.checkClipboard()
         await greeting.fetchIfNeeded()
+        guard !Task.isCancelled else { return }
+        experienceOffer.offerIfDue(
+            isReady: launchState == .ready, isUnlocked: !lock.isLocked, isOpeningLink: links.request != nil
+        )
     }
 
     // MARK: Tabs

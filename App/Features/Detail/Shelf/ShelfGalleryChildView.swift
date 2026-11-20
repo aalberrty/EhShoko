@@ -18,14 +18,14 @@ struct ShelfGalleryChildView: View {
             if let detail = model.detail {
                 ShelfGalleryInfosScreen(gallery: model.gallery, detail: detail)
             }
-        case .archives, .torrents, .postComment, .tagDetail, .reader:
+        case .archives, .torrents, .tagDetail, .reader:
             EmptyView()
         }
     }
 }
 
-/// The content of a sheet the page asked for: the archive options, the torrents, the comment
-/// composer, a tag's details. Each sets its own detents.
+/// The content of a sheet the page asked for: the archive options, the torrents, a tag's
+/// details. Each sets its own detents.
 struct ShelfGallerySheet: View {
     let destination: DetailDestination
     let model: GalleryDetailModel
@@ -36,8 +36,6 @@ struct ShelfGallerySheet: View {
             ShelfArchivesSheet(gallery: model.gallery, archiveURL: archiveURL)
         case .torrents:
             ShelfTorrentsSheet(gid: model.gallery.gid, token: model.gallery.token)
-        case .postComment:
-            PostCommentSheet(composer: .new) { text in model.postComment(text) }
         case .tagDetail(let detail):
             TagDetailSheet(detail: detail)
         case .comments, .previews, .galleryInfos, .reader:

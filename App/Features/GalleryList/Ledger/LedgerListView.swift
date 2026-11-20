@@ -14,14 +14,14 @@ import SwiftUI
 /// open; this view draws the rows, the states and the controls' places.
 ///
 /// What only Ledger needs lives here as `@State` and goes with the view: the words of the
-/// rows, the headings' layout and the covers' prefetcher.
+/// rows and the headings' layout, with the list's own cover prefetcher.
 struct LedgerListView<Header: View>: View {
     let input: ListDesignInput
     @ViewBuilder var header: Header
 
     @State private var words = LedgerListWords()
     @State private var layout = LedgerListLayout()
-    @State private var prefetcher = LedgerCoverPrefetcher()
+    @State private var prefetcher = ListCoverPrefetcher()
     @State private var visits = LedgerListVisits()
     @Environment(SettingsStore.self) private var settings
     @Environment(FilterStore.self) private var filterStore
@@ -30,7 +30,9 @@ struct LedgerListView<Header: View>: View {
     var body: some View {
         let style = LedgerRowStyle(showsCover: settings.ledgerShowsCovers, look: look)
         content(style: style)
-            .modifier(LedgerListChrome(input: input, showsCovers: showsCovers))
+            .modifier(LedgerListChrome(
+                input: input, ownFolder: input.ownFolder(hasHeader: hasHeader), showsCovers: showsCovers
+            ))
             .onAppear {
                 // Rows read their reading progress when their page is mapped; a gallery or a
                 // reader opened from here may have moved it.
@@ -44,9 +46,10 @@ struct LedgerListView<Header: View>: View {
     @ViewBuilder
     private func content(style: LedgerRowStyle) -> some View {
         let feed = input.feed
-        // A list under a first screen's header keeps the header: its states are rows (in
-        // `LedgerListContent`). Otherwise they take the screen, where their buttons may be glass.
-        switch (feed.phase, input.context.embedsInStart) {
+        // A list under a header (a first screen's, the library's) keeps the header: its states
+        // are rows (in `LedgerListContent`), without glass. Otherwise they take the screen,
+        // where their buttons may be glass.
+        switch (feed.phase, hasHeader) {
         case (.signedOut(let kind), false):
             ListSignInState(kind: kind)
                 .background { look.background.ignoresSafeArea() }
@@ -72,6 +75,9 @@ struct LedgerListView<Header: View>: View {
                 .background { look.background.ignoresSafeArea() }
         }
     }
+
+    /// A first screen or the library passes a header; a list of its own passes none.
+    private var hasHeader: Bool { !(Header.self is EmptyView.Type) }
 
     /// The Search filter, which only a search's empty state reads.
     private var filterForLoosening: Filter {
@@ -105,13 +111,14 @@ private struct LedgerListContent<Header: View>: View {
     let style: LedgerRowStyle
     let words: LedgerListWords
     let layout: LedgerListLayout
-    let prefetcher: LedgerCoverPrefetcher
+    let prefetcher: ListCoverPrefetcher
 
     /// What a row's More or Move swipe action opened.
     @State private var dialog: LedgerRowDialog?
     @Environment(\.openGallery) private var openGallery
     @Environment(StackRouter.self) private var stack
     @Environment(\.lookTint) private var tint
+    @Environment(\.accessibilityVoiceOverEnabled) private var isVoiceOverOn
 
     private static var rowInsets: EdgeInsets {
         EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: LedgerGalleryRow.trailingInset)
@@ -123,13 +130,12 @@ private struct LedgerListContent<Header: View>: View {
         let feed = input.feed
         let entries = feed.entries
         let kind = LedgerListKind(input.context)
-        if layout.update(entries, grouping: kind.grouping, pageStarts: feed.pageStarts, words: words) {
-            prefetcher.stop()
-        }
+        layout.update(entries, grouping: kind.grouping, pageStarts: feed.pageStarts, words: words)
         prefetcher.isEnabled = style.showsCover
+        prefetcher.update(entries)
         let rows = LedgerRows(
             kind: kind, textInset: LedgerGalleryRow.textInset(showsCover: style.showsCover),
-            selectedID: stack.sideGallery?.gid
+            selectedID: stack.sideGallery?.gid, isSpoken: ListSpokenRows.isOn(isVoiceOverOn)
         )
         return List {
             header
@@ -172,7 +178,7 @@ private struct LedgerListContent<Header: View>: View {
                     .listRowSeparator(.hidden)
                     .listRowBackground(Color.clear)
             case .empty, .failed, .signedOut:
-                // Only under a first screen's header; see `LedgerListView.content`.
+                // Only under a header; see `LedgerListView.content`.
                 LedgerInlineState(phase: feed.phase, feed: feed, filters: input.filtersAction)
                     .listRowInsets(EdgeInsets())
                     .listRowSeparator(.hidden)
@@ -194,10 +200,11 @@ private struct LedgerListContent<Header: View>: View {
         let actions = input.actions
         let folder = rows.kind.marksFolders && !style.showsCover ? actions.favoriteFolder(of: entry) : nil
         let facts = words.facts(for: entry, ending: rows.kind.age, rank: rank)
+        let spoken = rows.isSpoken ? words.spokenLine(for: entry, ending: rows.kind.age, rank: rank) : nil
         return Button {
             openGallery(entry.gallery)
         } label: {
-            LedgerGalleryRow(entry: entry, facts: facts, folder: folder, style: style)
+            LedgerGalleryRow(entry: entry, facts: facts, spoken: spoken, folder: folder, style: style)
                 .equatable()
         }
         .listRowInsets(Self.rowInsets)
@@ -209,11 +216,7 @@ private struct LedgerListContent<Header: View>: View {
             LedgerSwipeActions(entry: entry, actions: actions, form: rows.kind.swipe) { dialog = $0 }
         }
         .galleryContextMenu(entry, actions: actions, offersMove: rows.kind.offersMove)
-        .onAppear {
-            if let index = layout.index(of: entry.id) {
-                prefetcher.rowAppeared(at: index, of: layout.coverURLs)
-            }
-        }
+        .onAppear { prefetcher.appeared(entry.id) }
     }
 
     private func rank(of entry: GalleryEntry, in section: LedgerSection) -> Int? {
@@ -228,6 +231,8 @@ private struct LedgerRows {
     let textInset: CGFloat
     /// The gallery in the side pane, whose row is tinted (iPad).
     let selectedID: String?
+    /// VoiceOver is on: rows read their words in full (`LedgerListWords.spokenLine`).
+    let isSpoken: Bool
 }
 
 /// What a kind of list changes in Ledger's rows.

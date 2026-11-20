@@ -1,9 +1,10 @@
 #if DEBUG || HARNESS
 import SwiftUI
 
-/// Stands in the slot after the last page until the closing page exists
-/// (`ReaderClosingPage`, which replaces it in the reader and here). It has what the slot must
-/// be shown to carry: controls that take their own taps, a height of its own for the vertical
+/// Fills the slot after the last page in place of the closing page where a setup asks for it
+/// (`ReaderHarnessSetup.slotContent`): the walk's height case, which makes it taller from
+/// outside to see the vertical strip measure the slot again. It has what the slot must be
+/// shown to carry: controls that take their own taps, a height of its own for the vertical
 /// strip, and no gesture on its background, so the engine's tap zones work on every empty part.
 struct ReaderHarnessStandIn: View {
     let model: ReaderHarnessModel

@@ -131,6 +131,7 @@ private struct WallGalleryCredit: View {
             }
         }
         .buttonStyle(.plain)
+        .hitAreaOutsetReturned()
     }
 
     private var label: some View {
@@ -145,7 +146,7 @@ private struct WallGalleryCredit: View {
                 .foregroundStyle(look.tertiaryLabel)
                 .accessibilityHidden(true)
         }
-        .contentShape(.rect)
+        .hitAreaOutset()
     }
 
     private var searches: [GalleryCreditSearch] {
@@ -228,18 +229,24 @@ private struct WallGalleryFacts: View, Equatable {
             if let count = facts.ratingCount {
                 Text(verbatim: "(\(count.formatted()))")
                     .monospacedDigit()
-                    .accessibilityLabel(L10n.Localizable.Gallery.Figure.votes(count))
+                    .accessibilityLabel(Self.votes(count))
             }
         }
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel(L10n.Localizable.Gallery.Figure.rating)
-        .accessibilityValue(ratingValue)
+        // One label, not a label and a value: the line combines its pieces, and a value would
+        // be read after the whole line, away from "Rating".
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(L10n.Localizable.Gallery.Figure.rating + ", " + ratingValue)
     }
 
     private var ratingValue: String {
         let value = facts.rating.formatted(.number.precision(.fractionLength(2)))
         guard let count = facts.ratingCount else { return value }
-        return value + ", " + L10n.Localizable.Gallery.Figure.votes(count)
+        return value + ", " + Self.votes(count)
+    }
+
+    /// "1 vote", "318 votes".
+    private static func votes(_ count: Int) -> String {
+        count == 1 ? L10n.Localizable.Gallery.Figure.vote(count) : L10n.Localizable.Gallery.Figure.votes(count)
     }
 }
 
@@ -286,12 +293,19 @@ struct WallGallerySectionHeading: View {
     var action: () -> Void = {}
 
     @Environment(\.look) private var look
+    @Environment(\.dynamicTypeSize) private var typeSize
 
     var body: some View {
-        HStack(alignment: .firstTextBaseline) {
+        // At the accessibility sizes the link goes under the title, which side by side would
+        // be broken into syllables.
+        let stacks = typeSize.isAccessibilitySize
+        let layout = stacks
+            ? AnyLayout(VStackLayout(alignment: .leading, spacing: Tokens.Spacing.xSmall))
+            : AnyLayout(HStackLayout(alignment: .firstTextBaseline))
+        layout {
             Text(title)
                 .lookSectionHeader()
-            Spacer(minLength: Tokens.Spacing.small)
+            if !stacks { Spacer(minLength: Tokens.Spacing.small) }
             if let link {
                 Button(action: action) {
                     HStack(spacing: 2) {
@@ -303,9 +317,10 @@ struct WallGallerySectionHeading: View {
                     }
                     .font(.footnote.weight(.semibold))
                     .foregroundStyle(look.label)
-                    .contentShape(.rect)
+                    .hitAreaOutset()
                 }
                 .buttonStyle(.plain)
+                .hitAreaOutsetReturned()
             }
         }
         .padding(.top, 18)

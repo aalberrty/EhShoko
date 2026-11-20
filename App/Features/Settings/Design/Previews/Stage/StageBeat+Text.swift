@@ -15,10 +15,12 @@ extension StageBeat {
 
 extension DesignStyle {
     /// What the preset's animation shows, in a sentence: the stage's value for VoiceOver.
-    var stageSummary: String {
+    /// Shelf's names the tab bar tucking away only where the playback shows it
+    /// (`StagePlayback.tabBarTucks`).
+    func stageSummary(tabBarTucks: Bool) -> String {
         typealias Summary = L10n.Localizable.Settings.Design.Stage.A11y
         return switch self {
-        case .shelf: Summary.shelf
+        case .shelf: tabBarTucks ? Summary.shelf : Summary.Shelf.still
         case .wall: Summary.wall
         case .ledger: Summary.ledger
         }

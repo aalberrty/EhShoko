@@ -40,8 +40,9 @@ nonisolated enum ListPrimaryControl: Equatable, Sendable {
 
 /// What a screen puts in the command bar's trailing circle (`wall.md` section 1).
 nonisolated enum BarControl: Equatable, Sendable {
-    /// A button: the filter, with a dot when it is not the default; Ledger's paste button.
-    case button(systemImage: String, title: String, showsDot: Bool)
+    /// A button: the filter, with a dot and VoiceOver's value (what it narrows) when it is not
+    /// the default; Ledger's paste button.
+    case button(systemImage: String, title: String, narrowing: String?)
     /// A button that opens a menu of list controls: Sort on favourites, More on History and
     /// Toplists, which have no primary control.
     case menu(systemImage: String, title: String, controls: ListMenuControls)
@@ -62,7 +63,7 @@ extension ListControls {
         case .filter(let summary):
             .button(
                 systemImage: "line.3.horizontal.decrease", title: L10n.Localizable.FiltersView.Title.filters,
-                showsDot: !summary.isDefault
+                narrowing: summary.isDefault ? nil : summary.longText
             )
         case .sort(let picker):
             .menu(systemImage: picker.systemImage, title: picker.title, controls: ListMenuControls(sort: picker))
@@ -107,10 +108,20 @@ struct ListFeed {
 
     let source: any ListFeedSource
     let signIn: ListSignInState.Kind?
+    /// What the screen around the list refreshes with it: the `refreshable` its surroundings
+    /// declare, which the design's own hides from the list's scroll view.
+    private var surroundingRefresh: RefreshAction?
 
     init(_ source: any ListFeedSource, signIn: ListSignInState.Kind? = nil) {
         self.source = source
         self.signIn = signIn
+    }
+
+    /// The same feed, whose pull to refresh also runs `refresh`.
+    func refreshing(with refresh: RefreshAction?) -> ListFeed {
+        var feed = self
+        feed.surroundingRefresh = refresh
+        return feed
     }
 
     /// The rows to draw: what is loaded, narrowed by `findText`.
@@ -134,8 +145,13 @@ struct ListFeed {
         nonmutating set { source.feedFindText = newValue }
     }
 
-    /// Pull to refresh.
-    func refresh() async { await source.feedRefresh() }
+    /// Pull to refresh: the list, and at the same time what its surroundings refresh.
+    func refresh() async {
+        guard let surroundingRefresh else { return await source.feedRefresh() }
+        async let surroundings: Void = surroundingRefresh()
+        await source.feedRefresh()
+        await surroundings
+    }
 
     /// Retry of the failed first page.
     func retry() { source.feedRetry() }
@@ -150,6 +166,26 @@ struct ListFeed {
     /// mapped and do not follow it; the shared wrapper calls this when a reader it presented
     /// over the list closes.
     func refreshReadingProgress() async { await source.feedRefreshReadingProgress() }
+}
+
+/// The list's primary control, which `ListHost` hands a first screen's header that draws
+/// the list's heading (`ListHeading.header`): Shelf's Home draws the Front Page's filter pill
+/// with it. `nil` where the command bar holds the control, for a list with none, and over a
+/// list that cannot be shown.
+struct ListHeadingControl: Equatable {
+    let control: ListPrimaryControl
+    /// Reports a choice to the list: `.filters` for the filter, `.sort` for an order.
+    let perform: (ListMenuAction) -> Void
+
+    /// Equal for the same control: `perform` is the list's own, the same for its life.
+    static func == (lhs: ListHeadingControl, rhs: ListHeadingControl) -> Bool {
+        lhs.control == rhs.control
+    }
+}
+
+extension EnvironmentValues {
+    /// Set by `ListHost` on its design and the header in it.
+    @Entry var listHeadingControl: ListHeadingControl? = nil
 }
 
 /// What backs a `ListFeed`: `GalleryListModel` and `HistoryModel`, and the part harness's
