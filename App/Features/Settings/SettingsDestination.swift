@@ -18,6 +18,8 @@ struct SettingsDestination: View {
         case .designPart(let part): DesignOptionsScreen(part: part)
         case .designSetup(let start): DesignSetupScreen(startingPoint: start)
         case .reading: ReadingSettingsScreen()
+        case .pageTranslation: PageTranslationSettingsScreen()
+        case .pageTranslationChild(let route): PageTranslationChildScreen(route: route)
         case .laboratory: LaboratorySettingsScreen()
         case .logs: LogsScreen()
         case .log(let file): LogDetailScreen(file: file)
