@@ -3,7 +3,9 @@ import Foundation
 import Synchronization
 import Testing
 
-@Suite struct LlamaEngineTests {
+/// One engine at a time: every engine computes on a thread of its own, and a run on a small
+/// machine shares its few cores with every other suite of the package.
+@Suite(.serialized) struct LlamaEngineTests {
     init() {
         TinyModel.keepMetalOff()
     }
