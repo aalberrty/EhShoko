@@ -95,28 +95,31 @@ import Testing
     static let reference = "models/det-phone/lama/mac"
 
     /// The repaint model, compiled once into the temporary folder.
-    static func inpainter(_ folder: PrivateFolder) async throws -> LamaInpainter {
+    static func compiledRepaintModel(_ folder: PrivateFolder) async throws -> URL {
         let compiled = FileManager.default.temporaryDirectory.appending(path: "EhPageTranslationTests-LaMa-fp16.mlmodelc")
         if !FileManager.default.fileExists(atPath: compiled.path) {
             let made = try await MLModel.compileModel(at: folder.url(repaintModel))
             try? FileManager.default.removeItem(at: compiled)
             try FileManager.default.moveItem(at: made, to: compiled)
         }
-        return try LamaInpainter(compiledModel: compiled)
+        return compiled
     }
 
     struct TileResult: Codable {
         var tile: Int
+        var units: String
         var seconds: Double
         /// Against the Mac's reference of the same model file on the CPU.
         var largestDifference: Int
+        /// Values that differ from the reference by more than 16 levels.
+        var farOff: Int
         var psnr: Double
         var psnrInMask: Double
     }
 
-    @Test func theRepaintModelGivesTheResearchsTiles() async throws {
-        let folder = try PrivateFolder.required()
-        let inpainter = try await Self.inpainter(folder)
+    /// The model's output for each research tile on `units`, against the reference.
+    private func tileResults(_ folder: PrivateFolder, units: MLComputeUnits, name: String) async throws -> [TileResult] {
+        let inpainter = try LamaInpainter(compiledModel: try await Self.compiledRepaintModel(folder), computeUnits: units)
         var results: [TileResult] = []
         let clock = ContinuousClock()
         for number in 0..<10 {
@@ -128,11 +131,12 @@ import Testing
             let start = clock.now
             let output = try await inpainter.repaint(tile: [UInt8](tile.pixels), mask: mask)
             let elapsed = clock.now - start
-            var largest = 0, squares = 0.0, squaresInMask = 0.0, masked = 0
+            var largest = 0, farOff = 0, squares = 0.0, squaresInMask = 0.0, masked = 0
             for index in 0..<(512 * 512) {
                 for channel in 0..<3 {
                     let difference = Int(output[index * 4 + channel]) - Int(expected.pixels[index * 4 + channel])
                     largest = max(largest, abs(difference))
+                    if abs(difference) > 16 { farOff += 1 }
                     squares += Double(difference * difference)
                     if mask[index] != 0 { squaresInMask += Double(difference * difference) }
                 }
@@ -142,22 +146,41 @@ import Testing
                 10 * log10(255 * 255 / max(sum / Double(max(1, count) * 3), 1e-6))
             }
             results.append(TileResult(
-                tile: number, seconds: Double(elapsed.components.seconds) + Double(elapsed.components.attoseconds) / 1e18,
-                largestDifference: largest, psnr: psnr(squares, 512 * 512), psnrInMask: psnr(squaresInMask, masked)
+                tile: number, units: name,
+                seconds: Double(elapsed.components.seconds) + Double(elapsed.components.attoseconds) / 1e18,
+                largestDifference: largest, farOff: farOff, psnr: psnr(squares, 512 * 512),
+                psnrInMask: psnr(squaresInMask, masked)
             ))
         }
+        return results
+    }
+
+    /// The reference is the same model file run on this Mac's CPU by the research's script.
+    /// On the CPU this code must give it back but for rounding, which shows that the tiles go
+    /// in and come out as the script's did. On the GPU, where the app runs the model, half
+    /// precision gives other values: the floor here is what this Mac's GPU measured, with a
+    /// margin, and is far above a tile gone black or noisy, which is what the Neural Engine
+    /// gives.
+    @Test func theRepaintModelGivesTheResearchsTiles() async throws {
+        let folder = try PrivateFolder.required()
+        let onCPU = try await tileResults(folder, units: .cpuOnly, name: "cpuOnly")
+        let onGPU = try await tileResults(folder, units: .cpuAndGPU, name: "cpuAndGPU")
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
-        try encoder.encode(results).write(to: Self.reports(folder).appending(path: "lama-tiles.json"))
-        // The reference ran the same file on the CPU; this runs it on the GPU, as the app does.
-        for result in results {
-            #expect(result.psnrInMask >= Self.minimumPSNR, "tile \(result.tile): \(result.psnrInMask) dB in the mask")
-            #expect(result.psnr >= Self.minimumPSNR, "tile \(result.tile): \(result.psnr) dB")
+        try encoder.encode(onCPU + onGPU).write(to: Self.reports(folder).appending(path: "lama-tiles.json"))
+        for result in onCPU {
+            #expect(result.psnrInMask >= Self.minimumPSNROnCPU, "tile \(result.tile) on the CPU: \(result.psnrInMask) dB in the mask")
+            #expect(result.largestDifference <= Self.largestDifferenceOnCPU, "tile \(result.tile) on the CPU")
+        }
+        for result in onGPU {
+            #expect(result.psnrInMask >= Self.minimumPSNROnGPU, "tile \(result.tile) on the GPU: \(result.psnrInMask) dB in the mask")
         }
     }
 
     /// Measured on the development Mac: see the task's report.
-    static let minimumPSNR = 40.0
+    static let minimumPSNROnCPU = 50.0
+    static let largestDifferenceOnCPU = 2
+    static let minimumPSNROnGPU = 32.0
 
     // MARK: Pictures for the owner
 
@@ -168,7 +191,7 @@ import Testing
     @Test func aTranslatedPictureOfEachTestPage() async throws {
         let folder = try PrivateFolder.required()
         let reports = try Self.reports(folder)
-        let inpainter = try await Self.inpainter(folder)
+        let inpainter = try LamaInpainter(compiledModel: try await Self.compiledRepaintModel(folder))
         struct PageSummary: Codable {
             var page: String
             var blocks: Int
@@ -177,6 +200,10 @@ import Testing
             var repainted: Int
             var overflowing: Int
             var standIns: Int
+            /// The patches' rectangles together, as a share of the page, and the largest of
+            /// them in pixels: what a patch file has to pack.
+            var patchShare: Double
+            var largestPatch: Int
             var milliseconds: [String: Double]
         }
         var summaries: [PageSummary] = []
@@ -197,6 +224,8 @@ import Testing
                 page: name, blocks: blocks.count, drawn: render.blocks.count,
                 inBalloons: render.blocks.filter(\.isInBalloon).count, repainted: render.blocks.filter(\.isRepainted).count,
                 overflowing: render.blocks.filter(\.overflows).count, standIns: standIns,
+                patchShare: Double(render.patches.reduce(0) { $0 + $1.rect.area }) / Double(bitmap.width * bitmap.height),
+                largestPatch: render.patches.map(\.rect.area).max() ?? 0,
                 milliseconds: [
                     "analysis": ms(render.timings.analysis), "filling": ms(render.timings.filling),
                     "repainting": ms(render.timings.repainting), "fitting": ms(render.timings.fitting),

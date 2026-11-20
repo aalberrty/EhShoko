@@ -2,7 +2,6 @@ import CoreGraphics
 @testable import EhPageTranslation
 import EhModels
 import Foundation
-import ImageIO
 import Testing
 
 /// One page on each ground with its analysis and its drawing, made once: many tests look at
@@ -241,22 +240,36 @@ actor DrawnPages {
         #expect(leftInk.x1 <= rightInk.x0)
     }
 
-    @Test func aPatchFileCarriesThePagesColourSpace() async throws {
+    @Test func thePatchIsDrawnInThePagesColourSpace() async throws {
+        // A page in Display P3 with grey lettering: the lettering goes into the patch as the
+        // values it was measured at, not converted through another colour space.
         let displayP3 = try #require(CGColorSpace(name: CGColorSpace.displayP3))
-        let plain = try SyntheticImages.letteredPage(width: 190, height: 270, letterings: [DrawnPages.letterings[0]])
-        // The same pixel values, read as Display P3.
+        // Heavy lettering, so that its strokes are wide enough to hold pixels of the ink alone.
+        let lettering = Lettering(
+            columns: ["駄目だ"], fontSize: 44, centre: CGPoint(x: 95, y: 130), balloonSize: CGSize(width: 150, height: 230),
+            fontName: "HiraginoSans-W8", inkGray: 0.4, translation: "不行啊"
+        )
+        let plain = try SyntheticImages.letteredPage(width: 190, height: 260, letterings: [lettering])
         let page = try PageBitmap(
-            width: 190, height: 270, originalWidth: 190, originalHeight: 270, pixels: plain.bitmap.pixels,
+            width: 190, height: 260, originalWidth: 190, originalHeight: 260, pixels: plain.bitmap.pixels,
             colorSpace: displayP3
         )
         let render = try await PageRenderer().render(page: page, blocks: plain.blocks)
         let patch = try #require(render.patches.first)
-        let data = try #require(patch.pngData(colorSpace: page.colorSpace))
-        let source = try #require(CGImageSourceCreateWithData(data as CFData, nil))
-        let decoded = try #require(CGImageSourceCreateImageAtIndex(source, 0, nil))
-        #expect(decoded.width == patch.rect.width && decoded.height == patch.rect.height)
-        #expect(decoded.colorSpace?.name == CGColorSpace.displayP3)
-        #expect(decoded.alphaInfo == .premultipliedLast || decoded.alphaInfo == .last)
+        let image = try #require(patch.makeImage(colorSpace: page.colorSpace))
+        #expect(image.colorSpace?.name == CGColorSpace.displayP3)
+        #expect(image.alphaInfo == .premultipliedLast)
+        // Inside a stroke of the new lettering the patch holds the ink's own grey, 102.
+        var greys = [Int](repeating: 0, count: 256)
+        for y in patch.rect.y0..<patch.rect.y1 {
+            for x in patch.rect.x0..<patch.rect.x1 {
+                let (color, alpha) = pixel(patch, x, y)
+                if alpha == 255, color.luma < 180 { greys[color.luma] += 1 }
+            }
+        }
+        let commonest = try #require(greys.indices.max { greys[$0] < greys[$1] })
+        #expect(abs(commonest - 102) <= 3)
+        #expect(greys[commonest] > 100)
     }
 }
 

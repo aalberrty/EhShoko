@@ -71,18 +71,9 @@ enum PatchBuilder {
     }
 }
 
-extension Patch {
-    /// The patch as a PNG file that carries `colorSpace`, the page bitmap's: the patch's
-    /// pixels are values of that space, so a file without it would show other colours on a
-    /// page that is not sRGB.
-    public func pngData(colorSpace: CGColorSpace) -> Data? {
-        guard let image = makeImage(colorSpace: colorSpace) else { return nil }
-        return PatchBuilder.pngData(of: image)
-    }
-}
-
 extension PatchBuilder {
-    /// `image` as a PNG file with its colour space embedded.
+    /// `image` as a PNG file with its colour space embedded: for pictures of whole pages made
+    /// by checks. A page's patches are stored by the patch file, not by this.
     static func pngData(of image: CGImage) -> Data? {
         let data = NSMutableData()
         guard let destination = CGImageDestinationCreateWithData(data, "public.png" as CFString, 1, nil) else {

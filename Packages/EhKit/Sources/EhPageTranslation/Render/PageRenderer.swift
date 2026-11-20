@@ -18,6 +18,13 @@ public struct PageRenderer: Sendable {
         self.fonts = fonts
     }
 
+    /// The version of the drawing rules. A page's patches are kept under it, beside the models
+    /// that made its text: raise it whenever a change here would draw the same page from the
+    /// same text differently (how a balloon is found, what is erased, how the lettering is
+    /// measured, fitted or drawn, the fonts), so pages drawn under the old rules are drawn
+    /// again and their text is kept.
+    public static let renderVersion = 1
+
     /// Draws the blocks of `blocks` that have a translation. Sound effects and blocks without
     /// one are left as they are.
     ///
