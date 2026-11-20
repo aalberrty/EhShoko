@@ -77,7 +77,8 @@ import Testing
         #expect(fp32.total == 316 && fp32.tokens == 316 && fp32.texts == 316)
         let fp16 = try await Self.onResearchInputs(Self.cptReader("fp16"))
         ReferenceSupport.report("cpt2 fp16, research inputs: \(fp16.tokens)/\(fp16.total) token lists, \(fp16.texts) texts equal")
-        #expect(fp16.texts >= 311)
+        // Measured on 2026-11-19: half precision on this Mac's CPU reads exactly what single precision does.
+        #expect(fp16.tokens == 316 && fp16.texts == 316)
     }
 
     @Test func cptOnTheCropsWithThisCodesPreparation() async throws {
@@ -99,7 +100,8 @@ import Testing
                 + String(format: "%.0f ms a crop (median, CPU)", DetectorsPrivateTests.median(seconds))
         )
         #expect(lines.count == 149)
-        #expect(same >= 300 && exact >= 138)
+        // Measured on 2026-11-19, as the research found with Swift's resize: 311 of 316, 143 of 149.
+        #expect(same >= 311 && exact >= 143)
     }
 
     @Test func narSmallOnTheCrops() async throws {
@@ -129,7 +131,8 @@ import Testing
                 + String(format: "%.0f ms a crop (median, CPU)", DetectorsPrivateTests.median(seconds))
         )
         #expect(research.count == 316)
-        #expect(same >= 280 && exact >= 120)
+        // Measured on 2026-11-19 (the research's ONNX run read 126 of the 149 lines exactly).
+        #expect(same >= 304 && exact >= 127)
     }
 }
 
