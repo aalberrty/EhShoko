@@ -6,7 +6,8 @@ import EhModels
 import Foundation
 
 /// Settings › Translation on a store of its own, for screenshots and the scroll check: launch
-/// a debug build with `-PageTranslationSample <state>`.
+/// a debug build with `-PageTranslationSample <state>` (and `-PageTranslationSampleToken <text>`
+/// for a kept token).
 ///
 /// The sample's catalog is the app's plus the four language models MT24 will list, so the
 /// Translate screen has five cards. Its folder is a temporary one, written afresh at each
@@ -41,7 +42,8 @@ enum PageTranslationSample: String {
                 compile: { $0 },
                 prepare: { _, _ in try await Task.sleep(for: .seconds(atLaunch == .preparing ? 20 : 0)) }
             ),
-            tokens: .inMemory(),
+            // `-PageTranslationSampleToken <text>` starts with a token kept.
+            tokens: .inMemory(UserDefaults.standard.string(forKey: "PageTranslationSampleToken")),
             freeSpace: { _ in 64_000_000_000 }
         )
         return PageTranslationModelStore(environment: environment, choices: .settings(settings))
