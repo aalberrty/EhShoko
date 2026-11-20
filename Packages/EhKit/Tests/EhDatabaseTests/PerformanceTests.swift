@@ -108,8 +108,11 @@ import Testing
         #expect(count == 50 && indices == Array(1...50) && one?.regions.count == 8)
         #expect(commits == 1)
         #expect(try await database.pageTranslationCount(gid: "3000100", modelSetKey: modelSet) == 100)
+        // The bound only catches a query that has stopped using the index or a batch that has
+        // stopped being one transaction. It is far above the measured times because GitHub's
+        // Macs run every suite at once: a 20 ms batch has taken over 3 s there.
         for (name, time) in [("count", countTime), ("indices", indicesTime), ("read", readTime), ("insert", insertTime)] {
-            #expect(time < .seconds(2), "\(name): \(time)")
+            #expect(time < .seconds(30), "\(name): \(time)")
         }
     }
 }
