@@ -1,0 +1,131 @@
+@testable import EhModels
+import Testing
+
+/// Keeps the table of measured figures whole: a choice without figures, a choice missing a row
+/// its kind has, or a tally that cannot be right fails here, on every run.
+@Suite struct PageTranslationMeasurementsTests {
+    private typealias Kind = MeasuredFigure.Kind
+    private typealias Subject = PageTranslationMeasurements.Subject
+
+    // The rows each kind of choice shows, in order. Adding a kind of figure to one choice means
+    // adding it here, and then to every other choice of that kind, as `.notMeasured` if need be.
+    private static let detectorRows: [Kind] = [.balloonTextFound, .notesFound, .timePerPage, .memory, .firstLoad]
+    private static let readerRows: [Kind] = [.linesReadExactly, .timePerBlock, .memory, .firstLoad]
+    private static let translatorRows: [Kind] = [
+        .linesFullyRight, .linesWithSeriousError, .timePerPage, .memory, .graphicsMemory, .firstLoad, .heat,
+    ]
+    private static let repaintModelRows: [Kind] = [.pictureMatches, .timePerTile, .memory, .firstLoad]
+    /// "Off" runs no model: all it has is the time for a page.
+    private static let repaintOffRows: [Kind] = [.timePerPage]
+    private static let pairRows: [Kind] = [.linesReadExactly]
+
+    /// What the research counted on: 93 balloon texts and 58 notes on the 18 pages, 149 lines
+    /// of dialogue, 101 judged lines, 10 tiles of artwork.
+    private static let totals: [Kind: Int] = [
+        .balloonTextFound: 93, .notesFound: 58, .linesReadExactly: 149,
+        .linesFullyRight: 101, .linesWithSeriousError: 101, .pictureMatches: 10,
+    ]
+
+    private static let pairs = TextDetectorChoice.allCases.flatMap { detector in
+        TextReaderChoice.allCases.map { Subject.pair(detector, $0) }
+    }
+
+    private static let subjects: [Subject] = TextDetectorChoice.allCases.map(Subject.detector)
+        + TextReaderChoice.allCases.map(Subject.reader)
+        + TranslatorChoice.allCases.map(Subject.translator)
+        + RepaintChoice.allCases.map(Subject.repaint)
+        + pairs
+
+    private static func expectedRows(_ subject: Subject) -> [Kind] {
+        switch subject {
+        case .detector: detectorRows
+        case .reader: readerRows
+        case .translator: translatorRows
+        case let .repaint(choice): choice.artifact == nil ? repaintOffRows : repaintModelRows
+        case .pair: pairRows
+        }
+    }
+
+    @Test func everyChoiceAndEveryPairHasTheRowsOfItsKind() {
+        for subject in Self.subjects {
+            let kinds = PageTranslationMeasurements.figures(of: subject).map(\.kind)
+            #expect(kinds == Self.expectedRows(subject), "\(subject)")
+        }
+    }
+
+    @Test func thePublicAccessorsGiveEachChoiceItsRows() {
+        for choice in TextDetectorChoice.allCases {
+            #expect(PageTranslationMeasurements.figures(for: choice) == PageTranslationMeasurements.figures(of: .detector(choice)))
+        }
+        for choice in TextReaderChoice.allCases {
+            #expect(PageTranslationMeasurements.figures(for: choice) == PageTranslationMeasurements.figures(of: .reader(choice)))
+        }
+        for choice in TranslatorChoice.allCases {
+            #expect(PageTranslationMeasurements.figures(for: choice) == PageTranslationMeasurements.figures(of: .translator(choice)))
+        }
+        for choice in RepaintChoice.allCases {
+            #expect(PageTranslationMeasurements.figures(for: choice) == PageTranslationMeasurements.figures(of: .repaint(choice)))
+        }
+        for case let .pair(detector, reader) in Self.pairs {
+            let figure = PageTranslationMeasurements.linesReadExactly(detector: detector, reader: reader)
+            #expect(PageTranslationMeasurements.figures(of: .pair(detector, reader)) == [figure])
+        }
+    }
+
+    @Test func theTableHoldsNothingElse() {
+        let described = Self.subjects.reduce(0) { $0 + PageTranslationMeasurements.figures(of: $1).count }
+        #expect(described == PageTranslationMeasurements.table.count)
+        let keys = PageTranslationMeasurements.table.map { "\($0.subject) \($0.figure.kind)" }
+        #expect(Set(keys).count == keys.count)
+    }
+
+    @Test func talliesAreCountedOnTheResearchsTotals() {
+        for row in PageTranslationMeasurements.table {
+            let figure = row.figure
+            switch figure.value {
+            case let .tally(count, of: total):
+                #expect(Self.totals[figure.kind] == total, "\(row.subject) \(figure.kind)")
+                #expect((0...total).contains(count), "\(row.subject) \(figure.kind)")
+            case .notMeasured:
+                break
+            default:
+                #expect(Self.totals[figure.kind] == nil, "\(row.subject) \(figure.kind) is a count")
+            }
+        }
+    }
+
+    @Test func everyValueIsOfItsKindsSort() {
+        for row in PageTranslationMeasurements.table {
+            let figure = row.figure
+            let fits = switch (figure.kind, figure.value) {
+            case (_, .notMeasured): true
+            case (.timePerPage, let .seconds(s)), (.timePerBlock, let .seconds(s)),
+                 (.timePerTile, let .seconds(s)), (.firstLoad, let .seconds(s)): s > 0
+            case (.memory, let .megabytes(mb)): mb > 0
+            case (.graphicsMemory, let .megabytes(mb)): mb >= 0
+            case (.heat, let .coolFor(pages)): pages > 0
+            case (.heat, let .hotFrom(page)): page > 0
+            case (_, .tally): Self.totals[figure.kind] != nil
+            default: false
+            }
+            #expect(fits, "\(row.subject) \(figure.kind): \(figure.value)")
+        }
+    }
+
+    /// Accuracy is counted on the test pages; speed, memory and heat on a device.
+    @Test func everyFigureNamesWhatItWasMeasuredOn() {
+        for row in PageTranslationMeasurements.table {
+            let figure = row.figure
+            let onPages = [.pagesPhone, .pagesMac].contains(figure.basis)
+            let accuracy = Self.totals[figure.kind] != nil && figure.kind != .pictureMatches
+            #expect(onPages == accuracy, "\(row.subject) \(figure.kind) on \(figure.basis)")
+        }
+    }
+
+    @Test func theDefaultPairReadsWhatTheResearchFound() {
+        let set = PageTranslationModelSet.default
+        let figure = PageTranslationMeasurements.linesReadExactly(detector: set.detector, reader: set.reader)
+        #expect(figure == MeasuredFigure(kind: .linesReadExactly, value: .tally(115, of: 149), basis: .pagesMac))
+        #expect(PageTranslationMeasurements.testPageCount == 18)
+    }
+}
