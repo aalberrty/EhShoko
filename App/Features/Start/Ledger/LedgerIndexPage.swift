@@ -16,7 +16,7 @@ struct LedgerIndexPage: View {
     var body: some View {
         ScrollView {
             LazyVStack(alignment: .leading, spacing: 0) {
-                LedgerIndexTitle(isColumn: false)
+                LedgerTitle(L10n.Localizable.Shell.Place.index)
                     .padding(.horizontal, 20)
                     .padding(.bottom, 8)
                 LedgerIndexPageContinue(navigation: navigation)
@@ -27,8 +27,8 @@ struct LedgerIndexPage: View {
             .padding(.bottom, 24)
         }
         .background { look.background.ignoresSafeArea() }
-        .refreshable { await model.refreshFolderCounts() }
-        .ledgerIndexBarTitle()
+        .refreshable { await model.folderCounts.refresh() }
+        .ledgerBarTitle(L10n.Localizable.Shell.Place.index)
     }
 }
 
@@ -72,7 +72,7 @@ private struct LedgerIndexPageLists: View {
             LedgerIndexPageRow(isLast: item.kind == items.last?.kind) {
                 navigation.open(item.kind)
             } label: {
-                LedgerIndexLine(mark: .symbol(item.kind.systemImage), title: item.kind.title, value: item.value)
+                LedgerLine(mark: .symbol(item.kind.systemImage), title: item.kind.title, value: item.value)
             }
         }
     }
@@ -94,13 +94,15 @@ private struct LedgerIndexPageFavorites: View {
     var body: some View {
         if accountSession.isLoggedIn {
             LedgerIndexSectionHeader(title: L10n.Localizable.Shell.Place.favorites) {
-                Button(total) { navigation.openFolder(-1) }
+                Button { navigation.openFolder(-1) } label: { Text(total).hitAreaOutset() }
                     .buttonStyle(.borderless)
+                    .hitAreaOutsetReturned()
             }
             .ledgerIndexPageHeader()
-            LazyVGrid(columns: typeSize.isAccessibilitySize ? Self.oneColumn : Self.twoColumns, spacing: 6) {
-                ForEach(userStore.ledgerIndexFolders) { folder in
-                    LedgerIndexFolderCell(folder: folder) { navigation.openFolder(folder.index) }
+            // One column from the largest standard size, where two cut folder names to a word.
+            LazyVGrid(columns: typeSize >= .xxxLarge ? Self.oneColumn : Self.twoColumns, spacing: 6) {
+                ForEach(userStore.libraryFolders) { folder in
+                    LedgerFolderCell(folder: folder) { navigation.openFolder(folder.index) }
                 }
             }
             .padding(.horizontal, 16)
@@ -109,7 +111,7 @@ private struct LedgerIndexPageFavorites: View {
             LedgerIndexSectionHeader(title: L10n.Localizable.Shell.Place.favorites)
                 .ledgerIndexPageHeader()
             LedgerIndexPageRow(isLast: true, action: navigation.signIn) {
-                LedgerIndexLine(
+                LedgerLine(
                     mark: .symbol("person.crop.circle"), title: L10n.Localizable.Start.Ledger.signInFavorites
                 )
             }
@@ -140,7 +142,7 @@ private struct LedgerIndexPageQuickSearches: View {
                 LedgerIndexPageRow(isLast: word.id == words.last?.id) {
                     navigation.run(word.content)
                 } label: {
-                    LedgerIndexLine(
+                    LedgerLine(
                         mark: .symbol("magnifyingglass"), title: word.content,
                         value: word.name.isEmpty ? nil : word.name, isSyntax: true
                     )
@@ -158,7 +160,7 @@ private struct LedgerIndexPageRow<Label: View>: View {
     let action: () -> Void
     @ViewBuilder var label: Label
 
-    @ScaledMetric(relativeTo: .title3) private var markWidth = LedgerIndexLine.markWidth
+    @ScaledMetric(relativeTo: .title3) private var markWidth = LedgerLine.markWidth
 
     @Environment(\.look) private var look
 
@@ -169,7 +171,7 @@ private struct LedgerIndexPageRow<Label: View>: View {
                 .padding(.trailing, 16)
                 .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
         }
-        .buttonStyle(LedgerIndexRowButtonStyle())
+        .buttonStyle(LedgerRowButtonStyle())
         .overlay(alignment: .bottom) {
             if !isLast {
                 Rectangle()
@@ -177,7 +179,7 @@ private struct LedgerIndexPageRow<Label: View>: View {
                     .frame(height: 0.5)
                     // The row's inset, the mark's column and its spacing: the rule starts
                     // under the text.
-                    .padding(.leading, 20 + LedgerIndexLine.markColumn(markWidth) + LedgerIndexLine.markSpacing)
+                    .padding(.leading, 20 + LedgerLine.markColumn(markWidth) + LedgerLine.markSpacing)
             }
         }
     }

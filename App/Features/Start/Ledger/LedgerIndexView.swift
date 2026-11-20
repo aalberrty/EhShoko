@@ -18,12 +18,16 @@ struct LedgerIndexView: View {
     @State private var hud: HUDConfiguration?
 
     @Environment(\.chrome) private var chrome
+    @Environment(AccountSession.self) private var accountSession
     @Environment(AppRouter.self) private var appRouter
     @Environment(StackRouter.self) private var stack
     @Environment(\.openURL) private var openURL
+    @Environment(\.openContinueReader) private var openContinueReader
 
     var body: some View {
-        let navigation = LedgerIndexNavigation(appRouter: appRouter, stack: stack)
+        let navigation = LedgerIndexNavigation(
+            appRouter: appRouter, stack: stack, openContinueReader: openContinueReader
+        )
         Group {
             if chrome.isLeadingColumn {
                 LedgerIndexColumn(model: model, navigation: navigation) { editsQuickSearches = true }
@@ -31,10 +35,6 @@ struct LedgerIndexView: View {
                 LedgerIndexPage(model: model, navigation: navigation) { editsQuickSearches = true }
             }
         }
-        // The bar's back menu and VoiceOver's screen name; the title itself is drawn by the
-        // Index in the look's title face.
-        .navigationTitle(L10n.Localizable.Shell.Place.index)
-        .toolbarTitleDisplayMode(.inline)
         // The Index keeps its account button under `command`; under `tabs` the shell adds it.
         .startAccountButton()
         // The command bar's trailing circle: a gallery link from the clipboard. Beside the
@@ -51,14 +51,15 @@ struct LedgerIndexView: View {
         .hud($hud)
         .task { await model.observeHistoryCount() }
         .task { await model.observeQuickSearches() }
-        .task { await model.loadFolderCountsIfUnknown() }
+        // Again when the user signs in: an Index first shown signed out has asked nothing.
+        .task(id: accountSession.isLoggedIn) { await model.folderCounts.loadIfUnknown() }
         // Everything the Index shows but the counts is local: it is the first screen's
         // content as soon as it is on screen. Only the first call in the process counts.
         .onAppear { PerformanceSignposts.contentShown("index") }
     }
 
     private static let pasteControl = BarControl.button(
-        systemImage: "doc.on.clipboard", title: L10n.Localizable.Search.Link.title, showsDot: false
+        systemImage: "doc.on.clipboard", title: L10n.Localizable.Search.Link.title, narrowing: nil
     )
 
     /// Hands the link to the app as a shared link is handed to it, so the shell resolves it

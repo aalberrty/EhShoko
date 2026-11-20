@@ -41,19 +41,9 @@ nonisolated enum Tokens {
     enum ImageSize {
         /// Cover in a list row (legacy `rowW` × `rowH`).
         static let row = CGSize(width: 120 * Aspect.cover, height: 120)
-        /// Cover in the detail header and card cells (legacy `headerW` × `headerH`).
-        static let header = CGSize(width: 150 * Aspect.cover, height: 150)
-        /// Height of a card cell: the header cover plus its vertical padding (legacy `cardCellHeight`).
-        static let cardHeight: CGFloat = header.height + 20 * 2
-
         /// Preview column widths; legacy switched on `isPadWidth`, this switches on the size class.
         static func previewWidths(for sizeClass: UserInterfaceSizeClass?) -> ClosedRange<CGFloat> {
             sizeClass == .regular ? 180...220 : 100...120
-        }
-        /// Archive grid column width; legacy also special-cased the iPhone SE width, which the
-        /// adaptive grid now absorbs on its own.
-        static func archiveGridWidth(for sizeClass: UserInterfaceSizeClass?) -> CGFloat {
-            sizeClass == .regular ? 175 : 150
         }
     }
 

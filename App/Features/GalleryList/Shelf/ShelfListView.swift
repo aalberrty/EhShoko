@@ -17,7 +17,7 @@ struct ShelfListView<Header: View>: View {
     @ViewBuilder var header: Header
 
     @State private var texts = ShelfRowTexts()
-    @State private var prefetcher = ShelfListPrefetcher()
+    @State private var prefetcher = ListCoverPrefetcher()
     /// The container's width, for the columns and the tags that fit; 0 until it is known.
     @State private var width: CGFloat = 0
     @State private var hasAppeared = false
@@ -32,10 +32,15 @@ struct ShelfListView<Header: View>: View {
     @Environment(\.lookTint) private var tint
     @Environment(\.dynamicTypeSize) private var typeSize
     @Environment(\.chrome) private var chrome
+    @Environment(\.accessibilityVoiceOverEnabled) private var isVoiceOverOn
+    #if DEBUG || HARNESS
+    /// Set by the list harness alone, to measure the grid at a phone's width.
+    @Environment(\.shelfListAlwaysUsesGrid) private var alwaysUsesGrid
+    #endif
 
     var body: some View {
         content
-            .modifier(ShelfListChrome(input: input, width: width))
+            .modifier(ShelfListChrome(input: input, width: width, ownFolder: input.ownFolder(hasHeader: hasHeader)))
             .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { width = $0 }
             .onAppear {
                 // Back from a gallery page pushed over the list, or from a reader it presented:
@@ -56,7 +61,7 @@ struct ShelfListView<Header: View>: View {
             ShelfListState(input: input)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .background(look.background)
-        } else if columns > 1 {
+        } else if usesGrid {
             ShelfListGrid(
                 input: input, header: header, style: style, columns: columns, headerLine: headerLine,
                 prefetcher: prefetcher
@@ -68,6 +73,14 @@ struct ShelfListView<Header: View>: View {
 
     /// A first screen or the library passes a header; a list of its own passes none.
     private var hasHeader: Bool { !(Header.self is EmptyView.Type) }
+
+    /// The lazy grid from two columns on; one column is the `List`.
+    private var usesGrid: Bool {
+        #if DEBUG || HARNESS
+        if alwaysUsesGrid { return true }
+        #endif
+        return columns > 1
+    }
 
     /// One column under 700 pt, two from 700, three from 1,100 (`shelf.md` section 3).
     private var columns: Int {
@@ -81,7 +94,7 @@ struct ShelfListView<Header: View>: View {
     /// The filter pill or the sort line, where the bar does not hold them and no first screen
     /// draws the list's heading; not over a list that cannot be shown (signed out, failed).
     private var headerLine: ListPrimaryControl? {
-        guard !input.context.embedsInStart, !chrome.barHoldsPrimaryControl else { return nil }
+        guard input.context.drawsHeadingLine, !chrome.barHoldsPrimaryControl else { return nil }
         switch input.feed.phase {
         case .signedOut, .failed: return nil
         case .loading, .empty, .content: return input.controls.primary
@@ -101,7 +114,7 @@ struct ShelfListView<Header: View>: View {
         let metrics = texts.metrics
         let tagLimit = isRanked || !settings.showsTagsInList ? 0 : tagsThatFit(metrics)
         return ShelfRowStyle(
-            isRanked: isRanked, footer: footer, tagLimit: tagLimit,
+            isRanked: isRanked, footer: footer, tagLimit: tagLimit, isSpoken: ListSpokenRows.isOn(isVoiceOverOn),
             height: isRanked ? metrics.ranked : tagLimit > 0 ? metrics.standard.tags : metrics.standard.plain,
             zoom: zoomNamespace ?? localZoom, texts: texts, textsRevision: texts.revision
         )
@@ -143,8 +156,6 @@ enum ShelfListLayout {
     /// A state under a header takes at least this much of the list.
     static let stateHeight: CGFloat = 360
     static let gridSpacing: CGFloat = 12
-    /// Toplists' pages, when fewer than two are loaded to measure one by.
-    static let rankedPageSize = 50
 
     static func insets(isRanked: Bool) -> EdgeInsets {
         isRanked ? rankedInsets : rowInsets

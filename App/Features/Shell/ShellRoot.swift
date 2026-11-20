@@ -38,6 +38,9 @@ struct ShellRoot: View {
             .onChange(of: settings.designBar) { router.resetNavigation() }
             .onChange(of: StartStructure.style(settings)) { router.resetNavigation() }
             .task { await continueModel.observe() }
+            // TipKit's store is opened once the first screen is up, off the main actor, never
+            // on the launch path; until then no tip shows (`TipsConfiguration`).
+            .task { await TipsConfiguration.configure() }
             .environment(\.zoomNamespace, zoom)
             .environment(continueModel)
             .environment(filterStore)

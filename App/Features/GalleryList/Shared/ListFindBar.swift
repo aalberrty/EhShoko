@@ -7,7 +7,9 @@ extension View {
     /// clears the text.
     ///
     /// The bar is always attached and only its content comes and goes, so opening it keeps the
-    /// list, its scroll position and its state. It is a control above content, so on iOS 26
+    /// list, its scroll position and its state. The list makes room for it at once: what a lazy
+    /// list lays out must not change inside an animation (`spikes/S1.md`), so only the bar's
+    /// own content fades in. It is a control above content, so on iOS 26
     /// its field and close button are glass, in the pinned top bar where the navigation bar's
     /// scroll edge carries on behind them (`README.md` section 13); on iOS 18 they are material
     /// shapes on the bar material.
@@ -27,9 +29,7 @@ private struct ListFindBarModifier: ViewModifier {
                     text = ""
                     isPresented = false
                 }
-                .transition(.move(edge: .top).combined(with: .opacity))
             }
-            .animation(.smooth(duration: 0.3), value: isPresented)
     }
 }
 
@@ -39,6 +39,8 @@ struct ListFindBar: View {
     let close: () -> Void
 
     @FocusState private var isFocused: Bool
+    /// The bar has faded in; only its own opacity is animated.
+    @State private var isShown = false
     @Environment(\.look) private var look
 
     private static let height: CGFloat = 40
@@ -61,7 +63,11 @@ struct ListFindBar: View {
         }
         .padding(.horizontal, Tokens.Spacing.large)
         .padding(.vertical, Tokens.Spacing.small)
-        .onAppear { isFocused = true }
+        .opacity(isShown ? 1 : 0)
+        .onAppear {
+            isFocused = true
+            withAnimation(.smooth(duration: 0.25)) { isShown = true }
+        }
     }
 
     private var field: some View {

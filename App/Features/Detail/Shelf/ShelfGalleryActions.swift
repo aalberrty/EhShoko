@@ -5,11 +5,11 @@ import SwiftUI
 
 /// The four action tiles (`shelf.md` section 4, item 5): Favourite, Rate, Archive and
 /// "Torrents · 3", symbol over label in the tint on the look's surface. Signed out, the tiles
-/// that need an account are dimmed and a tap asks the user to sign in; Torrents is dimmed when
-/// there are none.
+/// that need an account are dimmed and a tap opens sign-in; Torrents is dimmed when there are
+/// none.
 struct ShelfGalleryActions: View {
     @Bindable var model: GalleryDetailModel
-    /// Asks the user to sign in: the page's prompt.
+    /// Opens sign-in (`AppRouter.presentSignIn`), through the page.
     let signIn: () -> Void
 
     @Environment(UserStore.self) private var userStore

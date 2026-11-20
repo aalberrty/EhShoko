@@ -13,7 +13,6 @@ private typealias MenuTitles = L10n.Localizable.DetailView.ContextMenu.Button
 /// comment a link pointed at is scrolled to and highlighted, as in v3.
 struct WallCommentsView: View {
     @State private var model: CommentsModel
-    @State private var asksToSignIn = false
     @State private var copyHUD: HUDConfiguration?
 
     @Environment(StackRouter.self) private var stack
@@ -63,7 +62,11 @@ struct WallCommentsView: View {
             title: L10n.Localizable.Gallery.Comments.write, systemImage: "square.and.pencil",
             action: .writeComment, isDimmed: !model.canCompose
         ))) { _ in
-            model.canCompose ? model.compose() : (asksToSignIn = true)
+            if model.canCompose {
+                model.compose()
+            } else {
+                appRouter?.presentSignIn()
+            }
         }
         // The composer belongs to this screen's model, which also edits.
         .sheet(item: $model.composer) { composer in
@@ -72,14 +75,6 @@ struct WallCommentsView: View {
         .sensoryFeedback(.impact(weight: .light), trigger: model.composer) { _, composer in composer != nil }
         .hud(linkHUD)
         .hud($copyHUD)
-        .alert(L10n.Localizable.ErrorView.Headline.loginRequired, isPresented: $asksToSignIn) {
-            Button(L10n.Localizable.NotLoginView.Button.login) {
-                appRouter?.presentSettings([.settings(.account), .settings(.login)])
-            }
-            AlertCancelButton(title: L10n.Localizable.JumpPageView.Button.cancel)
-        } message: {
-            Text(L10n.Localizable.List.Signin.note)
-        }
     }
 
     /// "COMMENTS" and how many there are, where the bar's title would have been.
@@ -211,6 +206,8 @@ private struct WallCommentBlock: View, Equatable {
             }
         }
         .lineLimit(1)
+        // One stop for VoiceOver: name, date and score. The body stays apart, for its links.
+        .accessibilityElement(children: .combine)
     }
 }
 

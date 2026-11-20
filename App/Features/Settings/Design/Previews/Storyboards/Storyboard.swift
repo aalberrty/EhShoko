@@ -1,7 +1,7 @@
 import EhModels
 import SwiftUI
 
-/// Eight seconds of one preset, in four beats of two: browse, the design's own way with a
+/// Eight seconds of one preset (six where its first beat is skipped), in four beats of two: browse, the design's own way with a
 /// list, open a gallery, read (`Design/designs/settings.md`, "The moving preview"). A pure
 /// description: which schematic layers to stack, how each moves, and where a fingertip shows
 /// a gesture. `tools/anim.py` is the reference: the same layers, the same times.
@@ -19,12 +19,24 @@ nonisolated struct Storyboard: Sendable {
     /// Drawn over every layer.
     let fingertips: [Fingertip]
     /// The moment of each beat that stands for it: the still under Reduce Motion, and the
-    /// held frame set beside the generator's.
+    /// held frame set beside the generator's. One for each of the four beats; a beat that is
+    /// not played keeps its still unused.
     let stills: [TimeInterval]
+    /// The first beat played. A storyboard whose first beat shows what the system cannot do
+    /// starts at the next one, and its turn is that much shorter.
+    var firstBeat = 0
 
-    static func of(_ style: DesignStyle) -> Storyboard {
+    /// The storyboard time its turn starts at.
+    var start: TimeInterval { Double(firstBeat) * Self.beat }
+    /// How long its turn lasts.
+    var length: TimeInterval { Self.duration - start }
+    var playedBeats: Range<Int> { firstBeat..<Self.beats }
+
+    /// - Parameter tabBarTucks: whether the tab bar tucks away as a list scrolls on this
+    ///   system; where it does not, Shelf skips the beat that shows it.
+    static func of(_ style: DesignStyle, tabBarTucks: Bool) -> Storyboard {
         switch style {
-        case .shelf: shelf
+        case .shelf: tabBarTucks ? shelf : shelfWithoutTuck
         case .wall: wall
         case .ledger: ledger
         }

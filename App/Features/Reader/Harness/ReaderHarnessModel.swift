@@ -1,5 +1,6 @@
 #if DEBUG || HARNESS
 import EhFeatures
+import EhModels
 import Observation
 import QuartzCore
 import UIKit
@@ -32,7 +33,8 @@ final class ReaderHarnessModel: ReaderEngineDataSource, ReaderEngineDelegate {
             }
         }
     }
-    /// Whether a slot for the closing page follows the last page. It holds a stand-in here.
+    /// Whether a slot for the closing page follows the last page. It holds the closing page,
+    /// or the stand-in where the setup asks for it (`ReaderHarnessSetup.slotContent`).
     var showsClosingSlot: Bool {
         didSet {
             if showsClosingSlot != oldValue {
@@ -44,6 +46,8 @@ final class ReaderHarnessModel: ReaderEngineDataSource, ReaderEngineDelegate {
     var isStandInTall = false
     /// How often each control of the stand-in was tapped.
     private(set) var standInTaps: [String: Int] = [:]
+    /// The look of the page status views and the closing page; `nil`: the app's.
+    var look: Look?
     /// Seconds between automatic page turns; 0 is off.
     var autoAdvanceInterval = 0.0 {
         didSet { restartAutoAdvance() }
@@ -55,7 +59,7 @@ final class ReaderHarnessModel: ReaderEngineDataSource, ReaderEngineDelegate {
     @ObservationIgnored var recorder: ReaderHarnessRecorder?
     /// Seconds from this model's creation to the first image the engine reported.
     @ObservationIgnored private(set) var firstPageDelay: Double?
-    /// Seconds it took to make the stand-in's controller, once the engine has asked for it.
+    /// Seconds it took to make the slot's controller, once the engine has asked for it.
     @ObservationIgnored private(set) var trailerMakeDuration: Double?
     @ObservationIgnored private let createdAt = CACurrentMediaTime()
     @ObservationIgnored private var states: [Int: ReaderPageState] = [:]
@@ -63,6 +67,8 @@ final class ReaderHarnessModel: ReaderEngineDataSource, ReaderEngineDelegate {
     @ObservationIgnored private var attempts: [Int: Int] = [:]
     /// Pages whose image the engine reported as loaded or failed.
     @ObservationIgnored private var reported: Set<Int> = []
+    /// Pages whose URL did not resolve or whose image did not load, until they are retried.
+    @ObservationIgnored private var failedPages: Set<Int> = []
     @ObservationIgnored private var autoAdvance: Task<Void, Never>?
     /// Fresh URLs every time the harness opens, so images download again instead of coming
     /// from the disk cache.
@@ -77,6 +83,7 @@ final class ReaderHarnessModel: ReaderEngineDataSource, ReaderEngineDelegate {
         latency = setup.latency
         knowsAspectRatios = setup.knowsAspectRatios
         showsClosingSlot = setup.hasTrailer
+        look = setup.look
         ReaderHarnessURLProtocol.install()
     }
 
@@ -95,6 +102,7 @@ final class ReaderHarnessModel: ReaderEngineDataSource, ReaderEngineDelegate {
         states = [:]
         attempts = [:]
         reported = []
+        failedPages = []
         proxy.reloadData()
     }
 
@@ -117,6 +125,14 @@ final class ReaderHarnessModel: ReaderEngineDataSource, ReaderEngineDelegate {
     /// Resolution fails once for every seventh page; the image fails once for every eleventh.
     static func failsResolutionFirst(_ page: Int) -> Bool { page % 7 == 0 }
     static func failsImageFirst(_ page: Int) -> Bool { page % 11 == 0 }
+
+    private func failsResolution(_ page: Int, attempt: Int) -> Bool {
+        setup.failingPages.map { $0.resolution.contains(page) } ?? (Self.failsResolutionFirst(page) && attempt == 0)
+    }
+
+    private func failsImage(_ page: Int, attempt: Int) -> Bool {
+        setup.failingPages.map { $0.image.contains(page) } ?? (Self.failsImageFirst(page) && attempt == 0)
+    }
 
     /// Whether nothing more is expected for a page that has a view: it is resolved, or nobody
     /// is resolving it, and its image has loaded or failed.
@@ -150,18 +166,30 @@ final class ReaderHarnessModel: ReaderEngineDataSource, ReaderEngineDelegate {
         return showsClosingSlot
     }
 
+    // The two members for the page status views are not recorded: they are not page calls,
+    // and a record must stay comparable with one made before they existed.
+
+    /// The harness's pages fail as if the site could not be reached.
+    func failureReason(at page: Int) -> AppError? {
+        states[page] == .failed ? .networkingFailed : nil
+    }
+
+    var failedPageCount: Int { failedPages.count }
+
     /// The closing page, with a detail model of its own whose requests are counted in the log
-    /// (`ReaderClosingHarness`). The walk's height case keeps the stand-in, whose height it
-    /// changes from outside.
+    /// (`ReaderClosingHarness`), or the stand-in where the setup asks for it.
     func makeTrailerViewController() -> UIViewController? {
         recorder?.add("D makeTrailer")
         let started = CACurrentMediaTime()
         let name = setup.name
-        let controller = name == "walk-height"
-            ? ReaderHarnessStandIn.makeController(model: self)
-            : ReaderClosingHarness.makeController(pageCount: galleryPageCount) { line in
+        let controller = switch setup.slotContent {
+        case .standIn:
+            ReaderHarnessStandIn.makeController(model: self)
+        case .closingPage:
+            ReaderClosingHarness.makeController(pageCount: galleryPageCount) { line in
                 ReaderHarnessFiles.log("\(name): \(line)")
             }
+        }
         let duration = CACurrentMediaTime() - started
         trailerMakeDuration = duration
         log(String(format: "closing page made in %.1f ms, on page %d", duration * 1_000, currentPage))
@@ -192,16 +220,21 @@ final class ReaderHarnessModel: ReaderEngineDataSource, ReaderEngineDelegate {
     func readerDidRequestRetry(page: Int) {
         recorder?.add("E retry \(page)")
         log("retry page \(page)")
-        reported.remove(page)
-        attempts[page, default: 0] += 1
-        states[page] = .pending
-        proxy.reloadPage(page)
-        resolve(page)
+        retry(page)
+    }
+
+    func readerDidRequestRetryAllFailed() {
+        recorder?.add("E retry all failed")
+        log("retry \(failedPages.count) failed pages")
+        for page in failedPages.sorted() {
+            retry(page)
+        }
     }
 
     func readerDidLoadImage(page: Int, pixelSize: CGSize) {
         recorder?.add("E loaded \(page) \(Int(pixelSize.width))x\(Int(pixelSize.height))")
         reported.insert(page)
+        failedPages.remove(page)
         if firstPageDelay == nil {
             let delay = CACurrentMediaTime() - createdAt
             firstPageDelay = delay
@@ -215,6 +248,7 @@ final class ReaderHarnessModel: ReaderEngineDataSource, ReaderEngineDelegate {
     func readerDidFailToLoadImage(page: Int) {
         recorder?.add("E failed \(page)")
         reported.insert(page)
+        failedPages.insert(page)
         log("image of page \(page) failed")
     }
 
@@ -255,6 +289,15 @@ final class ReaderHarnessModel: ReaderEngineDataSource, ReaderEngineDelegate {
 
     // MARK: Private
 
+    private func retry(_ page: Int) {
+        reported.remove(page)
+        failedPages.remove(page)
+        attempts[page, default: 0] += 1
+        states[page] = .pending
+        proxy.reloadPage(page)
+        resolve(page)
+    }
+
     private func resolve(_ page: Int) {
         guard resolving[page] == nil else { return }
         let delay = setup.hasFixedLatency ? latency : latency * Double.random(in: 0.5...1.5)
@@ -263,15 +306,18 @@ final class ReaderHarnessModel: ReaderEngineDataSource, ReaderEngineDelegate {
             guard !Task.isCancelled, let self else { return }
             resolving[page] = nil
             let attempt = attempts[page, default: 0]
-            if Self.failsResolutionFirst(page), attempt == 0 {
+            if failsResolution(page, attempt: attempt) {
                 states[page] = .failed
             } else if let url = ReaderHarnessURLProtocol.url(
-                forPage: page, session: session, attempt: attempt, latency: latency,
-                fails: Self.failsImageFirst(page) && attempt == 0
+                forPage: page, session: session, attempt: attempt, latency: setup.downloadLatency ?? latency,
+                fails: failsImage(page, attempt: attempt)
             ) {
                 states[page] = .image(url)
             } else {
                 states[page] = .failed
+            }
+            if states[page] == .failed {
+                failedPages.insert(page)
             }
             proxy.reloadPage(page)
         }

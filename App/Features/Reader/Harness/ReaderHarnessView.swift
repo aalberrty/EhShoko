@@ -8,7 +8,8 @@ import SwiftUI
 /// a wide panorama, every 9th page a large original (zooming in should sharpen it), every 6th a
 /// landscape page. Every 7th page fails to resolve once and every 11th fails to load once, so
 /// both retry paths can be tried. After the last page comes the slot of the closing page, with
-/// a stand-in in it.
+/// the closing page in it: a made-up gallery whose detail model runs on stand-in dependencies
+/// and ends in "Couldn't load" (`ReaderClosingHarness`).
 ///
 /// Launched with a check (`ReaderHarnessOptions`), it drives readers by itself and writes down
 /// what it finds.
@@ -45,12 +46,16 @@ private struct ReaderHarnessReader: View {
     let model: ReaderHarnessModel
     let close: () -> Void
 
+    @Environment(\.look) private var appLook
+
     var body: some View {
         ReaderEngineView(
             configuration: model.configuration, initialPage: model.setup.startPage, proxy: model.proxy,
             dataSource: model, delegate: model, probe: model.recorder.map { recorder in { recorder.add($0) } }
         )
         .ignoresSafeArea()
+        // As the reader hands it to its engine (`ReaderScreen`), with the look's own tint.
+        .environment(\.readerPageStyle, ReaderPageStyle(look: model.look ?? appLook))
         .overlay(alignment: .top) { status }
         .overlay(alignment: .bottom) {
             if model.isPanelVisible {
@@ -165,6 +170,13 @@ private struct ReaderHarnessPanel: View {
             }
             .pickerStyle(.segmented)
             Toggle("Closing page slot", isOn: $model.showsClosingSlot)
+            Picker("Look", selection: $model.look) {
+                Text(verbatim: "App's look").tag(Look?.none)
+                ForEach(Look.allCases, id: \.self) { look in
+                    Text(verbatim: "\(look)").tag(Look?.some(look))
+                }
+            }
+            .pickerStyle(.segmented)
         }
     }
 

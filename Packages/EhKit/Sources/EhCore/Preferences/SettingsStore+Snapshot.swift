@@ -106,15 +106,4 @@ extension SettingsStore {
         pageTranslationRepaint = setting.pageTranslationRepaint
         pageTranslationSourceAddress = setting.pageTranslationSourceAddress
     }
-
-    /// Sets the device-dependent default list display mode (legacy: `.thumbnail` on iPad-width
-    /// screens). Call it at launch. It only takes effect when no display mode has ever been
-    /// stored, and it stores `mode`, so it applies once per install and never overrides a
-    /// user's choice.
-    public func registerDefaultListDisplayMode(_ mode: ListDisplayMode) {
-        guard !storage.contains(.listDisplayMode) else { return }
-        listDisplayMode = mode
-        // Stored even when it equals the built-in default, marking it decided.
-        storage.set(listDisplayMode, for: .listDisplayMode)
-    }
 }

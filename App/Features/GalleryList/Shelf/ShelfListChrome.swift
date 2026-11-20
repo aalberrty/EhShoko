@@ -12,6 +12,8 @@ struct ShelfListChrome: ViewModifier {
     let input: ListDesignInput
     /// The list's width, for the period control's form.
     let width: CGFloat
+    /// A favourites folder on a screen of its own: More holds a menu of the folders.
+    let ownFolder: Int?
 
     @Environment(\.dynamicTypeSize) private var typeSize
 
@@ -32,7 +34,17 @@ struct ShelfListChrome: ViewModifier {
                     }
                 }
                 ToolbarItem(placement: .topBarTrailing) {
-                    ListMoreMenu(controls: menu, perform: input.perform)
+                    ListMoreMenu(controls: menu, perform: input.perform) {
+                        // In More, not on the title: the system shows no title menu on a large
+                        // title in the bar's row (iOS 26.3).
+                        if let ownFolder {
+                            Menu {
+                                ListFolderMenu(current: ownFolder)
+                            } label: {
+                                Label(L10n.Localizable.Shell.Place.favorites, systemImage: "folder")
+                            }
+                        }
+                    }
                 }
             }
             .modifier(ShelfListTitle(context: input.context))
@@ -58,20 +70,20 @@ struct ShelfListChrome: ViewModifier {
     }
 }
 
-/// The list's own title, unless it is embedded in a first screen or the library, which draw
-/// theirs. Large and leading in the bar's own row, as the Library tab's: a large title below
+/// The list's own title, unless the screen around it draws one (a first screen, the Library
+/// tab). Large and leading in the bar's own row, as the Library tab's: a large title below
 /// the bar would sit under the period control's or the find field's scroll edge effect on
 /// iOS 26 and be blurred by it.
 private struct ShelfListTitle: ViewModifier {
     let context: ListContext
 
     func body(content: Content) -> some View {
-        if context.embedsInStart {
+        if !context.showsTitle {
             content
         } else {
             content
                 .navigationTitle(context.title)
-                .toolbarTitleDisplayMode(.inlineLarge)
+                .leadingLargeTitle()
         }
     }
 }

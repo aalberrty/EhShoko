@@ -30,6 +30,8 @@ struct ShelfReaderMoreMenu: UIViewRepresentable {
         configuration.preferredSymbolConfigurationForImage = UIImage.SymbolConfiguration(textStyle: .body)
             .applying(UIImage.SymbolConfiguration(weight: .medium))
         let button = UIButton(configuration: configuration)
+        // The circle keeps its size: the symbol stops growing where the group's text does.
+        button.maximumContentSizeCategory = .extraExtraExtraLarge
         button.showsMenuAsPrimaryAction = true
         let items = context.coordinator
         button.menu = UIMenu(children: [
@@ -86,9 +88,8 @@ final class ShelfReaderMoreMenuItems {
     private func options() -> UIMenu {
         let model = model
         let settings = settings
-        // No localized name exists; "Live Text" is the system's own term, as in v3.
         let liveText = UIAction(
-            title: "Live Text", image: UIImage(systemName: "text.viewfinder"),
+            title: L10n.Localizable.Reader.liveText, image: UIImage(systemName: "text.viewfinder"),
             // The system analyzer is missing on some devices and in the simulator.
             attributes: ReaderLiveText.isSupported ? [] : .disabled,
             state: model.isLiveTextEnabled ? .on : .off

@@ -90,7 +90,7 @@ struct LedgerPreviewsGrid: View {
         case .search(let keyword):
             stack?.push(.search(keyword: keyword))
         case .signIn:
-            appRouter?.presentSettings([.settings(.account), .settings(.login)])
+            appRouter?.presentSignIn()
         }
     }
 }

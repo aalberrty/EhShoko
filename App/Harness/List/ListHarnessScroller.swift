@@ -11,10 +11,14 @@ import UIKit
 /// offset follows the clock, not the frame count, so a late frame jumps further, as under a
 /// finger, and every run covers the same distance in the same time.
 ///
-/// While it runs it counts late frames from the display link, a rough estimate of what
-/// Instruments' Animation Hitches reports (it sees main-thread stalls, not render-server ones),
-/// and marks the run as the `HarnessScroll` signpost interval (category `Harness`), which
+/// It marks the run as the `HarnessScroll` signpost interval (category `Harness`), which
 /// `measure.sh` uses to bound the hitches it counts.
+///
+/// It also counts late display-link frames, for the probes that have nothing better
+/// (`SettingsProbe`, the previews harness). That count is no measure of a list: it misses
+/// every update that overruns its frame by less than half a frame, which is most of what a
+/// list does (it read 0 to 2 ms/s where Instruments counted 113), so the list harness's
+/// result and `measure.sh` no longer carry it.
 @MainActor
 final class ListHarnessScroller: NSObject {
     nonisolated struct Result: Sendable {
@@ -29,8 +33,32 @@ final class ListHarnessScroller: NSObject {
         var longHitches = 0
         var frameDuration: Double = 0
         var reachedEnd = false
+        /// The main thread's CPU time, in seconds, from the first movement to the last, and what
+        /// was built and served in that time.
+        var mainThreadCPU: Double = 0
+        var cellBodies = 0
+        /// Of the body runs, those for a cell built before; and the cells standing built
+        /// beyond where the list had got to when the scroll ended (`ListHarnessCells.Tally`).
+        var cellsAgain = 0
+        var cellsAhead = 0
+        var coversServed = 0
 
         var hitchRatio: Double { duration > 0 ? hitchTime * 1_000 / duration : 0 }
+    }
+
+    /// The main thread's clocks at one moment of the run. The scroller runs on the main thread,
+    /// so its thread's CPU clock is the main thread's.
+    private struct Mark {
+        var cpu: UInt64
+        var cells: Int
+        var served: Int
+
+        static var now: Mark {
+            Mark(
+                cpu: clock_gettime_nsec_np(CLOCK_THREAD_CPUTIME_ID), cells: ListHarnessCells.value,
+                served: ListHarnessURLProtocol.servedCount.withLock { $0 }
+            )
+        }
     }
 
     private static let signposter = OSSignposter(subsystem: "app.ehshoko", category: "Harness")
@@ -49,6 +77,9 @@ final class ListHarnessScroller: NSObject {
     private var previousDuration: CFTimeInterval = 0
     private var endReachedAt: CFTimeInterval?
     private var result = Result()
+    /// At the first movement, and at the latest one.
+    private var firstMove: Mark?
+    private var lastMove: Mark?
 
     var isRunning: Bool { link != nil }
 
@@ -61,6 +92,8 @@ final class ListHarnessScroller: NSObject {
         result = Result()
         startTime = nil
         endReachedAt = nil
+        firstMove = nil
+        lastMove = nil
         let top = -scrollView.adjustedContentInset.top
         scrollView.setContentOffset(CGPoint(x: scrollView.contentOffset.x, y: top), animated: false)
         startOffset = top
@@ -119,6 +152,11 @@ final class ListHarnessScroller: NSObject {
         let inset = scrollView.adjustedContentInset
         let maximum = max(scrollView.contentSize.height + inset.bottom - scrollView.bounds.height, -inset.top)
         let target = min(startOffset + CGFloat(speed * (now - startTime)), maximum)
+        if target != scrollView.contentOffset.y {
+            let mark = Mark.now
+            if firstMove == nil { firstMove = mark }
+            lastMove = mark
+        }
         scrollView.contentOffset.y = target
         result.distance = Double(target - startOffset)
         guard target >= maximum else {
@@ -137,12 +175,22 @@ final class ListHarnessScroller: NSObject {
     private func finish() {
         link?.invalidate()
         link = nil
-        if let signpost {
-            Self.signposter.endInterval("HarnessScroll", signpost)
-            self.signpost = nil
-        }
         if let startTime {
             result.duration = previousTimestamp - startTime
+        }
+        if let firstMove, let lastMove {
+            result.mainThreadCPU = Double(lastMove.cpu - firstMove.cpu) / 1e9
+            result.cellBodies = lastMove.cells - firstMove.cells
+            let tally = ListHarnessCells.tally(last: result.cellBodies)
+            result.cellsAgain = tally.again
+            result.cellsAhead = tally.ahead
+            result.coversServed = lastMove.served - firstMove.served
+        }
+        if let signpost {
+            // The scroll's count ends its interval, as a hand's stretch does (`ListHarnessObserver`).
+            let count = "\(result.cellBodies) \(result.cellsAgain) \(result.cellsAhead) \(Int(result.distance))"
+            Self.signposter.endInterval("HarnessScroll", signpost, "\(count, privacy: .public)")
+            self.signpost = nil
         }
         continuation?.resume(returning: result)
         continuation = nil
@@ -151,10 +199,13 @@ final class ListHarnessScroller: NSObject {
     /// The scroll view of the list: of the scroll views around the anchor with content taller
     /// than themselves, the tallest one under the nearest common ancestor. Going outward one
     /// ancestor at a time keeps the screen below a presented harness out of the search.
-    private func findScrollView() -> UIScrollView? {
+    func findScrollView() -> UIScrollView? {
         var container = anchor?.superview
+        // Half the list's own width (the anchor's), so a list narrower than its window is
+        // found and a strip of thumbnails is not.
+        let width = (anchor?.bounds.width ?? 0) / 2
         while let view = container {
-            if let found = tallestScrollView(in: view) {
+            if let found = tallestScrollView(in: view, atLeast: width > 0 ? width : view.bounds.width / 2) {
                 return found
             }
             container = view.superview
@@ -162,13 +213,13 @@ final class ListHarnessScroller: NSObject {
         return nil
     }
 
-    private func tallestScrollView(in root: UIView) -> UIScrollView? {
+    private func tallestScrollView(in root: UIView, atLeast width: CGFloat) -> UIScrollView? {
         var best: UIScrollView?
         var pending = [root]
         while let view = pending.popLast() {
             if let scrollView = view as? UIScrollView, !scrollView.isHidden,
                scrollView.contentSize.height > scrollView.bounds.height,
-               scrollView.bounds.width >= root.bounds.width / 2,
+               scrollView.bounds.width >= width,
                best.map({ scrollView.contentSize.height > $0.contentSize.height }) ?? true {
                 best = scrollView
             }

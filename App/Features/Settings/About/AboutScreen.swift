@@ -13,7 +13,7 @@ struct AboutScreen: View {
                 AboutLinkRows(links: AboutLink.contacts)
             } header: {
                 // iOS 18 has no large-title subtitle, so the credits head the first section.
-                if #unavailable(iOS 26) {
+                LargeSubtitleFallback {
                     credits.textCase(nil)
                 }
             }
@@ -33,14 +33,10 @@ struct AboutScreen: View {
         }
         .settingsFormStyle()
         .navigationTitle(L10n.Localizable.AboutView.Title.ehShoko)
-        .toolbar {
-            if #available(iOS 26, *) {
-                ToolbarItem(placement: .largeSubtitle) {
-                    credits
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(.vertical, Tokens.Spacing.xSmall)
-                }
-            }
+        .largeSubtitle {
+            credits
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.vertical, Tokens.Spacing.xSmall)
         }
     }
 

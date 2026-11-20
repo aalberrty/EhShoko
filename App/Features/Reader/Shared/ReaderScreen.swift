@@ -18,6 +18,7 @@ import SwiftUI
 /// reaches its frame, and only a design that covers the page sets it.
 struct ReaderScreen: View {
     @State private var session: ReaderSession
+    @Environment(\.dismiss) private var dismiss
 
     init(gallery: Gallery, initialPage: Int? = nil, detail: GalleryDetail? = nil) {
         // Only the holder is made here. A view's `init` runs again every time the presenting
@@ -38,6 +39,9 @@ struct ReaderScreen: View {
             ReaderControls(model: model, viewport: session.viewport)
         }
         .modifier(ReaderChrome(model: model))
+        // VoiceOver's escape gesture leaves as Close does, also while the controls are hidden
+        // (and with them Close). A full-screen cover has no escape of its own.
+        .accessibilityAction(.escape) { dismiss() }
         .task { await model.start() }
         .onDisappear { model.close() }
     }
@@ -51,7 +55,7 @@ private final class ReaderSession {
     private let detail: GalleryDetail?
 
     private(set) lazy var model = ReaderModel(gallery: gallery, initialPage: initialPage, detail: detail)
-    private(set) lazy var bridge = ReaderEngineBridge(model: model)
+    private(set) lazy var bridge = ReaderEngineBridge(model: model, viewport: viewport)
     let viewport = ReaderViewport()
 
     init(gallery: Gallery, initialPage: Int?, detail: GalleryDetail?) {

@@ -1,3 +1,4 @@
+import EhNetworking
 import Foundation
 import os
 import Testing
@@ -15,6 +16,26 @@ struct PerformanceSignpostsTests {
         // A second end and a late event are ignored rather than recorded as a stray end.
         interval.end("failed")
         interval.event("Stored")
+        #expect(interval.isEnded)
+    }
+
+    @Test func responsesAreMarkedOnlyDuringTheOperation() async {
+        let interval = PerformanceSignposts.begin(.listPage, "frontpage first")
+        #expect(ResponseArrival.observer == nil)
+
+        let value = await interval.markingResponses {
+            // What `EhClient.send` does when a request is answered.
+            #expect(ResponseArrival.observer != nil)
+            ResponseArrival.observer?()
+            return 25
+        }
+
+        #expect(value == 25)
+        #expect(ResponseArrival.observer == nil)
+        #expect(!interval.isEnded)
+        // An answer after the interval ended (a second fetch of the same screen) marks nothing.
+        interval.end("25 galleries")
+        await interval.markingResponses { ResponseArrival.observer?() }
         #expect(interval.isEnded)
     }
 
