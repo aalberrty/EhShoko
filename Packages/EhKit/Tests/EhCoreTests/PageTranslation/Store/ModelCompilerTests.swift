@@ -21,7 +21,7 @@ import Testing
                 },
                 load: { url, units, function in
                     made.update { $0.append(Load(url: url, units: units, function: function)) }
-                    if function == failing { throw CocoaError(.fileReadCorruptFile) }
+                    if let failing, function == failing { throw CocoaError(.fileReadCorruptFile) }
                 }
             )
         } catch is CocoaError {
