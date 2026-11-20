@@ -60,7 +60,7 @@ actor DrawnPage {
 }
 
 /// Drawing a page: patches out.
-@Suite struct PageRendererTests {
+@Suite(.oneDrawingTestAtATime) struct PageRendererTests {
     typealias Lettering = SyntheticImages.Lettering
 
     /// The colour and alpha of a patch's pixel at (`x`, `y`) of the page.
@@ -272,7 +272,7 @@ actor DrawnPage {
 }
 
 /// The cost of drawing a page.
-@Suite struct RenderTimingTests {
+@Suite(.oneDrawingTestAtATime) struct RenderTimingTests {
     static let texts: [([String], String)] = [
         (["今日は良い天気", "ですね散歩に", "行きましょう"], "今天天气真好，我们一起去散步吧！"),
         (["昨日の夜から", "ずっと雨が", "降っている"], "从昨天晚上开始就一直在下雨。"),

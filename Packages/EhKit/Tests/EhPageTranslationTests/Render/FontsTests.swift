@@ -5,7 +5,7 @@ import Foundation
 import Testing
 
 /// The three subset fonts the target carries.
-@Suite struct FontsTests {
+@Suite(.oneDrawingTestAtATime) struct FontsTests {
     @Test(arguments: FontLibrary.BundledFont.allCases)
     func eachBundledFontLoads(font: FontLibrary.BundledFont) throws {
         let url = try #require(font.url)

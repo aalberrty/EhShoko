@@ -79,7 +79,7 @@ actor StubInpainter: Inpainter {
     }
 }
 
-@Suite struct TiledRepaintTests {
+@Suite(.oneDrawingTestAtATime) struct TiledRepaintTests {
     /// A page of plain grey: the stub paints over whatever is there.
     private func page(width: Int, height: Int) throws -> PageBitmap {
         try PageBitmap(

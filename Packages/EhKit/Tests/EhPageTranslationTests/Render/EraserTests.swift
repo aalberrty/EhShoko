@@ -5,7 +5,7 @@ import Foundation
 import Testing
 
 /// The ink mask and the smooth fill.
-@Suite struct EraserTests {
+@Suite(.oneDrawingTestAtATime) struct EraserTests {
     typealias Lettering = SyntheticImages.Lettering
 
     @Test func theEraseMaskCoversTheGlyphsAndStaysInTheBalloon() async throws {

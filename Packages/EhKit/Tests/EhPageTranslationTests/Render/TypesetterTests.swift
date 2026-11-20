@@ -5,7 +5,7 @@ import Foundation
 import Testing
 
 /// Fitting a translation to its area and drawing it.
-@Suite struct TypesetterTests {
+@Suite(.oneDrawingTestAtATime) struct TypesetterTests {
     private let typesetter = Typesetter()
     private let face = FontLibrary.bundled.face(.dialogue)
 

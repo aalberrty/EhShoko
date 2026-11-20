@@ -5,7 +5,7 @@ import Foundation
 import Testing
 
 /// Finding a balloon's interior from the page's pixels.
-@Suite struct RegionsTests {
+@Suite(.oneDrawingTestAtATime) struct RegionsTests {
     typealias Lettering = SyntheticImages.Lettering
 
     private static let sentence = ["今日は良い天気", "ですね散歩に", "行きましょう"]

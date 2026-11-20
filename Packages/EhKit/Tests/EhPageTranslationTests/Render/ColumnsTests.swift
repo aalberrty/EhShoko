@@ -5,7 +5,7 @@ import Foundation
 import Testing
 
 /// Finding a block's columns from its ink.
-@Suite struct ColumnsTests {
+@Suite(.oneDrawingTestAtATime) struct ColumnsTests {
     typealias Lettering = SyntheticImages.Lettering
 
     /// The columns of one lettered block, found on the pixels around its text. `onArtwork`

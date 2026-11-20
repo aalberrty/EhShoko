@@ -5,7 +5,7 @@ import Foundation
 import Testing
 
 /// Measuring the lettering of a block: size, pitch, colour, outline, weight, alignment.
-@Suite struct StyleTests {
+@Suite(.oneDrawingTestAtATime) struct StyleTests {
     typealias Lettering = SyntheticImages.Lettering
 
     /// The style of one lettered block, measured on the pixels around its text.
