@@ -2279,6 +2279,10 @@ internal enum L10n {
           internal static let on = L10n.tr("Localizable", "reader.translate.a11y.on", fallback: "Translation on")
           /// Compare original and translation
           internal static let wipe = L10n.tr("Localizable", "reader.translate.a11y.wipe", fallback: "Compare original and translation")
+          internal enum Cached {
+            /// 1 page already translated
+            internal static let one = L10n.tr("Localizable", "reader.translate.a11y.cached.one", fallback: "1 page already translated")
+          }
         }
         internal enum Status {
           /// Downloading translation · %1$@ of %2$@

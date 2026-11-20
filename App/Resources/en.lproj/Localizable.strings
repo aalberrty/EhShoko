@@ -1201,6 +1201,7 @@
 "reader.translate.a11y.on" = "Translation on";
 "reader.translate.a11y.off" = "Translation off";
 "reader.translate.a11y.cached" = "%d pages already translated";
+"reader.translate.a11y.cached.one" = "1 page already translated";
 "reader.translate.a11y.wipe" = "Compare original and translation";
 "translation.download.title" = "Translate pages on this %@";
 "translation.download.body" = "Japanese is redrawn as 简体中文 right on the page. It needs one download; after that it works offline and nothing leaves your device.";

@@ -1201,6 +1201,7 @@
 "reader.translate.a11y.on" = "翻譯已開啟";
 "reader.translate.a11y.off" = "翻譯已關閉";
 "reader.translate.a11y.cached" = "已翻譯 %d 頁";
+"reader.translate.a11y.cached.one" = "已翻譯 1 頁";
 "reader.translate.a11y.wipe" = "比較原文與譯文";
 "translation.download.title" = "在此 %@ 上翻譯頁面";
 "translation.download.body" = "頁面上的日文會直接重繪為简体中文。只需下載一次，之後可離線使用，任何內容都不會離開你的裝置。";

@@ -1201,6 +1201,7 @@
 "reader.translate.a11y.on" = "翻訳オン";
 "reader.translate.a11y.off" = "翻訳オフ";
 "reader.translate.a11y.cached" = "%d ページは翻訳済み";
+"reader.translate.a11y.cached.one" = "1 ページは翻訳済み";
 "reader.translate.a11y.wipe" = "原文と訳文を比較";
 "translation.download.title" = "この %@ でページを翻訳";
 "translation.download.body" = "日本語の文字を、ページ上でそのまま简体中文に描き直します。ダウンロードは一度だけ必要です。その後はオフラインで使え、データが端末の外に出ることはありません。";
