@@ -23,7 +23,9 @@ its author offers it. The private store's address is never part of the catalog.
   python3 Scripts/translation_catalog.py --folder test-store/ --only det-v4s
 
 `--write` replaces ModelCatalog+Generated.swift, `--check` exits 1 when that file is not what
-would be written, `--json` prints the catalog as the app's `ModelCatalog` decodes it. With
+would be written, `--json` prints the catalog as the app's `ModelCatalog` decodes it.
+`--credits <dir>` also compares the credits written here with the CREDITS.md files of a
+store folder, so a credit is never one thing in the app and another beside the model. With
 none of them the Swift source goes to standard output. A table of every artifact with its
 file count and size goes to standard error.
 """
@@ -47,7 +49,7 @@ def hugging_face(repository, commit):
 
 
 def model_scope(repository):
-    return f"https://modelscope.cn/models/{repository}/resolve/master"
+    return f"https://www.modelscope.cn/models/{repository}/resolve/master"
 
 
 # In the order choices fall back: of a kind, an earlier model is preferred when the chosen
@@ -56,39 +58,48 @@ def model_scope(repository):
 #
 # sharing: fromPublisher (downloaded where its author offers it), publicStore (the project
 # may pass a copy on), privateOnly (it may not).
+#
+# A credit says what the CREDITS.md beside the model says, word for word: `--credits` checks
+# it. nonCommercial is a licence's own term; a model whose card states no licence at all has
+# it False and says so in "licence".
 ARTIFACTS = [
     {
         "id": "det-k2xl-768", "version": "1", "role": "detector", "sharing": "privateOnly",
         "loading": {"coreML": "cpuAndNeuralEngine"},
         "credit": {
-            "name": "KoharuLayout RF-DETR-Seg-2XL", "author": "mayocream",
+            "name": "KoharuLayout RF-DETR-Seg-2XL (768 px)", "author": "mayocream",
             "source": "https://huggingface.co/mayocream/koharu-layout-rfdetr-seg-2xl-1152",
-            "licence": "No licence stated (trained on Manga109 under academic terms)",
+            "licence": '"other" (no licence stated for the weights; RF-DETR software Apache-2.0; '
+                       "training images under Manga109's academic-use terms)",
             "licenceText": "https://huggingface.co/mayocream/koharu-layout-rfdetr-seg-2xl-1152",
-            "changes": "Converted to Core ML at 768 × 768 with 16-bit floats; one layer rewritten.",
-            "nonCommercial": True,
+            "changes": "Converted to Core ML with 16-bit floats at 768 x 768 (the author's model is 1152 px); "
+                       "one layer rewritten for the conversion.",
+            "nonCommercial": False,
         },
     },
     {
         "id": "det-yolo26s", "version": "1", "role": "detector", "sharing": "privateOnly",
         "loading": {"coreML": "cpuAndNeuralEngine"},
         "credit": {
-            "name": "Koharu YOLO26s", "author": "mayocream",
+            "name": "Koharu YOLO26s",
+            "author": "mayocream (weights); Liiesl (the ONNX export that was converted)",
             "source": "https://huggingface.co/mayocream/koharu-yolo26s",
-            "licence": "No licence stated for the weights; the export is AGPL-3.0",
+            "licence": 'Weights: "other" (mayocream\'s card). The ONNX export that was converted: '
+                       "AGPL-3.0 (Liiesl's card).",
             "licenceText": "https://huggingface.co/mayocream/koharu-yolo26s",
-            "changes": "Converted to Core ML with 16-bit floats from the ONNX export by Liiesl.",
-            "nonCommercial": True,
+            "changes": "Converted from Liiesl's ONNX export to Core ML, 16-bit floats.",
+            "nonCommercial": False,
         },
     },
     {
         "id": "det-v4s", "version": "1", "role": "detector", "sharing": "publicStore",
         "loading": {"coreML": "cpuOnly"},
         "credit": {
-            "name": "comic-text-and-bubble-detector v4-s", "author": "ogkalu",
+            "name": "comic-text-and-bubble-detector, detector-v4-s", "author": "ogkalu",
             "source": "https://huggingface.co/ogkalu/comic-text-and-bubble-detector",
             "licence": "Apache-2.0", "licenceText": APACHE,
-            "changes": "Rebuilt from the published 8-bit file as floats and converted to Core ML with 16-bit floats.",
+            "changes": "The published 8-bit (int8) detector was rebuilt as floats and converted to Core ML, "
+                       "16-bit floats.",
             "nonCommercial": False,
         },
     },
@@ -96,10 +107,11 @@ ARTIFACTS = [
         "id": "det-rtmdet2", "version": "1", "role": "detector", "sharing": "publicStore",
         "loading": {"coreML": "cpuAndNeuralEngine"},
         "credit": {
-            "name": "RTMDet manga layout", "author": "fumetodev",
+            "name": "RTMDet manga layout (1024 px)", "author": "fumetodev",
             "source": "https://huggingface.co/fumetodev/rtmdet-manga-layout-onnx",
-            "licence": "Apache-2.0", "licenceText": APACHE,
-            "changes": "Converted to Core ML with 16-bit floats; one block rewritten.",
+            "licence": "Apache-2.0 (the card is only the licence header)", "licenceText": APACHE,
+            "changes": "Converted from the ONNX file to Core ML, 16-bit floats, with one block rewritten for "
+                       "the conversion.",
             "nonCommercial": False,
         },
     },
@@ -107,10 +119,11 @@ ARTIFACTS = [
         "id": "ocr-cpt2", "version": "1", "role": "reader", "sharing": "publicStore",
         "loading": {"coreML": "cpuAndNeuralEngine"},
         "credit": {
-            "name": "manga-ocr-base CPT v2", "author": "muscgab",
+            "name": "manga-ocr-base-CPT (v2)", "author": "muscgab",
             "source": "https://huggingface.co/muscgab/manga-ocr-base-CPT",
             "licence": "CC BY-NC-SA 4.0", "licenceText": CC_BY_NC_SA,
-            "changes": "Converted to Core ML as an encoder and a one-step decoder with 16-bit floats.",
+            "changes": "Converted to Core ML: an encoder and a one-step decoder, 16-bit floats; the vocabulary "
+                       "is supplied as vocab.txt.",
             "nonCommercial": True,
         },
     },
@@ -144,10 +157,13 @@ ARTIFACTS = [
         "id": "mt-galtransl-v4-4b", "version": "1", "role": "translator", "sharing": "publicStore",
         "loading": {"languageModel": "galtransl"}, "listed": False,
         "credit": {
-            "name": "GalTransl v4 4B", "author": "SakuraLLM",
+            "name": "GalTransl-v4-4B-2601", "author": "SakuraLLM",
             "source": "https://huggingface.co/SakuraLLM/GalTransl-v4-4B-2601",
-            "licence": "CC BY-NC-SA 4.0", "licenceText": CC_BY_NC_SA,
-            "changes": "Re-quantized from the official file to Q4_K_M.", "nonCommercial": True,
+            "licence": "CC BY-NC-SA 4.0 (SakuraLLM adds that no commercial use of any kind is allowed)",
+            "licenceText": CC_BY_NC_SA,
+            "changes": "Re-quantized by this project from the author's official 3.31 GB GGUF file to Q4_K_M "
+                       "(Galtransl-v4-4B-2601-Q4_K_M-requant.gguf).",
+            "nonCommercial": True,
         },
     },
     {
@@ -156,9 +172,12 @@ ARTIFACTS = [
         "id": "mt-sakura-1.5b", "version": "1", "role": "translator", "sharing": "privateOnly",
         "loading": {"languageModel": "sakura"}, "listed": False,
         "credit": {
-            "name": "Sakura 1.5B", "author": "SakuraLLM; quantized by shing3232",
+            "name": "Sakura-1.5B-Qwen2.5-v1.0 (Q5_K_S quantization)",
+            "author": "SakuraLLM (model); shing3232 (this quantized file)",
             "source": "https://huggingface.co/shing3232/Sakura-1.5B-Qwen2.5-v1.0-GGUF-IMX",
-            "licence": "CC BY-NC-SA 4.0", "licenceText": CC_BY_NC_SA, "changes": None, "nonCommercial": True,
+            "licence": "CC BY-NC-SA 4.0 (SakuraLLM's official repository); the third party's repository "
+                       "states no licence",
+            "licenceText": CC_BY_NC_SA, "changes": None, "nonCommercial": True,
         },
     },
     {
@@ -169,7 +188,7 @@ ARTIFACTS = [
             model_scope("Tencent-Hunyuan/Hy-MT2-1.8B-GGUF"),
         ],
         "credit": {
-            "name": "Hy-MT2 1.8B", "author": "Tencent",
+            "name": "Hy-MT2 1.8B (GGUF)", "author": "Tencent",
             "source": "https://huggingface.co/tencent/Hy-MT2-1.8B-GGUF",
             "licence": "Apache-2.0", "licenceText": APACHE, "changes": None, "nonCommercial": False,
         },
@@ -182,7 +201,7 @@ ARTIFACTS = [
             model_scope("unsloth/Qwen3.5-4B-GGUF"),
         ],
         "credit": {
-            "name": "Qwen3.5 4B", "author": "Alibaba; quantized by unsloth",
+            "name": "Qwen3.5 4B (IQ4_XS GGUF)", "author": "Alibaba (model); unsloth (quantization)",
             "source": "https://huggingface.co/unsloth/Qwen3.5-4B-GGUF",
             "licence": "Apache-2.0", "licenceText": APACHE, "changes": None, "nonCommercial": False,
         },
@@ -191,20 +210,26 @@ ARTIFACTS = [
         "id": "inp-lama-manga", "version": "1", "role": "repaint", "sharing": "publicStore",
         "loading": {"coreML": "cpuAndGPU"},
         "credit": {
-            "name": "lama_large_512px", "author": "dreMaz",
+            "name": "lama_large_512px (LaMa fine-tuned on manga and anime)",
+            "author": "dreMaz; LaMa by Suvorov et al. (Samsung Research)",
             "source": "https://huggingface.co/dreMaz/AnimeMangaInpainting",
-            "licence": "MIT", "licenceText": MIT,
-            "changes": "Converted to Core ML with 16-bit floats.", "nonCommercial": False,
+            "licence": "MIT (this fine-tune); Apache-2.0 (LaMa)", "licenceText": MIT,
+            "changes": "Converted to Core ML, 16-bit floats, 512 x 512.", "nonCommercial": False,
         },
     },
     {
         "id": "inp-big-lama", "version": "1", "role": "repaint", "sharing": "publicStore",
         "loading": {"coreML": "cpuAndGPU"},
         "credit": {
-            "name": "LaMa big-lama", "author": "advimman",
+            "name": "LaMa big-lama",
+            "author": "Roman Suvorov, Elizaveta Logacheva, Anton Mashikhin, Anastasia Remizova, Arsenii Ashukha, "
+                      "Aleksei Silvestrov, Naejin Kong, Harshith Goka, Kiwoong Park, Victor Lempitsky "
+                      "(Samsung Research)",
             "source": "https://github.com/advimman/lama",
             "licence": "Apache-2.0", "licenceText": APACHE,
-            "changes": "Converted to Core ML.", "nonCommercial": False,
+            "changes": "Converted to Core ML, 32-bit floats, 512 x 512, from the TorchScript export of big-lama "
+                       "used by lama-cleaner.",
+            "nonCommercial": False,
         },
     },
 ]
@@ -311,6 +336,51 @@ def build(sources, include, only, catalog_version):
     return {"version": catalog_version, "artifacts": artifacts}
 
 
+CREDIT_LINE = re.compile(r"^- \*\*(.+?):\*\*\s*(.*)$")
+
+
+def read_credits(path):
+    """A CREDITS.md: a heading with the model's name, then `- **Key:** value` lines."""
+    fields = {}
+    for line in path.read_text(encoding="utf-8").splitlines():
+        if line.startswith("# ") and "name" not in fields:
+            fields["name"] = line[2:].strip()
+        elif match := CREDIT_LINE.match(line):
+            fields[match.group(1)] = match.group(2).strip()
+    return fields
+
+
+def check_credits(folder, catalog):
+    """Compares each credit of the catalog with the CREDITS.md its store folder holds."""
+    problems = []
+    checked = 0
+    for artifact in catalog["artifacts"]:
+        path = folder / artifact["id"] / artifact["version"] / "CREDITS.md"
+        if not path.exists():
+            continue
+        checked += 1
+        told, credit = read_credits(path), artifact["credit"]
+        source = (told.get("Source") or "").split()
+        unchanged = (told.get("Changed by this project") or "").lower().startswith("none")
+        pairs = [
+            ("name", credit["name"], told.get("name")),
+            ("author", credit["author"], told.get("Author")),
+            ("source", credit["source"], source[0] if source else None),
+            ("licence", credit["licence"], told.get("Licence")),
+            ("changes", credit["changes"], None if unchanged else told.get("Changed by this project")),
+            ("nonCommercial", credit["nonCommercial"],
+             (told.get("Non-commercial use only") or "").lower().startswith("yes")),
+        ]
+        for field, here, there in pairs:
+            if here != there:
+                problems.append(f"{artifact['id']}: {field} is {here!r} here and {there!r} in CREDITS.md")
+    for problem in problems:
+        print(problem, file=sys.stderr)
+    if problems:
+        fail(f"{len(problems)} credit(s) differ from the CREDITS.md files in {folder}")
+    print(f"the credits of {checked} artifact(s) are what their CREDITS.md say", file=sys.stderr)
+
+
 def swift_string(text):
     return '"' + text.replace("\\", "\\\\").replace('"', '\\"') + '"'
 
@@ -339,7 +409,8 @@ def swift(catalog):
         changes = swift_string(credit["changes"]) if credit["changes"] else "nil"
         lines += [
             "            ModelArtifact(",
-            f"                id: ModelArtifactID({swift_string(artifact['id'])}), version: {swift_string(artifact['version'])},",
+            f"                id: ModelArtifactID({swift_string(artifact['id'])}), "
+            f"version: {swift_string(artifact['version'])},",
             f"                role: .{artifact['role']}, sharing: .{artifact['sharing']},",
             "                credit: ArtifactCredit(",
             f"                    name: {swift_string(credit['name'])},",
@@ -416,6 +487,9 @@ def main():
                         help="also list an artifact that is not listed yet")
     parser.add_argument("--only", action="append", default=[], metavar="ARTIFACT",
                         help="list these artifacts and no others: a small catalog for trying a store out")
+    parser.add_argument("--credits", type=Path, metavar="DIR",
+                        help="a folder laid out like a model store: fail when a credit here is not what "
+                             "the CREDITS.md there says")
     parser.add_argument("--catalog-version", type=int, default=1)
     output = parser.add_mutually_exclusive_group()
     output.add_argument("--write", action="store_true", help=f"replace {SWIFT.relative_to(ROOT)}")
@@ -442,6 +516,8 @@ def main():
 
     catalog = build(sources, set(arguments.include), set(arguments.only), arguments.catalog_version)
     print(table(catalog), file=sys.stderr)
+    if arguments.credits:
+        check_credits(arguments.credits, catalog)
     source = swift(catalog)
     if arguments.json:
         print(json.dumps(codable(catalog), indent=2, ensure_ascii=False))

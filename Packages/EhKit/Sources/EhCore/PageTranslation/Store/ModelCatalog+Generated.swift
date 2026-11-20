@@ -12,13 +12,13 @@ extension ModelCatalog {
                 id: ModelArtifactID("det-k2xl-768"), version: "1",
                 role: .detector, sharing: .privateOnly,
                 credit: ArtifactCredit(
-                    name: "KoharuLayout RF-DETR-Seg-2XL",
+                    name: "KoharuLayout RF-DETR-Seg-2XL (768 px)",
                     author: "mayocream",
                     source: .catalog("https://huggingface.co/mayocream/koharu-layout-rfdetr-seg-2xl-1152"),
-                    licence: "No licence stated (trained on Manga109 under academic terms)",
+                    licence: "\"other\" (no licence stated for the weights; RF-DETR software Apache-2.0; training images under Manga109's academic-use terms)",
                     licenceText: .catalog("https://huggingface.co/mayocream/koharu-layout-rfdetr-seg-2xl-1152"),
-                    changes: "Converted to Core ML at 768 × 768 with 16-bit floats; one layer rewritten.",
-                    nonCommercial: true
+                    changes: "Converted to Core ML with 16-bit floats at 768 x 768 (the author's model is 1152 px); one layer rewritten for the conversion.",
+                    nonCommercial: false
                 ),
                 loading: .coreML(.cpuAndNeuralEngine),
                 files: [
@@ -49,12 +49,12 @@ extension ModelCatalog {
                 role: .detector, sharing: .privateOnly,
                 credit: ArtifactCredit(
                     name: "Koharu YOLO26s",
-                    author: "mayocream",
+                    author: "mayocream (weights); Liiesl (the ONNX export that was converted)",
                     source: .catalog("https://huggingface.co/mayocream/koharu-yolo26s"),
-                    licence: "No licence stated for the weights; the export is AGPL-3.0",
+                    licence: "Weights: \"other\" (mayocream's card). The ONNX export that was converted: AGPL-3.0 (Liiesl's card).",
                     licenceText: .catalog("https://huggingface.co/mayocream/koharu-yolo26s"),
-                    changes: "Converted to Core ML with 16-bit floats from the ONNX export by Liiesl.",
-                    nonCommercial: true
+                    changes: "Converted from Liiesl's ONNX export to Core ML, 16-bit floats.",
+                    nonCommercial: false
                 ),
                 loading: .coreML(.cpuAndNeuralEngine),
                 files: [
@@ -84,12 +84,12 @@ extension ModelCatalog {
                 id: ModelArtifactID("det-v4s"), version: "1",
                 role: .detector, sharing: .publicStore,
                 credit: ArtifactCredit(
-                    name: "comic-text-and-bubble-detector v4-s",
+                    name: "comic-text-and-bubble-detector, detector-v4-s",
                     author: "ogkalu",
                     source: .catalog("https://huggingface.co/ogkalu/comic-text-and-bubble-detector"),
                     licence: "Apache-2.0",
                     licenceText: .catalog("https://www.apache.org/licenses/LICENSE-2.0.txt"),
-                    changes: "Rebuilt from the published 8-bit file as floats and converted to Core ML with 16-bit floats.",
+                    changes: "The published 8-bit (int8) detector was rebuilt as floats and converted to Core ML, 16-bit floats.",
                     nonCommercial: false
                 ),
                 loading: .coreML(.cpuOnly),
@@ -120,12 +120,12 @@ extension ModelCatalog {
                 id: ModelArtifactID("det-rtmdet2"), version: "1",
                 role: .detector, sharing: .publicStore,
                 credit: ArtifactCredit(
-                    name: "RTMDet manga layout",
+                    name: "RTMDet manga layout (1024 px)",
                     author: "fumetodev",
                     source: .catalog("https://huggingface.co/fumetodev/rtmdet-manga-layout-onnx"),
-                    licence: "Apache-2.0",
+                    licence: "Apache-2.0 (the card is only the licence header)",
                     licenceText: .catalog("https://www.apache.org/licenses/LICENSE-2.0.txt"),
-                    changes: "Converted to Core ML with 16-bit floats; one block rewritten.",
+                    changes: "Converted from the ONNX file to Core ML, 16-bit floats, with one block rewritten for the conversion.",
                     nonCommercial: false
                 ),
                 loading: .coreML(.cpuAndNeuralEngine),
@@ -156,12 +156,12 @@ extension ModelCatalog {
                 id: ModelArtifactID("ocr-cpt2"), version: "1",
                 role: .reader, sharing: .publicStore,
                 credit: ArtifactCredit(
-                    name: "manga-ocr-base CPT v2",
+                    name: "manga-ocr-base-CPT (v2)",
                     author: "muscgab",
                     source: .catalog("https://huggingface.co/muscgab/manga-ocr-base-CPT"),
                     licence: "CC BY-NC-SA 4.0",
                     licenceText: .catalog("https://creativecommons.org/licenses/by-nc-sa/4.0/legalcode"),
-                    changes: "Converted to Core ML as an encoder and a one-step decoder with 16-bit floats.",
+                    changes: "Converted to Core ML: an encoder and a one-step decoder, 16-bit floats; the vocabulary is supplied as vocab.txt.",
                     nonCommercial: true
                 ),
                 loading: .coreML(.cpuAndNeuralEngine),
@@ -219,7 +219,7 @@ extension ModelCatalog {
                 loading: .coreML(.cpuAndNeuralEngine),
                 publisherAddresses: [
                     .catalog("https://huggingface.co/muscgab/manga-ocr-nar-small/resolve/81ff4f3313263d1da349946a9dd20d14e0fb0e66"),
-                    .catalog("https://modelscope.cn/models/muscgab/manga-ocr-nar-small/resolve/master")
+                    .catalog("https://www.modelscope.cn/models/muscgab/manga-ocr-nar-small/resolve/master")
                 ],
                 files: [
                     ModelFile(
@@ -255,7 +255,7 @@ extension ModelCatalog {
                 loading: .coreML(.cpuAndNeuralEngine),
                 publisherAddresses: [
                     .catalog("https://huggingface.co/muscgab/JMangaTranslator-Fast/resolve/151cebac786f262a9144fc109ac5341a94c3da12"),
-                    .catalog("https://modelscope.cn/models/muscgab/JMangaTranslator-Fast/resolve/master")
+                    .catalog("https://www.modelscope.cn/models/muscgab/JMangaTranslator-Fast/resolve/master")
                 ],
                 files: [
                     ModelFile(
@@ -328,12 +328,12 @@ extension ModelCatalog {
                 id: ModelArtifactID("inp-lama-manga"), version: "1",
                 role: .repaint, sharing: .publicStore,
                 credit: ArtifactCredit(
-                    name: "lama_large_512px",
-                    author: "dreMaz",
+                    name: "lama_large_512px (LaMa fine-tuned on manga and anime)",
+                    author: "dreMaz; LaMa by Suvorov et al. (Samsung Research)",
                     source: .catalog("https://huggingface.co/dreMaz/AnimeMangaInpainting"),
-                    licence: "MIT",
+                    licence: "MIT (this fine-tune); Apache-2.0 (LaMa)",
                     licenceText: .catalog("https://opensource.org/license/mit"),
-                    changes: "Converted to Core ML with 16-bit floats.",
+                    changes: "Converted to Core ML, 16-bit floats, 512 x 512.",
                     nonCommercial: false
                 ),
                 loading: .coreML(.cpuAndGPU),
@@ -365,11 +365,11 @@ extension ModelCatalog {
                 role: .repaint, sharing: .publicStore,
                 credit: ArtifactCredit(
                     name: "LaMa big-lama",
-                    author: "advimman",
+                    author: "Roman Suvorov, Elizaveta Logacheva, Anton Mashikhin, Anastasia Remizova, Arsenii Ashukha, Aleksei Silvestrov, Naejin Kong, Harshith Goka, Kiwoong Park, Victor Lempitsky (Samsung Research)",
                     source: .catalog("https://github.com/advimman/lama"),
                     licence: "Apache-2.0",
                     licenceText: .catalog("https://www.apache.org/licenses/LICENSE-2.0.txt"),
-                    changes: "Converted to Core ML.",
+                    changes: "Converted to Core ML, 32-bit floats, 512 x 512, from the TorchScript export of big-lama used by lama-cleaner.",
                     nonCommercial: false
                 ),
                 loading: .coreML(.cpuAndGPU),

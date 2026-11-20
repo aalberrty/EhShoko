@@ -59,8 +59,10 @@ import Testing
             let credit = artifact.credit
             #expect(!credit.name.isEmpty && !credit.author.isEmpty && !credit.licence.isEmpty, "\(artifact.id)")
             #expect(credit.source.scheme == "https" && credit.licenceText.scheme == "https")
-            // What the project converted says so; what it passes on unchanged does not.
-            #expect((credit.changes == nil) == (artifact.sharing == .fromPublisher), "\(artifact.id)")
+            // What its author hosts is passed on unchanged and says nothing of changes.
+            if artifact.sharing == .fromPublisher { #expect(credit.changes == nil, "\(artifact.id)") }
+            // A licence that forbids commercial use is named as one.
+            if credit.nonCommercial { #expect(credit.licence.contains("NC"), "\(artifact.id)") }
         }
     }
 
@@ -87,6 +89,20 @@ import Testing
         let ids = PageTranslationModelSet.default.artifacts + [RepaintChoice.default.artifact].compactMap { $0 }
         let bytes = ids.reduce(Int64(0)) { $0 + (catalog.artifact($1)?.downloadSize ?? 0) }
         #expect((1_170_000_000...1_180_000_000).contains(bytes), "\(bytes)")
+    }
+
+    /// The models the project converted itself say what was changed. A licence's own
+    /// "non-commercial" is kept apart from a card that states no licence at all.
+    @Test func theConvertedModelsSayWhatWasChanged() throws {
+        for id in [ModelArtifactID.k2xl, .yolo26s, .v4s, .rtmdet2, .cpt2, .lamaManga, .bigLama] {
+            let credit = try #require(catalog.artifact(id)).credit
+            #expect(credit.changes?.contains("Core ML") == true, "\(id)")
+        }
+        #expect(catalog.artifact(.cpt2)?.credit.nonCommercial == true)
+        #expect(catalog.artifact(.jmtFast1)?.credit.nonCommercial == true)
+        #expect(catalog.artifact(.k2xl)?.credit.nonCommercial == false)
+        #expect(catalog.artifact(.k2xl)?.credit.licence.contains("no licence stated") == true)
+        #expect(catalog.artifact(.v4s)?.credit.licence == "Apache-2.0")
     }
 
     @Test func thePublicStoreHasNoAddressYet() {
