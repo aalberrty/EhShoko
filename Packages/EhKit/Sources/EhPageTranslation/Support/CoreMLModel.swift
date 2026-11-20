@@ -2,7 +2,8 @@ import CoreML
 import Foundation
 
 /// A compiled Core ML model, loaded, with what its description says about its inputs and
-/// outputs. Detectors and readers hold one each and call it with Core ML's async prediction.
+/// outputs. Every model of the pipeline is held as one and called with Core ML's async
+/// prediction.
 ///
 /// `@unchecked Sendable` because `MLModel` is not marked `Sendable` in the SDK, although Core
 /// ML documents its prediction methods as safe to call from any thread and its async
