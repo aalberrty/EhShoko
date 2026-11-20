@@ -13,6 +13,21 @@ enum TinyModel {
     /// The first of the 26 letters.
     static let letterA: LlamaToken = 260
 
+    /// These tests compute on the CPU, but llama.cpp starts its Metal backend with the first
+    /// model of a process whatever that model runs on, and on a machine that has not run it
+    /// before that means compiling three dozen shader libraries: twenty to thirty seconds
+    /// with every core busy on GitHub's Macs, long enough to fail other suites' timed tests.
+    /// With no Metal device it does not start. The opt-in tests use the GPU, so with their
+    /// folder given Metal stays as it is.
+    static func keepMetalOff() {
+        _ = metalIsOff
+    }
+
+    private static let metalIsOff: Void = {
+        guard PrivateModels.folder == nil else { return }
+        setenv("GGML_METAL_DEVICES", "0", 1)
+    }()
+
     /// "<unk>", "<s>", "</s>", one piece for each byte, the word boundary, then a to z.
     static let vocabularySize = 3 + 256 + 1 + 26
 

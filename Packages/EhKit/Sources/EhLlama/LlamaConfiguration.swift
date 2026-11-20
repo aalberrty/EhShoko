@@ -5,7 +5,8 @@ public typealias LlamaToken = Int32
 public struct LlamaConfiguration: Sendable, Equatable {
     /// Where the model's layers run.
     public enum Device: Sendable, Equatable {
-        /// Every layer on the GPU (Metal), where llama.cpp can use one.
+        /// Every layer on the GPU (Metal). On an Intel Mac and in a simulator this is the
+        /// CPU as well: Metal is not started there (see `preferred`).
         case gpu
         /// The CPU alone: no layer and no buffer is given to a GPU.
         case cpu
@@ -13,8 +14,8 @@ public struct LlamaConfiguration: Sendable, Equatable {
         /// The GPU on a device and on a Mac with Apple silicon; the CPU on an Intel Mac and
         /// in every simulator. llama.cpp does run on an Intel GPU, ten times as fast as on the
         /// CPU, and gets the numbers wrong: a 1.8B model answered "-bal!!!!!!!!" on Iris Plus
-        /// graphics where the CPU gave a sentence. A simulator draws with its Mac's GPU, and
-        /// nothing is measured in one, so it takes the choice that is right everywhere.
+        /// graphics where the CPU gave a sentence. A simulator computes with its Mac's GPU,
+        /// and nothing is measured in one, so it takes the choice that is right everywhere.
         public static var preferred: Device {
             #if arch(x86_64) || targetEnvironment(simulator)
             .cpu

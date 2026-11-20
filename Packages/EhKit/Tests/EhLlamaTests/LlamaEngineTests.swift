@@ -4,11 +4,11 @@ import Synchronization
 import Testing
 
 @Suite struct LlamaEngineTests {
-    // MARK: Loading
-
-    @Test func theLibraryIsLinked() {
-        #expect(!LlamaEngine.systemInfo.isEmpty)
+    init() {
+        TinyModel.keepMetalOff()
     }
+
+    // MARK: Loading
 
     @Test func aModelLoadsAndDescribesItself() async throws {
         try await withTinyEngine { engine in
@@ -19,6 +19,7 @@ import Testing
             #expect(info.contextLength >= 256)
             #expect(info.parameterCount > 0)
             #expect(info.weightBytes > 0)
+            #expect(try await engine.systemInfo.contains("CPU"))
         }
     }
 

@@ -1,6 +1,5 @@
 import Dispatch
 import Foundation
-import llama
 
 /// A language-model file (GGUF) loaded through llama.cpp: text to tokens and back, and
 /// generation that can be stopped between two tokens. It knows nothing about prompts, pages
@@ -20,7 +19,8 @@ public actor LlamaEngine {
     private init() {}
 
     /// Loads the model at `url` with its weights mapped from the file, and makes its context.
-    /// Takes seconds for a large file; it runs on the engine's queue, not on the caller's actor.
+    /// Takes seconds for a large file, and longer the first time in a process, when llama.cpp
+    /// itself starts. It runs on the engine's queue, not on the caller's actor.
     public static func load(
         modelAt url: URL,
         configuration: LlamaConfiguration = LlamaConfiguration()
@@ -98,18 +98,8 @@ public actor LlamaEngine {
         }
     }
 
-    // MARK: The library
-
     /// What llama.cpp was built with and found on this machine (CPU features, Metal).
-    public nonisolated static var systemInfo: String {
-        LlamaBackend.start()
-        guard let text = llama_print_system_info() else { return "" }
-        return String(cString: text)
-    }
-
-    /// Whether this build of llama.cpp can put layers on a GPU at all.
-    public nonisolated static var supportsGPUOffload: Bool {
-        LlamaBackend.start()
-        return llama_supports_gpu_offload()
+    public var systemInfo: String {
+        get throws { try loaded().systemInfo }
     }
 }

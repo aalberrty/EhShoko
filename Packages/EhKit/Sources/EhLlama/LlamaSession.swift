@@ -71,6 +71,11 @@ final class LlamaSession {
         )
     }
 
+    var systemInfo: String {
+        guard let text = llama_print_system_info() else { return "" }
+        return String(cString: text)
+    }
+
     // MARK: Text and tokens
 
     func tokenize(_ text: String, addingSpecial: Bool, parsingSpecial: Bool) throws -> [LlamaToken] {
