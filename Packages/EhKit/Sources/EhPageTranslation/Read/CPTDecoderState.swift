@@ -80,7 +80,11 @@ final class CPTDecoderState {
         mask = try array([1, shape.length], shape.maskType)
         keys = try array(cache, shape.cacheType)
         values = try array(cache, shape.cacheType)
-        // Closed positions are never read with any weight, so the cache needs no clearing.
+        // A new array's memory is not cleared, and a closed position still enters attention with
+        // a weight of zero: zero times a stale NaN or infinity (likely in half precision) is NaN.
+        for array in [keys, values] {
+            array.withUnsafeMutableBytes { raw, _ in _ = raw.initializeMemory(as: UInt8.self, repeating: 0) }
+        }
         Self.fill(mask, with: Self.closed)
         inputs = try MLDictionaryFeatureProvider(dictionary: [
             "token": token, "pos": position, "mask": mask, "kcache": keys, "vcache": values,

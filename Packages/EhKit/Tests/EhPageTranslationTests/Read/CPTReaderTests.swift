@@ -63,6 +63,19 @@ struct CPTDecoderStateTests {
         (0..<array.count).map { array[$0].floatValue }
     }
 
+    /// A closed position is still read with a weight of zero, so the cache must hold no stale
+    /// NaN or infinity: it starts at zero.
+    @Test(arguments: [MLMultiArrayDataType.float16, .float32])
+    func theCacheStartsAtZero(type: MLMultiArrayDataType) throws {
+        for _ in 0..<4 {
+            let state = try Self.state(CPTCacheShape(layers: 2, heads: 12, length: 128, width: 64, cacheType: type))
+            for array in [state.keys, state.values] {
+                let nonZero = array.withUnsafeBytes { raw in raw.contains { $0 != 0 } }
+                #expect(!nonZero)
+            }
+        }
+    }
+
     @Test func theMaskOpensOnePositionAStep() throws {
         let state = try Self.state()
         #expect(Self.floats(state.mask).allSatisfy { $0 < -9000 })
