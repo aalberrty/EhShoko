@@ -154,7 +154,8 @@ public actor PageTranslationResultWriter {
     /// Returns when every write queued so far has finished or was skipped.
     public func waitUntilWritten() async {
         while let write = lastWrite {
-            await write.value
+            // Its value is the error it failed with, which whoever queued the write reads.
+            _ = await write.value
             if lastWrite == write { return }
         }
     }
