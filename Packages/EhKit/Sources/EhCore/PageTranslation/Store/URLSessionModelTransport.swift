@@ -9,19 +9,32 @@ import Synchronization
 /// is killed finish without it, after which the system starts the app again to deliver
 /// them. So every range of a download is handed to the system at once and goes on while the
 /// app is suspended or gone.
+///
+/// The system drops the token on a redirect to the same host too, and a background session
+/// does not ask before it follows one. So a request with a token is first taken past the
+/// redirects of its own host by `ModelAddressResolver`, and the background session is given
+/// the address that answers.
 public final class URLSessionModelTransport: ModelTransport {
     private let session: URLSession
     private let handler: Handler
     private let identifier: String?
+    private let resolver: ModelAddressResolver?
 
     /// - Parameters:
     ///   - identifier: the background session's name, or `nil` for a session that is not one.
     ///   - root: the model store's folder; destinations are remembered relative to it.
-    public init(configuration: URLSessionConfiguration, identifier: String?, root: URL) {
+    ///   - resolverConfiguration: the session that takes a request with a token past the
+    ///     redirects of its own host. A background session needs one; a session that asks
+    ///     its delegate about redirects does not.
+    public init(
+        configuration: URLSessionConfiguration, identifier: String?, root: URL,
+        resolverConfiguration: URLSessionConfiguration? = nil
+    ) {
         let handler = Handler(root: root)
         self.handler = handler
         self.identifier = identifier
         session = URLSession(configuration: configuration, delegate: handler, delegateQueue: nil)
+        resolver = resolverConfiguration.map(ModelAddressResolver.init(configuration:))
     }
 
     deinit {
@@ -41,7 +54,14 @@ public final class URLSessionModelTransport: ModelTransport {
         configuration.httpMaximumConnectionsPerHost = 4
         // A transfer that waits for a network gives up after a day and is asked for again.
         configuration.timeoutIntervalForResource = 24 * 60 * 60
-        return URLSessionModelTransport(configuration: configuration, identifier: identifier, root: root)
+        let resolving = URLSessionConfiguration.ephemeral
+        resolving.httpCookieStorage = nil
+        resolving.httpShouldSetCookies = false
+        resolving.urlCache = nil
+        resolving.timeoutIntervalForRequest = 30
+        return URLSessionModelTransport(
+            configuration: configuration, identifier: identifier, root: root, resolverConfiguration: resolving
+        )
     }
 
     public func fetch(
@@ -52,7 +72,13 @@ public final class URLSessionModelTransport: ModelTransport {
         }
         await collectEarlierTransfers()
         try Task.checkCancellation()
-        return try await withTaskCancellationHandler {
+        var request = request
+        // Only a range that will really be asked for is worth a question to the store.
+        if let resolver, request.token?.isEmpty == false, handler.needsTransfer(ticket) {
+            request.url = await resolver.address(for: request.url, token: request.token)
+            try Task.checkCancellation()
+        }
+        return try await withTaskCancellationHandler { [request] in
             try await withCheckedThrowingContinuation { continuation in
                 switch handler.register(ticket, request: request, received: received, continuation, in: session) {
                 case .delivered: continuation.resume(returning: .finished)
@@ -123,6 +149,12 @@ private final class Handler: NSObject, URLSessionDownloadDelegate, Sendable {
         state.withLock { $0.tasks[ticket] }?.cancel()
     }
 
+    /// Whether fetching this range would start a transfer: it is neither in place nor
+    /// under way.
+    func needsTransfer(_ ticket: ModelChunkTicket) -> Bool {
+        state.withLock { !ticket.isDelivered(in: root) && $0.tasks[ticket] == nil }
+    }
+
     /// Learns which transfers of an earlier run are still under way. Once per process.
     func attach(to session: URLSession) async {
         let attaching = state.withLock { state -> Task<Void, Never> in
@@ -184,12 +216,13 @@ private final class Handler: NSObject, URLSessionDownloadDelegate, Sendable {
     }
 
     /// Only a session that is not a background one asks. The system has already taken the
-    /// token off the new request; this makes sure of it for any other host.
+    /// token off the new request: it is put back for the host it was meant for, and kept
+    /// off for any other.
     func urlSession(
         _ session: URLSession, task: URLSessionTask, willPerformHTTPRedirection response: HTTPURLResponse,
         newRequest request: URLRequest, completionHandler: @escaping @Sendable (URLRequest?) -> Void
     ) {
-        completionHandler(ModelChunkDelivery.redirected(request, from: task.originalRequest?.url))
+        completionHandler(ModelChunkDelivery.redirected(request, from: task.originalRequest))
     }
 
     func urlSessionDidFinishEvents(forBackgroundURLSession session: URLSession) {
@@ -225,106 +258,5 @@ private final class TransferState: Sendable {
 
     func withLock<Result: Sendable>(_ body: (inout Value) -> Result) -> Result {
         value.withLock { body(&$0) }
-    }
-}
-
-// MARK: Judging an answer
-
-/// What to make of a finished download task: pure, so the rules are tested on the host.
-enum ModelChunkDelivery {
-    /// The request for one range: the range, the token for this address, and nothing else
-    /// about the app or the user.
-    static func urlRequest(for request: ModelChunkRequest) -> URLRequest {
-        var urlRequest = URLRequest(url: request.url, cachePolicy: .reloadIgnoringLocalCacheData)
-        urlRequest.httpShouldHandleCookies = false
-        urlRequest.setValue(
-            "bytes=\(request.range.lowerBound)-\(request.range.upperBound - 1)", forHTTPHeaderField: "Range"
-        )
-        // Compressed bytes would not be the range that was asked for.
-        urlRequest.setValue("identity", forHTTPHeaderField: "Accept-Encoding")
-        // The default names the app to every host; the hosts need to know nothing.
-        urlRequest.setValue("ModelStore/1", forHTTPHeaderField: "User-Agent")
-        if let token = request.token, !token.isEmpty {
-            urlRequest.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-        }
-        return urlRequest
-    }
-
-    /// Moves the downloaded file into place when it is the range that was asked for.
-    static func deliver(
-        _ location: URL, response: URLResponse?, ticket: ModelChunkTicket, root: URL
-    ) -> ModelChunkOutcome {
-        guard let response = response as? HTTPURLResponse else { return .refused(status: 0, retryAfter: nil) }
-        let outcome = judge(
-            status: response.statusCode, contentRange: response.value(forHTTPHeaderField: "Content-Range"),
-            retryAfter: response.value(forHTTPHeaderField: "Retry-After"), length: ModelFiles.size(of: location),
-            ticket: ticket
-        )
-        guard outcome == .finished else { return outcome }
-        do {
-            try ModelFiles.move(location, to: ticket.destination(in: root))
-            return .finished
-        } catch {
-            return .refused(status: 0, retryAfter: nil)
-        }
-    }
-
-    static func judge(
-        status: Int, contentRange: String?, retryAfter: String?, length: Int64?, ticket: ModelChunkTicket
-    ) -> ModelChunkOutcome {
-        let refused = ModelChunkOutcome.refused(status: status, retryAfter: delay(fromRetryAfter: retryAfter))
-        guard length == ticket.count else { return refused }
-        switch status {
-        case 206:
-            // A range that starts elsewhere is not ours, whatever its length.
-            if let first = firstByte(ofContentRange: contentRange), first != ticket.first { return refused }
-            return .finished
-        case 200:
-            // A source that ignores `Range` sends the whole file, which is the range only
-            // when the range is the whole file.
-            return ticket.first == 0 ? .finished : refused
-        default:
-            return refused
-        }
-    }
-
-    /// `bytes 100-199/1000` → 100.
-    static func firstByte(ofContentRange value: String?) -> Int64? {
-        guard let value, let unitEnd = value.firstIndex(of: " "), let dash = value.firstIndex(of: "-"),
-              unitEnd < dash
-        else { return nil }
-        return Int64(value[value.index(after: unitEnd)..<dash].trimmingCharacters(in: .whitespaces))
-    }
-
-    /// `Retry-After` as seconds or as an HTTP date.
-    static func delay(fromRetryAfter value: String?, now: Date = Date()) -> Duration? {
-        guard let value = value?.trimmingCharacters(in: .whitespaces), !value.isEmpty else { return nil }
-        if let seconds = Double(value) { return .seconds(max(0, seconds)) }
-        let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "en_US_POSIX")
-        formatter.timeZone = TimeZone(identifier: "GMT")
-        formatter.dateFormat = "EEE, dd MMM yyyy HH:mm:ss zzz"
-        guard let date = formatter.date(from: value) else { return nil }
-        return .seconds(max(0, date.timeIntervalSince(now)))
-    }
-
-    /// The request to follow a redirect with: without the token unless it stays on the host
-    /// the token was meant for.
-    static func redirected(_ request: URLRequest, from original: URL?) -> URLRequest {
-        var request = request
-        if !isSameOrigin(request.url, original) {
-            request.setValue(nil, forHTTPHeaderField: "Authorization")
-        }
-        return request
-    }
-
-    static func isSameOrigin(_ url: URL?, _ other: URL?) -> Bool {
-        guard let url, let other, let host = url.host(), let otherHost = other.host() else { return false }
-        return host.lowercased() == otherHost.lowercased() && url.scheme?.lowercased() == other.scheme?.lowercased()
-            && port(of: url) == port(of: other)
-    }
-
-    private static func port(of url: URL) -> Int {
-        url.port ?? (url.scheme?.lowercased() == "http" ? 80 : 443)
     }
 }

@@ -3,153 +3,16 @@ import Synchronization
 import Testing
 @testable import EhCore
 
-// MARK: The rules, without a session
-
-@Suite struct ModelChunkDeliveryTests {
-    private let ticket = ModelChunkTicket(path: "det-v4s/weight.bin.chunk-1", first: 1024, count: 1024)
-
-    private func judge(_ status: Int, range: String? = nil, retryAfter: String? = nil, length: Int64? = 1024) -> ModelChunkOutcome {
-        ModelChunkDelivery.judge(status: status, contentRange: range, retryAfter: retryAfter, length: length, ticket: ticket)
-    }
-
-    @Test func aRangeOfTheRightLengthIsTaken() {
-        #expect(judge(206, range: "bytes 1024-2047/16777216") == .finished)
-        // A server that says nothing about where the range starts is believed.
-        #expect(judge(206) == .finished)
-    }
-
-    @Test func anythingElseIsRefused() {
-        #expect(judge(206, range: "bytes 0-1023/16777216") == .refused(status: 206, retryAfter: nil))
-        #expect(judge(206, range: "bytes 1024-2047/16777216", length: 1000) == .refused(status: 206, retryAfter: nil))
-        #expect(judge(206, length: nil) == .refused(status: 206, retryAfter: nil))
-        #expect(judge(403, length: 211) == .refused(status: 403, retryAfter: nil))
-        #expect(judge(404) == .refused(status: 404, retryAfter: nil))
-        #expect(judge(500) == .refused(status: 500, retryAfter: nil))
-        #expect(judge(429, retryAfter: "17", length: 0) == .refused(status: 429, retryAfter: .seconds(17)))
-    }
-
-    /// A source that ignores `Range` sends the whole file, which is the range only when
-    /// the range is the whole file.
-    @Test func aWholeFileIsTheRangeOnlyWhenTheRangeIsTheWholeFile() {
-        #expect(judge(200) == .refused(status: 200, retryAfter: nil))
-        let whole = ModelChunkTicket(path: "det-v4s/LICENSE.chunk-0", first: 0, count: 400)
-        #expect(ModelChunkDelivery.judge(status: 200, contentRange: nil, retryAfter: nil, length: 400, ticket: whole) == .finished)
-        #expect(ModelChunkDelivery.judge(status: 200, contentRange: nil, retryAfter: nil, length: 9000, ticket: whole)
-            == .refused(status: 200, retryAfter: nil))
-    }
-
-    @Test func retryAfterIsSecondsOrADate() {
-        #expect(ModelChunkDelivery.delay(fromRetryAfter: "120") == .seconds(120))
-        #expect(ModelChunkDelivery.delay(fromRetryAfter: " 2 ") == .seconds(2))
-        #expect(ModelChunkDelivery.delay(fromRetryAfter: nil) == nil)
-        #expect(ModelChunkDelivery.delay(fromRetryAfter: "soon") == nil)
-        let now = Date(timeIntervalSince1970: 1_700_000_000)
-        #expect(ModelChunkDelivery.delay(fromRetryAfter: "Tue, 14 Nov 2023 22:14:20 GMT", now: now) == .seconds(60))
-        // A date that has passed means now.
-        #expect(ModelChunkDelivery.delay(fromRetryAfter: "Tue, 14 Nov 2023 22:00:00 GMT", now: now) == .seconds(0))
-    }
-
-    @Test func theRequestCarriesTheRangeAndNothingAboutTheUser() {
-        let request = ModelChunkRequest(
-            url: URL(string: "https://store.example/a/1/weight.bin")!, range: 33_554_432..<67_108_864,
-            token: "made-up-token", destination: URL(fileURLWithPath: "/tmp/x")
-        )
-
-        let urlRequest = ModelChunkDelivery.urlRequest(for: request)
-
-        #expect(urlRequest.value(forHTTPHeaderField: "Range") == "bytes=33554432-67108863")
-        #expect(urlRequest.value(forHTTPHeaderField: "Authorization") == "Bearer made-up-token")
-        #expect(urlRequest.value(forHTTPHeaderField: "User-Agent") == "ModelStore/1")
-        #expect(urlRequest.value(forHTTPHeaderField: "Accept-Encoding") == "identity")
-        #expect(urlRequest.value(forHTTPHeaderField: "Cookie") == nil)
-        #expect(!urlRequest.httpShouldHandleCookies)
-        #expect(urlRequest.cachePolicy == .reloadIgnoringLocalCacheData)
-
-        var withoutToken = request
-        withoutToken.token = nil
-        #expect(ModelChunkDelivery.urlRequest(for: withoutToken).value(forHTTPHeaderField: "Authorization") == nil)
-    }
-
-    /// The token is for the host it was sent to. A redirect anywhere else loses it.
-    @Test(arguments: [
-        ("https://cdn.example/signed/weight.bin?sig=1", false),
-        ("https://store.example:8443/a/weight.bin", false),
-        ("http://store.example/a/weight.bin", false),
-        ("https://evil.store.example/a/weight.bin", false),
-        ("https://store.example/b/weight.bin", true),
-        ("https://STORE.example:443/b/weight.bin", true)
-    ])
-    func aRedirectKeepsTheTokenOnlyOnTheSameHost(target: String, keeps: Bool) {
-        let original = URL(string: "https://store.example/a/weight.bin")!
-        var proposed = URLRequest(url: URL(string: target)!)
-        proposed.setValue("Bearer made-up-token", forHTTPHeaderField: "Authorization")
-        proposed.setValue("bytes=0-99", forHTTPHeaderField: "Range")
-
-        let followed = ModelChunkDelivery.redirected(proposed, from: original)
-
-        #expect(followed.value(forHTTPHeaderField: "Authorization") == (keeps ? "Bearer made-up-token" : nil))
-        #expect(followed.value(forHTTPHeaderField: "Range") == "bytes=0-99")
-        #expect(followed.url == proposed.url)
-    }
-
-    // MARK: Tickets
-
-    @Test func aTicketNamesItsRangeRelativeToTheStore() throws {
-        let root = URL(fileURLWithPath: "/var/mobile/Containers/Data/Application/ABC/Library/Application Support/PageTranslationModels")
-        let request = ModelChunkRequest(
-            url: URL(string: "https://store.example/x")!, range: 2048..<3072, token: nil,
-            destination: root.appending(path: "mt-jmt-fast-1/coreml/decoder.mlpackage/Data/weights/weight.bin.chunk-2")
-        )
-
-        let ticket = try #require(ModelChunkTicket(request, root: root))
-
-        #expect(ticket.description == "v1:2048:1024:mt-jmt-fast-1/coreml/decoder.mlpackage/Data/weights/weight.bin.chunk-2")
-        #expect(ModelChunkTicket(description: ticket.description) == ticket)
-        // The app's container moves when the app is updated: the ticket follows the new root.
-        let moved = URL(fileURLWithPath: "/var/mobile/Containers/Data/Application/XYZ/Library/Application Support/PageTranslationModels")
-        #expect(ticket.destination(in: moved).path(percentEncoded: false)
-            == moved.path(percentEncoded: false) + "/mt-jmt-fast-1/coreml/decoder.mlpackage/Data/weights/weight.bin.chunk-2")
-    }
-
-    @Test func aDestinationOutsideTheStoreHasNoTicket() {
-        let root = URL(fileURLWithPath: "/tmp/store")
-        func ticket(_ path: String, _ range: Range<Int64> = 0..<10) -> ModelChunkTicket? {
-            ModelChunkTicket(
-                ModelChunkRequest(url: URL(string: "https://x.example")!, range: range, token: nil, destination: URL(fileURLWithPath: path)),
-                root: root
-            )
-        }
-        #expect(ticket("/tmp/store/a/file") != nil)
-        #expect(ticket("/tmp/elsewhere/file") == nil)
-        #expect(ticket("/tmp/store/../elsewhere/file") == nil)
-        #expect(ticket("/tmp/storeroom/file") == nil)
-        #expect(ticket("/tmp/store") == nil)
-        #expect(ticket("/tmp/store/a/file", 5..<5) == nil)
-    }
-
-    @Test(arguments: [
-        nil, "", "something else", "v2:0:10:a/b", "v1:x:10:a/b", "v1:0:0:a/b", "v1:-1:10:a/b", "v1:0:10:",
-        "v1:0:10:/etc/passwd", "v1:0:10:a/../../b"
-    ] as [String?])
-    func aDescriptionThatIsNotATicketIsIgnored(description: String?) {
-        #expect(ModelChunkTicket(description: description) == nil)
-    }
-
-    @Test func aPathMayHoldAColon() {
-        let ticket = ModelChunkTicket(path: "a/odd:name.bin.chunk-0", first: 0, count: 5)
-        #expect(ModelChunkTicket(description: ticket.description) == ticket)
-    }
-}
-
-// MARK: The transport over a session
-
 /// Answers the transport's requests inside the test process. Each test uses host names
 /// of its own, so the tests can run side by side.
-final class StubURLProtocol: URLProtocol, @unchecked Sendable {
+class StubURLProtocol: URLProtocol, @unchecked Sendable {
     enum Reply: Sendable {
         case answer(status: Int, headers: [String: String] = [:], body: Data = Data())
         /// A careless redirect: every header is carried over.
         case redirect(URL)
+        /// A redirect as the system proposes it: the token is already taken off.
+        case redirectWithoutToken(URL)
+        case failure(URLError.Code)
         case never
     }
 
@@ -173,6 +36,10 @@ final class StubURLProtocol: URLProtocol, @unchecked Sendable {
         state.withLock { $0.seen[host] ?? [] }
     }
 
+    /// Whether a redirect is answered as it is (what a session sees when its delegate
+    /// refuses to follow) rather than handed to the session to follow.
+    class var answersRedirectsItself: Bool { false }
+
     override class func canInit(with request: URLRequest) -> Bool { true }
     override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
 
@@ -185,13 +52,21 @@ final class StubURLProtocol: URLProtocol, @unchecked Sendable {
         switch reply {
         case .never:
             break
-        case .redirect(let target):
+        case .failure(let code):
+            client?.urlProtocol(self, didFailWithError: URLError(code))
+        case .redirect(let target), .redirectWithoutToken(let target):
             var next = request
             next.url = target
+            if case .redirectWithoutToken = reply { next.setValue(nil, forHTTPHeaderField: "Authorization") }
             let response = HTTPURLResponse(
                 url: url, statusCode: 302, httpVersion: "HTTP/1.1", headerFields: ["Location": target.absoluteString]
             )!
-            client?.urlProtocol(self, wasRedirectedTo: next, redirectResponse: response)
+            if Self.answersRedirectsItself {
+                client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
+                client?.urlProtocolDidFinishLoading(self)
+            } else {
+                client?.urlProtocol(self, wasRedirectedTo: next, redirectResponse: response)
+            }
         case .answer(let status, let headers, let body):
             let response = HTTPURLResponse(url: url, statusCode: status, httpVersion: "HTTP/1.1", headerFields: headers)!
             client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
@@ -204,19 +79,28 @@ final class StubURLProtocol: URLProtocol, @unchecked Sendable {
 
     /// Serves `data` with `Range` support, the way a store does.
     static func serve(_ data: Data, host: String) {
-        answer(host: host) { request in
-            guard let header = request.value(forHTTPHeaderField: "Range"), header.hasPrefix("bytes=") else {
-                return .answer(status: 200, body: data)
-            }
-            let bounds = header.dropFirst(6).split(separator: "-").compactMap { Int($0) }
-            guard bounds.count == 2, bounds[0] < data.count else { return .answer(status: 416) }
-            let last = min(bounds[1], data.count - 1)
-            return .answer(
-                status: 206, headers: ["Content-Range": "bytes \(bounds[0])-\(last)/\(data.count)"],
-                body: data.subdata(in: bounds[0]..<last + 1)
-            )
-        }
+        answer(host: host) { request in range(of: data, for: request) }
     }
+
+    /// The answer of a store that has `data` to a request for a range of it.
+    static func range(of data: Data, for request: URLRequest) -> Reply {
+        guard let header = request.value(forHTTPHeaderField: "Range"), header.hasPrefix("bytes=") else {
+            return .answer(status: 200, body: data)
+        }
+        let bounds = header.dropFirst(6).split(separator: "-").compactMap { Int($0) }
+        guard bounds.count == 2, bounds[0] < data.count else { return .answer(status: 416) }
+        let last = min(bounds[1], data.count - 1)
+        return .answer(
+            status: 206, headers: ["Content-Range": "bytes \(bounds[0])-\(last)/\(data.count)"],
+            body: data.subdata(in: bounds[0]..<last + 1)
+        )
+    }
+}
+
+/// The same answers for the session that asks where an address leads: a redirect comes
+/// back as the answer, as it does when a session's delegate refuses to follow it.
+final class QuestionStubURLProtocol: StubURLProtocol, @unchecked Sendable {
+    override class var answersRedirectsItself: Bool { true }
 }
 
 /// The app's transport class on a session that is not a background one: the same
@@ -228,10 +112,18 @@ final class StubURLProtocol: URLProtocol, @unchecked Sendable {
     private let store = "store-\(UUID().uuidString.lowercased()).example"
     private let cdn = "cdn-\(UUID().uuidString.lowercased()).example"
 
-    private func makeTransport() -> URLSessionModelTransport {
-        let configuration = URLSessionConfiguration.ephemeral
-        configuration.protocolClasses = [StubURLProtocol.self]
-        return URLSessionModelTransport(configuration: configuration, identifier: nil, root: root)
+    /// - Parameter resolving: as in the app, where the session does not ask about
+    ///   redirects: requests with a token are taken past their own host's redirects first.
+    private func makeTransport(resolving: Bool = false) -> URLSessionModelTransport {
+        func configuration(_ stub: AnyClass) -> URLSessionConfiguration {
+            let configuration = URLSessionConfiguration.ephemeral
+            configuration.protocolClasses = [stub]
+            return configuration
+        }
+        return URLSessionModelTransport(
+            configuration: configuration(StubURLProtocol.self), identifier: nil, root: root,
+            resolverConfiguration: resolving ? configuration(QuestionStubURLProtocol.self) : nil
+        )
     }
 
     private func request(_ range: Range<Int64>, host: String? = nil, token: String? = StoreSamples.token) -> ModelChunkRequest {
@@ -286,6 +178,109 @@ final class StubURLProtocol: URLProtocol, @unchecked Sendable {
         #expect(followed.first?.headers["Authorization"] == nil)
         #expect(followed.first?.headers["Range"] == "bytes=2048-3071")
         #expect(followed.first?.url == target)
+    }
+
+    /// A store that points to another path of itself still gets the token there: Hugging
+    /// Face does this for every small file. The system has dropped it; it is put back.
+    @Test func theTokenFollowsARedirectOnTheSameHost() async throws {
+        let cached = URL(string: "https://\(store)/api/resolve-cache/a/abc123/weight.bin")!
+        StubURLProtocol.answer(host: store) { [data] request in
+            guard request.url == cached else { return .redirectWithoutToken(cached) }
+            // Like a private repository: nothing without the token.
+            guard request.value(forHTTPHeaderField: "Authorization") == "Bearer \(StoreSamples.token)" else {
+                return .answer(status: 401)
+            }
+            return .answer(status: 206, headers: ["Content-Range": "bytes 0-1023/5000"], body: data.prefix(1024))
+        }
+        let request = request(0..<1024)
+
+        #expect(try await makeTransport().fetch(request) { _ in } == .finished)
+        #expect(try Data(contentsOf: request.destination) == data.prefix(1024))
+        #expect(StubURLProtocol.seen(host: store).map(\.url) == [request.url, cached])
+    }
+
+    /// A background session does not ask before it follows a redirect, so a request with a
+    /// token is taken past its own host's redirects first and the session is handed the
+    /// address that answers.
+    @Test func aBackgroundSessionIsHandedTheAddressThatAnswers() async throws {
+        let cached = URL(string: "https://\(store)/api/resolve-cache/a/abc123/weight.bin")!
+        StubURLProtocol.answer(host: store) { [data] request in
+            guard request.url == cached else { return .redirectWithoutToken(cached) }
+            guard request.value(forHTTPHeaderField: "Authorization") == "Bearer \(StoreSamples.token)" else {
+                return .answer(status: 401)
+            }
+            return StubURLProtocol.range(of: data, for: request)
+        }
+        let transport = makeTransport(resolving: true)
+        let first = request(0..<1024)
+        let second = request(1024..<2048)
+
+        #expect(try await transport.fetch(first) { _ in } == .finished)
+        #expect(try await transport.fetch(second) { _ in } == .finished)
+
+        #expect(try Data(contentsOf: second.destination) == data.subdata(in: 1024..<2048))
+        let seen = StubURLProtocol.seen(host: store)
+        // One question to the file's address and one to where it points, a byte each; then
+        // the two ranges, asked of the address that answers. The question is asked once.
+        #expect(seen.map(\.url) == [first.url, cached, cached, cached])
+        #expect(seen.map { $0.headers["Range"] } == ["bytes=0-0", "bytes=0-0", "bytes=0-1023", "bytes=1024-2047"])
+        #expect(seen.allSatisfy { $0.headers["Authorization"] == "Bearer \(StoreSamples.token)" })
+    }
+
+    /// A signed address on another host is not where the token goes: the session is handed
+    /// the store's own address and follows from there without it.
+    @Test func aBackgroundSessionKeepsTheStoresAddressWhenItPointsElsewhere() async throws {
+        let signed = URL(string: "https://\(cdn)/signed/weight.bin?sig=abc")!
+        StubURLProtocol.answer(host: store) { _ in .redirect(signed) }
+        StubURLProtocol.serve(data, host: cdn)
+        let request = request(2048..<3072)
+
+        #expect(try await makeTransport(resolving: true).fetch(request) { _ in } == .finished)
+
+        #expect(try Data(contentsOf: request.destination) == data.subdata(in: 2048..<3072))
+        // The question, then the range: both to the store, with the token.
+        #expect(StubURLProtocol.seen(host: store).map { $0.headers["Range"] } == ["bytes=0-0", "bytes=2048-3071"])
+        #expect(StubURLProtocol.seen(host: store).allSatisfy { $0.url == request.url })
+        // The other host sees the range once and never the token.
+        let followed = StubURLProtocol.seen(host: cdn)
+        #expect(followed.map { $0.headers["Range"] } == ["bytes=2048-3071"])
+        #expect(followed.allSatisfy { $0.headers["Authorization"] == nil })
+    }
+
+    @Test func aRequestWithoutATokenIsNotAskedAbout() async throws {
+        StubURLProtocol.serve(data, host: store)
+        let request = request(0..<1024, token: nil)
+
+        #expect(try await makeTransport(resolving: true).fetch(request) { _ in } == .finished)
+        #expect(StubURLProtocol.seen(host: store).map { $0.headers["Range"] } == ["bytes=0-1023"])
+    }
+
+    @Test func aRangeInPlaceCostsNoQuestion() async throws {
+        StubURLProtocol.serve(data, host: store)
+        let request = request(0..<1024)
+        try FileManager.default.createDirectory(at: request.destination.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try data.prefix(1024).write(to: request.destination)
+
+        #expect(try await makeTransport(resolving: true).fetch(request) { _ in } == .finished)
+        #expect(StubURLProtocol.seen(host: store).isEmpty)
+    }
+
+    /// A store that cannot be reached for the question is asked for the range all the same.
+    @Test func aQuestionThatFailsDoesNotStopTheRange() async throws {
+        let asked = Shared(0)
+        StubURLProtocol.answer(host: store) { [data] request in
+            if request.value(forHTTPHeaderField: "Range") == "bytes=0-0" {
+                asked.update { $0 += 1 }
+                return .failure(.networkConnectionLost)
+            }
+            return StubURLProtocol.range(of: data, for: request)
+        }
+        let transport = makeTransport(resolving: true)
+
+        #expect(try await transport.fetch(request(1024..<2048)) { _ in } == .finished)
+        #expect(try await transport.fetch(request(2048..<3072)) { _ in } == .finished)
+        // Not remembered: asked again for the next range.
+        #expect(asked.get() == 2)
     }
 
     @Test func anAnswerWithoutTheRangeIsRefused() async throws {

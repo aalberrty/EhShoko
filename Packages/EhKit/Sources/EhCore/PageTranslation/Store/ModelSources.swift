@@ -77,7 +77,8 @@ public struct ModelFileSource: Sendable, Hashable {
     public var kind: Kind
     /// The file's own address at this source.
     public var url: URL
-    /// Sent to `url`'s host and never to one it redirects to. Only a private store has one.
+    /// Sent to `url`'s host and never to another host it redirects to. Only a private
+    /// store has one.
     public var token: String?
 
     public init(kind: Kind, url: URL, token: String?) {

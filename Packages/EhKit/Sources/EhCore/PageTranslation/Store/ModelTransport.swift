@@ -6,7 +6,8 @@ public struct ModelChunkRequest: Sendable, Hashable {
     public var url: URL
     /// The bytes asked for, as offsets into the file.
     public var range: Range<Int64>
-    /// Sent as `Authorization: Bearer` to `url`'s host, and never to a host it redirects to.
+    /// Sent as `Authorization: Bearer` to `url`'s host, also when that host redirects to
+    /// another path of itself, and never to another host it redirects to.
     public var token: String?
     /// Where the bytes are put: a file inside the model store's folder. It exists, with
     /// exactly `range.count` bytes, only once the whole range has arrived.
