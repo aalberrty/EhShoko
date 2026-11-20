@@ -9,7 +9,8 @@ import PackageDescription
 //
 //   EhModels  →  EhParser  →  EhNetworking ┐
 //            ├→  EhDatabase ───────────────┼→  EhCore  →  EhFeatures
-//            └→  EhPageTranslation ────────┘
+//            └→  EhPageTranslation ────────┤
+//   EhLlama  ──────────────────────────────┘
 // Lets `unimplemented` dependency endpoints report issues to Swift Testing.
 let issueReportingTestSupport: Target.Dependency = .product(
     name: "IssueReportingTestSupport", package: "xctest-dynamic-overlay"
@@ -59,11 +60,25 @@ let package = Package(
         .target(name: "EhPageTranslation", dependencies: ["EhModels"]),
         .testTarget(name: "EhPageTranslationTests", dependencies: ["EhPageTranslation"]),
 
+        // llama.cpp as a binary: the only place one enters the package. It is built from
+        // llama.cpp's tagged source by `.github/workflows/llama-framework.yml` and kept as a
+        // pre-release of this repository, because the framework llama.cpp publishes has no
+        // slice for the iOS Simulator.
+        .binaryTarget(
+            name: "LlamaFramework",
+            url: "https://github.com/aalberrty/EhShoko/releases/download/llama-b12359/llama-b12359-xcframework.zip",
+            checksum: "f2fff4d63aa59f77c6cbd7344e9feabff841b4e4379e6403590691864010403e"
+        ),
+        // A language-model file loaded through llama.cpp: tokens, generation, a stop flag.
+        // Knows nothing about pages or translation.
+        .target(name: "EhLlama", dependencies: ["LlamaFramework"]),
+        .testTarget(name: "EhLlamaTests", dependencies: ["EhLlama"]),
+
         // Dependency keys, settings and UI-independent services built on the layers above.
         .target(
             name: "EhCore",
             dependencies: [
-                "EhModels", "EhParser", "EhNetworking", "EhDatabase",
+                "EhModels", "EhParser", "EhNetworking", "EhDatabase", "EhLlama",
                 .product(name: "Dependencies", package: "swift-dependencies"),
                 .product(name: "OpenCC", package: "SwiftyOpenCC")
             ]
