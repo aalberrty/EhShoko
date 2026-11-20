@@ -9,7 +9,7 @@ import Testing
         let columns = try await database.schemaColumns()
         #expect(Set(columns.keys) == [
             "gallery", "galleryDetail", "galleryState", "galleryPage",
-            "tagTranslation", "searchHistory", "quickSearchWord"
+            "tagTranslation", "searchHistory", "quickSearchWord", "pageTranslation"
         ])
         #expect(columns["gallery"] == [
             "gid", "token", "title", "rating", "category", "uploader", "pageCount", "postedDate",
