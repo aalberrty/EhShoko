@@ -1,0 +1,237 @@
+name: llama.cpp framework
+# Builds llama.cpp as an XCFramework and attaches it to a pre-release of this repository.
+# The package target `EhLlama` downloads that file by address and checksum.
+#
+# Why this exists: the framework llama.cpp publishes has slices for devices and for the Mac
+# only, and the app also has to build for the iOS Simulator.
+#
+# It is built once. A release is never replaced: to build another version, change the values
+# under `env` (a new `RELEASE_TAG` above all) and push; then put the new address and checksum
+# into `Packages/EhKit/Package.swift`. While the release of `RELEASE_TAG` exists, a run ends
+# after its first job without building anything.
+on:
+  push:
+    # Branches only, so that a pushed tag starts nothing.
+    branches: ['**']
+    paths:
+      - '.github/workflows/llama-framework.yml'
+  workflow_dispatch:
+concurrency:
+  group: llama-framework
+  cancel-in-progress: false
+env:
+  LLAMA_REPOSITORY: ggml-org/llama.cpp
+  # llama.cpp's release v1.0.0 is build b12359; both tags name this commit.
+  LLAMA_VERSION: v1.0.0
+  LLAMA_BUILD: b12359
+  LLAMA_COMMIT: b1b770d90d94cad9e9ea5b993bdbc383a522fb28
+  RELEASE_TAG: llama-b12359
+  ARCHIVE: llama-b12359-xcframework.zip
+  SYMBOLS_ARCHIVE: llama-b12359-dSYMs.zip
+  DEVELOPER_DIR: /Applications/Xcode_26.6.app
+jobs:
+  existing:
+    name: Look for the release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      found: ${{ steps.look.outputs.found }}
+    steps:
+      - name: Look for the release
+        id: look
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          draft=$(gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --json isDraft --jq .isDraft 2>/dev/null || true)
+          if [ "$draft" = "false" ]; then
+            echo "found=true" >> "$GITHUB_OUTPUT"
+            echo "::notice::The release $RELEASE_TAG exists, so nothing is built."
+          else
+            echo "found=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  build:
+    name: Build the framework
+    needs: existing
+    if: needs.existing.outputs.found != 'true'
+    runs-on: macos-26
+    timeout-minutes: 240
+    permissions:
+      contents: read
+    steps:
+      - name: Check out llama.cpp
+        uses: actions/checkout@v7
+        with:
+          repository: ${{ env.LLAMA_REPOSITORY }}
+          ref: ${{ env.LLAMA_COMMIT }}
+          # The build number inside the library is the number of commits.
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Check that the tags name the commit
+        run: |
+          git fetch --quiet --tags --force origin
+          test "$(git rev-parse HEAD)" = "$LLAMA_COMMIT"
+          test "$(git rev-parse "$LLAMA_BUILD^{commit}")" = "$LLAMA_COMMIT"
+          test "$(git rev-parse "$LLAMA_VERSION^{commit}")" = "$LLAMA_COMMIT"
+          test "b$(git rev-list --count HEAD)" = "$LLAMA_BUILD"
+
+      - name: Show the tools
+        run: |
+          xcodebuild -version
+          cmake --version
+          sysctl -n hw.logicalcpu machdep.cpu.brand_string
+
+      # llama.cpp's own script, unchanged. Its simulator and Mac builds hold arm64 and x86_64.
+      - name: Build for devices, simulators and the Mac
+        run: ./build-xcframework.sh ios-device ios-sim macos
+
+      # The script's own XCFramework carries the debug symbols, which are several times the
+      # size of the libraries. The same three frameworks are put together again without
+      # them, and the symbols go into a file of their own.
+      - name: Put the XCFramework together
+        run: |
+          mkdir out symbols
+          xcodebuild -create-xcframework \
+            -framework "$PWD/build-ios-device/framework/llama.framework" \
+            -framework "$PWD/build-ios-sim/framework/llama.framework" \
+            -framework "$PWD/build-macos/framework/llama.framework" \
+            -output "$PWD/out/llama.xcframework"
+          for build in ios-device ios-sim macos; do
+            mkdir "symbols/$build"
+            cp -R "build-$build/dSYMs/llama.dSYM" "symbols/$build/"
+          done
+
+      - name: Check the slices
+        run: |
+          check() { # slice, path of the library inside it, the architectures it must hold
+            local binary="out/llama.xcframework/$1/$2"
+            local found
+            found=$(lipo -archs "$binary" | tr ' ' '\n' | sort | xargs)
+            echo "$1: $found"
+            test "$found" = "$3"
+          }
+          check ios-arm64 llama.framework/llama "arm64"
+          check ios-arm64_x86_64-simulator llama.framework/llama "arm64 x86_64"
+          check macos-arm64_x86_64 llama.framework/Versions/A/llama "arm64 x86_64"
+
+      - name: Link a program against every slice, and run it on the Mac
+        run: |
+          cat > smoke.c <<'EOF'
+          #include <llama/llama.h>
+          #include <stdio.h>
+          int main(void) {
+              llama_backend_init();
+              printf("%s\n", llama_print_system_info());
+              llama_backend_free();
+              return 0;
+          }
+          EOF
+          framework="$PWD/out/llama.xcframework"
+          link() { # sdk, target, slice, output
+            xcrun --sdk "$1" clang -target "$2" -F "$framework/$3" -framework llama \
+              -Wl,-rpath,"$framework/$3" smoke.c -o "$4"
+          }
+          link iphoneos arm64-apple-ios16.4 ios-arm64 smoke-ios
+          link iphonesimulator arm64-apple-ios16.4-simulator ios-arm64_x86_64-simulator smoke-sim-arm64
+          link iphonesimulator x86_64-apple-ios16.4-simulator ios-arm64_x86_64-simulator smoke-sim-x86_64
+          link macosx arm64-apple-macos13.3 macos-arm64_x86_64 smoke-mac-arm64
+          link macosx x86_64-apple-macos13.3 macos-arm64_x86_64 smoke-mac-x86_64
+          ./smoke-mac-arm64
+          if arch -x86_64 /usr/bin/true 2>/dev/null; then
+            arch -x86_64 ./smoke-mac-x86_64
+          else
+            echo "::notice::No Rosetta on this Mac: the x86_64 Mac slice was linked and not run."
+          fi
+
+      - name: Pack
+        run: |
+          mkdir release
+          (cd out && zip -q -r -y "../release/$ARCHIVE" llama.xcframework)
+          (cd symbols && zip -q -r -y "../release/$SYMBOLS_ARCHIVE" .)
+          cp LICENSE release/LICENSE-llama.cpp.txt
+          (cd release && shasum -a 256 "$ARCHIVE" > "$ARCHIVE.sha256")
+          cat "release/$ARCHIVE.sha256"
+
+      - name: Write the release's text
+        run: |
+          size() { ls -l "$1" | awk '{ printf "%.1f MB", $5 / 1000000 }'; }
+          checksum=$(cut -d ' ' -f 1 "release/$ARCHIVE.sha256")
+          framework=out/llama.xcframework
+          {
+            echo "**This is not a release of the app.** It is a library the app is built with:"
+            echo "the package target \`EhLlama\` downloads \`$ARCHIVE\` from here when the app is built."
+            echo
+            echo "## What it is"
+            echo
+            echo "[llama.cpp](https://github.com/$LLAMA_REPOSITORY) $LLAMA_VERSION (build $LLAMA_BUILD, commit \`$LLAMA_COMMIT\`)"
+            echo "as an XCFramework, built from that source with its own \`build-xcframework.sh\`, unchanged."
+            echo "The framework llama.cpp publishes for this build has no slice for the iOS Simulator;"
+            echo "this one has, and is otherwise the same build."
+            echo
+            echo "| Slice | For | Architectures | Minimum system | Library |"
+            echo "|---|---|---|---|---|"
+            echo "| \`ios-arm64\` | iPhone and iPad | arm64 | iOS 16.4 | $(size $framework/ios-arm64/llama.framework/llama) |"
+            echo "| \`ios-arm64_x86_64-simulator\` | iOS Simulator | arm64, x86_64 | iOS 16.4 | $(size $framework/ios-arm64_x86_64-simulator/llama.framework/llama) |"
+            echo "| \`macos-arm64_x86_64\` | Mac | arm64, x86_64 | macOS 13.3 | $(size $framework/macos-arm64_x86_64/llama.framework/Versions/A/llama) |"
+            echo
+            echo "## Files"
+            echo
+            echo "- \`$ARCHIVE\` ($(size "release/$ARCHIVE")): the XCFramework. SHA-256:"
+            echo "  \`$checksum\`"
+            echo "- \`$SYMBOLS_ARCHIVE\` ($(size "release/$SYMBOLS_ARCHIVE")): the debug symbols of the three slices."
+            echo "- \`LICENSE-llama.cpp.txt\`: llama.cpp's licence."
+            echo
+            echo "Built with $(xcodebuild -version | tr '\n' ' ')by [this run]($GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID)"
+            echo "of \`.github/workflows/llama-framework.yml\`."
+            echo
+            echo "## Licence"
+            echo
+            echo "llama.cpp is under the MIT licence. It also holds code of other authors under their"
+            echo "own terms; see \`licenses/\` and \`vendor/\` in its source at the commit above."
+            echo
+            echo '```'
+            cat LICENSE
+            echo '```'
+          } > release/notes.md
+          cat release/notes.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Keep the files for the next job
+        uses: actions/upload-artifact@v7
+        with:
+          name: llama-framework
+          path: release/
+          retention-days: 7
+          if-no-files-found: error
+
+  release:
+    name: Publish the pre-release
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Fetch the files
+        uses: actions/download-artifact@v8
+        with:
+          name: llama-framework
+          path: release
+
+      - name: Check the archive
+        run: cd release && shasum -a 256 -c "$ARCHIVE.sha256"
+
+      - name: Publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # A draft left by a run that stopped halfway.
+          draft=$(gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --json isDraft --jq .isDraft 2>/dev/null || true)
+          if [ "$draft" = "true" ]; then
+            gh release delete "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --yes
+          fi
+          gh release create "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
+            --prerelease --latest=false \
+            --title "llama.cpp $LLAMA_BUILD as an XCFramework (a build dependency, not the app)" \
+            --notes-file release/notes.md \
+            "release/$ARCHIVE" "release/$ARCHIVE.sha256" "release/$SYMBOLS_ARCHIVE" release/LICENSE-llama.cpp.txt
