@@ -116,13 +116,21 @@ import Testing
         try await database.saveDetail(SampleData.detail("1"), state: GalleryState(gid: "1"))
         try await database.updateReadingProgress(gid: "1", progress: 5)
         try await database.upsertPages([GalleryPage(gid: "1", index: 1, imageURL: SampleData.url("1.jpg"))])
+        // The translated text of the pages read goes with them.
+        try await database.savePageTranslations([
+            PageTranslationTests.page(gid: "1", index: 1), PageTranslationTests.page(gid: "3", index: 2)
+        ])
         // Rows for a gallery without a `gallery` row are cleared too.
         try await database.saveDetail(SampleData.detail("2"), state: GalleryState(gid: "2"))
         try await database.recordSearchKeyword("kept")
 
-        try await database.clearHistory()
+        let commits = try await database.commitCount {
+            try await database.clearHistory()
+        }
 
-        for table in ["gallery", "galleryDetail", "galleryState", "galleryPage"] {
+        // One transaction deletes it all (the checkpoint after it commits nothing).
+        #expect(commits == 1)
+        for table in ["gallery", "galleryDetail", "galleryState", "galleryPage", "pageTranslation"] {
             #expect(try await database.rowCount(table) == 0, "\(table)")
         }
         #expect(try await database.gallery(gid: "1") == nil)
@@ -147,9 +155,19 @@ import Testing
         let (database, directory) = try await TestDatabase.onDisk()
         defer { try? FileManager.default.removeItem(at: directory) }
         let marker = "UNIQUE-TITLE-MARKER-7F3A"
+        let textMarker = "UNIQUE-PAGE-TEXT-MARKER-91C2"
         for index in 0..<20 {
             try await database.recordOpened(SampleData.gallery("\(index)", title: "\(marker) \(index)"))
         }
+        // Translated text, in rows of a page each; the last is longer than a database page, so
+        // its text also sits in overflow pages.
+        try await database.savePageTranslations((0..<20).map { index in
+            PageTranslationTests.page(gid: "\(index)", index: 1, translation: "\(textMarker) \(index)")
+        } + [PageTranslationTests.page(
+            gid: "0", index: 2, translation: String(repeating: "\(textMarker) ", count: 600)
+        )])
+        // The text is on disk before the clear, so finding none after it means something.
+        #expect(try Self.filesHold(textMarker, in: directory))
 
         try await database.clearHistory()
 
@@ -159,6 +177,17 @@ import Testing
         for file in files {
             let data = try Data(contentsOf: file)
             #expect(data.range(of: Data(marker.utf8)) == nil, "\(file.lastPathComponent) still holds a cleared title")
+            #expect(
+                data.range(of: Data(textMarker.utf8)) == nil,
+                "\(file.lastPathComponent) still holds a cleared page's text"
+            )
+        }
+    }
+
+    /// Whether any of the database's files in `directory` holds `marker`.
+    static func filesHold(_ marker: String, in directory: URL) throws -> Bool {
+        try FileManager.default.contentsOfDirectory(at: directory, includingPropertiesForKeys: nil).contains { file in
+            try Data(contentsOf: file).range(of: Data(marker.utf8)) != nil
         }
     }
 }
