@@ -25,6 +25,8 @@ struct ReaderClosingPage: View {
     let sizeReporter: ReaderClosingSizeReporter
     /// The detail model of its own, when no gallery page presented the reader.
     let ownDetail: ReaderClosingOwnDetail
+    /// The space the engine draws in; `nil` in the reader harness.
+    let viewport: ReaderViewport?
 
     @Environment(\.readerClosingContext) private var context
     /// The look and accent the reader hands its engine's views (`ReaderScreen`).
@@ -40,19 +42,29 @@ struct ReaderClosingPage: View {
     /// the column, so the column clears the controls when the strip rests at its end.
     static let bottomReserve: CGFloat = 176
 
+    /// The reserve, or none while a design has shortened the engine's viewport (Ledger's open
+    /// sheet, in a paged direction, in portrait): the slot then ends above the controls. Where
+    /// the controls cover more of the screen than the reserve without shortening the viewport
+    /// (Ledger's open sheet over the vertical strip), as much as they cover.
+    static func bottomReserve(viewportInset: CGFloat, coveredBottom: CGFloat) -> CGFloat {
+        viewportInset > 0 ? 0 : max(bottomReserve, coveredBottom)
+    }
+
     /// The hosting controller the engine puts in its trailing slot.
     ///
     /// - Parameter makeDetail: makes the page's own detail model; the reader harness makes one
     ///   on stand-in dependencies.
+    /// - Parameter viewport: the reader's, whose inset says whether its controls already
+    ///   keep the slot clear.
     static func makeController(
-        gallery: Gallery, pageCount: Int,
+        gallery: Gallery, pageCount: Int, viewport: ReaderViewport? = nil,
         makeDetail: @escaping @MainActor (Gallery) -> GalleryDetailModel = { GalleryDetailModel(gallery: $0) }
     ) -> UIViewController {
         ReaderClosingProbe.asked()
         let reporter = ReaderClosingSizeReporter()
         let page = ReaderClosingPage(
             gallery: gallery, pageCount: pageCount, sizeReporter: reporter,
-            ownDetail: ReaderClosingOwnDetail(make: makeDetail)
+            ownDetail: ReaderClosingOwnDetail(make: makeDetail), viewport: viewport
         )
         let controller = UIHostingController(rootView: page)
         // The page draws the reader's background itself; the hosting view adds nothing.
@@ -73,7 +85,11 @@ struct ReaderClosingPage: View {
                 .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { height in
                     ReaderClosingProbe.laidOut(height: height)
                 }
-                .padding(.bottom, Self.bottomReserve)
+                // The strip measures the block again when this changes (`sizeReporter`) and, resting
+                // at its end, stays there, so the column rises above an opened sheet.
+                .padding(.bottom, Self.bottomReserve(
+                    viewportInset: viewport?.bottomInset ?? 0, coveredBottom: viewport?.coveredBottom ?? 0
+                ))
                 .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { height in
                     sizeReporter.contentHeightDidChange(height)
                 }

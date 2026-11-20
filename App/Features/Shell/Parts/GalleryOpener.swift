@@ -13,9 +13,35 @@ nonisolated struct GalleryOpener {
     fileprivate let router: StackRouter?
     fileprivate let usesSidePane: Bool
 
+    /// `origin` says which kind of cover was tapped where a screen can show one gallery
+    /// twice; that cover marks itself with `galleryZoomSource(_:from:)`.
     @MainActor
-    func callAsFunction(_ gallery: Gallery, intent: DetailIntent? = nil) {
-        router?.open(gallery, intent: intent, inSidePane: usesSidePane)
+    func callAsFunction(_ gallery: Gallery, intent: DetailIntent? = nil, from origin: GalleryOrigin = .list) {
+        router?.open(gallery, intent: intent, origin: origin, inSidePane: usesSidePane)
+    }
+}
+
+extension GalleryOrigin {
+    /// The id of the zoom between a cover of this kind and the gallery page. A list's covers
+    /// keep the gid alone, the id every list design's rows already give their cover.
+    func zoomID(gid: String) -> AnyHashable {
+        switch self {
+        case .list: AnyHashable(gid)
+        case .coverShelf, .recentlySeen: AnyHashable(GalleryZoomID(gid: gid, origin: self))
+        }
+    }
+}
+
+nonisolated private struct GalleryZoomID: Hashable {
+    let gid: String
+    let origin: GalleryOrigin
+}
+
+extension View {
+    /// Marks a cover outside a list as where the zoom into its gallery starts and ends, for a
+    /// gallery opened with `openGallery(_:from:)` from the same `origin`.
+    func galleryZoomSource(_ gid: String, from origin: GalleryOrigin) -> some View {
+        zoomSource(origin.zoomID(gid: gid))
     }
 }
 

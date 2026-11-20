@@ -16,7 +16,9 @@ import Foundation
 /// | `-HarnessBar` | the preset's | `tabs`, `command` |
 /// | `-HarnessStart`, `-HarnessList`, `-HarnessGallery`, `-HarnessReader`, `-HarnessSearch`, `-HarnessLibrary`, `-HarnessLook` | the preset's | `shelf`, `wall`, `ledger`: one part's design |
 /// | `-HarnessWidth` | 0 | the container's width in points; 0 is the window's (320, 430, 1000) |
-/// | `-HarnessHeader YES` | NO | a list gets a tall header instead of an empty one |
+/// | `-HarnessHeader` | `none` | `none`: a list of its own, with no header (its states take the screen); `empty`: an empty header, as a first screen with nothing above the rows passes; `YES` or `tall`: a tall header |
+/// | `-HarnessTags YES` | NO | lists show their tag line (`showsTagsInList`) |
+/// | `-HarnessDensity` | `medium` | `large`, `medium`, `small`: Wall's density |
 /// | `-HarnessKind` | `frontpage` | `frontpage`, `popular`, `watched`, `toplists`, `history`, `folder`, `search`, `scoped` |
 /// | `-HarnessState` | `content` | `content`, `loading`, `empty`, `failed`, `signedOut`, `stale`, `nextLoading`, `nextFailed`, `end` |
 /// | `-HarnessPresentation` | `pushed` | `pushed`, `pane`, `sheet`: how the gallery opens |
@@ -24,14 +26,22 @@ import Foundation
 /// | `-HarnessScheme` | the system's | `light`, `dark` |
 /// | `-HarnessTextSize max` | the system's | the largest Dynamic Type size |
 /// | `-HarnessPanel NO` | YES | hides the panel's button, for screenshots |
+/// | `-HarnessSignedIn YES`, `-HarnessNetwork YES`, `-HarnessSignInAfter <s>`, `-HarnessLatency <s>`, `-HarnessFixturePath <file>` | signed out, fixtures | the harness's own account and network (`PartHarnessAccount`): signed in with ten named folders, lists loaded through a client that records every request in `Documents/harness-requests.txt` |
+/// | `-HarnessRich YES`, `-HarnessFavorited YES`, `-HarnessRated <n>`, `-HarnessPages <n>`, `-HarnessProgress <n>` | the plain stored page | the first gallery's fuller stored page (`PartHarnessRichPage`) |
 /// | `-HarnessMemoryCheck` | none | `shelf`, `wall`, `ledger`: the scripted memory check. 25 s after launch (time to visit screens) the live per-design objects are written to `Documents/part-harness-heap-1.txt`, the designs switch to this preset, and 10 s later they are written to `part-harness-heap-2.txt` (`PartHarnessHeap`) |
+///
+/// Launched as the whole app it also writes, in `Documents/`, `harness-requests.txt` (every
+/// request of its client, `PartHarnessAccount`) and `harness-decodes.txt` (the covers decoded
+/// and served, `PartHarnessDecodeLog`).
 nonisolated struct PartHarnessOptions: Equatable, Sendable {
     var part = PartHarnessPart.shell
     /// The design of every part. The part under test takes its own; the others are its
     /// surroundings.
     var choices = DesignChoices(preset: .shelf)
     var width = 0
-    var hasTallHeader = false
+    var header = PartHarnessHeaderMode.absent
+    var showsTags = false
+    var density = WallDensity.medium
     var kind = PartHarnessListKind.frontpage
     var state = PartHarnessListState.content
     var presentation = PartHarnessPresentation.pushed
@@ -63,7 +73,9 @@ nonisolated struct PartHarnessOptions: Equatable, Sendable {
         options.choices.library = value("HarnessLibrary") ?? options.choices.library
         options.choices.look = value("HarnessLook") ?? options.choices.look
         options.width = max(defaults.integer(forKey: "HarnessWidth"), 0)
-        options.hasTallHeader = defaults.bool(forKey: "HarnessHeader")
+        options.header = PartHarnessHeaderMode(argument: defaults.string(forKey: "HarnessHeader"))
+        options.showsTags = defaults.bool(forKey: "HarnessTags")
+        options.density = value("HarnessDensity") ?? options.density
         options.kind = value("HarnessKind") ?? options.kind
         options.state = value("HarnessState") ?? options.state
         options.presentation = value("HarnessPresentation") ?? options.presentation
@@ -78,10 +90,43 @@ nonisolated struct PartHarnessOptions: Equatable, Sendable {
     }
 }
 
+extension PartHarnessOptions {
+    /// The tab the shell puts the part in under `tabs`; the harness shows that tab's stack.
+    var tab: AppTab {
+        switch part {
+        case .search: .search
+        case .library: .library
+        case .list where kind == .watched: .watched
+        case .list where kind == .toplists: .top
+        case .list, .shell, .gallery, .start: .home
+        }
+    }
+}
+
 nonisolated enum PartHarnessPart: String, CaseIterable, Identifiable, Sendable {
     case shell, list, gallery, start, search, library
 
     var id: String { rawValue }
+}
+
+/// What a list in the part harness has above its rows.
+nonisolated enum PartHarnessHeaderMode: String, CaseIterable, Identifiable, Sendable {
+    /// No header: a list of its own, whose states take the screen.
+    case absent = "none"
+    /// A header with nothing in it: the list keeps its states under it, as rows.
+    case empty
+    /// Two shelves' worth of blocks, so the rows start below the fold on a small phone.
+    case tall
+
+    var id: String { rawValue }
+
+    init(argument: String?) {
+        switch argument?.lowercased() {
+        case "yes", "tall", "true", "1": self = .tall
+        case "empty": self = .empty
+        default: self = .absent
+        }
+    }
 }
 
 nonisolated enum PartHarnessListKind: String, CaseIterable, Identifiable, Sendable {
@@ -106,5 +151,22 @@ nonisolated enum PartHarnessScheme: String, CaseIterable, Identifiable, Sendable
     case system, light, dark
 
     var id: String { rawValue }
+
+    /// The harness's scheme is its settings' Theme, so Settings can change it.
+    init(_ scheme: PreferredColorScheme) {
+        switch scheme {
+        case .automatic: self = .system
+        case .light: self = .light
+        case .dark: self = .dark
+        }
+    }
+
+    var preferredColorScheme: PreferredColorScheme {
+        switch self {
+        case .system: .automatic
+        case .light: .light
+        case .dark: .dark
+        }
+    }
 }
 #endif

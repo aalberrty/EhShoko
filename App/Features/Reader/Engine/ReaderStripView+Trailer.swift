@@ -81,8 +81,36 @@ extension ReaderStripView {
     /// The trailer's content asks for another height.
     func trailerFittingHeightDidChange() {
         guard viewportSize.width > 0 else { return }
-        UIView.performWithoutAnimation { _ = applyTrailerHeight() }
+        let restingAtEnd = isRestingAtEndOnTrailer
+        let before = contentOffset
+        var changed = false
+        UIView.performWithoutAnimation { changed = applyTrailerHeight() }
+        if changed, restingAtEnd {
+            stayAtEnd(from: before)
+        }
         setNeedsLayout()
+    }
+
+    /// The reader is on the trailer, the strip rests against its end, and nothing moves it.
+    private var isRestingAtEndOnTrailer: Bool {
+        guard reportedTrailer || isTrailerRequested,
+              !isDragging, !isDecelerating, !isZooming, !isZoomBouncing, !isAnimatingScroll
+        else { return false }
+        return contentOffset.y >= max(contentSize.height - bounds.height, 0) - 0.5
+    }
+
+    /// Glides from `offset` to the strip's new end. The trailer's content grew or shrank under
+    /// it, as the closing page does when a design's controls come to cover more of the screen
+    /// (Ledger's open sheet): kept at the end, the column keeps clear of them.
+    private func stayAtEnd(from offset: CGPoint) {
+        let target = CGPoint(x: contentOffset.x, y: max(contentSize.height - bounds.height, 0))
+        guard abs(target.y - offset.y) > 0.5 else { return }
+        // A strip that got shorter has already been brought back in range; start from where
+        // it was, out of range for the moment, so that the move is seen.
+        contentOffset = CGPoint(x: contentOffset.x, y: offset.y)
+        UIView.animate(springDuration: 0.35, bounce: 0, options: [.allowUserInteraction, .beginFromCurrentState]) {
+            self.contentOffset = target
+        }
     }
 
     /// Whether a point of the strip (in the container's coordinates) is on the trailer.

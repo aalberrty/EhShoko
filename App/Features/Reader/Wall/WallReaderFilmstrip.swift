@@ -60,7 +60,9 @@ private struct WallReaderFilm: View {
         ReaderThumbnailStrip(
             model: model, length: WallReaderMetrics.filmLength, isReversed: isReversed,
             // The outline is white in both appearances: it rings a picture, over a page.
-            width: 34, currentWidth: 50, outline: .white, spacing: 5
+            width: 34, currentWidth: 50, outline: .white, outlineOffset: 1, spacing: 5,
+            // The thumbnails stand on one line, the larger one rising above the others.
+            alignment: .bottom
         )
         .fixedSize()
         .frame(maxWidth: Self.maximumWidth)

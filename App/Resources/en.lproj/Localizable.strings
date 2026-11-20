@@ -41,16 +41,17 @@
 "common.value.second" = "%@ second";
 "common.value.seconds" = "%@ seconds";
 "common.value.records" = "%@ entries";
+"common.close" = "Close";
+"common.cancel" = "Cancel";
+"common.back" = "Back";
 
 // MARK: TabItem
 "tab_item.title.home" = "Home";
 "tab_item.title.favorites" = "Favorites";
-"tab_item.title.search" = "Search";
 "tab_item.title.setting" = "Settings";
 
 // MARK: ToolbarItem
 "toolbar_item.button.filters" = "Filters";
-"toolbar_item.button.jump_page" = "Go to page";
 "toolbar_item.button.quick_search" = "Quick search";
 
 // MARK: JumpPage
@@ -110,13 +111,7 @@
 
 // MARK: HomeView
 "home_view.title.home" = "Home";
-"home_view.section.title.frontpage" = "Frontpage";
-"home_view.section.title.toplists" = "Toplists";
-"home_view.section.title.other" = "More";
 // HomeMiscGridType
-"enum.home_misc_grid_type.title.popular" = "Popular";
-"enum.home_misc_grid_type.title.watched" = "Watched";
-"enum.home_misc_grid_type.title.history" = "History";
 
 // MARK: FrontpageView
 "frontpage_view.title.frontpage" = "Frontpage";
@@ -134,19 +129,15 @@
 "history_view.title.history" = "History";
 
 // MARK: FavoritesView
-"favorites_view.title.favorites" = "Favorites";
 // FavoriteCategory
 "struct.user.favorite_category.default" = "Favorites %@";
-"struct.user.favorite_category.all" = "All";
 
 // MARK: SearchView
 "search_view.title.search" = "Search";
-"search_view.section.title.recently_searched" = "Recent searches";
 "search_view.section.title.recently_seen" = "Recently viewed";
 "search_view.section.title.quick_search" = "Quick search";
 // Searchable
 "searchable.prompt.filter" = "Filter titles";
-"searchable.title.matches_count" = "%d matches";
 
 // MARK: QuickSearchView
 "quick_search_view.title.quick_search" = "Quick search";
@@ -159,15 +150,12 @@
 // MARK: SettingView
 "setting_view.title.setting" = "Settings";
 // SettingStateRoute
-"enum.setting_state_route.value.account" = "Account";
 "enum.setting_state_route.value.general" = "General";
-"enum.setting_state_route.value.appearance" = "Appearance";
 "enum.setting_state_route.value.reading" = "Reading";
 "enum.setting_state_route.value.laboratory" = "Laboratory";
 "enum.setting_state_route.value.about" = "About EhShoko";
 
 // MARK: AccountSettingView
-"account_setting_view.title.account" = "Account";
 "account_setting_view.title.shows_new_dawn_greeting" = "Show the daily reward";
 "account_setting_view.button.login" = "Sign in";
 "account_setting_view.button.logout" = "Sign out";
@@ -213,17 +201,12 @@
 "logs_view.title.latest" = "Current";
 
 // MARK: AppearanceSettingView
-"appearance_setting_view.title.appearance" = "Appearance";
 "appearance_setting_view.title.theme" = "Theme";
-"appearance_setting_view.title.tint_color" = "Accent color";
-"appearance_setting_view.title.display_mode" = "Layout";
 "appearance_setting_view.title.shows_tags_in_list" = "Show tags in lists";
 "appearance_setting_view.title.maximum_number_of_tags" = "Tags to show";
 "appearance_setting_view.title.displays_japanese_title" = "Prefer Japanese titles";
 "appearance_setting_view.button.app_icon" = "App icon";
 "appearance_setting_view.menu.title.infite" = "No limit";
-"appearance_setting_view.section.title.list" = "Lists";
-"appearance_setting_view.section.title.gallery" = "Gallery";
 // PreferredColorScheme
 "enum.preferred_color_scheme.value.automatic" = "Automatic";
 "enum.preferred_color_scheme.value.light" = "Light";
@@ -235,8 +218,6 @@
 "enum.app_icon_type.value.stand_with_ukraine_2022" = "Stand with Ukraine (2022)";
 "enum.app_icon_type.value.not_my_president" = "NOT MY PRESIDENT";
 // ListDisplayMode
-"enum.list_display_mode.value.detail" = "Detailed";
-"enum.list_display_mode.value.thumbnail" = "Covers";
 
 // MARK: AppIconView
 "app_icon_view.title.app_icon" = "App icon";
@@ -261,34 +242,17 @@
 
 // MARK: AboutView
 "about_view.title.ehShoko" = "EhShoko";
-"about_view.button.website" = "Website";
-"about_view.button.altStore_source" = "AltStore source";
 "about_view.title.version" = "Version";
 "about_view.section.title.special_thanks" = "Thanks to";
-"about_view.section.title.code_level_contributors" = "Code contributors";
-"about_view.section.title.translation_contributors" = "Translators";
 "about_view.section.title.acknowledgements" = "Open-source software";
 
 // MARK: DetailView
-"detail_view.button.read" = "Read";
-"detail_view.button.post_comment" = "Write a comment";
-"detail_view.toolbar_item.button.archives" = "Archive";
-"detail_view.toolbar_item.button.torrents" = "Torrents";
 "detail_view.toolbar_item.button.share" = "Share";
 "detail_view.context_menu.button.detail" = "Tag details";
 "detail_view.context_menu.button.withdraw_vote" = "Remove vote";
 "detail_view.context_menu.button.vote_up" = "Vote up";
 "detail_view.context_menu.button.vote_down" = "Vote down";
-"detail_view.description_section.title.favorited" = "Favorited";
-"detail_view.description_section.title.language" = "Language";
-"detail_view.description_section.title.ratings" = "%@ ratings";
-"detail_view.description_section.title.page_count" = "Length";
-"detail_view.description_section.title.file_size" = "Size";
-"detail_view.description_section.description.favorited" = "times";
-"detail_view.description_section.description.page_count" = "pages";
 "detail_view.action_section.button.give_a_rating" = "Rate";
-"detail_view.action_section.button.similar_gallery" = "Similar galleries";
-"detail_view.section.title.previews" = "Previews";
 "detail_view.section.title.comments" = "Comments";
 
 // MARK: ArchivesView
@@ -355,7 +319,6 @@
 "reading_view.context_menu.button.save" = "Save to Photos";
 "reading_view.context_menu.button.save_original" = "Save original";
 "reading_view.context_menu.button.share" = "Share";
-"reading_view.toolbar_item.title.auto_play" = "Auto-play";
 "reading_view.toolbar_item.title.dual_page_mode" = "Two pages side by side";
 "reading_view.toolbar_item.title.except_the_cover" = "Cover on its own";
 "reading_view.toolbar_item.button.retry_all_failed_images" = "Retry failed pages";
@@ -378,13 +341,16 @@
 "filters_view.title.set_minimum_rating" = "Limit by rating";
 "filters_view.title.minimum_rating" = "Minimum rating";
 "filters_view.title.set_pages_range" = "Limit by length";
-"filters_view.title.pages_range" = "Page range";
 "filters_view.title.disable_language_filter" = "Ignore language filter";
 "filters_view.title.disable_uploader_filter" = "Ignore uploader filter";
 "filters_view.title.disable_tags_filter" = "Ignore tag filter";
-"filters_view.button.reset_filters" = "Reset filters";
 "filters_view.section.title.advanced" = "Advanced";
 "filters_view.section.title.default_filter" = "Your default filters";
+"filters_view.section.title.narrow_down" = "Narrow down";
+"filters_view.title.pages_separator" = "to";
+"filters_view.title.any" = "Any";
+"filters_view.title.options_on" = "%d on";
+"filters_view.section.footer.separate_filters" = "Lists, Watched and Search each keep their own filters. Changes apply as you make them.";
 // FilterRange
 "enum.filter_range.value.search" = "Search";
 "enum.filter_range.value.global" = "Lists";
@@ -963,6 +929,8 @@
 "list.page.jump" = "Go to page…";
 "list.find" = "Find in this list";
 "list.empty" = "No galleries";
+"list.galleries" = "%d galleries";
+"list.gallery" = "%d gallery";
 "list.empty.ledger" = "Nothing here yet";
 "list.more.failed" = "Couldn't load more";
 "list.offline.title" = "You're offline";
@@ -1014,7 +982,9 @@
 "gallery.figure.size" = "Size";
 "gallery.figure.favorited" = "Favorited";
 "gallery.figure.people" = "people";
+"gallery.figure.person" = "person";
 "gallery.figure.votes" = "%d votes";
+"gallery.figure.vote" = "%d vote";
 "gallery.figure.posted" = "Posted";
 "gallery.figure.uploader" = "Uploader";
 "gallery.figure.parody" = "Parody";
@@ -1025,6 +995,7 @@
 "gallery.action.info" = "Info";
 "gallery.action.similar" = "Similar galleries";
 "gallery.previews" = "Previews";
+"gallery.previews.columns" = "Columns";
 "gallery.tags" = "Tags";
 "gallery.tags.count" = "Tags · %d";
 "gallery.all" = "All %d";
@@ -1044,6 +1015,11 @@
 "reader.page.failed" = "This page didn't load";
 "reader.page.reload_failed" = "Reload all %d failed pages";
 "reader.page.loading" = "Loading · %1$@ of %2$@";
+"reader.page.reason.timed_out" = "The image server timed out.";
+"reader.page.reason.status" = "The image server answered with error %d.";
+"reader.page.reason.unreadable" = "The image couldn't be read.";
+"reader.live_text" = "Live Text";
+"reader.action.save" = "Save";
 
 // MARK: Selectable designs: search
 "search.scope.everywhere" = "Everywhere";
@@ -1059,6 +1035,11 @@
 "search.link.open" = "Open";
 "search.hint" = "Search by title or tag";
 "search.scope.signin" = "Sign in to search here";
+"search.scope" = "Scope";
+"search.token.excluded" = "Not %@";
+"search.key.insert" = "Insert %@";
+"search.key.exclude" = "Exclude";
+"search.key.exact" = "Exact match";
 
 // MARK: Selectable designs: library
 "library.all" = "All";
@@ -1153,6 +1134,7 @@
 "settings.design.setup.so_far" = "So far: %@";
 "settings.design.setup.with_colours" = "%1$@ with %2$@’s colors";
 "settings.design.setup.custom_changed" = "Custom · %1$d pages changed from %2$@";
+"settings.design.setup.custom_changed.one" = "Custom · 1 page changed from %@";
 "settings.design.setup.current" = "Current";
 "settings.design.setup.next" = "Next";
 "settings.design.setup.skip" = "Skip";
@@ -1180,6 +1162,7 @@
 "settings.design.stage.pause" = "Pause";
 "settings.design.stage.play" = "Play";
 "settings.design.stage.a11y.shelf" = "Tabs at the bottom with a Continue bar above them. Scrolling tucks the bar away. A cover opens its gallery, and the reader has a bar at the top and a panel at the bottom.";
+"settings.design.stage.a11y.shelf.still" = "Tabs at the bottom with a Continue bar above them. A cover opens its gallery, and the reader has a bar at the top and a panel at the bottom.";
 "settings.design.stage.a11y.wall" = "A wall of covers and one bar at the bottom. Pinching changes the size of the covers, swiping the bar changes the list, and the bar turns into the gallery’s actions. The reader has one bar that scrubs through pages.";
 "settings.design.stage.a11y.ledger" = "An index of lists that leads into dense rows. Swiping a row shows its actions. A gallery reads like a page of text, and the reader’s controls are a sheet that pulls up.";
 "offer.title" = "Choose your experience";

@@ -1,4 +1,5 @@
 #if DEBUG || HARNESS
+import EhCore
 import EhFeatures
 import SwiftUI
 
@@ -32,6 +33,7 @@ struct ListHarnessView: View {
                 }
         }
         .environment(stack)
+        .lookEnvironment(Look(model.options.look ?? model.options.slot.design), accent: model.settings.accentColor)
         .task { await model.start() }
         .onDisappear { model.stop() }
     }
@@ -41,11 +43,19 @@ struct ListHarnessView: View {
         if model.phase == .preparing {
             ProgressView()
         } else {
-            ListHarnessSlotView(slot: model.options.slot, galleries: model.galleries, settings: model.settings)
+            ListHarnessSlotView(
+                slot: model.options.slot, galleries: model.galleries, pageSize: model.options.pageSize,
+                settings: model.settings
+            )
+                // A later run of a series is a list of its own, built from its first row.
+                .id(model.listID)
                 .background { ListHarnessAnchor(scroller: model.scroller) }
+                .modifier(ListHarnessWidth(width: model.options.width))
                 .overlay(alignment: .bottom) {
                     if model.options.showsDock {
                         ListHarnessDock()
+                    } else if model.options.showsBar {
+                        ListHarnessBar(settings: model.settings)
                     }
                 }
         }
@@ -69,6 +79,7 @@ struct ListHarnessView: View {
                 }
                 Toggle(isOn: $model.options.showsTags) { Text(verbatim: "Tags in rows") }
                 Toggle(isOn: $model.options.showsDock) { Text(verbatim: "Dock over the list") }
+                Toggle(isOn: $model.options.showsBar) { Text(verbatim: "Command bar over the list") }
                 Picker(selection: $model.options.speed) {
                     ForEach([1_000.0, 2_000, 4_000], id: \.self) { speed in
                         Text(verbatim: "\(Int(speed)) pt/s").tag(speed)
@@ -79,15 +90,32 @@ struct ListHarnessView: View {
             } label: {
                 Label { Text(verbatim: "Options") } icon: { Image(systemName: "slider.horizontal.3") }
             }
-            .disabled(model.phase == .running)
+            .disabled(model.phase == .running || model.phase == .observing)
         }
         ToolbarItem(placement: .confirmationAction) {
             if model.phase == .running {
                 Button { model.stop() } label: { Text(verbatim: "Stop") }
             } else {
                 Button { Task { await model.run() } } label: { Text(verbatim: "Run") }
-                    .disabled(model.phase == .preparing)
+                    .disabled(model.phase == .preparing || model.phase == .observing)
             }
+        }
+    }
+}
+
+/// A narrower list in a wide window, with the size class its width has: a phone's list on an
+/// iPad.
+private struct ListHarnessWidth: ViewModifier {
+    let width: Int
+
+    func body(content: Content) -> some View {
+        if width > 0 {
+            content
+                .frame(width: CGFloat(width))
+                .environment(\.horizontalSizeClass, width >= 700 ? .regular : .compact)
+                .frame(maxWidth: .infinity)
+        } else {
+            content
         }
     }
 }
@@ -108,10 +136,12 @@ private struct ListHarnessStatus: View {
     }
 
     private var text: String {
-        let setup = "\(options.slot.rawValue)\(options.showsDock ? " + dock" : "") · \(options.galleryCount) galleries · \(Int(options.speed)) pt/s"
+        let chrome = options.showsDock ? " + dock" : options.showsBar ? " + bar" : ""
+        let setup = "\(options.slot.rawValue)\(chrome) · \(options.galleryCount) galleries · \(Int(options.speed)) pt/s"
         switch phase {
         case .preparing: return "Preparing \(setup)"
         case .ready: return "\(setup) · Run scrolls to the end"
+        case .observing: return "Flick the list up, fast, until it closes by itself"
         case .running: return "Scrolling \(setup)"
         case .finished(let result): return result.summary
         case .failed(let message): return message
@@ -142,6 +172,33 @@ private struct ListHarnessDock: View {
             action: .comments
         ))
     )
+}
+
+/// The command bar over the list, in its glass container, as the shell's bottom chrome places
+/// it (an overlay; the list keeps its full height, so rows pass under the glass). It reads the
+/// harness's settings, whose first screen is Wall's, so it names Front Page as its place.
+private struct ListHarnessBar: View {
+    let settings: SettingsStore
+    @State private var router = AppRouter()
+    @Namespace private var glass
+
+    var body: some View {
+        GlassGroup(spacing: ActionDock.spacing) {
+            CommandBar(
+                router: router,
+                control: .button(systemImage: "line.3.horizontal.decrease", title: "Filters", narrowing: "8 of 10 categories"),
+                perform: { _ in }, openSearch: { _ in }
+            )
+            .frame(maxWidth: 560)
+            .frame(height: ActionDock.height)
+        }
+        // The shell's margins (`BottomChrome`).
+        .padding(.horizontal, 12)
+        .padding(.bottom, Tokens.Spacing.small)
+        .environment(\.chromeNamespace, glass)
+        .environment(settings)
+        .environment(router)
+    }
 }
 
 /// Opens the list harness from Settings › Laboratory.

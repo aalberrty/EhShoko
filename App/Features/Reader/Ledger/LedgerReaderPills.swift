@@ -9,10 +9,9 @@ import SwiftUI
 /// symbols alone: all four the same way.
 struct LedgerPagePills: View {
     let model: ReaderModel
-    let watch: LedgerPageWatch
 
     var body: some View {
-        let hasImage = watch.pageHasImage
+        let hasImage = model.currentPageHasImage
         ViewThatFits(in: .horizontal) {
             pills(showsTitles: true, hasImage: hasImage)
             pills(showsTitles: false, hasImage: hasImage)
@@ -27,12 +26,14 @@ struct LedgerPagePills: View {
                     // The page at the moment of the tap; on the closing page, the last page.
                     model.perform(action, page: model.currentPage)
                 } label: {
-                    LedgerPillLabel(title: action.localizedName, symbol: action.symbolName, showsTitle: showsTitles)
+                    // "Save" for "Save to Photos", which leaves no room for the others' names.
+                    let title = action == .save ? L10n.Localizable.Reader.Action.save : action.localizedName
+                    LedgerPillLabel(title: title, symbol: action.symbolName, showsTitle: showsTitles)
                 }
                 .ledgerControlName(action.localizedName, symbol: action.symbolName)
                 .disabled(!hasImage)
             }
-            LedgerReloadPill(model: model, watch: watch, showsTitle: showsTitles)
+            LedgerReloadPill(model: model, showsTitle: showsTitles)
         }
     }
 }
@@ -40,7 +41,6 @@ struct LedgerPagePills: View {
 /// Reload: a tap reloads the page on screen, a hold offers the two reloads of the gallery.
 private struct LedgerReloadPill: View {
     let model: ReaderModel
-    let watch: LedgerPageWatch
     let showsTitle: Bool
 
     private typealias Strings = L10n.Localizable.ReadingView.ToolbarItem.Button
@@ -50,17 +50,14 @@ private struct LedgerReloadPill: View {
         Menu {
             Button(Strings.retryAllFailedImages, systemImage: "exclamationmark.arrow.triangle.2.circlepath") {
                 model.retryAllFailedImages()
-                watch.lookAgain()
             }
             Button(Strings.reloadAllImages, systemImage: reload.symbolName) {
                 model.reloadAllImages()
-                watch.lookAgain()
             }
         } label: {
             LedgerPillLabel(title: reload.localizedName, symbol: reload.symbolName, showsTitle: showsTitle)
         } primaryAction: {
             model.perform(reload, page: model.currentPage)
-            watch.lookAgain()
         }
         .ledgerControlName(reload.localizedName, symbol: reload.symbolName)
     }

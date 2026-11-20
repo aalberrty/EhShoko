@@ -23,13 +23,14 @@ struct RouteDestination: View {
             )
         case .listSearch(let scope, let keyword):
             GalleryListScreen(context: ListContext(kind: .scopedSearch(scope, keyword: keyword), title: keyword))
-        case .favoritesFolder(let folder):
-            LibraryFolderScreen(folder: folder)
-        case .detail(let gallery, let intent):
+        case .favoritesFolder(let route):
+            LibraryFolderScreen(route: route)
+        case .detail(let gallery, let intent, let origin):
             GalleryPage(gallery: gallery, intent: intent)
-                // From the cover that was tapped, whatever list design drew it. The pane's and
-                // the sheet's pages are roots, not destinations, and do not zoom.
-                .zoomDestination(gallery.gid)
+                // From the cover that was tapped, whatever design drew it, and back into the
+                // same one when the screen shows the gallery twice. The pane's and the sheet's
+                // pages are roots, not destinations, and do not zoom.
+                .zoomDestination(origin.zoomID(gid: gallery.gid))
         case .detailChild(let route):
             GalleryChildScreen(route: route)
         case .settings(let route):

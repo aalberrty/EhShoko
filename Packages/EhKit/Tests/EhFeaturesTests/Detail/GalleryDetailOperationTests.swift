@@ -146,7 +146,6 @@ import Testing
         model.rate(8)
         let chip = try #require(model.tagRows.first?.chips.first)
         model.voteTag(chip, vote: 1)
-        model.showPostComment()
         model.showArchives()
         try await Task.sleep(for: .milliseconds(50))
 
@@ -155,7 +154,7 @@ import Testing
         #expect(model.destination == nil)
     }
 
-    @Test func loggedInUserCanOpenArchivesAndComposer() async throws {
+    @Test func loggedInUserCanOpenArchives() async throws {
         let env = try await DetailEnvironment()
         env.logIn()
         let model = await env.loadedDetailModel()
@@ -164,8 +163,6 @@ import Testing
         #expect(model.destination == .archives(
             archiveURL: URL(string: "https://e-hentai.org/archiver.php?gid=3103480&token=0000000000")!
         ))
-        model.showPostComment()
-        #expect(model.destination == .postComment)
     }
 
     @Test func torrentsNeedTorrents() async throws {

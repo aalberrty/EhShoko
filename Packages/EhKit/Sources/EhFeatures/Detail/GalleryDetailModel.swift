@@ -197,8 +197,17 @@ public final class GalleryDetailModel {
         loadingState = .loading
         let client = client
         let gid = gallery.gid
+        // The first fetch is inside `GalleryOpen`; a later one finds the interval ended, and
+        // its answers mark nothing.
+        let signpost = openSignpost
         return tasks.run("fetch") { [weak self] in
-            let outcome = await Outcome.of { try await client.galleryDetail(gid: gid, galleryURL: galleryURL) }
+            let outcome = await Outcome.of {
+                let request: @Sendable () async throws -> GalleryDetailResponse = {
+                    try await client.galleryDetail(gid: gid, galleryURL: galleryURL)
+                }
+                guard let signpost else { return try await request() }
+                return try await signpost.markingResponses(request)
+            }
             var titles: GalleryTitles?
             if case .success(let response) = outcome {
                 titles = await GalleryTitles.make(for: response.detail)

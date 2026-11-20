@@ -12,6 +12,8 @@ import UIKit
 /// |---|---|
 /// | `-HarnessStageScroll YES` | Four seconds after the page opens, scrolls it from the top to the end at `-HarnessSpeed` points a second (default 400), counting late frames, and writes the result to `Library/Caches/PreviewHarness/stage-scroll`. |
 /// | `-HarnessStageExport YES` | Writes the twelve held frames (one per beat, the storyboards' stills) light and dark to `Library/Caches/PreviewHarness/stage-light.png` and `stage-dark.png`. |
+/// | `-HarnessStageLoop YES` | Writes frames of the playing loop every quarter second, from Ledger's last second through Shelf's turn into Wall, light, to `Library/Caches/PreviewHarness/stage-loop.png`. |
+/// | `-HarnessStageTucks YES\|NO` | For the loop's frames only: plays Shelf as where the tab bar tucks away (26.1 and later) or as where it does not, instead of as this system does. |
 /// | `-HarnessStageSelect shelf\|wall\|ledger` | Selects that preset after two seconds, as a tap on its tile does. |
 /// | `-HarnessStageCovered YES` | Starts with the stage covered, so it holds: the control for the time and scroll measurements. |
 /// | `-HarnessStageProbe YES` | Six seconds after the page opens, writes the process's memory (`stage-open`, beside the harness's round marks). |
@@ -86,6 +88,9 @@ struct PreviewHarnessStage: View {
         if defaults.bool(forKey: "HarnessStageExport") {
             status = PreviewHarnessStageExport.write(accent: store.accentColor)
         }
+        if defaults.bool(forKey: "HarnessStageLoop") {
+            status = PreviewHarnessStageExport.writeLoop(accent: store.accentColor)
+        }
         if let name = defaults.string(forKey: "HarnessStageSelect"), let style = DesignStyle(rawValue: name) {
             try? await Task.sleep(for: .seconds(2))
             selection = style
@@ -111,8 +116,25 @@ struct PreviewHarnessStage: View {
 /// generator's contact sheet (`tools/settings.py`, `contact`), so the two can be set side by
 /// side.
 enum PreviewHarnessStageExport {
-    static let moments: [(DesignStyle, Int)] = StagePlayback.order.flatMap { style in
-        (0..<Storyboard.beats).map { (style, $0) }
+    static let playback = StagePlayback()
+    static let moments: [StageBeat] = StagePager.pages(of: playback)
+
+    /// The loop's frames: the playback taking turns from Shelf, from a second before the
+    /// cycle ends (Ledger dissolving into Shelf) until half a second into Wall.
+    static func writeLoop(accent: RGBColor) -> String {
+        let tucks = UserDefaults.standard.object(forKey: "HarnessStageTucks").map { _ in
+            UserDefaults.standard.bool(forKey: "HarnessStageTucks")
+        }
+        let playback = StagePlayback(tabBarTucks: tucks ?? TabAccessoryKind.tabBarMinimizesOnScroll)
+        let cycle = playback.turns.reduce(0) { $0 + playback.storyboard($1).length }
+        let end = cycle + playback.storyboard(.shelf).length + 0.5
+        let times = stride(from: cycle - 1, through: end, by: 0.25).map { $0 }
+        let palettes = StagePalettes(accent: accent, colorScheme: .light, contrast: .standard)
+        let renderer = ImageRenderer(content: StageLoopFrames(playback: playback, times: times, palettes: palettes))
+        renderer.scale = 2
+        guard let data = renderer.uiImage?.pngData(), let url = folder?.appending(path: "stage-loop.png"),
+              (try? data.write(to: url)) != nil else { return "Loop not written" }
+        return "Wrote the loop, tab bar \(playback.tabBarTucks ? "tucks" : "stays")"
     }
 
     static func write(accent: RGBColor) -> String {
@@ -150,14 +172,15 @@ private struct StageHeldFrames: View {
     let palettes: StagePalettes
 
     var body: some View {
-        let rows = stride(from: 0, to: PreviewHarnessStageExport.moments.count, by: 6).map {
-            Array(PreviewHarnessStageExport.moments[$0..<$0 + 6])
+        let moments = PreviewHarnessStageExport.moments
+        let rows = stride(from: 0, to: moments.count, by: 6).map {
+            Array(moments[$0..<min($0 + 6, moments.count)])
         }
         VStack(alignment: .leading, spacing: 18) {
             ForEach(rows.indices, id: \.self) { row in
                 HStack(alignment: .top, spacing: 14) {
                     ForEach(rows[row].indices, id: \.self) { item in
-                        frame(rows[row][item].0, rows[row][item].1)
+                        frame(rows[row][item])
                     }
                 }
             }
@@ -167,22 +190,65 @@ private struct StageHeldFrames: View {
         .background(scheme == .dark ? Color(white: 0.11) : Color(red: 0.95, green: 0.95, blue: 0.97))
     }
 
-    private func frame(_ style: DesignStyle, _ beat: Int) -> some View {
-        let time = Storyboard.of(style).stills[beat]
-        let offset = Double(StagePlayback.order.firstIndex(of: style) ?? 0) * Storyboard.duration
-        let scene = StageFrame(scenes: [StageScene(style: style, time: time, opacity: 1)])
+    private func frame(_ moment: StageBeat) -> some View {
+        let playback = PreviewHarnessStageExport.playback
+        let board = playback.storyboard(moment.style)
+        let time = board.stills[moment.beat]
+        let earlier = playback.turns.prefix { $0 != moment.style }
+        let offset = earlier.reduce(0) { $0 + playback.storyboard($1).length } - board.start
+        let scene = StageFrame(scenes: [playback.scene(moment.style, at: time)])
         return VStack(spacing: 6) {
             Canvas { context, size in
                 StageRenderer.render(scene, palettes: palettes, into: context, size: size)
             }
             .frame(width: PresetStage.size.width, height: PresetStage.size.height)
-            Text(verbatim: "\(style.localizedName) · \(StageBeat(style: style, beat: beat).caption) · "
+            Text(verbatim: "\(moment.style.localizedName) · \(moment.caption) · "
                  + String(format: "%.1f s", offset + time))
                 .font(.system(size: 11))
                 .frame(width: 170)
                 .lineLimit(2)
                 .multilineTextAlignment(.center)
         }
+    }
+}
+
+/// Frames of the playing loop at `times`, half the stage's size, ten to a row, each under the
+/// time, the preset and the beat's caption.
+private struct StageLoopFrames: View {
+    let playback: StagePlayback
+    let times: [TimeInterval]
+    let palettes: StagePalettes
+
+    var body: some View {
+        let rows = stride(from: 0, to: times.count, by: 10).map { Array(times[$0..<min($0 + 10, times.count)]) }
+        VStack(alignment: .leading, spacing: 10) {
+            ForEach(rows.indices, id: \.self) { row in
+                HStack(alignment: .top, spacing: 8) {
+                    ForEach(rows[row], id: \.self, content: frame)
+                }
+            }
+        }
+        .padding(12)
+        .foregroundStyle(Color.black)
+        .background(Color(red: 0.95, green: 0.95, blue: 0.97))
+    }
+
+    private func frame(_ time: TimeInterval) -> some View {
+        let scene = playback.frame(at: time)
+        let (style, beat) = playback.beat(at: time)
+        return VStack(spacing: 3) {
+            Canvas { context, size in
+                StageRenderer.render(scene, palettes: palettes, into: context, size: size)
+            }
+            .frame(width: PresetStage.size.width / 2, height: PresetStage.size.height / 2)
+            Text(verbatim: String(format: "%.2f s", time) + " · \(style.localizedName) \(beat + 1)")
+                .font(.system(size: 9).monospacedDigit())
+            Text(verbatim: StageBeat(style: style, beat: beat).caption)
+                .font(.system(size: 8))
+                .lineLimit(2)
+                .multilineTextAlignment(.center)
+        }
+        .frame(width: 84)
     }
 }
 #endif

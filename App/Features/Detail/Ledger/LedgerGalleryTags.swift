@@ -79,8 +79,10 @@ struct LedgerGalleryTags: View {
                         Capsule().fill(.tint)
                     }
                 }
+                .hitAreaOutset(HitArea.shortWord)
         }
         .buttonStyle(.plain)
+        .hitAreaOutsetReturned(HitArea.shortWord)
         .accessibilityAddTraits(isVoting ? .isSelected : [])
     }
 

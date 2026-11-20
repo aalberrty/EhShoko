@@ -33,9 +33,8 @@ struct SearchScopeMenu: View {
             // Otherwise VoiceOver finds two images, "Search" and "Go Down", beside the button.
             .accessibilityHidden(true)
         }
-        // There is no word for "scope" in the app's strings: the button says where the search
-        // looks, as a pop-up button whose value is the place.
-        .accessibilityLabel(L10n.Localizable.Shell.Search.prompt)
+        // A pop-up button "Scope" whose value is where the search looks.
+        .accessibilityLabel(L10n.Localizable.Search.scope)
         .accessibilityValue(model.scope.localizedName)
     }
 

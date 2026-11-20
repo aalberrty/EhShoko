@@ -26,6 +26,8 @@ struct ReaderSliderRow: View {
             .monospacedDigit()
             .foregroundStyle(look.secondaryLabel)
             .fixedSize()
+            // The slider's value says "of 48".
+            .accessibilityHidden(true)
     }
 }
 
@@ -37,6 +39,7 @@ struct ReaderSliderTrack: View {
     var body: some View {
         ReaderUISlider(
             page: model.sliderPage, pageCount: model.pageCount, isReversed: isReversed,
+            spokenPosition: ReaderPagePosition(model: model).long,
             onEditingChanged: { model.sliderEditingChanged($0) },
             onChange: { model.setSliderPage($0) }
         )
@@ -53,6 +56,8 @@ private struct ReaderUISlider: UIViewRepresentable {
     let page: Int
     let pageCount: Int
     let isReversed: Bool
+    /// "Page 23 of 48" or "End", VoiceOver's value.
+    let spokenPosition: String
     let onEditingChanged: (Bool) -> Void
     let onChange: (Int) -> Void
 
@@ -61,8 +66,9 @@ private struct ReaderUISlider: UIViewRepresentable {
     }
 
     func makeUIView(context: Context) -> UISlider {
-        let slider = UISlider()
+        let slider = ReaderPageUISlider()
         slider.minimumValue = 1
+        slider.accessibilityLabel = L10n.Localizable.Gallery.Figure.pages
         // The reading direction decides which way it runs, not the interface language.
         slider.semanticContentAttribute = .forceLeftToRight
         let coordinator = context.coordinator
@@ -88,7 +94,19 @@ private struct ReaderUISlider: UIViewRepresentable {
         if !slider.isTracking, Int(slider.value.rounded()) != page {
             slider.setValue(Float(page), animated: false)
         }
-        slider.accessibilityValue = "\(page) / \(pageCount)"
+        slider.accessibilityValue = spokenPosition
+    }
+
+    /// VoiceOver's swipe up or down turns one page, not the tenth of the range a `UISlider`
+    /// steps by. Without a touch the model is not scrubbing, so the reader follows at once.
+    private final class ReaderPageUISlider: UISlider {
+        override func accessibilityIncrement() { step(by: 1) }
+        override func accessibilityDecrement() { step(by: -1) }
+
+        private func step(by pages: Float) {
+            setValue(value.rounded() + pages, animated: false)
+            sendActions(for: .valueChanged)
+        }
     }
 
     final class Coordinator: NSObject {

@@ -1,3 +1,4 @@
+import EhNetworking
 import Foundation
 import os
 
@@ -15,6 +16,10 @@ import os
 /// | `GalleryOpen` | the gallery page's first load | its fetched page is applied (event `Stored` when the database's copy is) |
 /// | `ReaderOpen` | the reader starts | its first page is shown |
 /// | `ListPage` | a list page is requested | its galleries are applied |
+///
+/// `ListPage` and `GalleryOpen` also carry the event `Response` when the site's answer arrives
+/// (`PerformanceInterval.markingResponses`), so the time from the answer to the applied rows,
+/// which is the app's own, reads apart from the network's.
 public enum PerformanceSignposts {
     public static let subsystem = AppLogger.subsystem
     public static let category = "Performance"
@@ -80,12 +85,16 @@ public enum PerformanceSignposts {
 /// recording.
 public final class PerformanceInterval: Sendable {
     private let name: PerformanceSignposts.Name
+    /// What the interval began with; its `Response` events repeat it, so that the events of
+    /// several lists loading at once can be told apart.
+    private let detail: String
     private let signposter: OSSignposter
     // `OSSignpostIntervalState` is not marked `Sendable`; it is only touched under this lock.
     private let state: OSAllocatedUnfairLock<OSSignpostIntervalState?>
 
     init(name: PerformanceSignposts.Name, detail: String, signposter: OSSignposter) {
         self.name = name
+        self.detail = detail
         self.signposter = signposter
         let id = signposter.makeSignpostID()
         let begun = signposter.beginInterval(name.staticName, id: id, "\(detail, privacy: .public)")
@@ -102,6 +111,23 @@ public final class PerformanceInterval: Sendable {
         guard !isEnded else { return }
         signposter.emitEvent(name.staticName, "\(message, privacy: .public)")
     }
+
+    /// Runs `operation`, marking the moment each request it sends through `EhClient` is
+    /// answered as the event `Response` (followed by the interval's detail). An operation that
+    /// asks more than once (an empty page skipped, a retry) leaves one event per answer; the
+    /// last one is the answer that was applied.
+    public func markingResponses<Value: Sendable>(
+        _ operation: @Sendable () async throws -> Value
+    ) async rethrows -> Value {
+        try await ResponseArrival.$observer.withValue({ [self] in responseArrived() }, operation: operation)
+    }
+
+    private func responseArrived() {
+        event(detail.isEmpty ? Self.responseEvent : "\(Self.responseEvent) \(detail)")
+    }
+
+    /// The message a `Response` event starts with; `Scripts/measure_report.py` reads it.
+    public static let responseEvent = "Response"
 
     /// Ends the interval with what happened ("done", "failed", "cancelled", "24 rows").
     public func end(_ outcome: String = "done") {

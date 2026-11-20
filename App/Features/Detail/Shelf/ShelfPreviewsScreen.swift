@@ -9,8 +9,10 @@ struct ShelfPreviewsScreen: View {
     let detail: GalleryDetailModel
 
     @State private var model: PreviewsModel
-    /// The page the grid is scrolled to: the page last read when it opens.
-    @State private var position: Int?
+    /// The page last read, which the grid is opened at; `nil` from the start.
+    private let opensAt: Int?
+    /// Whether the grid has been brought to `opensAt`, once, after its first layout.
+    @State private var hasOpened = false
 
     @Environment(StackRouter.self) private var stack: StackRouter?
     @Environment(AppRouter.self) private var appRouter: AppRouter?
@@ -23,37 +25,49 @@ struct ShelfPreviewsScreen: View {
             gallery: detail.gallery, pageCount: detail.pageCount,
             config: detail.previewConfig, previewURLs: detail.previewURLs
         ))
-        _position = State(initialValue: detail.readingProgress.flatMap { $0 > 1 ? $0 : nil })
+        opensAt = detail.readingProgress.flatMap { $0 > 1 ? $0 : nil }
     }
 
     var body: some View {
         let widths = Tokens.ImageSize.previewWidths(for: sizeClass)
         let gid = model.gallery.gid
-        ScrollView {
-            LazyVGrid(
-                columns: [GridItem(.adaptive(minimum: widths.lowerBound, maximum: widths.upperBound), spacing: 10)],
-                spacing: Tokens.Spacing.medium
-            ) {
-                ForEach(1..<(model.pageCount + 1), id: \.self) { index in
-                    Button {
-                        model.select(index)
-                    } label: {
-                        ShelfPreviewGridCell(
-                            index: index, thumbnail: model.preview(at: index), failed: model.hasFailed(at: index),
-                            isCurrent: index == lastRead
-                        )
-                        .readerSource(.preview(gid: gid, page: index))
+        ScrollViewReader { proxy in
+            ScrollView {
+                LazyVGrid(
+                    columns: [GridItem(.adaptive(minimum: widths.lowerBound, maximum: widths.upperBound), spacing: 10)],
+                    spacing: Tokens.Spacing.medium
+                ) {
+                    ForEach(1..<(model.pageCount + 1), id: \.self) { index in
+                        Button {
+                            model.select(index)
+                        } label: {
+                            ShelfPreviewGridCell(
+                                index: index, thumbnail: model.preview(at: index), failed: model.hasFailed(at: index),
+                                isCurrent: index == lastRead
+                            )
+                            .readerSource(.preview(gid: gid, page: index))
+                        }
+                        .buttonStyle(.plain)
+                        .onAppear { model.thumbnailAppeared(index) }
+                        .onDisappear { model.thumbnailDisappeared(index) }
                     }
-                    .buttonStyle(.plain)
-                    .onAppear { model.thumbnailAppeared(index) }
-                    .onDisappear { model.thumbnailDisappeared(index) }
+                }
+                .padding(.horizontal)
+                .padding(.vertical, Tokens.Spacing.small)
+            }
+            // Not `scrollPosition(id:anchor:)`: its first position moved the grid sideways by its
+            // margin (to the left edge on iOS 26.3, 14 pt in on iOS 18.5) and did not reach the
+            // page. A scroll to the page once the grid has a height moves it only up or down.
+            .onScrollGeometryChange(for: Bool.self) { geometry in
+                geometry.contentSize.height > geometry.containerSize.height
+            } action: { _, isLaidOut in
+                guard isLaidOut, !hasOpened else { return }
+                hasOpened = true
+                if let opensAt {
+                    proxy.scrollTo(opensAt, anchor: .center)
                 }
             }
-            .scrollTargetLayout()
-            .padding(.horizontal)
-            .padding(.vertical, Tokens.Spacing.small)
         }
-        .scrollPosition(id: $position, anchor: .center)
         .background(look.background)
         .navigationTitle(L10n.Localizable.PreviewsView.Title.previews)
         .navigationBarTitleDisplayMode(.inline)
@@ -95,7 +109,7 @@ struct ShelfPreviewsScreen: View {
         case .search(let keyword):
             stack?.push(.search(keyword: keyword))
         case .signIn:
-            appRouter?.presentSettings([.settings(.account), .settings(.login)])
+            appRouter?.presentSignIn()
         }
     }
 }

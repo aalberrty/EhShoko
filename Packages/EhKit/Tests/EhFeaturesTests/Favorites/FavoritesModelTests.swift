@@ -1,6 +1,7 @@
 @testable import EhFeatures
 import EhModels
 import EhTestSupport
+import Observation
 import Testing
 
 @Suite struct FavoritesModelTests {
@@ -63,6 +64,43 @@ import Testing
         #expect(model.list.phase == .content)
     }
 
+    @Test func aFolderReadWithoutChoosingItKeepsTheChoiceAndIsReusedWhenChosen() async throws {
+        let env = try ListTestEnvironment()
+        env.transport.on(.any, reply: .fixture(ListFixture.favorites))
+        let model = env.make { FavoritesModel() }
+        #expect(model.loadedList(for: 3) == nil)
+
+        let folder = model.list(for: 3)
+        #expect(model.category == -1)
+        #expect(model.loadedList(for: 3) === folder)
+        #expect(model.list(for: 3) === folder)
+        await folder.loadIfNeeded()
+        #expect(env.query("favcat", ofRequest: 0) == "3")
+
+        model.select(category: 3)
+        #expect(model.list === folder)
+        var screen = ListScreenTask()
+        await screen.render(model.list)
+        #expect(env.transport.requests.count == 1)
+    }
+
+    /// Wall's piles draw the folders opened this session: a folder opened after they were
+    /// drawn redraws them.
+    @Test func aViewOfTheLoadedListsSeesAFolderOpenedLater() throws {
+        let env = try ListTestEnvironment()
+        let model = env.make { FavoritesModel() }
+        let changed = Gate()
+        withObservationTracking {
+            _ = model.loadedList(for: 2)
+        } onChange: {
+            changed.open()
+        }
+
+        _ = model.list(for: 2)
+
+        #expect(changed.isOpen)
+    }
+
     @Test func sortOrderChangeReloadsWithInlineSetAndDropsOtherFolders() async throws {
         let env = try ListTestEnvironment()
         env.transport.on(.any, reply: try ListFixture.favoritesSorted(by: .favoritedTime))
@@ -92,31 +130,38 @@ import Testing
         #expect(env.query("inline_set", ofRequest: previousCount) == nil)
     }
 
-    @Test func keywordSearchesTheCurrentFolder() async throws {
+    /// A folder pushed from the library sorts its own list: that list is reloaded with the
+    /// order, the library keeps its choice, and the chosen folder's list, out of date now, is
+    /// a new one that loads when it is shown.
+    @Test func aFolderSortedFromItsOwnScreenReloadsThatFolderAndKeepsTheChoice() async throws {
         let env = try ListTestEnvironment()
-        env.transport.on(.any, reply: .fixture(ListFixture.favorites))
+        env.transport.on(.any, reply: try ListFixture.favoritesSorted(by: .favoritedTime))
         let model = env.make { FavoritesModel() }
         await model.list.loadIfNeeded()
+        let all = model.list
+        let folder = model.list(for: 3)
+        await folder.loadIfNeeded()
+        let current = try #require(folder.favoritesSortOrder)
 
-        model.keyword = "tag"
-        model.submitKeyword()
+        model.setSortOrder(current, in: 3)
+        #expect(!folder.entries.galleries.isEmpty)
+        #expect(model.list === all)
+
+        let other: FavoritesSortOrder = current == .favoritedTime ? .lastUpdateTime : .favoritedTime
+        model.setSortOrder(other, in: 3)
+        #expect(model.category == -1)
+        #expect(model.loadedList(for: 3) === folder)
+        #expect(folder.entries.galleries.isEmpty)
+        #expect(model.list !== all)
+        #expect(model.loadedList(for: -1) === model.list)
+        #expect(model.list.entries.galleries.isEmpty)
+
+        await folder.loadIfNeeded()
+        #expect(env.query("favcat", ofRequest: 2) == "3")
+        #expect(env.query("inline_set", ofRequest: 2) != nil)
         await model.list.loadIfNeeded()
-        #expect(env.query("f_search", ofRequest: 1) == "tag")
-        #expect(env.query("sn", ofRequest: 1) == "on")
-
-        var screen = ListScreenTask()
-        await screen.render(model.list)
-        model.select(category: 4)
-        await screen.render(model.list)
-        #expect(env.query("f_search", ofRequest: 2) == "tag")
-
-        model.isQuickSearchPresented = true
-        model.quickSearch("other")
-        #expect(!model.isQuickSearchPresented)
-        #expect(model.keyword == "other")
-        await model.list.loadIfNeeded()
-        #expect(env.query("f_search", ofRequest: 3) == "other")
-        #expect(env.query("favcat", ofRequest: 3) == "4")
+        #expect(env.query("favcat", ofRequest: 3) == "all")
+        #expect(env.query("inline_set", ofRequest: 3) == nil)
     }
 
     @Test func tabReselectionReloadsTheCurrentFolder() async throws {

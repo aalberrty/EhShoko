@@ -17,7 +17,6 @@ struct LedgerReaderSheet: View {
     @State private var stage: LedgerSheetStage
     /// Whether the open rows have been built while the sheet rests.
     @State private var hasOpenRows = false
-    @State private var watch = LedgerPageWatch()
 
     init(model: ReaderModel, sheet: LedgerSheetState) {
         self.model = model
@@ -31,7 +30,7 @@ struct LedgerReaderSheet: View {
         // The rows scroll where the sheet cannot be as tall as they are: in landscape, where
         // the screen is short and the two-page rows join them.
         ScrollView {
-            LedgerSheetRows(model: model, sheet: sheet, watch: watch, stage: stage, hasOpenRows: hasOpenRows)
+            LedgerSheetRows(model: model, sheet: sheet, stage: stage, hasOpenRows: hasOpenRows)
                 .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { height in
                     if stage == .open {
                         sheet.openRowsDidLayOut(height: height)
@@ -39,6 +38,11 @@ struct LedgerReaderSheet: View {
                 }
         }
         .scrollBounceBehavior(.basedOnSize)
+        // Where the system put the sheet, for the closing page in regular width
+        // (`LedgerPageInset.coveredBottom`).
+        .onGeometryChange(for: CGFloat.self) { $0.frame(in: .global).minY.rounded() } action: { top in
+            sheet.top = top
+        }
         // The open rows are built once the sheet has come to rest, not with it and not under
         // the finger that pulls it up: built at the start of a pull, they cost it its first
         // frames.
@@ -53,7 +57,6 @@ struct LedgerReaderSheet: View {
         .onGeometryChange(for: LedgerSheetStage.self) { heights.stage(at: $0.size.height) } action: { stage in
             withAnimation(LedgerReaderMetrics.rowsAnimation) { self.stage = stage }
         }
-        .background { LedgerPageWatcher(model: model, watch: watch) }
         // A sheet does not inherit the tint.
         .lookEnvironment(look, accent: settings.accentColor)
         .presentationDetents([heights.restDetent, heights.openDetent], selection: detent(heights))
@@ -80,7 +83,6 @@ struct LedgerReaderSheet: View {
 private struct LedgerSheetRows: View {
     let model: ReaderModel
     let sheet: LedgerSheetState
-    let watch: LedgerPageWatch
     let stage: LedgerSheetStage
     let hasOpenRows: Bool
 
@@ -90,7 +92,7 @@ private struct LedgerSheetRows: View {
         let isReversed = settings.readingDirection == .rightToLeft
         VStack(spacing: 0) {
             if stage == .open {
-                LedgerSheetHeader(model: model)
+                LedgerSheetHeader(model: model, spreads: spreads)
                     .transition(.opacity)
             }
             // A gallery of one page has no slider.
@@ -101,12 +103,12 @@ private struct LedgerSheetRows: View {
                     .padding(.bottom, stage == .open ? 0 : LedgerReaderMetrics.restRowGap)
             }
             if stage != .open {
-                LedgerRestRow(model: model, sheet: sheet, watch: watch)
+                LedgerRestRow(model: model, sheet: sheet)
                     .transition(.opacity)
             }
             if hasOpenRows || stage != .rest {
                 LedgerOpenRows(
-                    model: model, sheet: sheet, watch: watch, isReversed: isReversed, isUncovered: stage != .rest
+                    model: model, sheet: sheet, isReversed: isReversed, isUncovered: stage != .rest
                 )
             }
         }
@@ -117,17 +119,28 @@ private struct LedgerSheetRows: View {
         // without a name show theirs in the large content viewer.
         .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
     }
+
+    /// Two pages side by side, as the engine decides it (`ReaderConfiguration.usesDualPage`):
+    /// in a paged direction, with the setting on, on a screen wider than tall.
+    private var spreads: ReaderSpreads {
+        ReaderSpreads(
+            offersDualPage: sheet.isLandscape && settings.readingDirection != .vertical,
+            enablesDualPage: settings.enablesDualPageMode,
+            exceptCover: settings.exceptCover
+        )
+    }
 }
 
-/// "Page 23 of 48", or "End", with the gallery's short title trailing.
+/// "Page 23 of 48", "Pages 22–23 of 48" or "End", with the gallery's short title trailing.
 private struct LedgerSheetHeader: View {
     let model: ReaderModel
+    let spreads: ReaderSpreads
 
     @Environment(\.look) private var look
 
     var body: some View {
         HStack(alignment: .firstTextBaseline, spacing: Tokens.Spacing.medium) {
-            Text(ReaderPagePosition(model: model).long)
+            Text(spreads.text(for: ReaderPagePosition(model: model)))
                 .font(.title2.bold())
                 .fontDesign(look.titleDesign)
                 .monospacedDigit()
@@ -144,7 +157,8 @@ private struct LedgerSheetHeader: View {
     }
 }
 
-/// The title without its groups. A view of its own, so a page turn does not parse it again.
+/// The title without its groups, which the model parsed. A view of its own, so a page turn
+/// does not draw it again.
 private struct LedgerSheetTitle: View {
     let model: ReaderModel
 

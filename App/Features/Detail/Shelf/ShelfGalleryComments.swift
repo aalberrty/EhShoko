@@ -122,5 +122,7 @@ struct ShelfCommentByline: View {
             }
         }
         .lineLimit(1)
+        // One stop for VoiceOver: name, date and score. The body stays apart, for its links.
+        .accessibilityElement(children: .combine)
     }
 }

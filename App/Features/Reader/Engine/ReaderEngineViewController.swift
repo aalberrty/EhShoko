@@ -1,4 +1,5 @@
 import EhFeatures
+import EhModels
 import UIKit
 
 /// The reader engine. Shows the pages of a `ReaderEngineDataSource` in the configured reading
@@ -23,6 +24,8 @@ final class ReaderEngineViewController: UIViewController {
     private(set) var currentPage: Int
 
     private var pageCount = 0
+    /// The host's count of failed pages, as the failure cards show it.
+    private var failedPageCount = 0
     private var registry = ReaderPageRegistry()
     private(set) var content: (any ReaderContentView)?
     private var viewportSize = CGSize.zero
@@ -99,6 +102,7 @@ final class ReaderEngineViewController: UIViewController {
             contentDidChangeCurrentPage(pageCount)
         }
         prefetcher.reset()
+        failedPageCount = dataSource?.failedPageCount ?? 0
         // Page numbers may stand for different images now, so no view is carried over. The
         // trailer is not a page: its view stays, and the new content places it again.
         trailer?.removeFromSuperview()
@@ -111,12 +115,13 @@ final class ReaderEngineViewController: UIViewController {
     /// image load, so this is how a retry starts. Pages without a view cost nothing.
     func reloadPage(_ page: Int) {
         guard page >= 1, page <= pageCount else { return }
-        registry.setFailedImage(nil, forPage: page)
+        registry.clearFailedImage(forPage: page)
         setAspectRatio(dataSource?.aspectRatio(at: page), forPage: page)
+        updateFailedPageCount()
         if let pageView = content?.pageView(forPage: page) {
             let shown = pageContent(for: page)
             pageView.setContent(shown)
-            if shown == .resolutionFailed, content?.visiblePages?.contains(page) == true {
+            if shown.isResolutionFailure, content?.visiblePages?.contains(page) == true {
                 firstPageDidSettle()
             }
         }
@@ -222,10 +227,20 @@ final class ReaderEngineViewController: UIViewController {
         case .pending:
             .pending
         case .failed:
-            .resolutionFailed
+            .resolutionFailed(dataSource?.failureReason(at: page))
         case .image(let url):
-            registry.hasFailedImage(page: page, url: url) ? .imageFailed : .image(url)
+            registry.imageFailure(page: page, url: url).map { ReaderPageContent.imageFailed($0.reason) } ?? .image(url)
         }
+    }
+
+    /// Reads the host's count of failed pages and hands a new value to the pages on screen,
+    /// whose failure cards offer to reload them all. A page view made later gets it when it
+    /// is configured.
+    private func updateFailedPageCount() {
+        let count = dataSource?.failedPageCount ?? 0
+        guard count != failedPageCount else { return }
+        failedPageCount = count
+        content?.forEachPageView { $0.setFailedPageCount(count) }
     }
 
     private func setAspectRatio(_ ratio: CGFloat?, forPage page: Int) {
@@ -288,8 +303,9 @@ extension ReaderEngineViewController: ReaderContentHost {
         probe?(.configure(page: page, request: request))
         #endif
         pageView.delegate = self
+        pageView.setFailedPageCount(failedPageCount)
         let shown = pageContent(for: page)
-        if shown == .resolutionFailed || shown == .imageFailed {
+        if shown.isFailure {
             // A page that arrives with its failure never reports an image. Only the flag: the
             // tiling pass that asked for this view places the trailer when it is done.
             hasSettledFirstPage = true
@@ -316,22 +332,24 @@ extension ReaderEngineViewController: ReaderPageViewDelegate {
     func pageView(_ pageView: ReaderPageView, didLoadImageWithPixelSize pixelSize: CGSize) {
         let page = pageView.page
         guard page >= 1, page <= pageCount, pixelSize.width > 0, pixelSize.height > 0 else { return }
-        registry.setFailedImage(nil, forPage: page)
+        registry.clearFailedImage(forPage: page)
         setAspectRatio(pixelSize.width / pixelSize.height, forPage: page)
         if registry.shouldReport(pixelSize: pixelSize, forPage: page) {
             delegate?.readerDidLoadImage(page: page, pixelSize: pixelSize)
+            updateFailedPageCount()
         }
         firstPageDidSettle()
     }
 
-    func pageViewDidFailToLoadImage(_ pageView: ReaderPageView) {
+    func pageView(_ pageView: ReaderPageView, didFailToLoadImageFor reason: ReaderImageFailure?) {
         let page = pageView.page
         guard page >= 1, page <= pageCount else { return }
         // Remembered, so the page still shows the retry button when it scrolls back in.
         if case .image(let url) = dataSource?.pageState(at: page) {
-            registry.setFailedImage(url, forPage: page)
+            registry.setFailedImage(url, reason: reason, forPage: page)
         }
         delegate?.readerDidFailToLoadImage(page: page)
+        updateFailedPageCount()
         if content?.visiblePages?.contains(page) == true {
             firstPageDidSettle()
         }
@@ -339,6 +357,10 @@ extension ReaderEngineViewController: ReaderPageViewDelegate {
 
     func pageViewDidRequestRetry(_ pageView: ReaderPageView) {
         delegate?.readerDidRequestRetry(page: pageView.page)
+    }
+
+    func pageViewDidRequestRetryAllFailed(_ pageView: ReaderPageView) {
+        delegate?.readerDidRequestRetryAllFailed()
     }
 
     func contextMenu(for pageView: ReaderPageView) -> UIMenu? {

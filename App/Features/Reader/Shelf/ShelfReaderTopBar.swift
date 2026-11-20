@@ -6,7 +6,7 @@ import SwiftUI
 /// More. Three glass shapes in the layer's one container, side by side, none on another.
 struct ShelfReaderTopBar: View {
     let model: ReaderModel
-    let spreads: ShelfReaderSpreads
+    let spreads: ReaderSpreads
 
     var body: some View {
         HStack(spacing: ShelfReaderMetrics.topSpacing) {
@@ -21,14 +21,15 @@ struct ShelfReaderTopBar: View {
 /// slider, so it names the page being scrubbed to.
 private struct ShelfReaderTitleCapsule: View {
     let model: ReaderModel
-    let spreads: ShelfReaderSpreads
+    let spreads: ReaderSpreads
 
     @Environment(SettingsStore.self) private var settings
     @Environment(\.look) private var look
 
     var body: some View {
         VStack(spacing: 1) {
-            Text(model.title(prefersJapanese: settings.displaysJapaneseTitle))
+            // The title without its groups, as drawn ("Yoake no Hakoniwa"), parsed by the model.
+            Text(model.shortTitle(prefersJapanese: settings.displaysJapaneseTitle))
                 .font(.footnote.weight(.semibold))
                 .fontDesign(look.titleDesign)
                 .foregroundStyle(look.label)
@@ -64,6 +65,9 @@ private struct ShelfReaderActionGroup: View {
                     .contentShape(.rect)
             }
             .accessibilityLabel(L10n.Localizable.ReadingView.ContextMenu.Button.share)
+            .accessibilityShowsLargeContentViewer {
+                Label(L10n.Localizable.ReadingView.ContextMenu.Button.share, systemImage: "square.and.arrow.up")
+            }
 
             ShelfReaderMoreMenu(model: model, offersDualPage: offersDualPage)
         }
@@ -71,26 +75,5 @@ private struct ShelfReaderActionGroup: View {
         .font(.body.weight(.medium))
         .foregroundStyle(look.label)
         .glassSurface(in: .capsule, isInteractive: true)
-    }
-}
-
-/// Which pages the capsule names: the page, or the two pages of a spread when the engine lays
-/// out two side by side (`ReaderConfiguration.usesDualPage(in:)`).
-struct ShelfReaderSpreads: Equatable {
-    /// In landscape, in a paged direction: where two pages can show.
-    let offersDualPage: Bool
-    let enablesDualPage: Bool
-    let exceptCover: Bool
-
-    var isDualPage: Bool { offersDualPage && enablesDualPage }
-
-    func text(for position: ReaderPagePosition) -> String {
-        guard isDualPage, !position.isAtEnd else { return position.long }
-        let layout = ReaderSpreadLayout(pageCount: position.pageCount, isDualPage: true, exceptCover: exceptCover)
-        let pages = layout.pages(inSpread: layout.spreadIndex(forPage: position.page))
-        // A spread whose second page is the last reports that page; name the spread from its
-        // first page whichever it reports.
-        let first = ReaderPagePosition(page: pages.lowerBound, pageCount: position.pageCount, isAtEnd: false)
-        return first.long(spreadEndingAt: pages.upperBound)
     }
 }

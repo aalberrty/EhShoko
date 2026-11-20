@@ -92,9 +92,22 @@ public final class ReaderModel {
     /// `currentPage` stays the last page meanwhile. The engine reports it
     /// (`trailerVisibilityDidChange(_:)`); without a closing page it stays `false`.
     public internal(set) var isAtEnd = false
+    /// How many pages have failed: those that could not be resolved and those whose image did
+    /// not load. "Retry failed pages" and a failed page's "Reload all" are for these.
+    ///
+    /// Observable, unlike the page states it sums up, for the controls: it changes when a page
+    /// fails or recovers, not as pages resolve one after another. The engine reads
+    /// `pageSummary` instead (`ReaderModel+PageSummary.swift`).
+    public internal(set) var failedPageCount = 0
+    /// Whether the current page has its image, which Save, Copy and Share need. On the closing
+    /// page, the last page's. It changes when the reader moves and when that page resolves.
+    public internal(set) var currentPageHasImage = false
+    /// The titles split into the parts of the site's convention, parsed off the main actor once
+    /// they are known (`parsedTitle(prefersJapanese:)`); `nil` until then.
+    public internal(set) var parsedTitles: ReaderParsedTitles?
     /// The gallery's detail page, for its titles: the opener's, else what is stored. A list's
     /// gallery carries neither the detail's title nor its Japanese title.
-    private var detail: GalleryDetail?
+    var detail: GalleryDetail?
 
     // MARK: Engine
 
@@ -118,10 +131,13 @@ public final class ReaderModel {
     @ObservationIgnored var staleCandidates: Set<Int> = []
     /// Pages whose image failed to download or decode, as the engine reported.
     @ObservationIgnored var failedImagePages: Set<Int> = []
+    /// `failedPageCount` and `currentPageHasImage` outside observation: what the engine reads,
+    /// and what the model compares a new value with before it publishes one.
+    @ObservationIgnored public internal(set) var pageSummary = ReaderPageSummary()
     @ObservationIgnored private var openedAt: ContinuousClock.Instant?
     /// `ReaderOpen`, from `start()` until the first page is shown.
     @ObservationIgnored private var openSignpost: PerformanceInterval?
-    @ObservationIgnored private var isClosed = false
+    @ObservationIgnored private(set) var isClosed = false
     @ObservationIgnored var autoPlayTask: Task<Void, Never>?
     @ObservationIgnored var previewDebounce: Task<Void, Never>?
     @ObservationIgnored var actionTasks: [Int: Task<Void, Never>] = [:]
@@ -188,12 +204,7 @@ public final class ReaderModel {
         if detail == nil, let stored = try? await database.detail(gid: gid), !isClosed {
             detail = stored
         }
-    }
-
-    /// The title the gallery page shows: the Japanese title when preferred and present, else
-    /// the detail's title; the list's title until a detail is known.
-    public func title(prefersJapanese: Bool) -> String {
-        detail?.title(prefersJapanese: prefersJapanese) ?? gallery.title
+        await parseTitles()
     }
 
     /// Stops all work and saves what is left to save. Call it when the reader goes away.
@@ -260,6 +271,7 @@ public final class ReaderModel {
             // Opened on a chosen page (legacy saved it before presenting the reader).
             writer.setProgress(page)
         }
+        refreshCurrentPageHasImage()
     }
 
     // MARK: Engine data source
@@ -282,6 +294,7 @@ public final class ReaderModel {
         }
         resolver.setFocus(page)
         writer.setProgress(page)
+        refreshCurrentPageHasImage()
         // Legacy kept turning at the end; there is nowhere to go from the last page. With a
         // closing page, auto-play stops there instead (`trailerVisibilityDidChange`).
         if autoPlay != .off, page >= pageCount, !hasTrailer {
@@ -299,7 +312,9 @@ public final class ReaderModel {
 
     /// A page's image is on screen, decoded at `pixelSize`.
     public func imageDidLoad(page: Int, pixelSize: CGSize) {
-        failedImagePages.remove(page)
+        if failedImagePages.remove(page) != nil {
+            refreshFailedPageCount()
+        }
         staleCandidates.remove(page)
         noteFirstPage()
         guard pixelSize.width > 0, pixelSize.height > 0 else { return }
@@ -324,6 +339,7 @@ public final class ReaderModel {
             resolver.resolveAgain(page)
         } else {
             failedImagePages.insert(page)
+            refreshFailedPageCount()
         }
     }
 
@@ -335,6 +351,7 @@ public final class ReaderModel {
         } else {
             resolver.retry(page)
         }
+        refreshFailedPageCount()
     }
 
     public func togglePanel() {
@@ -344,16 +361,23 @@ public final class ReaderModel {
     // MARK: Resolver events
 
     private func handle(_ event: ReaderPageResolver.Event) {
+        // The summaries first: the engine reads the failed-page count as it reloads the page.
         switch event {
         case .resolved(let image):
-            failedImagePages.remove(image.index)
+            let wasFailed = failedImagePages.remove(image.index) != nil
             staleCandidates.remove(image.index)
             writer.add(GalleryPage(
                 gid: gallery.gid, index: image.index,
                 imageURL: image.imageURL, originalImageURL: image.originalImageURL
             ))
+            if wasFailed {
+                refreshFailedPageCount()
+            }
+            pageDidChange(image.index)
             engine?.reloadPage(image.index)
         case .failed(let page, _), .updated(let page):
+            refreshFailedPageCount()
+            pageDidChange(page)
             engine?.reloadPage(page)
         }
     }

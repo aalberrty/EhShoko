@@ -17,7 +17,7 @@ struct DesignOptionCard: View {
     /// The wizard marks the option the app uses now with a small "Current" tag.
     var isCurrent = false
     /// The preview's width; its height is 1.6 times that. 95 to 105 on the options screen,
-    /// 84 in the wizard.
+    /// 84 in the wizard on a phone, less in an iPad's form sheet so three cards fit.
     var previewWidth: CGFloat = 100
     let action: () -> Void
 
@@ -25,12 +25,16 @@ struct DesignOptionCard: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private static let cornerRadius: CGFloat = 20
+    /// The preview's height over its width.
+    static let previewAspect: CGFloat = 1.6
+    /// The card's padding above and below its preview.
+    static let verticalPadding = Tokens.Spacing.small * 2
 
     var body: some View {
         Button(action: action) {
             HStack(spacing: Tokens.Spacing.large) {
                 DesignPreview(.option(part, option), look: look)
-                    .frame(width: previewWidth, height: previewWidth * 1.6)
+                    .frame(width: previewWidth, height: previewWidth * Self.previewAspect)
                     .accessibilityHidden(true)
                 VStack(alignment: .leading, spacing: Tokens.Spacing.xSmall) {
                     Text(option.localizedName)
@@ -77,8 +81,9 @@ struct DesignOptionCard: View {
     }
 }
 
-/// An empty ring, or a filled circle with a check in the tint.
-private struct RadioMark: View {
+/// An empty ring, or a filled circle with a check in the tint: the option card's mark, and the
+/// wizard's on its own "Keep what I have" card.
+struct RadioMark: View {
     let isSelected: Bool
 
     @Environment(\.look) private var look

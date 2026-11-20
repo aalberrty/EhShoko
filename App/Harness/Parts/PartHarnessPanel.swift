@@ -39,7 +39,9 @@ struct PartHarnessPanel: View {
                 Section {
                     picker("Kind", $model.options.kind, PartHarnessListKind.allCases) { $0.rawValue }
                     picker("State", $model.options.state, PartHarnessListState.allCases) { $0.rawValue }
-                    Toggle(isOn: $model.options.hasTallHeader) { Text(verbatim: "Tall header") }
+                    picker("Header", $model.options.header, PartHarnessHeaderMode.allCases) { $0.rawValue }
+                    Toggle(isOn: $model.options.showsTags) { Text(verbatim: "Tags in lists") }
+                    picker("Wall density", $model.options.density, WallDensity.allCases) { $0.rawValue }
                 } header: {
                     Text(verbatim: "Lists")
                 }

@@ -3,7 +3,8 @@ import SwiftUI
 /// Places the closing page's scroll view in the slot the engine gives it.
 ///
 /// The scroll view's content is the column with `ReaderClosingPage.bottomReserve` of empty
-/// space under it, the room the reader's controls take when they rest at the bottom.
+/// space under it, the room the reader's controls take when they rest at the bottom; none
+/// while Ledger's open sheet has already shortened the slot.
 ///
 /// - Where the slot holds the content, the scroll view is exactly as tall as the content and
 ///   centred, so the column is centred in the space above the reserve. It cannot scroll then,

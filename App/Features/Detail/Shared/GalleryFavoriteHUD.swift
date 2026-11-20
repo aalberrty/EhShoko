@@ -9,12 +9,6 @@ extension View {
     func galleryFavoriteHUD(_ model: GalleryDetailModel, hud: Binding<HUDConfiguration?>) -> some View {
         modifier(GalleryFavoriteHUD(model: model, hud: hud))
     }
-
-    /// "Login required" with Login, which opens Settings at the account's sign-in, and Cancel:
-    /// what a gallery page's actions that need an account ask when tapped signed out.
-    func gallerySignInAlert(isPresented: Binding<Bool>) -> some View {
-        modifier(GallerySignInAlert(isPresented: isPresented))
-    }
 }
 
 private struct GalleryFavoriteHUD: ViewModifier {
@@ -28,23 +22,6 @@ private struct GalleryFavoriteHUD: ViewModifier {
             guard let report else { return }
             hud = .symbol("heart.fill", title: L10n.Localizable.List.Favorited.hud(userStore.favoriteFolderName(report.folder)))
             FavoriteTip.record(report)
-        }
-    }
-}
-
-private struct GallerySignInAlert: ViewModifier {
-    @Binding var isPresented: Bool
-
-    @Environment(AppRouter.self) private var appRouter: AppRouter?
-
-    func body(content: Content) -> some View {
-        content.alert(L10n.Localizable.ErrorView.Headline.loginRequired, isPresented: $isPresented) {
-            Button(L10n.Localizable.NotLoginView.Button.login) {
-                appRouter?.presentSettings([.settings(.account), .settings(.login)])
-            }
-            AlertCancelButton(title: L10n.Localizable.JumpPageView.Button.cancel)
-        } message: {
-            Text(L10n.Localizable.List.Signin.note)
         }
     }
 }

@@ -78,9 +78,10 @@ struct ShelfGalleryFigures: View {
     }
 
     private var favorited: ShelfFigure {
-        ShelfFigure(
-            title: L10n.Localizable.Gallery.Figure.favorited, value: detail.favoritedCount.formatted(),
-            caption: .text(L10n.Localizable.Gallery.Figure.people)
+        typealias Figure = L10n.Localizable.Gallery.Figure
+        return ShelfFigure(
+            title: Figure.favorited, value: detail.favoritedCount.formatted(),
+            caption: .text(detail.favoritedCount == 1 ? Figure.person : Figure.people)
         )
     }
 }
