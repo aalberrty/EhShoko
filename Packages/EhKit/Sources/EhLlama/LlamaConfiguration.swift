@@ -9,6 +9,19 @@ public struct LlamaConfiguration: Sendable, Equatable {
         case gpu
         /// The CPU alone: no layer and no buffer is given to a GPU.
         case cpu
+
+        /// The GPU on a device and on a Mac with Apple silicon; the CPU on an Intel Mac and
+        /// in every simulator. llama.cpp does run on an Intel GPU, ten times as fast as on the
+        /// CPU, and gets the numbers wrong: a 1.8B model answered "-bal!!!!!!!!" on Iris Plus
+        /// graphics where the CPU gave a sentence. A simulator draws with its Mac's GPU, and
+        /// nothing is measured in one, so it takes the choice that is right everywhere.
+        public static var preferred: Device {
+            #if arch(x86_64) || targetEnvironment(simulator)
+            .cpu
+            #else
+            .gpu
+            #endif
+        }
     }
 
     /// Prompt and answer together, in tokens.
@@ -20,7 +33,7 @@ public struct LlamaConfiguration: Sendable, Equatable {
     public var threads: Int
     public var device: Device
 
-    public init(contextLength: Int = 1024, batchSize: Int = 512, threads: Int = 4, device: Device = .gpu) {
+    public init(contextLength: Int = 1024, batchSize: Int = 512, threads: Int = 4, device: Device = .preferred) {
         self.contextLength = contextLength
         self.batchSize = batchSize
         self.threads = threads

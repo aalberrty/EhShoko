@@ -6,10 +6,20 @@ import Testing
 /// The opt-in tier: a real model file through the Mac slice of the library (`PrivateModels`).
 /// Serialized, because each test maps more than a gigabyte and uses every core it is given.
 @Suite(.serialized) struct LlamaEnginePrivateTests {
-    /// The smallest model file loads, generates 20 tokens, and a stop flag set at the fifth
-    /// token of a second run ends that run there. Once on the CPU alone and once with every
-    /// layer on the GPU; the times are printed for the task's report.
-    @Test(.privateModels, .timeLimit(.minutes(30)), arguments: [LlamaConfiguration.Device.cpu, .gpu])
+    /// On an Intel Mac the GPU is left out: it generates, and what it generates is wrong
+    /// (`LlamaConfiguration.Device.preferred`).
+    static let devices: [LlamaConfiguration.Device] = {
+        #if arch(x86_64)
+        [.cpu]
+        #else
+        [.cpu, .gpu]
+        #endif
+    }()
+
+    /// The smallest model file loads, goes on from a Japanese sentence in Japanese for 20
+    /// tokens, and a stop flag set at the fifth token of another run ends that run there.
+    /// The times are printed for whoever needs them.
+    @Test(.privateModels, .timeLimit(.minutes(30)), arguments: devices)
     func theSmallestModelLoadsGeneratesAndStops(on device: LlamaConfiguration.Device) async throws {
         let model = try PrivateModels.smallest()
         let log = Mutex<[String]>([])
@@ -33,6 +43,11 @@ import Testing
         let generated = try await engine.generate(prompt: prompt, options: options)
         #expect(generated.finish == .tokenLimit)
         #expect(generated.tokens.count == 20)
+        // Kana or kanji: a model that computes wrongly answers with noise.
+        let japanese = generated.text.unicodeScalars.contains { scalar in
+            (0x3040...0x30FF).contains(scalar.value) || (0x4E00...0x9FFF).contains(scalar.value)
+        }
+        #expect(japanese, "\(generated.text)")
         // The likeliest token each time: the same run gives the same tokens.
         let again = try await engine.generate(prompt: prompt, options: options)
         #expect(again.tokens == generated.tokens)
