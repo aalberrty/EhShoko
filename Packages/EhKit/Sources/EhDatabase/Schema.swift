@@ -12,12 +12,16 @@ enum Schema {
     static let tagTranslation = "tagTranslation"
     static let searchHistory = "searchHistory"
     static let quickSearchWord = "quickSearchWord"
+    static let pageTranslation = "pageTranslation"
 
     static func registerMigrations(in migrator: inout DatabaseMigrator) {
         migrator.registerMigration("v1") { db in
             try createGalleryTables(db)
             try createGalleryPageTable(db)
             try createSearchTables(db)
+        }
+        migrator.registerMigration("pageTranslation-1") { db in
+            try createPageTranslationTable(db)
         }
     }
 
@@ -112,5 +116,28 @@ enum Schema {
             table.column("content", .text).notNull()
             table.column("position", .integer).notNull().indexed()
         }
+    }
+
+    private static func createPageTranslationTable(_ db: Database) throws {
+        // The text of each translated page, one row per gallery, model set and page. `modelSet`
+        // is `PageTranslationModelSet.key`; `regions` is a JSON array of `TranslatedRegion`.
+        //
+        // A row is 1 to 4 KB, too large for WITHOUT ROWID (SQLite advises it for rows under a
+        // twentieth of a page), so the key is a unique index beside the rowid table. The index
+        // puts the model set before the page: the questions asked of a whole gallery (how many
+        // pages, which ones) read one range of the index and never touch the rows.
+        try db.create(table: pageTranslation) { table in
+            table.column("gid", .text).notNull()
+            table.column("pageIndex", .integer).notNull()
+            table.column("modelSet", .text).notNull()
+            table.column("imageWidth", .integer).notNull()
+            table.column("imageHeight", .integer).notNull()
+            table.column("regions", .jsonText).notNull()
+            table.column("createdAt", .datetime).notNull()
+        }
+        try db.create(
+            index: "pageTranslation_on_gid_modelSet_pageIndex", on: pageTranslation,
+            columns: ["gid", "modelSet", "pageIndex"], options: .unique
+        )
     }
 }

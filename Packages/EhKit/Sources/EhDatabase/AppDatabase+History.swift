@@ -72,16 +72,26 @@ extension AppDatabase {
         return observation.values(in: writer, scheduling: .task)
     }
 
-    /// Deletes every gallery, detail, state and page row.
+    /// Deletes every gallery, detail, state and page row, and the translated text of every page
+    /// (what the user read), in one transaction.
     ///
-    /// This is a privacy feature, so the content must not stay recoverable on disk:
+    /// This is a privacy feature, so the content must not stay recoverable on disk (see
+    /// `deleteLeavingNoTrace(_:)`). Patch files and translation results not yet written are not
+    /// the database's: whoever clears the history also removes them.
+    public func clearHistory() async throws {
+        try await deleteLeavingNoTrace([
+            Schema.gallery, Schema.galleryDetail, Schema.galleryState, Schema.galleryPage, Schema.pageTranslation
+        ])
+    }
+
+    /// Deletes every row of `tables` in one transaction so that none stays recoverable on disk:
     /// `secure_delete` zeroes the freed pages in the database file, and the write-ahead log,
     /// which still holds the rows' earlier content, is checkpointed and truncated afterwards.
-    public func clearHistory() async throws {
+    func deleteLeavingNoTrace(_ tables: [String]) async throws {
         try await writer.write { db in
             try db.execute(sql: "PRAGMA secure_delete = ON")
             defer { try? db.execute(sql: "PRAGMA secure_delete = OFF") }
-            for table in [Schema.gallery, Schema.galleryDetail, Schema.galleryState, Schema.galleryPage] {
+            for table in tables {
                 try db.execute(sql: "DELETE FROM \(table)")
             }
         }

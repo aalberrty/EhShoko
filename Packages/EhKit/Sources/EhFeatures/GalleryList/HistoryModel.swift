@@ -41,6 +41,8 @@ public final class HistoryModel {
     private var limit = HistoryModel.pageSize
 
     @ObservationIgnored @Dependency(\.database) private var database
+    @ObservationIgnored @Dependency(\.pageTranslationResultWriter) private var pageTranslationWriter
+    @ObservationIgnored @Dependency(\.pageTranslationPatchStore) private var pageTranslationPatches
 
     public init() {}
 
@@ -80,13 +82,24 @@ public final class HistoryModel {
         limit += Self.pageSize
     }
 
+    /// Clears the history and what was translated of the pages read: their text goes with the
+    /// history, in its transaction; then results not yet written are dropped, so a late batch
+    /// cannot write rows back, and the patch files are removed. The second step runs even when
+    /// the first fails.
     public func clear() async {
         isClearConfirmationPresented = false
+        var failure: (any Error)?
         do {
             try await database.clearHistory()
         } catch {
-            fail(error)
+            failure = error
         }
+        do {
+            try await pageTranslationWriter.removeAll(patchStore: pageTranslationPatches)
+        } catch {
+            failure = failure ?? error
+        }
+        if let failure { fail(failure) }
     }
 
     /// The database sends every row again on each change; rows it sent before keep their
