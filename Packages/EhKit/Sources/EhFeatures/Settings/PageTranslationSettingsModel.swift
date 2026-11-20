@@ -17,7 +17,9 @@ import Observation
 /// Choosing a model that is installed applies at once. Choosing one that is not starts its
 /// download while the current models keep working, and applies when its install finishes
 /// (`pending`). When nothing works yet, there is nothing to keep working: the choice
-/// applies at once and becomes part of the set the top card downloads.
+/// applies at once and becomes part of the set the top card downloads. A pending choice is
+/// kept in the settings too, so one whose install ends after the app was closed still applies
+/// when the screen next loads (`restorePendingChoices()`).
 @Observable
 public final class PageTranslationSettingsModel {
     /// What the top card's button does.
@@ -29,7 +31,10 @@ public final class PageTranslationSettingsModel {
     }
 
     /// A choice of each kind that waits for its install; the current one is used until then.
-    public internal(set) var pending: [ModelRole: PageTranslationChoice] = [:]
+    /// Every change is written to the settings, so it is cleared there wherever it is here.
+    public internal(set) var pending: [ModelRole: PageTranslationChoice] = [:] {
+        didSet { persistPending(changedFrom: oldValue) }
+    }
 
     @ObservationIgnored @Dependency(\.pageTranslationModelStore) var store
     @ObservationIgnored @Dependency(\.settings) var settings
@@ -47,6 +52,8 @@ public final class PageTranslationSettingsModel {
     public internal(set) var isClearingTranslatedPages = false
     /// A licence's full text, from the file beside its model, shown in a sheet.
     public var licence: LicenceText?
+    /// The notices of llama.cpp and the fonts, read when Models and licences first opens.
+    public internal(set) var notices: [PageTranslationNotice] = []
 
     /// Keeps the model while a pending choice waits for its install (`watchPending()`).
     @ObservationIgnored private var pendingWatch: Task<Void, Never>?
@@ -60,6 +67,7 @@ public final class PageTranslationSettingsModel {
     /// Translation screen's `task`.
     public func load() async {
         await store.refresh()
+        restorePendingChoices()
         adoptDownloadsUnderWay()
         await measureTranslatedPages()
     }
@@ -212,7 +220,7 @@ public final class PageTranslationSettingsModel {
         }
     }
 
-    private func apply(_ choice: PageTranslationChoice) {
+    func apply(_ choice: PageTranslationChoice) {
         switch choice {
         case .detector(let detector): settings.pageTranslationDetector = detector
         case .reader(let reader): settings.pageTranslationReader = reader
@@ -257,7 +265,7 @@ public final class PageTranslationSettingsModel {
     /// The watch holds the model, on purpose: a choice still applies when its install
     /// finishes after the screen was closed. It ends, and lets the model go, once nothing is
     /// pending.
-    private func watchPending() {
+    func watchPending() {
         guard pendingWatch == nil, !pending.isEmpty else { return }
         pendingWatch = Task {
             await forEachObservedValue(of: { self.pendingStates }) { states in

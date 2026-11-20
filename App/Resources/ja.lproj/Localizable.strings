@@ -1201,6 +1201,7 @@
 "reader.translate.a11y.on" = "翻訳オン";
 "reader.translate.a11y.off" = "翻訳オフ";
 "reader.translate.a11y.cached" = "%d ページは翻訳済み";
+"reader.translate.a11y.cached.one" = "1 ページは翻訳済み";
 "reader.translate.a11y.wipe" = "原文と訳文を比較";
 "translation.download.title" = "この %@ でページを翻訳";
 "translation.download.body" = "日本語の文字を、ページ上でそのまま简体中文に描き直します。ダウンロードは一度だけ必要です。その後はオフラインで使え、データが端末の外に出ることはありません。";
@@ -1224,8 +1225,10 @@
 "settings.translation.headline" = "日本語 → %1$@、この %2$@ 上で";
 "settings.translation.status.none" = "未ダウンロード";
 "settings.translation.status.downloading" = "ダウンロード中 · %1$@ / %2$@";
+"settings.translation.status.paused" = "一時停止中 · %1$@ / %2$@";
 "settings.translation.status.preparing" = "準備中";
 "settings.translation.status.ready" = "準備完了 · オフラインで使用可";
+"settings.translation.status.no_source" = "先に下の「非公開のモデル取得元」を入力してください";
 "settings.translation.pair" = "この組み合わせは、%3$d ページのテストで %2$d 行中 %1$d 行を正確に読み取りました";
 "settings.translation.pair.not_measured" = "この組み合わせではテストしていません";
 "settings.translation.models" = "モデル";
@@ -1257,8 +1260,8 @@
 "settings.translation.value.seconds" = "%@ 秒";
 "settings.translation.value.milliseconds" = "%@ ミリ秒";
 "settings.translation.value.not_measured" = "未測定";
-"settings.translation.value.heat_cool" = "%d ページ連続でも熱くならない";
-"settings.translation.value.heat_hot" = "連続 %d ページ目から熱くなる";
+"settings.translation.value.heat_cool" = "連続 %d ページでも熱くならない";
+"settings.translation.value.heat_hot" = "連続 %d ページ以内に熱くなる";
 "settings.translation.basis.pages" = "当方の %d ページのテストで";
 "settings.translation.basis.pages_mac" = "当方の %d ページのテストで、Mac で実行";
 "settings.translation.basis.phone" = "%@ で";
@@ -1273,7 +1276,9 @@
 "settings.translation.storage.delete_all.message" = "モデルをもう一度ダウンロードするまで、ページ翻訳は使えません。";
 "settings.translation.source" = "非公開のモデル取得元";
 "settings.translation.source.address" = "アドレス";
+"settings.translation.source.address.invalid" = "無効";
 "settings.translation.source.token" = "アクセストークン";
+"settings.translation.source.token.kept" = "保存済み";
 "settings.translation.source.footer" = "任意。このプロジェクトが再配布できないモデルや、自分で用意したコピーに使います。それ以外はすべて公開の取得元から入手します。";
 "settings.translation.licences" = "モデルとライセンス";
 "settings.translation.credit.author" = "作者";

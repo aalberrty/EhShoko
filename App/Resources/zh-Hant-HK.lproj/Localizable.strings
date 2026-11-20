@@ -1200,6 +1200,7 @@
 "reader.translate.a11y.on" = "翻譯已開啟";
 "reader.translate.a11y.off" = "翻譯已關閉";
 "reader.translate.a11y.cached" = "已翻譯 %d 頁";
+"reader.translate.a11y.cached.one" = "已翻譯 1 頁";
 "reader.translate.a11y.wipe" = "比較原文與譯文";
 "translation.download.title" = "在此 %@ 上翻譯頁面";
 "translation.download.body" = "頁面上的日文會直接重繪為简体中文。只需下載一次，之後可離線使用，任何內容都不會離開你的裝置。";
@@ -1223,8 +1224,10 @@
 "settings.translation.headline" = "日文 → %1$@，在此 %2$@ 上";
 "settings.translation.status.none" = "未下載";
 "settings.translation.status.downloading" = "正在下載 · %1$@ / %2$@";
+"settings.translation.status.paused" = "已暫停 · %1$@ / %2$@";
 "settings.translation.status.preparing" = "正在準備";
 "settings.translation.status.ready" = "已就緒 · 可離線使用";
+"settings.translation.status.no_source" = "請先在下方填寫私人模型來源";
 "settings.translation.pair" = "此組合在我們的 %3$d 張測試頁上準確讀出了 %2$d 行中的 %1$d 行";
 "settings.translation.pair.not_measured" = "此組合未經共同測試";
 "settings.translation.models" = "模型";
@@ -1256,8 +1259,8 @@
 "settings.translation.value.seconds" = "%@ 秒";
 "settings.translation.value.milliseconds" = "%@ 毫秒";
 "settings.translation.value.not_measured" = "未測量";
-"settings.translation.value.heat_cool" = "連續 %d 頁都不發熱";
-"settings.translation.value.heat_hot" = "連續第 %d 頁起發熱";
+"settings.translation.value.heat_cool" = "連續翻譯 %d 頁都不發熱";
+"settings.translation.value.heat_hot" = "連續翻譯 %d 頁內就會發熱";
 "settings.translation.basis.pages" = "在我們的 %d 張測試頁上";
 "settings.translation.basis.pages_mac" = "在我們的 %d 張測試頁上，於 Mac 執行";
 "settings.translation.basis.phone" = "在 %@ 上";
@@ -1272,7 +1275,9 @@
 "settings.translation.storage.delete_all.message" = "在重新下載模型之前，頁面翻譯將無法使用。";
 "settings.translation.source" = "私人模型來源";
 "settings.translation.source.address" = "位址";
+"settings.translation.source.address.invalid" = "無效";
 "settings.translation.source.token" = "存取權杖";
+"settings.translation.source.token.kept" = "已儲存";
 "settings.translation.source.footer" = "選填。用於本項目無權發佈的模型，以及你自己的副本。其他一切都來自公開來源。";
 "settings.translation.licences" = "模型與授權";
 "settings.translation.credit.author" = "作者";

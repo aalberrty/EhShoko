@@ -167,6 +167,11 @@ extension ModelTransferProgress {
     var downloadingText: String {
         Strings.Status.downloading(completedBytes.byteText, totalBytes.byteText)
     }
+
+    /// "Paused · 412 MB of 1.18 GB".
+    var pausedText: String {
+        Strings.Status.paused(completedBytes.byteText, totalBytes.byteText)
+    }
 }
 
 @MainActor
@@ -185,14 +190,15 @@ extension ModelStoreFailure {
 }
 
 extension ModelSetState {
-    /// The top card's state line.
+    /// The state line of the models of the current choices, as the reader's download sheet
+    /// can show it.
     var statusText: String {
         typealias Status = Strings.Status
         return switch self {
         case .unavailable: Download.noSource
         case .missing: Status.none
         case .downloading(let progress), .waitingForConnection(let progress): progress.downloadingText
-        case .paused(let progress): progress.text
+        case .paused(let progress): progress.pausedText
         case .preparing: Status.preparing
         case .ready: Status.ready
         case .failed: Download.failed
@@ -215,6 +221,17 @@ extension ModelSetState {
         case .downloading(let progress), .waitingForConnection(let progress), .paused(let progress): progress
         default: nil
         }
+    }
+
+    /// The top card's state line: with no source it points at the private source section
+    /// under it rather than at Settings, where it already is.
+    var settingsStatusText: String {
+        self == .unavailable ? Strings.Status.noSource : statusText
+    }
+
+    func settingsDetail(isConnected: Bool) -> String? {
+        if case .failed(.noSource) = self { return Strings.Status.noSource }
+        return detail(isConnected: isConnected)
     }
 }
 
@@ -239,7 +256,7 @@ extension PageTranslationChoiceCard {
         case .installed: parts.append(Strings.installed)
         case .needs(let bytes): parts.append(Strings.needs(bytes.byteText))
         case .downloading(let progress): parts.append(progress.downloadingText)
-        case .paused(let progress): parts.append(progress.text)
+        case .paused(let progress): parts.append(progress.pausedText)
         case .preparing: parts.append(Strings.Status.preparing)
         case .failed(let failure): parts.append(failure.detail ?? Download.failed)
         case .notOffered: parts.append(Strings.notPublic)

@@ -47,6 +47,28 @@ import Testing
         #expect(store.pageTranslationSourceAddress.isEmpty)
     }
 
+    @Test func pendingChoicesAreStoredAndRemoved() {
+        let storage = PreferenceStorage.ephemeral()
+        let store = SettingsStore(storage: storage)
+        store.pageTranslationPendingDetector = .v4s
+        store.pageTranslationPendingTranslator = .hyMT2
+        #expect(storage.defaults.string(forKey: "settings.pageTranslationPendingDetector") == "v4s")
+        #expect(storage.defaults.string(forKey: "settings.pageTranslationPendingTranslator") == "hyMT2")
+        let reloaded = SettingsStore(storage: storage)
+        #expect(reloaded.pageTranslationPendingDetector == .v4s)
+        #expect(reloaded.pageTranslationPendingReader == nil)
+        #expect(reloaded.pageTranslationPendingTranslator == .hyMT2)
+        reloaded.pageTranslationPendingDetector = nil
+        #expect(!storage.contains(.pageTranslationPendingDetector))
+        #expect(SettingsStore(storage: storage).pageTranslationPendingDetector == nil)
+    }
+
+    @Test func anUnknownPendingChoiceIsDropped() {
+        let storage = PreferenceStorage.ephemeral()
+        storage.defaults.set("someFutureTranslator", forKey: "settings.pageTranslationPendingTranslator")
+        #expect(SettingsStore(storage: storage).pageTranslationPendingTranslator == nil)
+    }
+
     @Test func modelSetObservesOnlyTheModelSettings() {
         let store = SettingsStore(storage: .ephemeral())
         let read = { _ = store.pageTranslationModelSet }

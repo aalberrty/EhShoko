@@ -79,7 +79,7 @@ let package = Package(
         .target(
             name: "EhCore",
             dependencies: [
-                "EhModels", "EhParser", "EhNetworking", "EhDatabase", "EhLlama",
+                "EhModels", "EhParser", "EhNetworking", "EhDatabase", "EhLlama", "EhPageTranslation",
                 .product(name: "Dependencies", package: "swift-dependencies"),
                 .product(name: "OpenCC", package: "SwiftyOpenCC")
             ]
