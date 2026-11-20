@@ -106,23 +106,73 @@ import Testing
         let writer = Self.writer(database)
         await writer.add(Self.page(gid: "1", index: 1))
         await writer.flush()
-        await writer.deleteAllTranslations()
+        await writer.deleteTranslations(gid: "1")
         await writer.waitUntilWritten()
         #expect(try await database.pageTranslationCount(gid: "1", modelSetKey: Self.modelSet) == 0)
         #expect(await writer.writeCount == 2)
     }
 
-    @Test func deletingEverythingForgetsEveryQueuedResult() async throws {
+    @Test func discardingDropsWhatIsWaiting() async throws {
+        let database = try await TestDatabase.inMemory()
+        let writer = Self.writer(database)
+        await writer.add(Self.page(gid: "1", index: 1))
+        await writer.discardUnwritten()
+        #expect(try await writer.translatedPageCount(gid: "1", modelSetKey: Self.modelSet) == 0)
+        await writer.flush()
+        await writer.waitUntilWritten()
+        #expect(await writer.writeCount == 0)
+        // Results added afterwards are written as usual.
+        await writer.add(Self.page(gid: "1", index: 2))
+        await writer.flush()
+        await writer.waitUntilWritten()
+        #expect(try await database.translatedPageIndices(gid: "1", modelSetKey: Self.modelSet) == [2])
+    }
+
+    /// What Clear History relies on: once `discardUnwritten()` returns, no batch made before it
+    /// commits, so rows deleted then stay deleted. A large batch makes a save that would still
+    /// be running likely to commit after the delete.
+    @Test func noBatchFromBeforeADiscardCommitsAfterIt() async throws {
+        let database = try await TestDatabase.inMemory()
+        let writer = Self.writer(database)
+        for index in 1...400 {
+            await writer.add(Self.page(gid: "1", index: index))
+        }
+        await writer.flush()
+        await writer.add(Self.page(gid: "2", index: 1))
+        await writer.discardUnwritten()
+        try await database.deleteAllPageTranslations()
+        await writer.flush()
+        await writer.waitUntilWritten()
+        #expect(try await database.pageTranslationCount(gid: "1", modelSetKey: Self.modelSet) == 0)
+        #expect(try await database.pageTranslationCount(gid: "2", modelSetKey: Self.modelSet) == 0)
+    }
+
+    @Test func removingEverythingTakesRowsWaitingResultsAndPatchFiles() async throws {
         let database = try await TestDatabase.inMemory()
         try await database.savePageTranslations([Self.page(gid: "1", index: 1)])
         let writer = Self.writer(database)
         await writer.add(Self.page(gid: "2", index: 1))
-        await writer.deleteAllTranslations()
+        let (patches, directory) = try await Self.patchStoreWithAFile()
+        defer { try? FileManager.default.removeItem(at: directory.deletingLastPathComponent()) }
+
+        try await writer.removeAll(patchStore: patches)
+
         #expect(try await writer.translatedPageCount(gid: "2", modelSetKey: Self.modelSet) == 0)
         await writer.flush()
         await writer.waitUntilWritten()
         #expect(try await database.pageTranslationCount(gid: "1", modelSetKey: Self.modelSet) == 0)
         #expect(try await database.pageTranslationCount(gid: "2", modelSetKey: Self.modelSet) == 0)
+        #expect(!FileManager.default.fileExists(atPath: directory.path))
+        #expect(await patches.size() == 0)
+    }
+
+    @Test func removingEverythingWhenNothingWasTranslatedSucceeds() async throws {
+        let writer = Self.writer(try await TestDatabase.inMemory())
+        let patches = PageTranslationPatchStore(
+            directory: URL.temporaryDirectory.appending(path: "Missing-\(UUID().uuidString)", directoryHint: .isDirectory)
+        )
+        try await writer.removeAll(patchStore: patches)
+        #expect(await patches.size() == 0)
     }
 
     @Test func expiryWritesWhatIsQueuedAndKeepsTheCurrentModelSet() async throws {
@@ -145,6 +195,17 @@ import Testing
         #expect(try await database.pageTranslationCount(gid: "2", modelSetKey: Self.otherModelSet) == 0)
         #expect(try await database.translatedPageIndices(gid: "3", modelSetKey: Self.modelSet) == [1])
         #expect(try await database.pageTranslationCount(gid: "3", modelSetKey: Self.otherModelSet) == 0)
+    }
+
+    /// A patch store over a new temporary folder that holds one patch file.
+    static func patchStoreWithAFile() async throws -> (PageTranslationPatchStore, URL) {
+        let directory = try TestDatabase.makeTemporaryDirectory().appending(path: "PageTranslation")
+        let store = PageTranslationPatchStore(directory: directory)
+        let variant = PageTranslationPatchVariant(modelSet: .default, repaint: .lamaManga, renderVersion: 1)
+        let url = try await store.prepareToWrite(gid: "1", pageIndex: 1, variant: variant)
+        try Data(repeating: 1, count: 4_096).write(to: url)
+        await store.didWrite(url)
+        return (store, directory)
     }
 
     static func page(

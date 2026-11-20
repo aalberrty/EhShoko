@@ -13,6 +13,8 @@ import Foundation
 /// Reads go through the writer rather than straight to the database: a result waiting for its
 /// batch, or in a write that has not committed, is still found, so a page is never translated
 /// twice because it came back into view within the delay.
+///
+/// The process has one writer, `\.pageTranslationResultWriter`.
 public actor PageTranslationResultWriter {
     /// How long results are collected before they are written: longer than a page takes, so a
     /// run of pages shares a transaction; short enough that little is lost if the app is killed.
@@ -48,8 +50,12 @@ public actor PageTranslationResultWriter {
     private var inFlight: [PageKey: PageTranslation] = [:]
     /// Deletes queued and not finished: reads wait for them, so nothing deleted is found again.
     private var queuedDeletes = 0
+    /// Raised by `discardUnwritten()`: a save queued before it finds its generation old and does
+    /// not run.
+    private var generation = 0
     private var timer: Task<Void, Never>?
-    private var lastWrite: Task<Void, Never>?
+    /// The last write queued; its value is the error it failed with.
+    private var lastWrite: Task<(any Error)?, Never>?
     /// Database transactions started so far. Tests read it to see that results are batched.
     public private(set) var writeCount = 0
 
@@ -89,7 +95,7 @@ public actor PageTranslationResultWriter {
         pending = [:]
         inFlight.merge(batch) { _, newer in newer }
         let translations = batch.values.sorted { ($0.gid, $0.pageIndex) < ($1.gid, $1.pageIndex) }
-        enqueue { [database] in
+        enqueue(generation: generation) { [database] in
             try await database.savePageTranslations(translations)
         } completion: { writer in
             for (key, translation) in batch where writer.inFlight[key] == translation {
@@ -105,13 +111,30 @@ public actor PageTranslationResultWriter {
         enqueueDelete { database in try await database.deletePageTranslations(gid: gid) }
     }
 
-    /// Forgets every queued result and deletes every stored page.
-    public func deleteAllTranslations() {
+    /// Forgets every result not yet written and returns when no save of one is running, so a late
+    /// batch cannot write rows back after the caller deletes them. Saves queued before it do not
+    /// run; results added after it are written as usual.
+    public func discardUnwritten() async {
         timer?.cancel()
         timer = nil
         pending = [:]
         inFlight = [:]
-        enqueueDelete { database in try await database.deleteAllPageTranslations() }
+        generation += 1
+        await waitUntilWritten()
+    }
+
+    /// Removes every translated page: results not yet written, every stored row (leaving no
+    /// trace of their text in the database's files) and every patch file of `patchStore`.
+    /// Settings' Clear calls it, and so does Clear History after clearing the history. When
+    /// translation was never used it costs one empty delete and finds no folder to remove.
+    ///
+    /// Throws when the rows could not be deleted; the patch files are removed either way.
+    public func removeAll(patchStore: PageTranslationPatchStore) async throws {
+        await discardUnwritten()
+        let delete = enqueueDelete { database in try await database.deleteAllPageTranslations() }
+        let failure = await delete.value
+        await patchStore.removeAll()
+        if let failure { throw failure }
     }
 
     /// Deletes stored pages of every model set but `modelSetKey`, and of galleries neither opened
@@ -128,7 +151,7 @@ public actor PageTranslationResultWriter {
         }
     }
 
-    /// Returns when every write queued so far has finished.
+    /// Returns when every write queued so far has finished or was skipped.
     public func waitUntilWritten() async {
         while let write = lastWrite {
             await write.value
@@ -185,29 +208,41 @@ public actor PageTranslationResultWriter {
         }
     }
 
-    private func enqueueDelete(_ delete: @escaping @Sendable (AppDatabase) async throws -> Void) {
+    @discardableResult
+    private func enqueueDelete(
+        _ delete: @escaping @Sendable (AppDatabase) async throws -> Void
+    ) -> Task<(any Error)?, Never> {
         queuedDeletes += 1
-        enqueue { [database] in
+        return enqueue(generation: nil) { [database] in
             try await delete(database)
         } completion: { writer in
             writer.queuedDeletes -= 1
         }
     }
 
+    /// Queues `write` after every write queued before it. A write with a `generation` is skipped
+    /// when `discardUnwritten()` has raised the generation since it was queued.
+    @discardableResult
     private func enqueue(
+        generation: Int?,
         _ write: @escaping @Sendable () async throws -> Void,
         completion: @escaping @Sendable (isolated PageTranslationResultWriter) -> Void
-    ) {
+    ) -> Task<(any Error)?, Never> {
         let previous = lastWrite
         writeCount += 1
-        lastWrite = Task {
-            await previous?.value
+        let task = Task { () -> (any Error)? in
+            _ = await previous?.value
+            defer { completion(self) }
+            if let generation, generation != self.generation { return nil }
             do {
                 try await write()
+                return nil
             } catch {
                 logger.error("Saving page translations failed: \(error)", category: "PageTranslation")
+                return error
             }
-            completion(self)
         }
+        lastWrite = task
+        return task
     }
 }

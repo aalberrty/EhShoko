@@ -31,6 +31,7 @@ public struct PageTranslationPatchVariant: Sendable, Hashable {
 ///
 /// The store keeps the folder's size in memory once it has measured it, so a write costs one
 /// `stat` and no scan. Nothing here runs at launch: the store measures and expires on first use.
+/// The process has one store, `\.pageTranslationPatchStore`.
 public actor PageTranslationPatchStore {
     /// 300 MB: one to three thousand pages at 100 to 400 KB each.
     public static let defaultLimit = 300 * 1024 * 1024
@@ -93,7 +94,9 @@ public actor PageTranslationPatchStore {
         setLastUsed(date, of: galleryFolder(gid))
     }
 
-    /// The size of every patch file on disk, in bytes, measured now (what Settings shows).
+    /// The size of every patch file on disk, in bytes, measured now: what Settings shows for
+    /// translated pages. The text in the database is not counted: 1 to 4 KB a page, a few MB
+    /// for thousands of pages, and measuring it would read every row.
     public func size() -> Int {
         let total = measure()
         knownSize = total
