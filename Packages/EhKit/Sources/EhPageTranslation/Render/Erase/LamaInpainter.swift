@@ -6,32 +6,40 @@ import Foundation
 /// It runs on the GPU. On the Neural Engine it returns black or noisy tiles, so that is never
 /// asked for; `big-lama` also needs its 32-bit version, which is a matter of which file is
 /// installed. Loading takes a second or two, and so does the first tile.
-public final class LamaInpainter: Inpainter {
-    private let model: LoadedModel
+public struct LamaInpainter: Inpainter {
+    private let model: CoreMLModel
     private let outputName: String
-
-    /// Loads the compiled model at `url`. Blocks while it loads: call it off the main actor.
-    public init(compiledModel url: URL, computeUnits: MLComputeUnits = .cpuAndGPU) throws {
-        let configuration = MLModelConfiguration()
-        configuration.computeUnits = computeUnits
-        let model = try MLModel(contentsOf: url, configuration: configuration)
-        let inputs = model.modelDescription.inputDescriptionsByName
-        guard inputs[Self.imageName] != nil, inputs[Self.maskName] != nil,
-              let output = model.modelDescription.outputDescriptionsByName.keys.sorted().first
-        else { throw InpainterError.unexpectedOutput }
-        self.model = LoadedModel(model: model)
-        outputName = output
-    }
 
     static let imageName = "image"
     static let maskName = "mask"
+
+    /// Loads the compiled model at `url` and checks that it takes and gives tiles: a wrong
+    /// file is refused here, before any page is seen.
+    public init(compiledModel url: URL, computeUnits: MLComputeUnits = .cpuAndGPU) async throws {
+        let model = try await CoreMLModel.load(contentsOf: url, computeUnits: computeUnits)
+        let side = TilePlan.modelSide
+        let image = try model.inputArray(Self.imageName, rank: 4).shape
+        let mask = try model.inputArray(Self.maskName, rank: 4).shape
+        guard image == [1, 3, side, side] else { throw ModelSignatureError.unexpectedShape(Self.imageName, image) }
+        guard mask == [1, 1, side, side] else { throw ModelSignatureError.unexpectedShape(Self.maskName, mask) }
+        // The model has one output; its name is the conversion's.
+        guard model.outputs.count == 1, let output = model.outputs.keys.first else {
+            throw ModelSignatureError.missingOutput("output")
+        }
+        let shape = try model.outputShape(output, rank: 4)
+        guard shape == [1, 3, side, side] else { throw ModelSignatureError.unexpectedShape(output, shape) }
+        self.model = model
+        outputName = output
+    }
 
     public func repaint(tile: [UInt8], mask: [UInt8]) async throws -> [UInt8] {
         let side = TilePlan.modelSide, count = side * side
         guard tile.count == count * 4, mask.count == count else { throw InpainterError.unexpectedOutput }
         let image = try MLMultiArray(shape: [1, 3, NSNumber(value: side), NSNumber(value: side)], dataType: .float32)
         let hole = try MLMultiArray(shape: [1, 1, NSNumber(value: side), NSNumber(value: side)], dataType: .float32)
-        // The model reads planes of red, green and blue from 0 to 1, as the page encodes them.
+        // A new array's memory is not cleared: every element of both is written here, the
+        // three planes of the image and the whole mask. The model reads planes of red, green
+        // and blue from 0 to 1, as the page encodes them.
         image.withUnsafeMutableBufferPointer(ofType: Float.self) { values, _ in
             tile.withUnsafeBufferPointer { bytes in
                 for index in 0..<count {
@@ -44,12 +52,10 @@ public final class LamaInpainter: Inpainter {
         hole.withUnsafeMutableBufferPointer(ofType: Float.self) { values, _ in
             for index in 0..<count { values[index] = mask[index] != 0 ? 1 : 0 }
         }
-        let input = try MLDictionaryFeatureProvider(dictionary: [Self.imageName: image, Self.maskName: hole])
-        let output = try await model.model.prediction(from: input)
-        guard let values = output.featureValue(for: outputName)?.multiArrayValue else {
-            throw InpainterError.unexpectedOutput
-        }
-        return try Self.pixels(of: values)
+        let output = try await model.prediction([
+            Self.imageName: MLFeatureValue(multiArray: image), Self.maskName: MLFeatureValue(multiArray: hole)
+        ])
+        return try Self.pixels(of: output.multiArray(outputName))
     }
 
     /// The model's output, planes of red, green and blue from 0 to 1, as the bytes of a tile.
@@ -75,13 +81,4 @@ public final class LamaInpainter: Inpainter {
             return pixels
         }
     }
-}
-
-/// A loaded Core ML model that may be used from any task.
-///
-/// `@unchecked Sendable` is safe here: nothing changes an `MLModel` after it is loaded, and
-/// Core ML's asynchronous prediction, the only call made on it, is the one Apple documents
-/// for use from several tasks at once.
-private struct LoadedModel: @unchecked Sendable {
-    let model: MLModel
 }

@@ -119,7 +119,7 @@ import Testing
 
     /// The model's output for each research tile on `units`, against the reference.
     private func tileResults(_ folder: PrivateFolder, units: MLComputeUnits, name: String) async throws -> [TileResult] {
-        let inpainter = try LamaInpainter(compiledModel: try await Self.compiledRepaintModel(folder), computeUnits: units)
+        let inpainter = try await LamaInpainter(compiledModel: try await Self.compiledRepaintModel(folder), computeUnits: units)
         var results: [TileResult] = []
         let clock = ContinuousClock()
         for number in 0..<10 {
@@ -165,14 +165,17 @@ import Testing
         let folder = try PrivateFolder.required()
         let onCPU = try await tileResults(folder, units: .cpuOnly, name: "cpuOnly")
         let onGPU = try await tileResults(folder, units: .cpuAndGPU, name: "cpuAndGPU")
+        // The GPU's values differ a little from one loading of the model to the next; a second
+        // pass is recorded to show by how much.
+        let again = try await tileResults(folder, units: .cpuAndGPU, name: "cpuAndGPU, loaded again")
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
-        try encoder.encode(onCPU + onGPU).write(to: Self.reports(folder).appending(path: "lama-tiles.json"))
+        try encoder.encode(onCPU + onGPU + again).write(to: Self.reports(folder).appending(path: "lama-tiles.json"))
         for result in onCPU {
             #expect(result.psnrInMask >= Self.minimumPSNROnCPU, "tile \(result.tile) on the CPU: \(result.psnrInMask) dB in the mask")
             #expect(result.largestDifference <= Self.largestDifferenceOnCPU, "tile \(result.tile) on the CPU")
         }
-        for result in onGPU {
+        for result in onGPU + again {
             #expect(result.psnrInMask >= Self.minimumPSNROnGPU, "tile \(result.tile) on the GPU: \(result.psnrInMask) dB in the mask")
         }
     }
@@ -191,7 +194,7 @@ import Testing
     @Test func aTranslatedPictureOfEachTestPage() async throws {
         let folder = try PrivateFolder.required()
         let reports = try Self.reports(folder)
-        let inpainter = try LamaInpainter(compiledModel: try await Self.compiledRepaintModel(folder))
+        let inpainter = try await LamaInpainter(compiledModel: try await Self.compiledRepaintModel(folder))
         struct PageSummary: Codable {
             var page: String
             var blocks: Int

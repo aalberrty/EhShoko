@@ -1,3 +1,5 @@
+import Accelerate
+
 /// Binary morphology on planes of one byte per pixel (non-zero = set), `width` × `height`,
 /// row by row. The loops run on unsafe buffers: they are the inner loops of drawing a page.
 enum Morphology {
@@ -112,28 +114,41 @@ enum Morphology {
     }
 
     /// Grows the set pixels by `radius` pixels along both axes (a square): cheaper than a
-    /// disc, and enough to close the gaps of an anti-aliased outline.
+    /// disc, and enough to close the gaps of an anti-aliased outline. vImage's maximum filter
+    /// does it in one pass whatever the plane holds; a plane that is mostly set, like a
+    /// balloon's mask, cost several times a sparse one when every set pixel wrote its
+    /// neighbours.
     static func dilateSquare(_ plane: [UInt8], width: Int, height: Int, radius: Int) -> [UInt8] {
-        guard radius > 0, width > 0, height > 0 else { return plane }
-        var rows = [UInt8](repeating: 0, count: plane.count), out = [UInt8](repeating: 0, count: plane.count)
-        plane.withUnsafeBufferPointer { source in
-            rows.withUnsafeMutableBufferPointer { grown in
-                for y in 0..<height {
-                    let row = y * width
-                    for x in 0..<width where source[row + x] != 0 {
-                        for near in max(0, x - radius)...min(width - 1, x + radius) { grown[row + near] = 1 }
-                    }
-                }
+        guard radius > 0, width > 0, height > 0, plane.count == width * height else { return plane }
+        var out = [UInt8](repeating: 0, count: plane.count)
+        let side = vImagePixelCount(2 * radius + 1)
+        let error = plane.withUnsafeBytes { source in
+            out.withUnsafeMutableBytes { destination in
+                var input = vImage_Buffer(
+                    data: UnsafeMutableRawPointer(mutating: source.baseAddress), height: vImagePixelCount(height),
+                    width: vImagePixelCount(width), rowBytes: width
+                )
+                var output = vImage_Buffer(
+                    data: destination.baseAddress, height: vImagePixelCount(height), width: vImagePixelCount(width),
+                    rowBytes: width
+                )
+                return vImageMax_Planar8(&input, &output, nil, 0, 0, side, side, vImage_Flags(kvImageNoFlags))
             }
         }
-        rows.withUnsafeBufferPointer { source in
-            out.withUnsafeMutableBufferPointer { grown in
-                for y in 0..<height {
-                    let row = y * width
-                    for x in 0..<width where source[row + x] != 0 {
-                        for near in max(0, y - radius)...min(height - 1, y + radius) { grown[near * width + x] = 1 }
-                    }
-                }
+        return error == kvImageNoError ? out : dilateSquareByRows(plane, width: width, height: height, radius: radius)
+    }
+
+    /// The same without vImage, for the case that it refuses the plane.
+    private static func dilateSquareByRows(_ plane: [UInt8], width: Int, height: Int, radius: Int) -> [UInt8] {
+        var rows = [UInt8](repeating: 0, count: plane.count), out = [UInt8](repeating: 0, count: plane.count)
+        for y in 0..<height {
+            for x in 0..<width where plane[y * width + x] != 0 {
+                for near in max(0, x - radius)...min(width - 1, x + radius) { rows[y * width + near] = 1 }
+            }
+        }
+        for y in 0..<height {
+            for x in 0..<width where rows[y * width + x] != 0 {
+                for near in max(0, y - radius)...min(height - 1, y + radius) { out[near * width + x] = 1 }
             }
         }
         return out
