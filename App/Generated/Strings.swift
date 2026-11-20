@@ -2171,6 +2171,8 @@ internal enum L10n {
       internal static let liveText = L10n.tr("Localizable", "reader.live_text", fallback: "Live Text")
       /// Settings
       internal static let settings = L10n.tr("Localizable", "reader.settings", fallback: "Settings")
+      /// Translate
+      internal static let translate = L10n.tr("Localizable", "reader.translate", fallback: "Translate")
       internal enum Action {
         /// Save
         internal static let save = L10n.tr("Localizable", "reader.action.save", fallback: "Save")
@@ -2247,6 +2249,60 @@ internal enum L10n {
         /// Pages %1$d–%2$d of %3$d
         internal static func of(_ p1: Int, _ p2: Int, _ p3: Int) -> String {
           return L10n.tr("Localizable", "reader.pages.of", p1, p2, p3, fallback: "Pages %1$d–%2$d of %3$d")
+        }
+      }
+      internal enum Translate {
+        /// Compare
+        internal static let compare = L10n.tr("Localizable", "reader.translate.compare", fallback: "Compare")
+        /// Translation · on this %@
+        internal static func group(_ p1: Any) -> String {
+          return L10n.tr("Localizable", "reader.translate.group", String(describing: p1), fallback: "Translation · on this %@")
+        }
+        /// Original
+        internal static let original = L10n.tr("Localizable", "reader.translate.original", fallback: "Original")
+        /// Translate to %@
+        internal static func `switch`(_ p1: Any) -> String {
+          return L10n.tr("Localizable", "reader.translate.switch", String(describing: p1), fallback: "Translate to %@")
+        }
+        /// 简体中文
+        internal static let target = L10n.tr("Localizable", "reader.translate.target", fallback: "简体中文")
+        /// Translated
+        internal static let translated = L10n.tr("Localizable", "reader.translate.translated", fallback: "Translated")
+        internal enum A11y {
+          /// %d pages already translated
+          internal static func cached(_ p1: Int) -> String {
+            return L10n.tr("Localizable", "reader.translate.a11y.cached", p1, fallback: "%d pages already translated")
+          }
+          /// Translation off
+          internal static let off = L10n.tr("Localizable", "reader.translate.a11y.off", fallback: "Translation off")
+          /// Translation on
+          internal static let on = L10n.tr("Localizable", "reader.translate.a11y.on", fallback: "Translation on")
+          /// Compare original and translation
+          internal static let wipe = L10n.tr("Localizable", "reader.translate.a11y.wipe", fallback: "Compare original and translation")
+        }
+        internal enum Status {
+          /// Downloading translation · %1$@ of %2$@
+          internal static func downloading(_ p1: Any, _ p2: Any) -> String {
+            return L10n.tr("Localizable", "reader.translate.status.downloading", String(describing: p1), String(describing: p2), fallback: "Downloading translation · %1$@ of %2$@")
+          }
+          /// Couldn't translate page %d
+          internal static func failed(_ p1: Int) -> String {
+            return L10n.tr("Localizable", "reader.translate.status.failed", p1, fallback: "Couldn't translate page %d")
+          }
+          /// Hold Translate to see the original
+          internal static let hold = L10n.tr("Localizable", "reader.translate.status.hold", fallback: "Hold Translate to see the original")
+          /// Getting translation ready…
+          internal static let preparing = L10n.tr("Localizable", "reader.translate.status.preparing", fallback: "Getting translation ready…")
+          /// Translating page %d…
+          internal static func translating(_ p1: Int) -> String {
+            return L10n.tr("Localizable", "reader.translate.status.translating", p1, fallback: "Translating page %d…")
+          }
+        }
+        internal enum Wipe {
+          /// 原文
+          internal static let original = L10n.tr("Localizable", "reader.translate.wipe.original", fallback: "原文")
+          /// 译文
+          internal static let translated = L10n.tr("Localizable", "reader.translate.wipe.translated", fallback: "译文")
         }
       }
     }
@@ -2389,6 +2445,8 @@ internal enum L10n {
     internal enum Settings {
       /// Experience
       internal static let design = L10n.tr("Localizable", "settings.design", fallback: "Experience")
+      /// Translation
+      internal static let translation = L10n.tr("Localizable", "settings.translation", fallback: "Translation")
       internal enum Account {
         /// Cookies
         internal static let cookies = L10n.tr("Localizable", "settings.account.cookies", fallback: "Cookies")
@@ -2713,6 +2771,206 @@ internal enum L10n {
           internal static let desc = L10n.tr("Localizable", "settings.row.reading.desc", fallback: "Direction, preload, two pages, gaps, zoom")
         }
       }
+      internal enum Translation {
+        /// Default
+        internal static let `default` = L10n.tr("Localizable", "settings.translation.default", fallback: "Default")
+        /// Japanese to Chinese on this device, models, storage
+        internal static let desc = L10n.tr("Localizable", "settings.translation.desc", fallback: "Japanese to Chinese on this device, models, storage")
+        /// Find text
+        internal static let detector = L10n.tr("Localizable", "settings.translation.detector", fallback: "Find text")
+        /// Pages are translated on this %@. Nothing is uploaded.
+        internal static func footer(_ p1: Any) -> String {
+          return L10n.tr("Localizable", "settings.translation.footer", String(describing: p1), fallback: "Pages are translated on this %@. Nothing is uploaded.")
+        }
+        /// Japanese → %1$@, on this %2$@
+        internal static func headline(_ p1: Any, _ p2: Any) -> String {
+          return L10n.tr("Localizable", "settings.translation.headline", String(describing: p1), String(describing: p2), fallback: "Japanese → %1$@, on this %2$@")
+        }
+        /// Installed
+        internal static let installed = L10n.tr("Localizable", "settings.translation.installed", fallback: "Installed")
+        /// Models and licenses
+        internal static let licences = L10n.tr("Localizable", "settings.translation.licences", fallback: "Models and licenses")
+        /// Models
+        internal static let models = L10n.tr("Localizable", "settings.translation.models", fallback: "Models")
+        /// Needs %@
+        internal static func needs(_ p1: Any) -> String {
+          return L10n.tr("Localizable", "settings.translation.needs", String(describing: p1), fallback: "Needs %@")
+        }
+        /// Not in the public store
+        internal static let notPublic = L10n.tr("Localizable", "settings.translation.not_public", fallback: "Not in the public store")
+        /// Your own copy, not checked
+        internal static let ownCopy = L10n.tr("Localizable", "settings.translation.own_copy", fallback: "Your own copy, not checked")
+        /// This pair read %1$d of %2$d lines exactly on our %3$d test pages
+        internal static func pair(_ p1: Int, _ p2: Int, _ p3: Int) -> String {
+          return L10n.tr("Localizable", "settings.translation.pair", p1, p2, p3, fallback: "This pair read %1$d of %2$d lines exactly on our %3$d test pages")
+        }
+        /// Read text
+        internal static let reader = L10n.tr("Localizable", "settings.translation.reader", fallback: "Read text")
+        /// Repaint artwork
+        internal static let repaint = L10n.tr("Localizable", "settings.translation.repaint", fallback: "Repaint artwork")
+        /// Private model source
+        internal static let source = L10n.tr("Localizable", "settings.translation.source", fallback: "Private model source")
+        /// Storage
+        internal static let storage = L10n.tr("Localizable", "settings.translation.storage", fallback: "Storage")
+        /// Translate
+        internal static let translator = L10n.tr("Localizable", "settings.translation.translator", fallback: "Translate")
+        internal enum Basis {
+          /// On a Mac
+          internal static let mac = L10n.tr("Localizable", "settings.translation.basis.mac", fallback: "On a Mac")
+          /// On our %d test pages
+          internal static func pages(_ p1: Int) -> String {
+            return L10n.tr("Localizable", "settings.translation.basis.pages", p1, fallback: "On our %d test pages")
+          }
+          /// On our %d test pages, run on a Mac
+          internal static func pagesMac(_ p1: Int) -> String {
+            return L10n.tr("Localizable", "settings.translation.basis.pages_mac", p1, fallback: "On our %d test pages, run on a Mac")
+          }
+          /// On %@
+          internal static func phone(_ p1: Any) -> String {
+            return L10n.tr("Localizable", "settings.translation.basis.phone", String(describing: p1), fallback: "On %@")
+          }
+        }
+        internal enum Credit {
+          /// Author
+          internal static let author = L10n.tr("Localizable", "settings.translation.credit.author", fallback: "Author")
+          /// Changed by this project
+          internal static let changes = L10n.tr("Localizable", "settings.translation.credit.changes", fallback: "Changed by this project")
+          /// License
+          internal static let licence = L10n.tr("Localizable", "settings.translation.credit.licence", fallback: "License")
+          /// Non-commercial use only
+          internal static let nc = L10n.tr("Localizable", "settings.translation.credit.nc", fallback: "Non-commercial use only")
+          /// Source
+          internal static let source = L10n.tr("Localizable", "settings.translation.credit.source", fallback: "Source")
+        }
+        internal enum Desc {
+          internal enum Repaint {
+            /// The same with a general model, larger
+            internal static let bigLama = L10n.tr("Localizable", "settings.translation.desc.repaint.big_lama", fallback: "The same with a general model, larger")
+            /// Redraws the artwork behind the text
+            internal static let lamaManga = L10n.tr("Localizable", "settings.translation.desc.repaint.lama_manga", fallback: "Redraws the artwork behind the text")
+            /// No download; a smooth fill behind text on artwork
+            internal static let off = L10n.tr("Localizable", "settings.translation.desc.repaint.off", fallback: "No download; a smooth fill behind text on artwork")
+          }
+        }
+        internal enum Figure {
+          /// First load
+          internal static let firstLoad = L10n.tr("Localizable", "settings.translation.figure.first_load", fallback: "First load")
+          /// Balloon text found
+          internal static let foundBalloon = L10n.tr("Localizable", "settings.translation.figure.found_balloon", fallback: "Balloon text found")
+          /// Handwritten notes found
+          internal static let foundNotes = L10n.tr("Localizable", "settings.translation.figure.found_notes", fallback: "Handwritten notes found")
+          /// Heat
+          internal static let heat = L10n.tr("Localizable", "settings.translation.figure.heat", fallback: "Heat")
+          /// Memory
+          internal static let memory = L10n.tr("Localizable", "settings.translation.figure.memory", fallback: "Memory")
+          /// Graphics memory
+          internal static let memoryGpu = L10n.tr("Localizable", "settings.translation.figure.memory_gpu", fallback: "Graphics memory")
+          /// Picture matches the reference
+          internal static let picture = L10n.tr("Localizable", "settings.translation.figure.picture", fallback: "Picture matches the reference")
+          /// Lines read exactly
+          internal static let readExact = L10n.tr("Localizable", "settings.translation.figure.read_exact", fallback: "Lines read exactly")
+          /// Lines translated fully right
+          internal static let `right` = L10n.tr("Localizable", "settings.translation.figure.right", fallback: "Lines translated fully right")
+          /// Lines with a serious error
+          internal static let serious = L10n.tr("Localizable", "settings.translation.figure.serious", fallback: "Lines with a serious error")
+          /// Time for a block of text
+          internal static let timeBlock = L10n.tr("Localizable", "settings.translation.figure.time_block", fallback: "Time for a block of text")
+          /// Time for a page
+          internal static let timePage = L10n.tr("Localizable", "settings.translation.figure.time_page", fallback: "Time for a page")
+          /// Time for a tile of artwork
+          internal static let timeTile = L10n.tr("Localizable", "settings.translation.figure.time_tile", fallback: "Time for a tile of artwork")
+        }
+        internal enum Measured {
+          /// Accuracy is from our own test of %1$d pages. Speed and memory were measured on %2$@. Your pages and your device will differ.
+          internal static func footer(_ p1: Int, _ p2: Any) -> String {
+            return L10n.tr("Localizable", "settings.translation.measured.footer", p1, String(describing: p2), fallback: "Accuracy is from our own test of %1$d pages. Speed and memory were measured on %2$@. Your pages and your device will differ.")
+          }
+        }
+        internal enum NotPublic {
+          /// Its license does not let this project pass it on. It can be chosen with a private source or your own copy.
+          internal static let why = L10n.tr("Localizable", "settings.translation.not_public.why", fallback: "Its license does not let this project pass it on. It can be chosen with a private source or your own copy.")
+        }
+        internal enum Note {
+          /// Judged on a larger file of the same model
+          internal static let largerFile = L10n.tr("Localizable", "settings.translation.note.larger_file", fallback: "Judged on a larger file of the same model")
+        }
+        internal enum OwnCopy {
+          /// Use this file? This app cannot check a copy you made yourself.
+          internal static let confirm = L10n.tr("Localizable", "settings.translation.own_copy.confirm", fallback: "Use this file? This app cannot check a copy you made yourself.")
+          /// How to add your own copy
+          internal static let how = L10n.tr("Localizable", "settings.translation.own_copy.how", fallback: "How to add your own copy")
+        }
+        internal enum Pair {
+          /// This pair was not tested together
+          internal static let notMeasured = L10n.tr("Localizable", "settings.translation.pair.not_measured", fallback: "This pair was not tested together")
+        }
+        internal enum Repaint {
+          /// Off while %@ is the translator: both do not fit in memory
+          internal static func offForTranslator(_ p1: Any) -> String {
+            return L10n.tr("Localizable", "settings.translation.repaint.off_for_translator", String(describing: p1), fallback: "Off while %@ is the translator: both do not fit in memory")
+          }
+        }
+        internal enum Source {
+          /// Address
+          internal static let address = L10n.tr("Localizable", "settings.translation.source.address", fallback: "Address")
+          /// Optional. For models this project may not pass on, and for your own copies. Everything else comes from public sources.
+          internal static let footer = L10n.tr("Localizable", "settings.translation.source.footer", fallback: "Optional. For models this project may not pass on, and for your own copies. Everything else comes from public sources.")
+          /// Access token
+          internal static let token = L10n.tr("Localizable", "settings.translation.source.token", fallback: "Access token")
+        }
+        internal enum Status {
+          /// Downloading · %1$@ of %2$@
+          internal static func downloading(_ p1: Any, _ p2: Any) -> String {
+            return L10n.tr("Localizable", "settings.translation.status.downloading", String(describing: p1), String(describing: p2), fallback: "Downloading · %1$@ of %2$@")
+          }
+          /// Not downloaded
+          internal static let `none` = L10n.tr("Localizable", "settings.translation.status.none", fallback: "Not downloaded")
+          /// Preparing
+          internal static let preparing = L10n.tr("Localizable", "settings.translation.status.preparing", fallback: "Preparing")
+          /// Ready · works offline
+          internal static let ready = L10n.tr("Localizable", "settings.translation.status.ready", fallback: "Ready · works offline")
+        }
+        internal enum Storage {
+          /// Clear Translated Pages
+          internal static let clearPages = L10n.tr("Localizable", "settings.translation.storage.clear_pages", fallback: "Clear Translated Pages")
+          /// Delete All Models
+          internal static let deleteAll = L10n.tr("Localizable", "settings.translation.storage.delete_all", fallback: "Delete All Models")
+          /// Models on this %@
+          internal static func models(_ p1: Any) -> String {
+            return L10n.tr("Localizable", "settings.translation.storage.models", String(describing: p1), fallback: "Models on this %@")
+          }
+          /// Translated pages
+          internal static let pages = L10n.tr("Localizable", "settings.translation.storage.pages", fallback: "Translated pages")
+          internal enum DeleteAll {
+            /// Translation stops working until the models are downloaded again.
+            internal static let message = L10n.tr("Localizable", "settings.translation.storage.delete_all.message", fallback: "Translation stops working until the models are downloaded again.")
+          }
+        }
+        internal enum Value {
+          /// Stays cool for %d pages in a row
+          internal static func heatCool(_ p1: Int) -> String {
+            return L10n.tr("Localizable", "settings.translation.value.heat_cool", p1, fallback: "Stays cool for %d pages in a row")
+          }
+          /// Hot from page %d in a row
+          internal static func heatHot(_ p1: Int) -> String {
+            return L10n.tr("Localizable", "settings.translation.value.heat_hot", p1, fallback: "Hot from page %d in a row")
+          }
+          /// %@ ms
+          internal static func milliseconds(_ p1: Any) -> String {
+            return L10n.tr("Localizable", "settings.translation.value.milliseconds", String(describing: p1), fallback: "%@ ms")
+          }
+          /// Not measured
+          internal static let notMeasured = L10n.tr("Localizable", "settings.translation.value.not_measured", fallback: "Not measured")
+          /// %@ s
+          internal static func seconds(_ p1: Any) -> String {
+            return L10n.tr("Localizable", "settings.translation.value.seconds", String(describing: p1), fallback: "%@ s")
+          }
+          /// %1$d of %2$d
+          internal static func tally(_ p1: Int, _ p2: Int) -> String {
+            return L10n.tr("Localizable", "settings.translation.value.tally", p1, p2, fallback: "%1$d of %2$d")
+          }
+        }
+      }
     }
     internal enum Shell {
       internal enum Account {
@@ -2888,6 +3146,54 @@ internal enum L10n {
       internal enum Title {
         /// Torrents
         internal static let torrents = L10n.tr("Localizable", "torrents_view.title.torrents", fallback: "Torrents")
+      }
+    }
+    internal enum Translation {
+      internal enum Download {
+        /// Japanese is redrawn as 简体中文 right on the page. It needs one download; after that it works offline and nothing leaves your device.
+        internal static let body = L10n.tr("Localizable", "translation.download.body", fallback: "Japanese is redrawn as 简体中文 right on the page. It needs one download; after that it works offline and nothing leaves your device.")
+        /// A file did not match its checksum and was removed
+        internal static let checksum = L10n.tr("Localizable", "translation.download.checksum", fallback: "A file did not match its checksum and was removed")
+        /// The download stopped
+        internal static let failed = L10n.tr("Localizable", "translation.download.failed", fallback: "The download stopped")
+        /// Translation starts in this gallery when the download finishes.
+        internal static let footer = L10n.tr("Localizable", "translation.download.footer", fallback: "Translation starts in this gallery when the download finishes.")
+        /// Keep Reading
+        internal static let keepReading = L10n.tr("Localizable", "translation.download.keep_reading", fallback: "Keep Reading")
+        /// Some of these models are free for non-commercial use only. Credits are under Models and licenses.
+        internal static let nc = L10n.tr("Localizable", "translation.download.nc", fallback: "Some of these models are free for non-commercial use only. Credits are under Models and licenses.")
+        /// Set the model source in Settings first
+        internal static let noSource = L10n.tr("Localizable", "translation.download.no_source", fallback: "Set the model source in Settings first")
+        /// Not enough space: %1$@ needed, %2$@ free
+        internal static func noSpace(_ p1: Any, _ p2: Any) -> String {
+          return L10n.tr("Localizable", "translation.download.no_space", String(describing: p1), String(describing: p2), fallback: "Not enough space: %1$@ needed, %2$@ free")
+        }
+        /// No connection. The download continues when you are back online.
+        internal static let offline = L10n.tr("Localizable", "translation.download.offline", fallback: "No connection. The download continues when you are back online.")
+        /// Open Settings
+        internal static let openSettings = L10n.tr("Localizable", "translation.download.open_settings", fallback: "Open Settings")
+        /// Pause
+        internal static let pause = L10n.tr("Localizable", "translation.download.pause", fallback: "Pause")
+        /// Preparing the models. This happens once.
+        internal static let preparing = L10n.tr("Localizable", "translation.download.preparing", fallback: "Preparing the models. This happens once.")
+        /// %1$@ of %2$@
+        internal static func progress(_ p1: Any, _ p2: Any) -> String {
+          return L10n.tr("Localizable", "translation.download.progress", String(describing: p1), String(describing: p2), fallback: "%1$@ of %2$@")
+        }
+        /// about %@ left
+        internal static func remaining(_ p1: Any) -> String {
+          return L10n.tr("Localizable", "translation.download.remaining", String(describing: p1), fallback: "about %@ left")
+        }
+        /// Resume
+        internal static let resume = L10n.tr("Localizable", "translation.download.resume", fallback: "Resume")
+        /// Download %@
+        internal static func start(_ p1: Any) -> String {
+          return L10n.tr("Localizable", "translation.download.start", String(describing: p1), fallback: "Download %@")
+        }
+        /// Translate pages on this %@
+        internal static func title(_ p1: Any) -> String {
+          return L10n.tr("Localizable", "translation.download.title", String(describing: p1), fallback: "Translate pages on this %@")
+        }
       }
     }
     internal enum WatchedView {
