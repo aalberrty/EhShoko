@@ -15,6 +15,9 @@ extension SyntheticImages {
         case gradient
         /// Screentone dots and crossing lines.
         case texture
+        /// The three side by side, each a third of the page: white, the gradient, the
+        /// screentone. One page then shows a block on every ground.
+        case thirds
     }
 
     enum BalloonShape: Sendable {
@@ -141,6 +144,13 @@ extension SyntheticImages {
         switch ground {
         case .white:
             break
+        case .thirds:
+            for (index, part) in [Ground.gradient, .texture].enumerated() {
+                context.saveGState()
+                context.clip(to: CGRect(x: w * CGFloat(index + 1) / 3, y: 0, width: w / 3, height: h))
+                draw(part, in: context, width: width, height: height)
+                context.restoreGState()
+            }
         case .gradient:
             let colors = [CGColor(gray: 0.92, alpha: 1), CGColor(gray: 0.45, alpha: 1)] as CFArray
             if let gradient = CGGradient(colorsSpace: sRGB, colors: colors, locations: nil) {

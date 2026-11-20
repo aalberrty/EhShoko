@@ -21,14 +21,26 @@ import Testing
         return (BlockAnalyzer().analyze(page: page.bitmap, block: page.blocks[0], index: 0), page)
     }
 
-    @Test(arguments: zip([SyntheticImages.Ground.white, .gradient, .texture], [Lettering.Hint.none, .box, .mask]))
-    func aBalloonsInteriorIsFoundOnEveryGround(ground: SyntheticImages.Ground, hint: Lettering.Hint) throws {
-        let (analysis, page) = try analysis(balloon(hint: hint), ground: ground)
+    @Test func aBalloonsInteriorIsFoundOnEveryGround() async throws {
+        // On white with the detector's box, on a gradient and on a screentone with its mask,
+        // and on the screentone with nothing from the detector.
+        let drawn = try await DrawnPage.shared.drawn()
+        var found = 0
+        for analysis in drawn.analysis.blocks {
+            guard let truth = drawn.page.interiors[analysis.index] else { continue }
+            let interior = try #require(analysis.interior, "block \(analysis.index)")
+            // The interior lies within the outline and reaches it all round.
+            #expect(interior.share(coveredBy: truth) > 0.995, "block \(analysis.index)")
+            #expect(truth.share(coveredBy: interior) > 0.93, "block \(analysis.index)")
+            found += 1
+        }
+        #expect(found == 5)
+    }
+
+    @Test func aBalloonIsFoundWithoutTheDetectorsWordOnWhite() throws {
+        let (analysis, page) = try analysis(balloon(hint: .none))
         let found = try #require(analysis?.interior)
-        let truth = try #require(page.interiors[0])
-        // The interior lies within the outline and reaches it all round.
-        #expect(found.share(coveredBy: truth) > 0.995)
-        #expect(truth.share(coveredBy: found) > 0.93)
+        #expect(try #require(page.interiors[0]).share(coveredBy: found) > 0.93)
         #expect(analysis?.kind == .dialogue)
         #expect(analysis?.style.face == .dialogue)
     }
@@ -63,7 +75,7 @@ import Testing
         #expect(analysis?.style.face != .serif)
     }
 
-    @Test(arguments: [SyntheticImages.Ground.white, .gradient, .texture])
+    @Test(arguments: [SyntheticImages.Ground.gradient, .texture])
     func textOnTheGroundIsNotInABalloon(ground: SyntheticImages.Ground) throws {
         let lettering = Lettering(columns: ["何だって", "本当なの"], fontSize: 20, centre: CGPoint(x: 120, y: 140), shape: .none)
         let (analysis, _) = try analysis(lettering, ground: ground)
@@ -81,13 +93,17 @@ import Testing
     }
 
     /// The balloon of a page with a quarter of its outline painted over, so a fill leaks out.
+    /// A short text in a small balloon: without the detector's balloon the window that is
+    /// searched grows with the text.
     private func openedBalloon(side: Int, hint: Lettering.Hint) throws -> (PageBitmap, TextBlock) {
         let centre = CGFloat(side) / 2
-        let page = try SyntheticImages.letteredPage(
-            width: side, height: side, letterings: [balloon(hint: hint, centre: CGPoint(x: centre, y: centre))]
+        let lettering = Lettering(
+            columns: ["何だって", "本当なの"], fontSize: 18, centre: CGPoint(x: centre, y: centre),
+            balloonSize: CGSize(width: 110, height: 140), hint: hint
         )
+        let page = try SyntheticImages.letteredPage(width: side, height: side, letterings: [lettering])
         var pixels = [UInt8](page.bitmap.pixels)
-        for y in 0..<(side / 2 - 50) {
+        for y in 0..<(side / 2 - 40) {
             for x in (side / 2)..<side {
                 for channel in 0..<3 { pixels[(y * side + x) * 4 + channel] = 255 }
             }
@@ -100,19 +116,19 @@ import Testing
     }
 
     @Test func anOutlineWithAGapIsNoBalloonUnlessTheDetectorsMaskClosesIt() throws {
-        let (page, block) = try openedBalloon(side: 620, hint: .none)
+        let (page, block) = try openedBalloon(side: 340, hint: .none)
         let leaked = try #require(BlockAnalyzer().analyze(page: page, block: block, index: 0))
         #expect(leaked.interior == nil)
         // With the detector's mask the fill stops where the balloon was.
-        let (_, hinted) = try openedBalloon(side: 620, hint: .mask)
+        let (_, hinted) = try openedBalloon(side: 340, hint: .mask)
         let closed = try #require(BlockAnalyzer().analyze(page: page, block: hinted, index: 0))
         let interior = try #require(closed.interior)
-        #expect(interior.rect.width < 170 && interior.rect.height < 240)
+        #expect(interior.rect.width < 130 && interior.rect.height < 160)
     }
 
     @Test func blankPaperUpToThePagesEdgesIsNoBalloon() throws {
         // A leak that fills a small page meets nothing but the page's edges.
-        let (page, block) = try openedBalloon(side: 260, hint: .none)
+        let (page, block) = try openedBalloon(side: 180, hint: .none)
         let analysis = try #require(BlockAnalyzer().analyze(page: page, block: block, index: 0))
         #expect(analysis.interior == nil)
     }

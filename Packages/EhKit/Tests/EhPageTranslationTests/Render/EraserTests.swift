@@ -8,29 +8,23 @@ import Testing
 @Suite struct EraserTests {
     typealias Lettering = SyntheticImages.Lettering
 
-    @Test(arguments: [SyntheticImages.Ground.white, .gradient, .texture])
-    func theEraseMaskCoversTheGlyphsAndStaysInTheBalloon(ground: SyntheticImages.Ground) async throws {
-        let drawn = try await DrawnPages.shared.drawn(ground)
+    @Test func theEraseMaskCoversTheGlyphsAndStaysInTheBalloon() async throws {
+        // Balloons on white, on a gradient and on a screentone.
+        let drawn = try await DrawnPage.shared.drawn()
         for analysis in drawn.analysis.blocks {
-            guard let interior = drawn.page.interiors[analysis.index] else { continue }
-            #expect(drawn.page.glyphs[analysis.index].share(coveredBy: analysis.erase) >= 0.95, "block \(analysis.index) on \(ground)")
-            // The mask stays inside the balloon and off its outline.
-            #expect(analysis.erase.share(coveredBy: interior) == 1, "block \(analysis.index) on \(ground)")
+            #expect(drawn.page.glyphs[analysis.index].share(coveredBy: analysis.erase) >= 0.95, "block \(analysis.index)")
+            if let interior = drawn.page.interiors[analysis.index] {
+                // The mask stays inside the balloon and off its outline.
+                #expect(analysis.erase.share(coveredBy: interior) == 1, "block \(analysis.index)")
+            } else {
+                // On artwork the mask is the ink with a margin, not the whole box.
+                #expect(Double(analysis.erase.count) < 0.9 * Double(analysis.erase.rect.area))
+            }
         }
     }
 
-    @Test func theEraseMaskCoversGlyphsOnArtwork() async throws {
-        let drawn = try await DrawnPages.shared.drawn(.gradient)
-        let analysis = try #require(drawn.analysis.blocks.last)
-        #expect(!analysis.isInBalloon)
-        #expect(drawn.page.glyphs[analysis.index].share(coveredBy: analysis.erase) >= 0.95)
-        // The mask is the ink with a margin, not the whole box.
-        #expect(Double(analysis.erase.count) < 0.9 * Double(analysis.erase.rect.area))
-    }
-
-    @Test(arguments: [SyntheticImages.Ground.white, .gradient, .texture])
-    func nothingDarkIsLeftInsideAnErasedBalloon(ground: SyntheticImages.Ground) async throws {
-        let drawn = try await DrawnPages.shared.drawn(ground)
+    @Test func nothingDarkIsLeftInsideAnErasedBalloon() async throws {
+        let drawn = try await DrawnPage.shared.drawn()
         for analysis in drawn.analysis.blocks {
             guard let interior = analysis.interior else { continue }
             var canvas = PixelWindow(page: drawn.page.bitmap, rect: interior.rect.insetBy(-12, -12))
@@ -42,7 +36,7 @@ import Testing
                 }
             }
             // The darkest balloon here is filled with 74% grey.
-            #expect(darkest > 170, "block \(analysis.index) on \(ground): \(darkest)")
+            #expect(darkest > 170, "block \(analysis.index): \(darkest)")
         }
     }
 

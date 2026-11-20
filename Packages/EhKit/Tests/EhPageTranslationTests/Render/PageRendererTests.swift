@@ -4,10 +4,11 @@ import EhModels
 import Foundation
 import Testing
 
-/// One page on each ground with its analysis and its drawing, made once: many tests look at
-/// the same result, and making it is what costs.
-actor DrawnPages {
-    static let shared = DrawnPages()
+/// One page with its analysis and its drawing, made once: many tests look at the same result,
+/// and making it is what costs. Its ground is white, a gradient and a screentone side by
+/// side, with two blocks on each.
+actor DrawnPage {
+    static let shared = DrawnPage()
 
     typealias Lettering = SyntheticImages.Lettering
 
@@ -17,38 +18,43 @@ actor DrawnPages {
         var render: PageRender
     }
 
-    /// A balloon, a balloon with a gradient and furigana, a shout the detector missed, a
-    /// caption box and a note on the ground.
     static let letterings: [Lettering] = [
-        Lettering(columns: ["今日は良い天気", "ですね散歩に", "行きましょう"], fontSize: 20, centre: CGPoint(x: 90, y: 125),
+        // On white: a balloon, and a note on the paper.
+        Lettering(columns: ["今日は良い天気", "ですね散歩に", "行きましょう"], fontSize: 20, centre: CGPoint(x: 85, y: 120),
                   balloonSize: CGSize(width: 150, height: 220), translation: "今天天气真好，我们一起去散步吧！"),
-        Lettering(columns: ["漢字の勉強", "難しいです"], fontSize: 24, centre: CGPoint(x: 250, y: 125),
+        Lettering(columns: ["何だって", "本当なの"], fontSize: 20, centre: CGPoint(x: 150, y: 320), shape: .none,
+                  translation: "你说什么？是真的吗？"),
+        // On the gradient: a balloon with a gradient of its own and furigana, and a caption box.
+        Lettering(columns: ["漢字の勉強", "難しいです"], fontSize: 24, centre: CGPoint(x: 325, y: 120),
                   balloonSize: CGSize(width: 150, height: 220), ruby: ["かんじのべん", ""], balloonGray: 0.96, balloonGrayBottom: 0.74,
                   translation: "学习汉字真的很难啊……", hint: .mask),
-        Lettering(columns: ["え？"], fontSize: 32, centre: CGPoint(x: 395, y: 90), balloonSize: CGSize(width: 100, height: 140),
-                  fontName: "HiraginoSans-W8", translation: "诶？", hint: .none),
-        Lettering(columns: ["昨日の夜から", "ずっと雨が", "降っている"], fontSize: 18, centre: CGPoint(x: 395, y: 290), shape: .box,
+        Lettering(columns: ["昨日の夜から", "ずっと雨が", "降っている"], fontSize: 18, centre: CGPoint(x: 400, y: 305), shape: .box,
                   balloonSize: CGSize(width: 110, height: 170), translation: "从昨天晚上开始就一直在下雨。", hint: .mask),
-        Lettering(columns: ["何だって", "本当なの"], fontSize: 20, centre: CGPoint(x: 150, y: 310), shape: .none,
-                  translation: "你说什么？是真的吗？")
+        // On the screentone: a balloon, and a shout the detector gave no balloon for.
+        Lettering(columns: ["もう一度だけ", "考えさせて", "ください"], fontSize: 20, centre: CGPoint(x: 570, y: 120),
+                  balloonSize: CGSize(width: 150, height: 220), translation: "请让我再考虑一次。", hint: .mask),
+        Lettering(columns: ["え？"], fontSize: 32, centre: CGPoint(x: 650, y: 315), balloonSize: CGSize(width: 100, height: 140),
+                  fontName: "HiraginoSans-W8", translation: "诶？", hint: .none)
     ]
-    static let width = 470, height = 390
+    static let width = 720, height = 400
+    /// The index of the note, the one block that stands in no balloon.
+    static let note = 1
 
-    static func page(_ ground: SyntheticImages.Ground) throws -> SyntheticImages.LetteredPage {
-        try SyntheticImages.letteredPage(width: width, height: height, ground: ground, letterings: letterings)
+    static func page() throws -> SyntheticImages.LetteredPage {
+        try SyntheticImages.letteredPage(width: width, height: height, ground: .thirds, letterings: letterings)
     }
 
-    private var drawn: [SyntheticImages.Ground: Task<Drawn, any Error>] = [:]
+    private var task: Task<Drawn, any Error>?
 
-    func drawn(_ ground: SyntheticImages.Ground) async throws -> Drawn {
-        if let task = drawn[ground] { return try await task.value }
+    func drawn() async throws -> Drawn {
+        if let task { return try await task.value }
         let task = Task<Drawn, any Error> {
-            let page = try Self.page(ground)
+            let page = try Self.page()
             let analysis = try PageAnalyzer().analyze(page: page.bitmap, blocks: page.blocks)
             let render = try await PageRenderer().draw(analysis, page: page.bitmap, blocks: page.blocks)
             return Drawn(page: page, analysis: analysis, render: render)
         }
-        drawn[ground] = task
+        self.task = task
         return try await task.value
     }
 }
@@ -64,33 +70,28 @@ actor DrawnPages {
                 patch.pixels[offset + 3])
     }
 
-    @Test(arguments: [SyntheticImages.Ground.white, .gradient, .texture])
-    func everyTranslatedBlockBecomesAPatch(ground: SyntheticImages.Ground) async throws {
-        let render = try await DrawnPages.shared.drawn(ground).render
-        #expect(render.blocks.map(\.index) == [0, 1, 2, 3, 4])
-        #expect(render.blocks.map(\.kind) == [.dialogue, .dialogue, .dialogue, .caption, .aside])
-        #expect(render.blocks.map(\.isInBalloon) == [true, true, true, true, false])
+    @Test func everyTranslatedBlockBecomesAPatch() async throws {
+        let render = try await DrawnPage.shared.drawn().render
+        #expect(render.blocks.map(\.index) == [0, 1, 2, 3, 4, 5])
+        #expect(render.blocks.map(\.kind) == [.dialogue, .aside, .dialogue, .caption, .dialogue, .dialogue])
+        #expect(render.blocks.map(\.isInBalloon) == [true, false, true, true, true, true])
         #expect(render.blocks.allSatisfy { $0.isVertical && !$0.isRepainted })
         #expect(render.blocks[0].lines.joined() == "今天天气真好，我们一起去散步吧！")
         #expect(render.blocks[0].lines.count >= 2)
-        #expect(render.blocks[2].lines == ["诶？"])
+        #expect(render.blocks[5].lines == ["诶？"])
         #expect(render.failedRepaints == 0)
-        #expect(render.patches.count == 5)
-        for (block, lettering) in zip(render.blocks, DrawnPages.letterings) {
-            // Between the dots of a screentone a note's size is anyone's guess.
-            if block.isInBalloon || ground != .texture {
-                #expect(abs(block.measuredFontSize / Double(lettering.fontSize) - 1) < 0.15, "block \(block.index)")
-            }
+        #expect(render.patches.count == 6)
+        for (block, lettering) in zip(render.blocks, DrawnPage.letterings) {
+            #expect(abs(block.measuredFontSize / Double(lettering.fontSize) - 1) < 0.15, "block \(block.index)")
             #expect(block.fontSize <= block.measuredFontSize * 1.08 + 0.001)
+            // In balloons the text fits.
+            if block.isInBalloon { #expect(!block.overflows, "block \(block.index)") }
         }
-        // In balloons the text fits.
-        #expect(render.blocks.prefix(4).allSatisfy { !$0.overflows })
         #expect(render.timings.repainting == .zero)
     }
 
-    @Test(arguments: [SyntheticImages.Ground.white, .gradient, .texture])
-    func aPatchIsOpaqueOnlyWhereItErasedOrLettered(ground: SyntheticImages.Ground) async throws {
-        let drawn = try await DrawnPages.shared.drawn(ground)
+    @Test func aPatchIsOpaqueOnlyWhereItErasedOrLettered() async throws {
+        let drawn = try await DrawnPage.shared.drawn()
         let page = drawn.page, render = drawn.render
         let width = page.bitmap.width, height = page.bitmap.height
         for block in render.blocks {
@@ -126,12 +127,10 @@ actor DrawnPages {
         }
     }
 
-    @Test(arguments: [SyntheticImages.Ground.white, .gradient, .texture])
-    func theLetteringStaysInsideItsBalloon(ground: SyntheticImages.Ground) async throws {
-        let drawn = try await DrawnPages.shared.drawn(ground)
-        let page = drawn.page, render = drawn.render
-        for block in render.blocks.prefix(4) {
-            let interior = try #require(page.interiors[block.index])
+    @Test func theLetteringStaysInsideItsBalloon() async throws {
+        let drawn = try await DrawnPage.shared.drawn()
+        for block in drawn.render.blocks where block.isInBalloon {
+            let interior = try #require(drawn.page.interiors[block.index])
             // Every dark pixel the patch draws lies inside the balloon's outline, and there
             // are some: the new text.
             var dark = 0
@@ -148,23 +147,22 @@ actor DrawnPages {
     }
 
     @Test func soundEffectsAndBlocksWithoutATranslationAreLeftAlone() async throws {
-        var page = try DrawnPages.page(.white)
-        page.blocks[0].kind = .soundEffect
-        page.blocks[1].translation = ""
-        page.blocks[2].translation = " \n"
-        page.blocks[3].kind = .soundEffect
+        var page = try DrawnPage.page()
+        for index in page.blocks.indices where index != DrawnPage.note {
+            if index % 2 == 0 { page.blocks[index].kind = .soundEffect } else { page.blocks[index].translation = " \n" }
+        }
         let render = try await PageRenderer().render(page: page.bitmap, blocks: page.blocks)
-        #expect(render.blocks.map(\.index) == [4])
+        #expect(render.blocks.map(\.index) == [DrawnPage.note])
         #expect(render.timings.analysis > .zero)
         let none = try await PageRenderer().render(page: page.bitmap, blocks: [])
         #expect(none.blocks.isEmpty && none.patches.isEmpty)
-        // The page with its one patch over it: only the note's pixels differ.
+        // The page with its one patch over it, as the reader shows it.
         let image = try #require(render.composited(over: page.bitmap))
         #expect(image.width == page.bitmap.width && image.height == page.bitmap.height)
     }
 
     @Test func drawingAgainOffTheCallersActorGivesTheSamePatches() async throws {
-        let drawn = try await DrawnPages.shared.drawn(.gradient)
+        let drawn = try await DrawnPage.shared.drawn()
         let page = drawn.page
         // Called from the main actor, the work still runs elsewhere.
         let second = try await Task { @MainActor in
@@ -174,7 +172,7 @@ actor DrawnPages {
     }
 
     @Test func aCancelledTaskDrawsNothing() async throws {
-        let page = try DrawnPages.page(.white)
+        let page = try SyntheticImages.letteredPage(width: 190, height: 260, letterings: [DrawnPage.letterings[0]])
         let task = Task {
             withUnsafeCurrentTask { $0?.cancel() }
             return try await PageRenderer().render(page: page.bitmap, blocks: page.blocks)
@@ -184,15 +182,15 @@ actor DrawnPages {
 
     @Test func textOnArtworkIsRepaintedByTheModelAndBalloonsAreNot() async throws {
         let stub = StubInpainter()
-        let drawn = try await DrawnPages.shared.drawn(.gradient)
+        let drawn = try await DrawnPage.shared.drawn()
         let page = drawn.page
         let render = try await PageRenderer().draw(drawn.analysis, page: page.bitmap, blocks: page.blocks, inpainter: stub)
-        #expect(render.blocks.map(\.isRepainted) == [false, false, false, false, true])
+        #expect(render.blocks.map(\.isRepainted) == [false, true, false, false, false, false])
         #expect(await stub.calls.count == 1)
         #expect(render.timings.repainting > .zero)
         // The erased pixels of the note carry what the model painted, except under the lettering.
-        let patch = render.blocks[4].patch
-        let analysis = try #require(drawn.analysis.blocks.last)
+        let patch = render.blocks[DrawnPage.note].patch
+        let analysis = drawn.analysis.blocks[DrawnPage.note]
         var painted = 0, erased = 0
         for y in analysis.erase.rect.y0..<analysis.erase.rect.y1 {
             for x in analysis.erase.rect.x0..<analysis.erase.rect.x1 where analysis.erase.contains(x, y) {
@@ -203,7 +201,7 @@ actor DrawnPages {
         #expect(Double(painted) > 0.6 * Double(erased))
         // A model that fails costs no translation: the note is filled instead.
         let failing = try await PageRenderer().render(
-            page: page.bitmap, blocks: [page.blocks[4]], inpainter: StubInpainter(fails: true)
+            page: page.bitmap, blocks: [page.blocks[DrawnPage.note]], inpainter: StubInpainter(fails: true)
         )
         #expect(failing.failedRepaints == 1 && failing.blocks.count == 1)
         #expect(failing.blocks[0].isRepainted == false && !failing.blocks[0].patch.isTransparent)
