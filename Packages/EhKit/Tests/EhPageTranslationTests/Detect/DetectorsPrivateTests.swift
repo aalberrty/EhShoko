@@ -186,29 +186,31 @@ extension RTMDetDetector: RunnableDetector {}
         let (pages, decoding, network) = try await onPages(fp16, test)
         ReferenceSupport.report("\(test.name) fp16, pages prepared here: \(pages)")
         ReferenceSupport.report(String(
-            format: "%@ fp16 times on %d pages: output to blocks median %.2f ms, max %.2f ms; network median %.0f ms",
+            format: "%@ fp16 on %d pages, debug build, wall clock: output to blocks median %.2f ms, max %.2f ms; network median %.0f ms",
             test.name, decoding.count, median(decoding), decoding.max() ?? 0, median(network)
         ))
         #expect(pages.share >= pageRate, "\(test.name) pages: \(pages)")
     }
 
-    // The rates: the research's Swift code on this Mac (fp32, its inputs); the phone with the
-    // Mac's inputs (fp16); the phone with its own preparation of the pages.
+    // The floors are what this code measured on 2026-11-15 and again on 2026-11-19 (the runs are
+    // deterministic on this Mac). The fp32 rates equal the research's Swift code on its own inputs;
+    // the fp16 rates are above the phone's (2XL 90.4% and 77.3%, YOLO26s 98%, v4-s 98.9% and 95.3%,
+    // RTMDet2 91.2%).
 
     @Test func koharuLayout2XL() async throws {
-        try await Self.check(Self.k2xl, macRate: 0.99, fp16InputRate: 0.904, pageRate: 0.773)
+        try await Self.check(Self.k2xl, macRate: 1, fp16InputRate: 0.954, pageRate: 0.81) // 605/634, 469/579
     }
 
     @Test func koharuYOLO26s() async throws {
-        try await Self.check(Self.yolo26s, macRate: 1, fp16InputRate: 0.98, pageRate: 0.98)
+        try await Self.check(Self.yolo26s, macRate: 1, fp16InputRate: 1, pageRate: 1)
     }
 
     @Test func ogkaluV4S() async throws {
-        try await Self.check(Self.v4s, macRate: 1, fp16InputRate: 0.989, pageRate: 0.953)
+        try await Self.check(Self.v4s, macRate: 1, fp16InputRate: 0.992, pageRate: 0.967) // 260/262, 211/218
     }
 
     @Test func rtmDet2() async throws {
-        try await Self.check(Self.rtmdet2, macRate: 1, fp16InputRate: 0.912, pageRate: 0.912)
+        try await Self.check(Self.rtmdet2, macRate: 1, fp16InputRate: 0.994, pageRate: 0.974) // 669/673, 570/585
     }
 
     /// The OpenCV-compatible letterbox of each page equals the research's, made with OpenCV.
