@@ -1,40 +1,5 @@
-import CoreML
 import EhModels
 import Foundation
-
-/// Turns a Core ML package into what the app loads. Tests replace it.
-public struct ModelCompiler: Sendable {
-    /// Compiles the package at the given place and returns where the compiled model was
-    /// put, which is a temporary place.
-    public var compile: @Sendable (URL) async throws -> URL
-    /// Loads a compiled model once with the compute units it will run on, so the system
-    /// builds its program now and keeps it.
-    public var prepare: @Sendable (URL, ModelComputeUnits) async throws -> Void
-
-    public init(
-        compile: @escaping @Sendable (URL) async throws -> URL,
-        prepare: @escaping @Sendable (URL, ModelComputeUnits) async throws -> Void
-    ) {
-        self.compile = compile
-        self.prepare = prepare
-    }
-
-    /// Core ML itself. Both calls are its asynchronous ones, which do their work on Core
-    /// ML's own threads.
-    public static let coreML = ModelCompiler(
-        compile: { try await MLModel.compileModel(at: $0) },
-        prepare: { url, units in
-            let configuration = MLModelConfiguration()
-            configuration.computeUnits = switch units {
-            case .cpuOnly: .cpuOnly
-            case .cpuAndGPU: .cpuAndGPU
-            case .cpuAndNeuralEngine: .cpuAndNeuralEngine
-            case .all: .all
-            }
-            _ = try await MLModel.load(contentsOf: url, configuration: configuration)
-        }
-    )
-}
 
 /// What the installer found on disk for one artifact.
 struct ModelArtifactSurvey: Sendable, Equatable {
