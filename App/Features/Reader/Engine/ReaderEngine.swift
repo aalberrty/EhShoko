@@ -1,3 +1,4 @@
+import EhCore
 import EhFeatures
 import EhModels
 import UIKit
@@ -45,10 +46,20 @@ protocol ReaderEngineDataSource: AnyObject {
     /// of the viewport; a later change of that height is announced with the controller's
     /// `preferredContentSize`.
     func makeTrailerViewController() -> UIViewController?
+
+    /// The page's translation to lay over its image, or `nil` for a page that has none.
+    ///
+    /// Never asked until the host has set a display other than `.original`
+    /// (`setTranslationDisplay(_:)`), which a reader does when Translate is first pressed.
+    /// From then on it is asked when a page gets a view and when the host says that the
+    /// page's translation changed (`reloadTranslation(_:)`), also while the original shows.
+    func translationOverlay(at page: Int) -> PageTranslationOverlay?
 }
 
 extension ReaderEngineDataSource {
     func failureReason(at page: Int) -> AppError? { nil }
+
+    func translationOverlay(at page: Int) -> PageTranslationOverlay? { nil }
 
     var failedPageCount: Int { 0 }
 
@@ -100,10 +111,25 @@ protocol ReaderEngineDelegate: AnyObject {
     /// current page meanwhile is the last page. It is also current while it shares the screen
     /// with a last page that is alone (two pages side by side).
     func readerDidChangeTrailerVisibility(_ isCurrent: Bool)
+
+    /// The pages the reader is on changed. Nearest first: the current page and what shares
+    /// the screen with it, which is the other page of a spread, or in the vertical direction
+    /// every page that is partly on screen. Never empty: the trailer alone changes nothing.
+    /// Where it changes together with the current page, this comes first.
+    func readerDidChangePagesOnScreen(_ pages: [Int])
+
+    /// A page's translation could not be shown: its patch file is missing or cannot be
+    /// read. The page shows the original. The engine does nothing by itself: have the page
+    /// drawn again, then call `reloadTranslation(_:)`. Reported once for a page.
+    func readerDidFailToShowTranslation(page: Int)
 }
 
 extension ReaderEngineDelegate {
     func readerDidRequestRetryAllFailed() {}
+
+    func readerDidChangePagesOnScreen(_ pages: [Int]) {}
+
+    func readerDidFailToShowTranslation(page: Int) {}
 
     func readerDidChangeTrailerVisibility(_ isCurrent: Bool) {}
 }

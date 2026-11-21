@@ -81,6 +81,8 @@ final class ReaderStripView: UIScrollView, UIScrollViewDelegate, ReaderContentVi
 
     var visiblePages: ClosedRange<Int>? { shownPages }
 
+    var pagesOnScreen: [Int] { ReaderGeometry.pagesNearestFirst(visible: shownPages, current: reportedPage) }
+
     var loadedPages: ClosedRange<Int>? { tiledPages }
 
     func apply(_ newConfiguration: ReaderConfiguration) {

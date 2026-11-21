@@ -65,6 +65,13 @@ extension ReaderPagedView {
         spreads.trailerPlacement == .besideLastPage(spread: index) ? 2 : spreads.pages(inSpread: index).count
     }
 
+    /// The pages of the place the reader is on, in reading order: one, or the two of a
+    /// spread. None on a trailer that has a slot of its own.
+    var pagesOnScreen: [Int] {
+        guard spreads.spreadCount > 0, trailerState != .alone else { return [] }
+        return Array(spreads.pages(inSpread: spreads.spreadIndex(forPage: currentPage)))
+    }
+
     /// The pages of a range of slots. This is the one place where something that works in
     /// page numbers meets the trailer: its own slot shows no page, and counts as the last
     /// spread, so that arriving on it and leaving it move neither the visible pages nor the

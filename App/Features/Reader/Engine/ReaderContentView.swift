@@ -49,6 +49,10 @@ protocol ReaderContentView: UIScrollView {
     /// Pages that are at least partly on screen.
     var visiblePages: ClosedRange<Int>? { get }
 
+    /// The pages the reader is on, nearest first: the current page and what shares the
+    /// screen with it. Unlike `visiblePages` it does not change while a page is turned.
+    var pagesOnScreen: [Int] { get }
+
     /// Pages that have a view, which includes a margin around the visible ones. These load
     /// their images themselves, so the prefetcher leaves them alone.
     var loadedPages: ClosedRange<Int>? { get }
