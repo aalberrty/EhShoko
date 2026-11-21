@@ -124,6 +124,8 @@ nonisolated struct TranslationHarnessResult: Codable, Sendable {
         var memory: TranslationHarnessSampler.Sample
         var thermal: String
         var recorded: TranslationHarnessCalls.Text?
+        /// A language model's requests for this page (`translateRecording`).
+        var languageModel: [TranslationHarnessLanguageModel.Page]?
     }
 
     struct TextTimes: Codable, Sendable {
@@ -171,6 +173,7 @@ nonisolated struct TranslationHarnessResult: Codable, Sendable {
             var page: String
             var ms: Double
             var lines: [Line]
+            var languageModel: TranslationHarnessLanguageModel.Page?
         }
 
         struct Line: Codable, Sendable {

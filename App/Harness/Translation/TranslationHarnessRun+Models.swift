@@ -123,11 +123,20 @@ extension TranslationHarnessRun {
             await say("lines of page \(number + 1) of \(file.pages.count)")
             let source = page.lines.map(\.ja)
             let start = clock.now
-            let translated = try await translator.translate(source)
+            var recording: TranslationHarnessLanguageModel.Page?
+            let translated: [String?]
+            if let model = translator as? LanguageModelTranslator {
+                let page = try await model.translateRecording(source)
+                recording = TranslationHarnessLanguageModel.Page(page)
+                translated = page.lines
+            } else {
+                translated = try await translator.translate(source)
+            }
             lines.pages.append(
                 TranslationHarnessResult.Lines.Page(
                     page: page.page, ms: TranslationHarnessCalls.milliseconds(clock.now - start),
-                    lines: zip(source, translated).map { TranslationHarnessResult.Lines.Line(ja: $0, zh: $1) }
+                    lines: zip(source, translated).map { TranslationHarnessResult.Lines.Line(ja: $0, zh: $1) },
+                    languageModel: recording
                 )
             )
             result.lines = lines

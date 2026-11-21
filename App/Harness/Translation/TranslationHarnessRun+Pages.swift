@@ -105,6 +105,7 @@ extension TranslationHarnessRun {
             endedAtS: TranslationHarnessCalls.milliseconds(final.at - start) / 1_000, event: final.event,
             calls: taken.tallies, memory: sampler.takeWindow(), thermal: thermal.harnessName, recorded: taken.text
         )
+        if !taken.languageModel.isEmpty { record.languageModel = taken.languageModel }
         if case let .translated(overlay) = final.event.status {
             record.patchFileSHA256 = await Self.sha256(of: overlay.patchFile)
         }
@@ -194,7 +195,8 @@ extension TranslationHarnessRun {
             translator: set.translator.rawValue, translatorFile: options.modelFile, repaint: setup.repaint.key,
             detectorUnits: pipeline?.detectorUnits?.harnessName ?? "preferred",
             readerUnits: pipeline?.readerUnits?.harnessName ?? "preferred",
-            translatorUnits: pipeline?.translatorUnits?.harnessName ?? "preferred",
+            translatorUnits: set.translator.engine == .languageModel
+                ? "llama.cpp" : pipeline?.translatorUnits?.harnessName ?? "preferred",
             repaintUnits: setup.repaintUnits.harnessName, contextLength: options.contextLength,
             contextLengthApplied: options.contextLength != nil && TranslationHarnessLanguageModel.appliesContextLength
         )

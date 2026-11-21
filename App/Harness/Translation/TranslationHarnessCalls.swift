@@ -53,6 +53,7 @@ nonisolated final class TranslationHarnessCalls: Sendable {
     private struct State {
         var tallies: [Stage: Tally] = [:]
         var text = Text()
+        var languageModel: [TranslationHarnessLanguageModel.Page] = []
         var underWay: [Int: Stage] = [:]
         var nextCall = 0
         var lastReturn: ContinuousClock.Instant?
@@ -95,14 +96,22 @@ nonisolated final class TranslationHarnessCalls: Sendable {
         state.withLock { update(&$0.text) }
     }
 
-    /// The tallies and text since the last call, which start again from nothing.
-    func take() -> (tallies: [String: Tally], text: Text?) {
+    func record(_ page: TranslationHarnessLanguageModel.Page) {
+        state.withLock { $0.languageModel.append(page) }
+    }
+
+    /// What was counted since the last call, which starts again from nothing.
+    func take() -> (
+        tallies: [String: Tally], text: Text?, languageModel: [TranslationHarnessLanguageModel.Page]
+    ) {
         state.withLock { state in
             let tallies = Dictionary(uniqueKeysWithValues: state.tallies.map { ($0.key.rawValue, $0.value) })
             let text = recordsText ? state.text : nil
+            let languageModel = state.languageModel
             state.tallies = [:]
             state.text = Text()
-            return (tallies, text)
+            state.languageModel = []
+            return (tallies, text, languageModel)
         }
     }
 
@@ -164,7 +173,15 @@ nonisolated struct TimedTranslator: PageTranslator {
 
     @concurrent
     func translate(_ lines: [String]) async throws -> [String?] {
-        let results = try await calls.measure(.translate) { try await inner.translate(lines) }
+        let results: [String?]
+        if let model = inner as? LanguageModelTranslator {
+            // The same call the translator makes for `translate`, with its requests kept.
+            let page = try await calls.measure(.translate) { try await model.translateRecording(lines) }
+            calls.record(TranslationHarnessLanguageModel.Page(page))
+            results = page.lines
+        } else {
+            results = try await calls.measure(.translate) { try await inner.translate(lines) }
+        }
         calls.record { $0.translations.append(.init(lines: lines, results: results)) }
         return results
     }
