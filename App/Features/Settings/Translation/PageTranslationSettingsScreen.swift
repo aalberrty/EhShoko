@@ -85,6 +85,8 @@ private struct PageTranslationTopCard: View {
     let model: PageTranslationSettingsModel
 
     @Environment(\.look) private var look
+    /// The title colour on the tint: black on Wall's white tint in dark mode.
+    @Environment(\.onTint) private var onTint
 
     var body: some View {
         let state = model.setState
@@ -117,6 +119,7 @@ private struct PageTranslationTopCard: View {
                 if let action = model.topAction {
                     Button(action.title) { model.performTopAction() }
                         .buttonStyle(.borderedProminent)
+                        .foregroundStyle(onTint)
                         .padding(.top, Tokens.Spacing.xSmall)
                 }
             }

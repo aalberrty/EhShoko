@@ -3,10 +3,11 @@ import EhFeatures
 import SwiftUI
 
 /// Wall's reader controls (`wall.md` section 5): Close at the top and one cluster under the
-/// thumb, the scrub capsule beside More. While a finger is on the capsule a filmstrip of page
-/// thumbnails stands above it.
+/// thumb, Translate, the scrub capsule and More. While Translate is on a row above the
+/// cluster holds the pill and the status toast. While a finger is on the capsule a filmstrip
+/// of page thumbnails stands above it all.
 ///
-/// Close, the capsule and More are glass shapes in one container, which stays in the hierarchy
+/// Close, Translate, the capsule, More, the pill and the toast are glass shapes in one container, which stays in the hierarchy
 /// while hidden (`ReaderControlsLayer`); they slide a little as they fade, Close up and the
 /// cluster down. They float over the engine without changing its layout, so this design never
 /// sets the viewport, and showing them or scrubbing re-renders nothing of the engine.
@@ -52,8 +53,10 @@ struct WallReaderControls: View {
     }
 }
 
-/// The bottom of the controls: the filmstrip's place, the places kept for translation, and
-/// the cluster.
+/// The bottom of the controls: the filmstrip's place, the translation row while Translate is
+/// on, and the cluster with Translate leading it. The translation views read their own
+/// values of the model; this view reads none of them, so a download's progress or a page's
+/// status re-renders only the control that shows it.
 private struct WallReaderBottom: View {
     let model: ReaderModel
     let isReversed: Bool
@@ -62,14 +65,11 @@ private struct WallReaderBottom: View {
     var body: some View {
         VStack(spacing: WallReaderMetrics.filmGap) {
             WallReaderFilmstrip(model: model, isReversed: isReversed)
+            // The row stands 12 pt above the cluster, further than the container blends.
             VStack(spacing: Tokens.Spacing.medium) {
-                // A three-way pill (original, compare, translated) at the leading side and a
-                // toast ("Translating page 23…") at the trailing side, once translation
-                // exists. Not in the hierarchy until then.
-                ReaderTranslationSlot(availability: model.translationAvailability) { EmptyView() }
+                WallReaderTranslationRow(model: model)
                 HStack(spacing: WallReaderMetrics.clusterSpacing) {
-                    // Translate, a leading circle with a progress ring while a model downloads.
-                    ReaderTranslationSlot(availability: model.translationAvailability) { EmptyView() }
+                    WallReaderTranslateCircle(model: model)
                     WallReaderScrubCapsule(model: model, isReversed: isReversed)
                     WallReaderMoreMenu(model: model, offersDualPage: offersDualPage)
                         .glassSurface(in: .circle, isInteractive: true)
@@ -83,8 +83,10 @@ private struct WallReaderBottom: View {
 
 /// Sizes of Wall's controls, at the default text size.
 nonisolated enum WallReaderMetrics {
-    /// The capsule and More are this high; More is a circle of it.
+    /// The capsule and More are this high; More and Translate are circles of it.
     static let clusterHeight: CGFloat = 52
+    /// The translation row's pill and toast are this high.
+    static let rowHeight: CGFloat = 44
     /// Between the capsule and More, and how near two shapes of the container blend.
     static let clusterSpacing: CGFloat = 8
     /// The cluster's distance from the sides.

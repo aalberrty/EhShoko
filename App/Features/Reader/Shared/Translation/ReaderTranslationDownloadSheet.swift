@@ -23,12 +23,12 @@ struct ReaderTranslationDownloadSheet: View {
     let close: () -> Void
 
     @State private var router = StackRouter()
-    @State private var store = PageTranslationModelStore.forDownloadSheet()
+    @State private var model = ReaderTranslationDownloadModel(store: .forDownloadSheet())
     @State private var detent = PresentationDetent.medium
 
     var body: some View {
         NavigationStack(path: $router.path) {
-            ReaderTranslationDownloadPanel(store: store, translation: translation, close: close)
+            ReaderTranslationDownloadPanel(model: model, translation: translation, close: close)
                 .toolbar(.hidden, for: .navigationBar)
                 .navigationDestination(for: Route.self) { route in
                     // Only Settings › Translation and the screens it pushes are reached from here.
@@ -47,7 +47,7 @@ struct ReaderTranslationDownloadSheet: View {
             await PageTranslationSample.prepare()
             #endif
             // The press read the folder already, unless the sample's store is shown.
-            if !store.isLoaded { await store.refresh() }
+            await model.load()
         }
     }
 }
