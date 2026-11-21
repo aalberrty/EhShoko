@@ -148,7 +148,9 @@ extension ReaderPageView {
             view.layer.removeAllAnimations()
             view.alpha = 1
             view.isHidden = !shows
-            if shows, animated {
+            // With Reduce Motion the translation is simply there, as the page's own
+            // controls are (`README` 7.1).
+            if shows, animated, !UIAccessibility.isReduceMotionEnabled {
                 view.alpha = 0
                 UIView.animate(withDuration: 0.2, delay: 0, options: [.allowUserInteraction, .beginFromCurrentState]) {
                     view.alpha = 1

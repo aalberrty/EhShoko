@@ -19,7 +19,8 @@ extension View {
     ///
     /// - Parameters:
     ///   - isInteractive: the glass reacts to touches, which a material cannot.
-    ///   - tint: tints the glass (the reader's Translate when on). `nil` for untinted.
+    ///   - tint: tints the glass (the reader's Translate when on); on iOS 18 the shape is filled
+    ///     with it. `nil` for untinted.
     func glassSurface(
         in shape: some Shape, isInteractive: Bool = false, tint: Color? = nil, fallback: GlassFallback = .regular
     ) -> some View {
@@ -85,8 +86,11 @@ private struct GlassSurface<S: Shape>: ViewModifier {
                     case .regular: shape.fill(.regularMaterial)
                     case .thin: shape.fill(.thinMaterial)
                     }
+                    // Tinted glass reads as the tint, and what sits on it is drawn in the colour
+                    // made for the tint (`\.onTint`); a material showing through a thin tint left
+                    // that white symbol on grey in Wall's light look.
                     if let tint {
-                        shape.fill(tint.opacity(0.35))
+                        shape.fill(tint)
                     }
                 }
                 .overlay { shape.stroke(.quaternary, lineWidth: 1) }

@@ -45,7 +45,12 @@ private struct ReaderTranslationWipeLayer: View {
     @State private var fraction: CGFloat?
     /// The fraction when the finger came down on the handle.
     @State private var dragStart: CGFloat?
-    @State private var width: CGFloat = 0
+    /// The engine's frame and the safe area's, on the screen: in landscape the sensor housing
+    /// lies between the two.
+    @State private var frame: CGRect = .zero
+    @State private var safeFrame: CGRect = .zero
+
+    private var width: CGFloat { frame.width }
 
     var body: some View {
         let current = fraction ?? CGFloat(translation.compareFraction)
@@ -58,13 +63,20 @@ private struct ReaderTranslationWipeLayer: View {
                     ReaderTranslationWipeColumn(handle: handle(current))
                         .offset(x: current * width - ReaderTranslationWipeMetrics.handleSize / 2)
                 }
-                .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { width = $0 }
+                .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { newFrame in
+                    frame = newFrame
+                    keepHandleInside()
+                }
                 // The engine's own frame (`ReaderEngineFrame`), so the line's fraction is the
                 // engine's. The covered bottom (Ledger's open sheet over the strip) only
                 // moves the handle up into the part that shows.
                 .padding(.bottom, viewport.coveredBottom)
                 .padding(.bottom, viewport.bottomInset)
                 .ignoresSafeArea()
+            }
+            .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { newFrame in
+                safeFrame = newFrame
+                keepHandleInside()
             }
         }
     }
@@ -87,14 +99,26 @@ private struct ReaderTranslationWipeLayer: View {
             .onEnded { _ in dragStart = nil }
     }
 
-    /// Keeps the handle whole on the screen, then tells the model, which tells the engine.
+    /// Keeps the handle whole on the screen and clear of the sensor housing (8 pt inside the
+    /// safe area's side), then tells the model, which tells the engine.
     private func move(to newFraction: CGFloat) {
         guard width > 0 else { return }
-        let margin = (ReaderTranslationWipeMetrics.handleSize / 2 + Tokens.Spacing.small) / width
-        let clamped = min(max(newFraction, margin), 1 - margin)
+        let leadingInset = safeFrame.isEmpty ? 0 : max(safeFrame.minX - frame.minX, 0)
+        let trailingInset = safeFrame.isEmpty ? 0 : max(frame.maxX - safeFrame.maxX, 0)
+        let half = ReaderTranslationWipeMetrics.handleSize / 2 + Tokens.Spacing.small
+        let lower = (leadingInset + half) / width
+        let upper = 1 - (trailingInset + half) / width
+        guard lower < upper else { return }
+        let clamped = min(max(newFraction, lower), upper)
         guard clamped != fraction else { return }
         fraction = clamped
         translation.setCompareFraction(clamped)
+    }
+
+    /// After a turn or a resize, the line keeps its fraction unless the handle would leave the
+    /// room `move(to:)` allows.
+    private func keepHandleInside() {
+        move(to: fraction ?? CGFloat(translation.compareFraction))
     }
 }
 
