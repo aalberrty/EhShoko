@@ -66,7 +66,7 @@ public struct LanguageModelTranslator: PageTranslator {
             return
         }
 
-        let generation = try await engine.generate(prompt, options: profile.options)
+        let generation = try await engine.generate(prompt, options: profile.options(sourceTokens: sourceTokens))
         // A stopped answer ends anywhere. The page is given up rather than kept in part.
         guard generation.finish != .stopped else { throw CancellationError() }
         try Task.checkCancellation()

@@ -18,12 +18,20 @@ import Testing
         let profile = try #require(LanguageModelProfile(choice))
         let results = try await translator(choice, engine: engine).translate(["こんにちは", "先生"])
         #expect(results == ["你好", "老师"])
+        // The stub counts a character as a token: the two numbered lines are 14.
         #expect(engine.calls == [
             .init(
                 prompt: profile.prompt.text(for: ["こんにちは", "先生"]),
-                options: TextGenerationOptions(maxTokens: 400, sampling: profile.sampling)
+                options: TextGenerationOptions(maxTokens: 2 * 14 + 32, sampling: profile.sampling)
             )
         ])
+    }
+
+    @Test func aFullPagesAnswerMayHaveTheModelsTokenLimit() async throws {
+        let engine = StubGenerationEngine.echoing(contextLength: 100_000)
+        let lines = (0..<14).map { "これは行\($0)のせりふです" }
+        _ = try await translator(engine: engine).translate(lines)
+        #expect(engine.calls.map(\.options.maxTokens) == [400])
     }
 
     @Test func aLineMissingFromTheAnswerIsNilAndTheOthersKeepTheirPlaces() async throws {
@@ -132,6 +140,7 @@ import Testing
         #expect(page.lines == Self.tenLines.map { "译\($0)" })
         #expect(page.requests.map(\.lineIndices) == [[0, 1, 2, 3, 4], [5, 6, 7, 8, 9]])
         #expect(engine.calls.allSatisfy { $0.options.maxTokens == profile.maxTokens })
+        #expect(engine.calls.count == 2)
     }
 
     /// A line too long for the model even alone stays as it is, and the others are translated.

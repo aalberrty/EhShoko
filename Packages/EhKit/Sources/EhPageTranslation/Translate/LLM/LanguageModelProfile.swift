@@ -67,8 +67,11 @@ public struct LanguageModelProfile: Sendable, Equatable {
         }
     }
 
-    var options: TextGenerationOptions {
-        TextGenerationOptions(maxTokens: maxTokens, sampling: sampling)
+    /// The options of a request for lines of `sourceTokens` tokens.
+    func options(sourceTokens: Int) -> TextGenerationOptions {
+        TextGenerationOptions(
+            maxTokens: min(maxTokens, Self.answerLimit(sourceTokens: sourceTokens)), sampling: sampling
+        )
     }
 
     // MARK: What one request can hold
@@ -78,6 +81,14 @@ public struct LanguageModelProfile: Sendable, Equatable {
     /// model itself), so a third is added, and a little more for pages of one short line.
     public static func answerReserve(sourceTokens: Int) -> Int {
         sourceTokens + sourceTokens / 3 + 16
+    }
+
+    /// The most tokens an answer to lines of `sourceTokens` tokens may have: twice its lines
+    /// and a little, far more than any compared answer had. A model now and then repeats one
+    /// character until something ends it; without this a page of one short line would then
+    /// take `maxTokens`, half a minute on a phone, where it now takes a tenth of that.
+    public static func answerLimit(sourceTokens: Int) -> Int {
+        2 * sourceTokens + 32
     }
 
     /// Whether lines of `sourceTokens` tokens, in a prompt of `promptTokens`, can be asked

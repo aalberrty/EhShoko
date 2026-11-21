@@ -98,15 +98,19 @@ import Testing
     /// set, and a draw can fall the other way on the last digits of a probability.
     ///
     /// The results are written after every page, and a run that was stopped goes on from the
-    /// pages it has.
+    /// pages it has. A greedy run (`PrivateTranslationFolder.isGreedy`) is kept apart and is
+    /// for comparing with a greedy run of another build; against the compared outputs, which
+    /// were drawn, its count of equal lines says nothing.
     @Test(.languageModelComparison, .timeLimit(.minutes(480)), arguments: LanguageModelCandidate.asked)
     func translatesTheComparedPages(candidate: LanguageModelCandidate) async throws {
-        let file = try PrivateTranslationFolder.reports("MT24/comparison").appending(path: "\(candidate.name).json")
-        var run = (try? ComparisonRun.read(file)) ?? ComparisonRun(model: candidate.name, file: candidate.file)
+        let name = candidate.name + (PrivateTranslationFolder.isGreedy ? "-greedy" : "")
+        let file = try PrivateTranslationFolder.reports("MT24/comparison").appending(path: "\(name).json")
+        var run = (try? ComparisonRun.read(file)) ?? ComparisonRun(model: name, file: candidate.file)
         let clock = ContinuousClock()
 
         let loadStart = clock.now
-        let profile = try #require(LanguageModelProfile(candidate.choice))
+        var profile = try #require(LanguageModelProfile(candidate.choice))
+        if PrivateTranslationFolder.isGreedy { profile.sampling.temperature = 0 }
         let engine = try await LlamaGenerationEngine.load(
             modelAt: candidate.url(), configuration: LlamaConfiguration(contextLength: profile.contextLength)
         )

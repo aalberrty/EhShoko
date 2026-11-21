@@ -13,9 +13,16 @@ import Testing
 /// `hymt2-q6k`, `hymt2-q4km`, `sakura`, `galtransl`, `qwen35`, or `all`:
 ///
 ///     PAGE_TRANSLATION_LANGUAGE_MODELS=sakura PAGE_TRANSLATION_PRIVATE=… swift test --filter …
+///
+/// With `PAGE_TRANSLATION_LANGUAGE_MODEL_GREEDY=1` that run always takes the likeliest token,
+/// which takes the draw out of a comparison between two builds of llama.cpp.
 enum PrivateTranslationFolder {
     static let variable = "PAGE_TRANSLATION_PRIVATE"
     static let modelsVariable = "PAGE_TRANSLATION_LANGUAGE_MODELS"
+    static let greedyVariable = "PAGE_TRANSLATION_LANGUAGE_MODEL_GREEDY"
+
+    /// Whether the long comparison was asked to leave the draw out.
+    static let isGreedy = value(greedyVariable) != nil
 
     private static func value(_ name: String) -> String? {
         guard let value = ProcessInfo.processInfo.environment[name]?.trimmingCharacters(in: .whitespacesAndNewlines),

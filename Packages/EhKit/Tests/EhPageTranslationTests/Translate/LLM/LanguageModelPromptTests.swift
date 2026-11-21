@@ -96,7 +96,7 @@ import Testing
         #expect(profile.sampling == sampling)
         #expect(profile.maxTokens == 400)
         #expect(profile.contextLength == 1024)
-        #expect(profile.options == TextGenerationOptions(maxTokens: 400, sampling: sampling))
+        #expect(profile.options(sourceTokens: 200) == TextGenerationOptions(maxTokens: 400, sampling: sampling))
     }
 
     @Test func everyLanguageModelChoiceHasAProfileAndTheCoreMLTranslatorHasNone() {
@@ -109,6 +109,20 @@ import Testing
         #expect(LanguageModelProfile.answerReserve(sourceTokens: 0) == 16)
         #expect(LanguageModelProfile.answerReserve(sourceTokens: 30) == 56)
         #expect(LanguageModelProfile.answerReserve(sourceTokens: 288) == 400)
+    }
+
+    /// A runaway answer to a short page ends long before the 400 tokens a full page may have.
+    @Test func aShortPagesAnswerMayHaveTwiceItsLinesAndALittle() throws {
+        let profile = try #require(LanguageModelProfile(.sakura1_5B))
+        #expect(LanguageModelProfile.answerLimit(sourceTokens: 6) == 44)
+        #expect(profile.options(sourceTokens: 6).maxTokens == 44)
+        #expect(profile.options(sourceTokens: 184).maxTokens == 400)
+        #expect(profile.options(sourceTokens: 183).maxTokens == 398)
+        // Always more than what is kept free for the answer.
+        for tokens in 0...600 {
+            #expect(LanguageModelProfile.answerLimit(sourceTokens: tokens)
+                > LanguageModelProfile.answerReserve(sourceTokens: tokens))
+        }
     }
 
     @Test func aRequestHoldsLinesWhoseAnswerFitsTheContextAndTheTokenLimit() throws {
