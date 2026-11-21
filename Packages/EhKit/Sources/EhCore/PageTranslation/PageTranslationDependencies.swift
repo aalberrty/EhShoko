@@ -120,9 +120,11 @@ extension PageTranslationService {
         Task { await service.perform(.memoryWarning) }
     }
 
-    /// How a language model becomes a translator. `nil` until the language-model translators
-    /// are wired in: choosing one then fails to load, and the choice is not offered anyway.
-    public static let languageModelLoader: PageTranslatorLoader.LanguageModelLoader? = nil
+    /// How a language model becomes a translator: its one file loaded through llama.cpp,
+    /// under the translator of the choice. A choice is offered only once the catalog has its
+    /// file, so until then nothing reaches this.
+    public static let languageModelLoader: PageTranslatorLoader.LanguageModelLoader? =
+        PageTranslatorLoader.llamaLanguageModel
 }
 
 extension PageTranslationEnvironment {

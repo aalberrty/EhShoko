@@ -26,9 +26,15 @@ import Testing
         (.jmtFast1, .nominal, true, false, 1, false),
         (.jmtFast1, .serious, true, false, 0, false),
         (.jmtFast1, .nominal, false, true, 0, false),
+        // A language model: one page ahead, and the page before like every translator.
         (.hyMT2, .nominal, false, false, 1, true),
+        (.sakura1_5B, .nominal, false, false, 1, true),
+        (.galTransl4B, .fair, false, false, 1, true),
+        (.qwen35_4B, .fair, false, false, 1, true),
         (.hyMT2, .fair, true, false, 1, false),
-        (.galTransl4B, .serious, false, false, 0, false)
+        (.galTransl4B, .serious, false, false, 0, false),
+        (.qwen35_4B, .critical, false, false, 0, false),
+        (.sakura1_5B, .nominal, false, true, 0, false)
     ])
     func thePolicyOfATranslatorAndThePhonesState(
         translator: TranslatorChoice, heat: PageTranslationHeat, isLowPower: Bool, memoryPressure: Bool,

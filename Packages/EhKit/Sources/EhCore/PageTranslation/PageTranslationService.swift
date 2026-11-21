@@ -21,6 +21,10 @@ import Foundation
 ///   the text its first half finished and writes no patch file.
 /// - **Loading.** The three models load when the first page needs them, the repaint model
 ///   when the first block on artwork does. Everything is let go when the last session closes.
+/// - **A language model as the translator** is one of the three and follows the same rules:
+///   loaded with the others when the first page needs text, one page ahead and not three
+///   (`PageTranslationPolicy`), stopped within a token when its page is cancelled, and freed
+///   when the pipeline is let go. A page it was stopped on writes nothing.
 ///
 /// The process has one, reached through `\.pageTranslation`. Nothing here runs before a
 /// session is opened.
@@ -88,7 +92,7 @@ public actor PageTranslationService {
         case unloaded
         case loading(Task<Void, Never>, generation: Int)
         case ready(PagePipeline)
-        case failed
+        case failed(LoadFailure)
     }
 
     enum InpainterState {
@@ -307,8 +311,7 @@ public actor PageTranslationService {
     }
 
     func unloadModels() {
-        if case let .loading(task, _) = pipelineState { task.cancel() }
-        pipelineState = .unloaded
+        releasePipeline()
         dropInpainter()
     }
 
@@ -316,45 +319,6 @@ public actor PageTranslationService {
         if case let .loading(task) = inpainterState { task.cancel() }
         inpainterState = .unloaded
         modelToken += 1
-    }
-
-    func startLoadingPipeline(_ configuration: PipelineConfiguration) {
-        generation += 1
-        let loadGeneration = generation
-        let interval = PerformanceSignposts.begin(.pageTranslateLoad, configuration.modelSet.key)
-        let start = clock.now
-        let task = Task(priority: .utility) { [environment, clock] in
-            let result: Result<PagePipeline, any Error>
-            do {
-                result = .success(try await environment.loadPipeline(configuration))
-            } catch {
-                result = .failure(error)
-            }
-            self.pipelineLoaded(loadGeneration, result, interval: interval, took: clock.now - start)
-        }
-        pipelineState = .loading(task, generation: loadGeneration)
-    }
-
-    private func pipelineLoaded(
-        _ loadGeneration: Int, _ result: Result<PagePipeline, any Error>, interval: PerformanceInterval, took: Duration
-    ) {
-        guard case .loading(_, loadGeneration) = pipelineState else {
-            interval.end("cancelled")
-            return
-        }
-        switch result {
-        case let .success(pipeline):
-            pipelineState = .ready(pipeline)
-            interval.end("done")
-            // No longer "getting ready": the pages that waited for the models wait for their turn.
-            for key in pagesWaitingForText() { emit(key, .translating) }
-            environment.logger.info("Page translation models loaded in \(took.formatted(Self.seconds)).", category: Self.logCategory)
-        case let .failure(error):
-            pipelineState = error is CancellationError ? .unloaded : .failed
-            interval.end("failed")
-            environment.logger.error("Page translation models did not load: \(error)", category: Self.logCategory)
-        }
-        pump()
     }
 
     /// The repaint model, loaded the first time a block on artwork needs it.

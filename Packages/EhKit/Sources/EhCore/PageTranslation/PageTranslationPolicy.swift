@@ -36,6 +36,9 @@ public struct PageTranslationPolicy: Sendable, Equatable {
     /// - At thermal "serious" or above: only the pages on screen.
     /// - After a memory warning, until the reader moves: only the pages on screen.
     /// - In Low Power Mode: one page ahead at most, and not the page before.
+    /// - Otherwise the page before is worked on with every translator, a language model
+    ///   too: it is the last of the window, so it never holds back a page that is on screen
+    ///   or ahead, and one that was read with Translate on is stored and costs nothing.
     public static func current(
         translator: TranslatorChoice, heat: PageTranslationHeat, isLowPowerModeEnabled: Bool,
         isUnderMemoryPressure: Bool
