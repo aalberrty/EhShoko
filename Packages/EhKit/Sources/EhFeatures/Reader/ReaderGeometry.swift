@@ -115,4 +115,15 @@ nonisolated public enum ReaderGeometry {
         let upper = min(max(last, 0), slotCount - 1)
         return lower...max(lower, upper)
     }
+
+    // MARK: Pages on screen
+
+    /// The pages of a strip that are on screen, nearest first: the current page, the pages
+    /// after it, which the reader is moving towards, and last the pages before it, nearest
+    /// first. A current page that is not among them leaves them in reading order.
+    public static func pagesNearestFirst(visible: ClosedRange<Int>?, current: Int) -> [Int] {
+        guard let visible else { return [] }
+        guard visible.contains(current) else { return Array(visible) }
+        return Array(current...visible.upperBound) + (visible.lowerBound..<current).reversed()
+    }
 }

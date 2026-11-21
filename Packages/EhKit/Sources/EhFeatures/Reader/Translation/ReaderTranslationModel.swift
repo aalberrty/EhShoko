@@ -62,6 +62,9 @@ public final class ReaderTranslationModel {
     /// Every page translated in this reader, also those that left the window: the engine asks
     /// for a page's overlay when it makes the page's view.
     @ObservationIgnored private var overlays: [Int: PageTranslationOverlay] = [:]
+    /// The pages the engine shows, nearest first: two in a spread, several in the strip.
+    /// Empty until the engine has said.
+    @ObservationIgnored private var pagesOnScreen: [Int] = []
     @ObservationIgnored private(set) var compareFraction = 0.5
     /// What the engine was last told to show.
     @ObservationIgnored private var sentDisplay = ReaderTranslationDisplay.original
@@ -173,10 +176,20 @@ public final class ReaderTranslationModel {
         refreshStatus()
     }
 
+    /// The engine shows other pages: the other page of a spread, or another part of the
+    /// strip. Nothing is asked while Translate is off.
+    func pagesOnScreenDidChange(_ pages: [Int]) {
+        guard pages != pagesOnScreen else { return }
+        pagesOnScreen = pages
+        // Pages without the current page are those of a turn, and the engine names the new
+        // current page next: the window is sent then, once, not twice.
+        guard let host, pages.contains(host.currentPage) else { return }
+        sendWindow()
+    }
+
     /// A page's image address became known or changed.
     func pageDidResolve(_ page: Int) {
-        guard isOn, ReaderTranslationWindow(currentPage: host?.currentPage ?? 0, pageCount: pageCount).pages.contains(page)
-        else { return }
+        guard isOn, window(at: host?.currentPage ?? 0).pages.contains(page) else { return }
         sendWindow()
     }
 
@@ -264,13 +277,16 @@ public final class ReaderTranslationModel {
 
     private func sendWindow() {
         guard isOn, let session, let host else { return }
-        let window = ReaderTranslationWindow(currentPage: host.currentPage, pageCount: pageCount)
-            .request(imageURL: host.translationImageURL(of:))
+        let window = window(at: host.currentPage).request(imageURL: host.translationImageURL(of:))
         guard window != sentWindow else { return }
         sentWindow = window
         let wanted = Set(window.pages.map(\.index))
         statuses = statuses.filter { wanted.contains($0.key) }
         session.setWindow(window)
+    }
+
+    private func window(at page: Int) -> ReaderTranslationWindow {
+        ReaderTranslationWindow(currentPage: page, pageCount: pageCount, shown: pagesOnScreen)
     }
 
     private func handle(_ event: PageTranslationEvent) {
