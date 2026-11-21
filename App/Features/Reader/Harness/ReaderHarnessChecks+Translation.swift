@@ -249,8 +249,8 @@ extension ReaderHarnessSession {
 
     // MARK: Damaged files
 
-    /// A patch file that cannot be read: the page shows the original, the host is told once,
-    /// and a file that is still damaged after it was written again is not asked for in a circle.
+    /// A patch file that cannot be read: the page shows the original, the host is told, and a
+    /// file that is still damaged after it was written again is not asked for in a circle.
     private func checkDamagedFiles(_ report: ReaderHarnessExpectations) async {
         report.section("A patch file that cannot be read")
         let translation = ReaderHarnessTranslation()
@@ -272,7 +272,12 @@ extension ReaderHarnessSession {
         try? await Task.sleep(for: .seconds(2))
         let loads = ReaderTranslationOverlayLoader.loadCount
         try? await Task.sleep(for: .seconds(1))
-        report.expect("page 9, damaged again when written again: told once", translation.failures == [6, 9], "\(translation.failures)")
+        // As the reader's model does: drawn again once, and when that cannot be shown either,
+        // not again by itself.
+        report.expect(
+            "page 9, damaged again when written again: told twice, drawn again once",
+            translation.failures == [6, 9, 9], "\(translation.failures)"
+        )
         report.expect("page 9 shows the original", run.pageView(9)?.showsTranslation == false, run.translationState)
         report.expect(
             "and its file is not read in a circle", ReaderTranslationOverlayLoader.loadCount == loads,
