@@ -7,7 +7,8 @@ import UIKit
 // The harness's check of the translation overlay, on its made-up translation
 // (`ReaderHarnessTranslation`). Like the other checks it opens its own readers, takes no
 // touch and writes a report whose last line is `##### done`. `-ReaderHarnessModes` picks
-// parts of it: `off`, `place`, `switch`, `livetext`, `damaged`, `release`, `cost`, `paging`.
+// parts of it: `off`, `place`, `switch`, `livetext`, `damaged`, `release`, `cost`, `paging`,
+// `compare`.
 extension ReaderHarnessSession {
     func checkTranslation() async {
         let report = ReaderHarnessExpectations(name: "translation-report.txt", title: "The translation overlay")
@@ -26,7 +27,8 @@ extension ReaderHarnessSession {
             ("damaged", { await self.checkDamagedFiles(report) }),
             ("release", { await self.checkRelease(report, translation) }),
             ("cost", { await self.checkCost(report, translation) }),
-            ("paging", { await self.checkPaging(report, translation) })
+            ("paging", { await self.checkPaging(report, translation) }),
+            ("compare", { await self.checkCompare(report, translation) })
         ]
         for (name, check) in checks where parts.isEmpty || parts.contains(name) {
             status = "translation: \(name)"
