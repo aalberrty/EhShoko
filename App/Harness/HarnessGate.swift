@@ -46,6 +46,8 @@ struct HarnessGate<Content: View>: View {
         case .rest:
             // What a device shows between two recordings of a session (`measure.sh rest`).
             HarnessRestView()
+        case .translation:
+            TranslationHarnessView()
         case nil:
             content()
         }
@@ -63,6 +65,7 @@ enum HarnessRequest: String {
     case dock
     case previews
     case rest
+    case translation
 
     /// `-Harness <name>`, read once.
     static let atLaunch = UserDefaults.standard.string(forKey: "Harness").flatMap(HarnessRequest.init(rawValue:))
