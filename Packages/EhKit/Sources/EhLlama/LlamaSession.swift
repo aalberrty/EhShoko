@@ -145,6 +145,10 @@ final class LlamaSession {
         }
         let sampler = try makeSampler(options.sampling)
         defer { llama_sampler_free(sampler) }
+        // The sampler is shown the prompt before the answer, as llama.cpp's own programs show
+        // it: the repeat penalty then counts the prompt's last tokens from the first token of
+        // the answer on. Only the penalty keeps what it is shown.
+        for token in prompt { llama_sampler_accept(sampler, token) }
         llama_memory_clear(llama_get_memory(context), true)
 
         // llama.cpp asks this while it computes a step, on its own threads. The signal
