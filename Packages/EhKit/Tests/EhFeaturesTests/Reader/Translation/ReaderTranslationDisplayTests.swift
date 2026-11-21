@@ -143,7 +143,8 @@ import Testing
         #expect(harness.service.lastWindow == .empty)
         #expect(model.translation.status == nil)
         #expect(model.translationDisplay == .original)
-        #expect(harness.log == ["translation:5", "display:original"])
+        // Off gives the engine no overlay: page 5 is asked about again and lets its go.
+        #expect(harness.log == ["translation:5", "display:original", "translation:5"])
         model.currentPageDidChange(6)
         #expect(harness.service.lastWindow == .empty)
 
@@ -151,7 +152,7 @@ import Testing
         await readerEventually { model.translation.isOn }
         #expect(harness.service.opened.count == 1)
         #expect(harness.service.lastWindow?.onScreen.map(\.index) == [6])
-        #expect(harness.log.last == "display:translated")
+        #expect(Array(harness.log.suffix(2)) == ["display:translated", "translation:5"])
         #expect(harness.service.closes == 0)
     }
 

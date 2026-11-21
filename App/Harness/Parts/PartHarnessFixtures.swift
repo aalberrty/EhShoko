@@ -197,6 +197,7 @@ enum PartHarnessDependencies {
         values.settings = settings
         self.settings = settings
         PartHarnessAccount.atLaunch.install(in: &values)
+        PartHarnessPageTranslation.install(in: &values)
         isInstalled = true
     }
 
@@ -228,7 +229,8 @@ enum PartHarnessDependencies {
         let detail = GalleryDetail(
             gid: gallery.gid, title: gallery.title, jpnTitle: nil, isFavorited: false, visibility: .yes,
             rating: gallery.rating, userRating: 0, ratingCount: 318, category: gallery.category,
-            language: .english, uploader: gallery.uploader ?? "uploader", postedDate: gallery.postedDate,
+            language: PartHarnessPageTranslation.continueLanguage, uploader: gallery.uploader ?? "uploader",
+            postedDate: gallery.postedDate,
             coverURL: gallery.coverURL, favoritedCount: 2_941, pageCount: gallery.pageCount,
             sizeCount: 86.4, sizeType: "MB", torrentCount: 3
         )
@@ -238,6 +240,7 @@ enum PartHarnessDependencies {
         )
         try? await database.saveDetail(detail, state: GalleryState(gid: gallery.gid, tags: gallery.tags, comments: [comment]))
         try? await database.updateReadingProgress(gid: gallery.gid, progress: max(gallery.pageCount / 3, 1))
+        await PartHarnessPageTranslation.seed(gallery)
     }
 }
 #endif

@@ -62,9 +62,11 @@ final class ReaderHarnessTranslation {
     }
 
     /// The engine could not show a page: the page is not translated until it is drawn again.
-    func didFail(page: Int) {
+    /// Returns whether to draw it again: once for a page, as the reader's model does.
+    func didFail(page: Int) -> Bool {
         failures.append(page)
         overlays[page] = nil
+        return failures.count(where: { $0 == page }) == 1
     }
 
     /// Cuts a page's file short, as a damaged cache would leave it.
@@ -85,13 +87,14 @@ extension ReaderHarnessModel {
         return translation?.overlay(at: page)
     }
 
-    /// As the reader's model answers it: the page loses its overlay and is drawn again.
+    /// As the reader's model answers it: the page loses its overlay and is drawn again, once.
     func readerDidFailToShowTranslation(page: Int) {
         recorder?.add("E translationFailed \(page)")
         ReaderHarnessFiles.log("\(setup.name): the translation of page \(page) could not be shown")
         guard let translation else { return }
-        translation.didFail(page: page)
+        let drawsAgain = translation.didFail(page: page)
         proxy.reloadTranslation(page)
+        guard drawsAgain else { return }
         let proxy = proxy
         translation.startMaking(pages: [page]) { proxy.reloadTranslation($0) }
     }

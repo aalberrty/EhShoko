@@ -9,7 +9,8 @@ struct ReaderEngineTranslation {
     /// Whether pages are asked for their overlays: from the first display that is not the
     /// original. A reader in which Translate was never pressed asks for none.
     var asksForOverlays = false
-    /// Pages whose overlay could not be shown, which the host has been told.
+    /// Pages whose overlay could not be shown, which the host has been told, until the host
+    /// gives the page its translation again.
     var failedPages: Set<Int> = []
     /// The pages the reader is on, as last reported.
     var pagesOnScreen: [Int] = []
@@ -42,6 +43,10 @@ extension ReaderEngineViewController {
     /// A page's translation changed: there is one now, another one, or none any more. A page
     /// without a view costs nothing; it is asked about when it gets one.
     func reloadTranslation(_ page: Int) {
+        // What the host gives now is a new attempt: if it cannot be shown either, the host is
+        // told again and decides (the reader's model draws a page again once, then marks it
+        // failed).
+        translation.failedPages.remove(page)
         guard translation.asksForOverlays, let pageView = content?.pageView(forPage: page) else { return }
         configureTranslation(of: pageView)
     }
@@ -70,8 +75,8 @@ extension ReaderEngineViewController {
 
     func pageView(_ pageView: ReaderPageView, didFailToShowTranslation overlay: PageTranslationOverlay) {
         let page = pageView.page
-        // Once for a page: a file that cannot be read after it was written again would
-        // otherwise be drawn and refused in a circle.
+        // Once for each translation the host gives the page: a page view made again for the
+        // same file does not tell it twice. Drawing again is the host's to limit.
         guard page >= 1, translation.failedPages.insert(page).inserted else { return }
         delegate?.readerDidFailToShowTranslation(page: page)
     }
