@@ -2,7 +2,9 @@ import SwiftUI
 
 nonisolated extension ReaderSchematic {
     /// Shelf's controls: a top bar of three shapes (close, title, actions) and a bottom panel
-    /// with a strip of nine pages, a slider and three buttons.
+    /// with a strip of nine pages, a slider and four buttons: Auto-play, the direction,
+    /// Translate and Settings. Translate is drawn off; its status capsule is transient and is
+    /// not drawn.
     static func shelfControls(_ canvas: SchematicCanvas) {
         let palette = canvas.palette
         closeButton(canvas)
@@ -13,10 +15,10 @@ nonisolated extension ReaderSchematic {
         canvas.chrome(5, 111, 90, 43, 9)
         strip(canvas, top: 115, count: 9)
         slider(canvas, x: 14, y: 131, width: 72)
-        for button in 0..<3 {
-            let x = 16 + CGFloat(button) * 26
-            canvas.box(x + 5, 138, 6, 5.5, palette.label, 1.5)
-            canvas.box(x, 146, 16, 1.8, palette.secondary)
+        for button in 0..<4 {
+            let x = 12 + CGFloat(button) * 20.5
+            canvas.box(x + 4, 138, 6, 5.5, palette.label, 1.5)
+            canvas.box(x, 146, 14, 1.8, palette.secondary)
         }
     }
 }
