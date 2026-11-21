@@ -100,24 +100,43 @@ struct ReaderTranslationDownloadPanel: View {
         .accessibilityElement(children: .combine)
     }
 
+    /// Side by side as drawn; one above the other when a title would not fit on one line
+    /// ("Download 1.18 GB" beside "Keep Reading" in a large text size or a long language).
     private func buttons(_ content: ReaderTranslationDownloadContent) -> some View {
-        HStack(spacing: Tokens.Spacing.small + Tokens.Spacing.xxSmall) {
-            if let secondary = content.secondary {
-                Button { perform(secondary) } label: { buttonLabel(secondary) }
-                    .buttonStyle(.bordered)
+        ViewThatFits(in: .horizontal) {
+            HStack(spacing: Tokens.Spacing.small + Tokens.Spacing.xxSmall) {
+                buttonRow(content, prominentFirst: false)
             }
-            Button { perform(content.primary) } label: { buttonLabel(content.primary) }
-                .buttonStyle(.borderedProminent)
+            VStack(spacing: Tokens.Spacing.small + Tokens.Spacing.xxSmall) {
+                buttonRow(content, prominentFirst: true)
+            }
         }
         .controlSize(.large)
         .buttonBorderShape(.capsule)
     }
 
+    /// The two buttons in reading order: the secondary one leading in a row, the prominent
+    /// one first when they stack.
+    @ViewBuilder
+    private func buttonRow(_ content: ReaderTranslationDownloadContent, prominentFirst: Bool) -> some View {
+        if prominentFirst { prominentButton(content.primary) }
+        if let secondary = content.secondary {
+            Button { perform(secondary) } label: { buttonLabel(secondary) }
+                .buttonStyle(.bordered)
+        }
+        if !prominentFirst { prominentButton(content.primary) }
+    }
+
+    private func prominentButton(_ action: ReaderTranslationDownloadContent.Action) -> some View {
+        Button { perform(action) } label: { buttonLabel(action) }
+            .buttonStyle(.borderedProminent)
+    }
+
     private func buttonLabel(_ action: ReaderTranslationDownloadContent.Action) -> some View {
         Text(action.title)
             .fontWeight(.semibold)
-            .lineLimit(2)
-            .minimumScaleFactor(0.8)
+            .lineLimit(1)
+            .fixedSize(horizontal: true, vertical: false)
             .frame(maxWidth: .infinity)
     }
 
