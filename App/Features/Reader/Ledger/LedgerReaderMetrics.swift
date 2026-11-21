@@ -9,6 +9,9 @@ nonisolated enum LedgerReaderMetrics {
     /// than this, or than its rows at the default text size where the translation group shows
     /// (`LedgerSheetHeights.maximumOpen`): the drawing had the group but not the Live Text row.
     static let maximumOpenHeight: CGFloat = 456
+    /// The most of the screen's height the open sheet takes in portrait, so that a short phone
+    /// keeps a page above it; beyond it the rows scroll, as they do in landscape.
+    static let maximumOpenShare: CGFloat = 0.6
     /// The least the open height stands above the resting one.
     static let minimumPull: CGFloat = 60
     /// How far above its resting height the sheet still counts as resting.
@@ -95,6 +98,18 @@ nonisolated struct LedgerSheetHeights: Equatable, Sendable {
     /// size, so that they never scroll there in portrait.
     static func maximumOpen(hasPages: Bool, showsTranslation: Bool) -> CGFloat {
         max(LedgerReaderMetrics.maximumOpenHeight, Self(hasPages: hasPages, showsTranslation: showsTranslation).open)
+    }
+
+    /// `maximumOpen`, and in portrait never more than `LedgerReaderMetrics.maximumOpenShare` of
+    /// the screen's height (an iPhone SE keeps a page above the sheet). Landscape keeps the
+    /// cap as it is: the system holds the sheet below the screen's top there anyway.
+    /// `screenHeight` is 0 until the screen has been measured.
+    static func maximumOpen(
+        hasPages: Bool, showsTranslation: Bool, screenHeight: CGFloat, isLandscape: Bool
+    ) -> CGFloat {
+        let cap = maximumOpen(hasPages: hasPages, showsTranslation: showsTranslation)
+        guard !isLandscape, screenHeight > 0 else { return cap }
+        return min(cap, (screenHeight * LedgerReaderMetrics.maximumOpenShare).rounded(.down))
     }
 
     var restDetent: PresentationDetent { .height(rest) }

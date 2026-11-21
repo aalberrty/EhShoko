@@ -74,6 +74,8 @@ final class LedgerSheetState {
     private(set) var showsTranslation = true
 
     private let hasPages: Bool
+    /// The reader's screen's height, in portrait or landscape as it stands; 0 until measured.
+    @ObservationIgnored private var screenHeight: CGFloat = 0
     @ObservationIgnored private var defaultOpenHeight: CGFloat
     @ObservationIgnored private var maximumOpenHeight: CGFloat
     private let minimumOpenHeight: CGFloat
@@ -88,13 +90,15 @@ final class LedgerSheetState {
         minimumOpenHeight = heights.rest + LedgerReaderMetrics.minimumPull
     }
 
-    /// The reader's screen turned. The open rows differ between the two (landscape adds the
-    /// two-page rows), so the open height starts over from what portrait needs and follows the
-    /// rows from there.
-    func screenDidTurn(isLandscape: Bool) {
-        guard isLandscape != self.isLandscape else { return }
+    /// The reader's screen turned or changed size. The open rows differ between portrait and
+    /// landscape (landscape adds the two-page rows), and in portrait the open sheet takes at
+    /// most a share of the screen, so the open height starts over from what portrait needs and
+    /// follows the rows from there.
+    func screenDidChange(isLandscape: Bool, height: CGFloat) {
+        guard isLandscape != self.isLandscape || height != screenHeight else { return }
         self.isLandscape = isLandscape
-        openHeight = defaultOpenHeight
+        screenHeight = height
+        resetOpenHeight()
     }
 
     /// The translation group came or went (a gallery's language became known, `README` 8).
@@ -102,8 +106,16 @@ final class LedgerSheetState {
     func translationDidChange(isShown: Bool) {
         guard isShown != showsTranslation else { return }
         showsTranslation = isShown
-        defaultOpenHeight = LedgerSheetHeights(hasPages: hasPages, showsTranslation: isShown).open
-        maximumOpenHeight = LedgerSheetHeights.maximumOpen(hasPages: hasPages, showsTranslation: isShown)
+        resetOpenHeight()
+    }
+
+    private func resetOpenHeight() {
+        maximumOpenHeight = LedgerSheetHeights.maximumOpen(
+            hasPages: hasPages, showsTranslation: showsTranslation,
+            screenHeight: screenHeight, isLandscape: isLandscape
+        )
+        let rows = LedgerSheetHeights(hasPages: hasPages, showsTranslation: showsTranslation).open
+        defaultOpenHeight = max(min(rows, maximumOpenHeight), minimumOpenHeight)
         openHeight = defaultOpenHeight
     }
 
@@ -206,7 +218,7 @@ private struct LedgerPageInsetDriver: View {
             .accessibilityHidden(true)
             .onGeometryChange(for: LedgerScreenShape.self) { LedgerScreenShape($0) } action: { shape in
                 screen = shape
-                sheet.screenDidTurn(isLandscape: shape.isLandscape)
+                sheet.screenDidChange(isLandscape: shape.isLandscape, height: shape.height)
             }
             .onChange(of: inset, initial: true) { _, inset in
                 set(inset)
@@ -230,19 +242,22 @@ private struct LedgerPageInsetDriver: View {
 }
 
 /// What the controls take from the reader's screen: whether it is wider than tall, the safe
-/// area at its bottom, which is also under the sheet, and where its bottom edge is in the
-/// window. Changes only when the screen turns.
+/// area at its bottom, which is also under the sheet, where its bottom edge is in the window,
+/// and its height, safe areas included. Changes only when the screen turns or changes size.
 nonisolated struct LedgerScreenShape: Equatable {
     var isLandscape = false
     var safeAreaBottom: CGFloat = 0
     var bottom: CGFloat = 0
+    var height: CGFloat = 0
 
     init() {}
 
     init(_ geometry: GeometryProxy) {
         isLandscape = geometry.size.width > geometry.size.height
         safeAreaBottom = geometry.safeAreaInsets.bottom
-        bottom = (geometry.frame(in: .global).maxY + geometry.safeAreaInsets.bottom).rounded()
+        let frame = geometry.frame(in: .global)
+        bottom = (frame.maxY + geometry.safeAreaInsets.bottom).rounded()
+        height = (bottom - (frame.minY - geometry.safeAreaInsets.top)).rounded()
     }
 
     /// From a sheet's top edge, in the window, to the screen's bottom edge.

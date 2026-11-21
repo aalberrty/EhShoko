@@ -18,7 +18,7 @@ nonisolated enum ReaderSchematic {
         case .shelf: page(canvas, CGRect(x: 8, y: 22, width: 84, height: 112))
         case .wall: page(canvas, CGRect(x: 8, y: 24, width: 84, height: 112))
         case .ledger:
-            page(canvas, shrunk ? CGRect(x: 22, y: 12, width: 56, height: 74) : CGRect(x: 8, y: 18, width: 84, height: 100))
+            page(canvas, shrunk ? CGRect(x: 30, y: 10, width: 40, height: 52) : CGRect(x: 8, y: 18, width: 84, height: 100))
         }
     }
 

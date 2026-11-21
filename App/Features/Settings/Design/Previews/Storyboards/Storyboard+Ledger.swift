@@ -33,14 +33,14 @@ nonisolated extension Storyboard {
             StageLayer(.readerControls(.ledger), [
                 Keyframe(6.8, .down(8, 0)), Keyframe(7.1, .down(0)), Keyframe(7.3, .down(0)), Keyframe(7.45, .down(0, 0)),
             ]),
-            StageLayer(.openSheet, [Keyframe(7.3, .down(82)), Keyframe(7.7, .down(0))]),
+            StageLayer(.openSheet, [Keyframe(7.25, .down(96)), Keyframe(7.6, .down(0))]),
         ],
         fingertips: [
             Fingertip(0.8, 40, 57),
             Fingertip(2.8, 84, 54, to: (52, 54), duration: 0.55),
             Fingertip(4.1, 11, 30),
             Fingertip(6.05, 50, 146),
-            Fingertip(7.2, 50, 126, to: (50, 84), duration: 0.55),
+            Fingertip(7.15, 50, 126, to: (50, 70), duration: 0.5),
         ],
         stills: [1.7, 3.5, 5.5, 7.6]
     )
