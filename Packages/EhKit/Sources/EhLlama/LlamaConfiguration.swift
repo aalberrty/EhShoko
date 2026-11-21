@@ -52,7 +52,8 @@ public struct LlamaSampling: Sendable, Equatable {
     public var topK: Int
     /// Drops tokens less likely than this share of the likeliest one. 0 is off.
     public var minP: Double
-    /// Makes a token among the last 64 less likely by this factor. 1 is off.
+    /// Makes a token among the last 64 of the prompt and the answer less likely by this
+    /// factor. 1 is off.
     public var repeatPenalty: Double
     /// The same seed, prompt and settings give the same tokens on the same machine.
     public var seed: UInt32
