@@ -115,6 +115,9 @@ private struct ReaderDestinationSheets: ViewModifier {
                 case .share(let file):
                     ActivityView(items: [file])
                         .presentationDetents([.medium, .large])
+                case .translationDownload:
+                    // A placeholder until the download sheet is built.
+                    EmptyView()
                 }
             }
     }

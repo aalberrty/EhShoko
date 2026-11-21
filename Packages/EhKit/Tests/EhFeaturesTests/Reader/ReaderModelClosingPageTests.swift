@@ -9,7 +9,7 @@ import Testing
         let harness = try ReaderModelHarness()
         let model = await harness.startedModel(initialPage: 100)
         #expect(!model.isAtEnd)
-        #expect(model.translationAvailability == .unavailable)
+        #expect(model.translationAvailability == .ready)
 
         model.trailerVisibilityDidChange(true)
         #expect(model.isAtEnd)
