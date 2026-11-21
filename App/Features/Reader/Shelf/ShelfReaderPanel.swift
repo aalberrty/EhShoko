@@ -3,18 +3,22 @@ import EhFeatures
 import EhModels
 import SwiftUI
 
-/// The bottom of the controls: the place kept for translation's state capsule, and the panel.
+/// The bottom of the controls: translation's status capsule and the panel, two shapes of
+/// one glass container. The capsule is not in the hierarchy for a gallery in another language.
 struct ShelfReaderBottom: View {
     let model: ReaderModel
     let isReversed: Bool
 
     var body: some View {
-        VStack(spacing: Tokens.Spacing.medium) {
-            // "Translating page 23…", "简体中文 · Hold Translate to see the original": a glass
-            // capsule above the panel once translation exists. Not in the hierarchy until then.
-            ReaderTranslationSlot(availability: model.translationAvailability) { EmptyView() }
-            ShelfReaderPanel(model: model, isReversed: isReversed)
-        }
+        // The capsule stands above the panel without taking part in its layout: it comes and
+        // goes, and changes its text, without moving the panel.
+        ShelfReaderPanel(model: model, isReversed: isReversed)
+            .overlay(alignment: .top) {
+                ReaderTranslationSlot(availability: model.translationAvailability) {
+                    ShelfTranslationCapsule(model: model)
+                }
+                .alignmentGuide(.top) { $0[.bottom] + Tokens.Spacing.medium }
+            }
     }
 }
 
@@ -57,8 +61,8 @@ private struct ShelfReaderPanel: View {
     }
 }
 
-/// Auto-play, the reading direction and Settings, symbol over label. Translate goes between
-/// the direction and Settings once translation exists.
+/// Auto-play, the reading direction, Translate (for a gallery that is not in another
+/// language) and Settings, symbol over label.
 private struct ShelfReaderButtonRow: View {
     let model: ReaderModel
 
@@ -66,7 +70,9 @@ private struct ShelfReaderButtonRow: View {
         HStack(spacing: 6) {
             ShelfAutoPlayButton(model: model)
             ShelfDirectionButton()
-            ReaderTranslationSlot(availability: model.translationAvailability) { EmptyView() }
+            ReaderTranslationSlot(availability: model.translationAvailability) {
+                ShelfTranslateButton(model: model)
+            }
             Button {
                 model.showSettings()
             } label: {
@@ -131,10 +137,12 @@ private struct ShelfDirectionButton: View {
 }
 
 /// A symbol over a short label, on a 54 pt tile that is lit in the tint while its thing is on.
-private struct ShelfPanelButtonLabel: View {
+/// `isMarked` puts the mark for pages translated before on the symbol (Translate).
+struct ShelfPanelButtonLabel: View {
     let title: String
     let symbol: String
     var isOn = false
+    var isMarked = false
 
     @Environment(\.look) private var look
     @Environment(\.lookTint) private var tint
@@ -145,6 +153,7 @@ private struct ShelfPanelButtonLabel: View {
         VStack(spacing: 3) {
             Image(systemName: symbol)
                 .font(.title3)
+                .readerTranslationMark(isMarked)
                 .frame(height: 24)
             Text(title)
                 .font(.caption2.weight(.medium))

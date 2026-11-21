@@ -28,7 +28,9 @@ protocol ReaderTranslationHost: AnyObject {
 ///   while the models load. Without models the press opens the download sheet and is
 ///   remembered by this reader: if the install ends while it is open, Translate turns on.
 /// - **On** lasts until the reader closes or Translate is pressed again. Nothing about it is
-///   stored. Turning it off stops the work and keeps the models and the overlays.
+///   stored. Turning it off stops the work and keeps the models. The engine is given no
+///   overlay while it is off, so the pages translated earlier let their patches go; turning
+///   it on again gives them back at once. Holding the original keeps them.
 ///
 /// The only observable values are what the controls draw. The statuses and overlays of the
 /// pages are not: the engine is told page by page (`ReaderEngineCommands.reloadTranslation`).
@@ -60,8 +62,15 @@ public final class ReaderTranslationModel {
     /// The service's statuses of the pages in `sentWindow`.
     @ObservationIgnored private var statuses: [Int: PageTranslationStatus] = [:]
     /// Every page translated in this reader, also those that left the window: the engine asks
-    /// for a page's overlay when it makes the page's view.
+    /// for a page's overlay when it makes the page's view. Kept while Translate is off, when
+    /// the engine is given none of them.
     @ObservationIgnored private var overlays: [Int: PageTranslationOverlay] = [:]
+    /// Pages whose overlay the engine could not show and which were drawn again for it. A
+    /// second failure is not drawn again by itself: the page is marked failed, with Retry.
+    @ObservationIgnored private var redrawnPages: Set<Int> = []
+    /// Pages marked failed because their overlay could not be shown after it was drawn again.
+    /// The service still has them as translated, so their failure is the reader's own.
+    @ObservationIgnored private var unshownPages: Set<Int> = []
     /// The pages the engine shows, nearest first: two in a spread, several in the strip.
     /// Empty until the engine has said.
     @ObservationIgnored private var pagesOnScreen: [Int] = []
@@ -106,10 +115,11 @@ public final class ReaderTranslationModel {
         }
     }
 
-    /// The overlay of a translated page, or `nil`. The engine asks when it makes a page's view
-    /// and when it is told that the page's translation changed.
+    /// The overlay of a translated page, or `nil`; `nil` for every page while Translate is
+    /// off. The engine asks when it makes a page's view and when it is told that the page's
+    /// translation changed.
     public func overlay(at page: Int) -> PageTranslationOverlay? {
-        overlays[page]
+        isOn ? overlays[page] : nil
     }
 
     // MARK: What the controls do
@@ -150,15 +160,26 @@ public final class ReaderTranslationModel {
 
     /// Retry of the current page's failure.
     func retryCurrentPage() {
-        guard isOn, let page = host?.currentPage, case .failed = statuses[page] else { return }
+        guard isOn, let page = host?.currentPage, status == .failed(page: page) else { return }
+        unshownPages.remove(page)
+        // Until the service says more: the page is asked for again.
+        statuses[page] = .translating
         session?.retry(page)
+        refreshStatus()
     }
 
-    /// The engine could not read a page's patch file: the service draws it again.
+    /// The engine could not read a page's patch file. The first time, the service draws it
+    /// again. When the drawing again cannot be shown either, the page is marked failed: it
+    /// shows the original, and so does its status, until Retry.
     func overlayDidFail(page: Int) {
         guard overlays.removeValue(forKey: page) != nil else { return }
         host?.engine?.reloadTranslation(page)
-        session?.retry(page)
+        if redrawnPages.insert(page).inserted {
+            session?.retry(page)
+        } else {
+            unshownPages.insert(page)
+            refreshStatus()
+        }
     }
 
     // MARK: What the reader forwards
@@ -247,6 +268,8 @@ public final class ReaderTranslationModel {
         if session == nil { openSession() }
         sendWindow()
         sendDisplay()
+        // The pages translated before Translate was last turned off show again at once.
+        reloadOverlays()
         refreshStatus()
     }
 
@@ -255,9 +278,20 @@ public final class ReaderTranslationModel {
         isHoldingOriginal = false
         sentWindow = .empty
         statuses = [:]
+        unshownPages = []
         session?.setWindow(.empty)
         sendDisplay()
+        // The engine cannot tell off from the original chosen: it is given no overlay, so the
+        // page views let their patches go.
+        reloadOverlays()
         refreshStatus()
+    }
+
+    /// Asks the engine again for every page translated in this reader. A page without a view
+    /// costs nothing.
+    private func reloadOverlays() {
+        guard let engine = host?.engine else { return }
+        for page in overlays.keys.sorted() { engine.reloadTranslation(page) }
     }
 
     private func openSession() {
@@ -296,7 +330,8 @@ public final class ReaderTranslationModel {
         case .translated(let overlay):
             if overlays[page] != overlay {
                 overlays[page] = overlay
-                host?.engine?.reloadTranslation(page)
+                // While off the engine is given nothing; turning on gives it every overlay.
+                if isOn { host?.engine?.reloadTranslation(page) }
             }
         case .nothingToDraw, .skipped, .failed:
             if overlays.removeValue(forKey: page) != nil {
@@ -308,13 +343,20 @@ public final class ReaderTranslationModel {
         // A late event of a page that left the window, or of a reader that turned it off.
         guard isOn, sentWindow.pages.contains(where: { $0.index == page }) else { return }
         statuses[page] = event.status
+        // Retry was asked for elsewhere, or the page is drawn again: the service has the say.
+        unshownPages.remove(page)
         if page == host?.currentPage { refreshStatus() }
     }
 
     private func refreshStatus() {
         var new: ReaderTranslationStatus?
-        if isOn, let host, !host.isAtEnd, let pageStatus = statuses[host.currentPage] {
-            new = ReaderTranslationStatus(pageStatus, page: host.currentPage)
+        if isOn, let host, !host.isAtEnd {
+            let page = host.currentPage
+            if unshownPages.contains(page) {
+                new = .failed(page: page)
+            } else if let pageStatus = statuses[page] {
+                new = ReaderTranslationStatus(pageStatus, page: page)
+            }
         }
         if status != new { status = new }
     }
