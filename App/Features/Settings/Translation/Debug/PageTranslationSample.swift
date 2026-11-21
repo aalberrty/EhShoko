@@ -23,30 +23,47 @@ import Foundation
 /// | `empty` | Nothing |
 /// | `preparing` | The default set, each model loading once for 20 s |
 /// | `paused` | The default set without its detector, whose download is paused a third of the way |
+/// | `downloading` | The same, the detector's download going on from a third of the way |
+/// | `offline` | The same with no network: the download waits for a connection |
+/// | `noSpace` | The same on a full disk: the download stops at once for want of room |
+/// | `failed` | The same with sources that answer 404: the download stops at once |
+/// | `noSource` | Nothing, and no private source whatever the settings say: no detector can be had |
+///
+/// The states that download need a private source for the detector, which is private-only:
+/// launch them with `-settings.pageTranslationSourceAddress https://models.example` unless
+/// the settings hold one.
 enum PageTranslationSample: String {
     case ready, partial, empty, preparing, paused
+    case downloading, offline, noSpace, failed, noSource
 
     static let atLaunch = UserDefaults.standard.string(forKey: "PageTranslationSample").flatMap(Self.init)
 
     private static let root = URL.temporaryDirectory.appending(path: "PageTranslationSample", directoryHint: .isDirectory)
     private static var isPrepared = false
 
-    /// The one sample store of the process.
-    private static let store: PageTranslationModelStore? = atLaunch.map { _ in
+    /// The one sample store of the process, which the reader's download sheet shows too.
+    static var sampleStore: PageTranslationModelStore? { store }
+
+    private static let store: PageTranslationModelStore? = atLaunch.map { state in
         @Dependency(\.settings) var settings
+        var choices = ModelStoreChoices.settings(settings)
+        if state == .noSource { choices.sourceAddress = { "" } }
+        let isOffline = state == .offline
         let environment = ModelStoreEnvironment(
             catalog: catalog,
             layout: ModelStoreLayout(root: root),
-            transport: SampleTransport(),
+            transport: SampleTransport(refuses: state == .failed),
             compiler: ModelCompiler(
                 compile: { $0 },
                 prepare: { _, _ in try await Task.sleep(for: .seconds(atLaunch == .preparing ? 20 : 0)) }
             ),
             // `-PageTranslationSampleToken <text>` starts with a token kept.
             tokens: .inMemory(UserDefaults.standard.string(forKey: "PageTranslationSampleToken")),
-            freeSpace: { _ in 64_000_000_000 }
+            // Less than any download needs (`spaceNeeded` adds 200 MB to what is left).
+            freeSpace: { _ in state == .noSpace ? 150_000_000 : 64_000_000_000 },
+            connectivity: { AsyncStream { $0.yield(!isOffline) } }
         )
-        return PageTranslationModelStore(environment: environment, choices: .settings(settings))
+        return PageTranslationModelStore(environment: environment, choices: choices)
     }
 
     /// The Translation screen's model over the sample store, or `nil` without the argument.
@@ -71,11 +88,15 @@ enum PageTranslationSample: String {
         let defaultSet: [ModelArtifactID] = [.k2xl, .cpt2, .jmtFast1, .lamaManga]
         let installed: [ModelArtifactID] = switch state {
         case .ready: defaultSet + [.v4s, .hyMT2]
-        case .partial, .paused: [.cpt2, .jmtFast1, .lamaManga]
-        case .empty: []
+        case .partial, .paused, .downloading, .offline, .noSpace, .failed: [.cpt2, .jmtFast1, .lamaManga]
+        case .empty, .noSource: []
         case .preparing: defaultSet
         }
-        if state == .paused { writePausedDownload(of: .k2xl, catalog: catalog, root: root) }
+        switch state {
+        case .paused: writeDownload(of: .k2xl, isPaused: true, catalog: catalog, root: root)
+        case .downloading, .offline, .noSpace, .failed: writeDownload(of: .k2xl, isPaused: false, catalog: catalog, root: root)
+        case .ready, .partial, .empty, .preparing, .noSource: break
+        }
         for id in installed {
             guard let artifact = catalog.artifact(id) else { continue }
             let folder = root.appending(path: id.rawValue, directoryHint: .isDirectory)
@@ -98,9 +119,9 @@ enum PageTranslationSample: String {
         }
     }
 
-    /// A download the store finds paused when it reads the folder: what was asked for, and a
-    /// sparse part of the first file, a third of it.
-    private nonisolated static func writePausedDownload(of id: ModelArtifactID, catalog: ModelCatalog, root: URL) {
+    /// A download the store finds when it reads the folder, paused or going on: what was
+    /// asked for, and a sparse part of the first file, a third of it.
+    private nonisolated static func writeDownload(of id: ModelArtifactID, isPaused: Bool, catalog: ModelCatalog, root: URL) {
         guard let file = catalog.artifact(id)?.files.first else { return }
         let files = FileManager()
         let part = root.appending(path: id.rawValue, directoryHint: .isDirectory).appending(path: file.path + ".part")
@@ -110,7 +131,7 @@ enum PageTranslationSample: String {
             try? handle.truncate(atOffset: UInt64(file.size / 3))
             try? handle.close()
         }
-        let intent: [String: Any] = ["artifacts": [id.rawValue], "isPaused": true]
+        let intent: [String: Any] = ["artifacts": [id.rawValue], "isPaused": isPaused]
         if let data = try? JSONSerialization.data(withJSONObject: intent) {
             files.createFile(atPath: root.appending(path: "downloads.json").path(percentEncoded: false), contents: data)
         }
@@ -159,8 +180,11 @@ enum PageTranslationSample: String {
 /// Serves zeros at 256 KB/s for each range (`-PageTranslationSampleRate <KB/s>` changes it),
 /// and no range in less than 45 s, so even a small file is under way long enough to be seen;
 /// each range is written as a sparse file. A download moves on screen, writes nothing for a
-/// while, and fails its checksum at the end.
+/// while, and fails its checksum at the end. With `refuses` every range is answered with a
+/// 404 at once.
 nonisolated private struct SampleTransport: ModelTransport {
+    var refuses = false
+
     private static let bytesPerSecond: Double = {
         let rate = UserDefaults.standard.integer(forKey: "PageTranslationSampleRate")
         return Double(rate > 0 ? rate : 256) * 1024
@@ -171,6 +195,7 @@ nonisolated private struct SampleTransport: ModelTransport {
     func fetch(
         _ request: ModelChunkRequest, received: @escaping @Sendable (Int64) -> Void
     ) async throws -> ModelChunkOutcome {
+        if refuses { return .refused(status: 404, retryAfter: nil) }
         let count = Int64(request.range.count)
         let seconds = max(Double(count) / Self.bytesPerSecond, Self.shortest)
         let steps = Int(seconds * Self.stepsPerSecond)
