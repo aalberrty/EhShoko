@@ -141,7 +141,9 @@ private struct FigureRow: View {
                     .frame(maxWidth: stacked ? nil : .infinity, alignment: .leading)
                 Text(figure.value.text)
                     .monospacedDigit()
-                    .foregroundStyle(figure.value == .notMeasured ? look.tertiaryLabel : look.label)
+                    // "Not measured" is quieter than a figure, but still readable: the tertiary
+                    // colour fails the contrast audit on the card.
+                    .foregroundStyle(figure.value == .notMeasured ? look.secondaryLabel : look.label)
                     .multilineTextAlignment(stacked ? .leading : .trailing)
                     .fixedSize(horizontal: false, vertical: true)
             }
