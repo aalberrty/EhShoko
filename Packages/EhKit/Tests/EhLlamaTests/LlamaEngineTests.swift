@@ -183,6 +183,29 @@ import Testing
         }
     }
 
+    /// llama.cpp's own programs show the sampler the prompt, so a model is held back from
+    /// repeating the end of its prompt from the first token of the answer on. A model that
+    /// would go on with a token of its prompt takes another one under a heavy penalty.
+    @Test func theRepeatPenaltyCountsTheEndOfThePrompt() async throws {
+        try await withTinyEngine { engine in
+            let greedy = LlamaGenerationOptions(maxTokens: 1, ignoresEndOfGeneration: true)
+            var penalised = greedy
+            penalised.sampling = LlamaSampling(temperature: 0, repeatPenalty: 1000)
+            // Prompts of 60 tokens each, taken from along the vocabulary, until one is found
+            // whose likeliest next token is one of its own.
+            let first = Int(TinyModel.endToken) + 1
+            for start in stride(from: first, to: TinyModel.vocabularySize - 60, by: 4) {
+                let prompt = [TinyModel.startToken] + (start..<start + 60).map { LlamaToken($0) }
+                let plain = try await engine.generate(prompt: prompt, options: greedy).tokens
+                guard let next = plain.first, prompt.contains(next) else { continue }
+                let held = try await engine.generate(prompt: prompt, options: penalised).tokens
+                #expect(held.count == 1 && held.first != next)
+                return
+            }
+            Issue.record("No prompt of the tiny model goes on with one of its own tokens")
+        }
+    }
+
     // MARK: Stopping
 
     @Test func theStopFlagEndsGenerationWithinOneToken() async throws {
