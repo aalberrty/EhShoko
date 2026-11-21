@@ -21,6 +21,11 @@ protocol ReaderContentHost: AnyObject {
     /// The pages on screen, or the pages that have a view, changed.
     func contentDidChangeVisiblePages()
 
+    /// The pages moved on screen: a scroll step, a zoom step or a new layout. Called often,
+    /// so the host does nothing here unless something fixed on the screen lies over the pages
+    /// (the compare wipe's line).
+    func contentDidMove()
+
     /// The view for the trailer's place, which has come within the tiled range. `nil` when
     /// there is none, or when its content does not exist yet and this is not the moment to
     /// make it (`ReaderEngineViewController.trailerView(isOnScreen:isMoving:)` has the rule).

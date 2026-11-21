@@ -74,7 +74,9 @@ public final class ReaderTranslationModel {
     /// The pages the engine shows, nearest first: two in a spread, several in the strip.
     /// Empty until the engine has said.
     @ObservationIgnored private var pagesOnScreen: [Int] = []
-    @ObservationIgnored private(set) var compareFraction = 0.5
+    /// Where the compare wipe's line is across the reader, from 0 to 1. Kept when the display
+    /// changes, so the wipe comes back where it was left. Not observable: it follows a finger.
+    @ObservationIgnored public private(set) var compareFraction = 0.5
     /// What the engine was last told to show.
     @ObservationIgnored private var sentDisplay = ReaderTranslationDisplay.original
     @ObservationIgnored private var isClosed = false

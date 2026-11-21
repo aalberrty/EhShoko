@@ -12,6 +12,8 @@ final class ReaderSpreadView: UIScrollView, UIScrollViewDelegate {
     private(set) var pageViews: [ReaderPageView] = []
     /// Called when a zoom gesture or animation settles: `true` if the spread is now zoomed in.
     var onZoomChange: ((Bool) -> Void)?
+    /// Called on every step of a pinch, a zoom animation or a pan while zoomed in.
+    var onMove: (() -> Void)?
 
     private let container = UIView()
 
@@ -49,6 +51,7 @@ final class ReaderSpreadView: UIScrollView, UIScrollViewDelegate {
         pageViews = []
         spreadIndex = -1
         onZoomChange = nil
+        onMove = nil
         views.forEach { $0.removeFromSuperview() }
         resetZoom()
         return views
@@ -108,6 +111,11 @@ final class ReaderSpreadView: UIScrollView, UIScrollViewDelegate {
             x: max(size.width, bounds.width) / 2,
             y: max(size.height, bounds.height) / 2
         )
+        onMove?()
+    }
+
+    func scrollViewDidScroll(_ scrollView: UIScrollView) {
+        onMove?()
     }
 
     func scrollViewDidEndZooming(_ scrollView: UIScrollView, with view: UIView?, atScale scale: CGFloat) {

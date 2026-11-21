@@ -2,7 +2,8 @@ import EhFeatures
 import SwiftUI
 
 // Ledger's page translation (`ledger.md` section 5, `README` 8): at rest, a round Translate
-// button leading the buttons, with the mark for pages translated before; pulled up, the group
+// button leading the buttons, with the mark for pages translated before, and Compare beside it
+// while Translate is on; pulled up, the group
 // "TRANSLATION · ON THIS IPHONE" with the switch and the segmented control. The switch and
 // the button are one state, on or off for this reader. All of it is fills on the system
 // sheet: no glass on glass.
@@ -12,14 +13,59 @@ import SwiftUI
 
 private typealias Strings = L10n.Localizable.Reader.Translate
 
-/// The resting row's Translate button, where the gallery offers it.
+/// The resting row's Translate button, where the gallery offers it, and Compare beside it
+/// while Translate is on.
+///
+/// Compare is shown only where it fits. On a 375 pt phone with failed pages (Retry joins the
+/// row) or a four-digit page number there is no room for a fifth round button; Compare is then
+/// left out of the resting row and stays in the pulled-up segmented control. The slot asks
+/// the row for its room first (`layoutPriority`), so the choice is made with what is left
+/// after the page number, the other buttons and the row's smallest gap.
 struct LedgerTranslateSlot: View {
     let model: ReaderModel
 
     var body: some View {
         ReaderTranslationSlot(availability: model.translationAvailability) {
+            LedgerTranslateButtons(model: model)
+        }
+        .layoutPriority(1)
+    }
+}
+
+private struct LedgerTranslateButtons: View {
+    let model: ReaderModel
+
+    var body: some View {
+        if model.translation.isOn {
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: Tokens.Spacing.small) {
+                    LedgerTranslateButton(model: model)
+                    LedgerCompareButton(model: model)
+                }
+                LedgerTranslateButton(model: model)
+            }
+        } else {
             LedgerTranslateButton(model: model)
         }
+    }
+}
+
+/// Compare at rest: lit while the wipe is over the page. A press puts the wipe there, and a
+/// second press goes back to the translation.
+private struct LedgerCompareButton: View {
+    let model: ReaderModel
+
+    private static let symbol = "rectangle.split.2x1"
+
+    var body: some View {
+        let isComparing = model.translation.displayMode == .compare
+        Button {
+            model.translation.setDisplayMode(isComparing ? .translated : .compare)
+        } label: {
+            LedgerRoundLabel(symbol: Self.symbol, isOn: isComparing)
+        }
+        .ledgerControlName(Strings.compare, symbol: Self.symbol)
+        .sensoryFeedback(.selection, trigger: isComparing)
     }
 }
 
@@ -183,12 +229,12 @@ private struct LedgerTranslateSwitchRow: View {
     }
 }
 
-/// Original or Translated while Translate is on; Compare joins them later (`README` 7.4; there
-/// is no side by side).
+/// Original, Translated or Compare while Translate is on (`README` 7.4; there is no side by
+/// side). Compare puts the wipe over the page.
 private struct LedgerTranslationDisplayRow: View {
     let model: ReaderModel
 
-    private static let modes: [ReaderTranslationDisplayMode] = [.original, .translated]
+    private static let modes: [ReaderTranslationDisplayMode] = [.original, .translated, .compare]
 
     var body: some View {
         Picker(L10n.Localizable.Reader.translate, selection: selection) {

@@ -80,7 +80,7 @@ struct ReaderHarnessFailingPages: Equatable {
 /// | `-ReaderHarnessCheck firstpage` | Times the first page with the slot off and on, in turn. |
 /// | `-ReaderHarnessCheck rotation` | Turns the screen and changes the direction at the end of the gallery. |
 /// | `-ReaderHarnessCheck walk` | Walks the slot's behaviour: jumps, reloads, the slot switched off, a height change. |
-/// | `-ReaderHarnessCheck translation` | The made-up translation: the overlays' place in every reading mode, zoomed and after a turn of the screen; switching; a damaged file; what is released; page turns with and without it (`ReaderHarnessChecks+Translation.swift`). With `-ReaderHarnessTranslationArm original\|translated` the page turns run one way only. |
+/// | `-ReaderHarnessCheck translation` | The made-up translation: the overlays' place in every reading mode, zoomed and after a turn of the screen; switching; a damaged file; what is released; page turns with and without it (`ReaderHarnessChecks+Translation.swift`); the compare wipe's cut, also while a page turns, and what moving it costs (`compare`, `ReaderHarnessChecks+TranslationCompare.swift`). With `-ReaderHarnessTranslationArm original\|translated` the page turns run one way only. |
 /// | `-ReaderHarnessModes a,b` | Only these modes of `calls`, or only these parts of `translation`. |
 /// | `-ReaderHarnessRepeat <n>` | Openings per case of `firstpage` (default 6). |
 /// | `-ReaderHarnessPose alone\|beside\|vertical` | Opens a short gallery on the closing page's slot: alone in the pager, beside the last page (landscape), or as the strip's block. |

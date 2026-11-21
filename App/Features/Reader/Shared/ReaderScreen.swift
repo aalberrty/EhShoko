@@ -7,7 +7,8 @@ import SwiftUI
 /// `initialPage` is 1-based; nil opens at the stored reading progress. `detail` is the
 /// gallery's detail page when the presenter has it, for the title.
 ///
-/// Three layers: the background, the UIKit reading engine, and the controls on top. The
+/// Three layers: the background, the UIKit reading engine, and the controls on top; while the
+/// reader compares a page with its translation, the wipe lies between the last two. The
 /// controls are the reader part's switch point (`Design/designs/README.md` section 4): the
 /// one place that reads `designReader`. Every controls design drives the same `ReaderModel`
 /// and is given the same two things, the model and the `ReaderViewport`; none knows who
@@ -36,6 +37,9 @@ struct ReaderScreen: View {
             ReaderEngineFrame(viewport: session.viewport) {
                 ReaderEngineHost(model: model, bridge: session.bridge)
             }
+            // Between the engine and the controls, so it stays while they hide. Only in the
+            // hierarchy while the reader compares.
+            ReaderTranslationWipe(model: model, viewport: session.viewport)
             ReaderControls(model: model, viewport: session.viewport)
         }
         .modifier(ReaderChrome(model: model))

@@ -12,8 +12,8 @@ struct LedgerRestRow: View {
         HStack(spacing: Tokens.Spacing.small) {
             LedgerPageNumber(model: model)
             Spacer(minLength: Tokens.Spacing.small)
-            // Translate leads the buttons (and later Compare). Not in the hierarchy for a
-            // gallery in another language.
+            // Translate leads the buttons, with Compare while on and where it fits. Not in
+            // the hierarchy for a gallery in another language.
             LedgerTranslateSlot(model: model)
             LedgerRetryFailedButton(model: model)
             LedgerAutoPlayButton(model: model, sheet: sheet)
@@ -53,6 +53,8 @@ private struct LedgerPageNumber: View {
         }
         .monospacedDigit()
         .lineLimit(1)
+        // Never shortened: Compare, which asks for its room first, gives way instead.
+        .fixedSize()
         .padding(.leading, Tokens.Spacing.small)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(position.long)

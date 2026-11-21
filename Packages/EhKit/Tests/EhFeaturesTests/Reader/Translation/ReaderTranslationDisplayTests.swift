@@ -187,6 +187,23 @@ import Testing
         #expect(harness.service.lastWindow != .empty)
     }
 
+    @Test func theWipeComesBackWhereItWasLeft() async throws {
+        let harness = try ReaderTranslationHarness()
+        let model = try await translatingModel(harness)
+        #expect(model.translation.compareFraction == 0.5)
+
+        model.translation.setDisplayMode(.compare)
+        model.translation.setCompareFraction(0.3)
+        model.translation.setCompareFraction(-1)
+        #expect(model.translation.compareFraction == 0)
+        model.translation.setCompareFraction(0.3)
+        model.translation.setDisplayMode(.translated)
+        model.translation.setDisplayMode(.compare)
+
+        #expect(model.translation.compareFraction == 0.3)
+        #expect(harness.log.suffix(2) == ["display:translated", "display:compare(fraction: 0.3)"])
+    }
+
     @Test func retryAsksForTheFailedPageAgain() async throws {
         let harness = try ReaderTranslationHarness()
         let model = try await translatingModel(harness)

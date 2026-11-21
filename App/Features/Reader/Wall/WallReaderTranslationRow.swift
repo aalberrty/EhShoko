@@ -42,16 +42,17 @@ struct WallReaderTranslationRow: View {
     }
 }
 
-/// The pill: Original and Translated, the one chosen filled with the tint. Its labels are
-/// the wipe's 原文 and 译文, as drawn (they name the two sides of the page in every
-/// language); VoiceOver reads the full words. Compare, the third state, is MT17's.
+/// The pill: Original, Compare and Translated, the one chosen filled with the tint. Its labels
+/// are the wipe's 原文 and 译文, as drawn (they name the two sides of the page in every
+/// language), with the split rectangle for Compare between them; VoiceOver reads the full
+/// words. Compare puts the wipe over the page (`ReaderTranslationWipe`).
 private struct WallReaderTranslationPill: View {
     let model: ReaderModel
 
     @Namespace private var selection
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
-    private static let modes: [ReaderTranslationDisplayMode] = [.original, .translated]
+    private static let modes: [ReaderTranslationDisplayMode] = [.original, .compare, .translated]
 
     var body: some View {
         let chosen = model.translation.displayMode
@@ -88,7 +89,7 @@ private struct WallReaderPillSegment: View {
 
     var body: some View {
         Button(action: action) {
-            Text(title)
+            label
                 .font(.subheadline.weight(.semibold))
                 .lineLimit(1)
                 .foregroundStyle(isChosen ? onTint : look.label)
@@ -108,10 +109,11 @@ private struct WallReaderPillSegment: View {
         .accessibilityAddTraits(isChosen ? .isSelected : [])
     }
 
-    private var title: String {
+    @ViewBuilder private var label: some View {
         switch mode {
-        case .original: L10n.Localizable.Reader.Translate.Wipe.original
-        case .translated, .compare: L10n.Localizable.Reader.Translate.Wipe.translated
+        case .original: Text(L10n.Localizable.Reader.Translate.Wipe.original)
+        case .compare: Image(systemName: "rectangle.split.2x1")
+        case .translated: Text(L10n.Localizable.Reader.Translate.Wipe.translated)
         }
     }
 
