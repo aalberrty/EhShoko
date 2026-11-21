@@ -206,9 +206,10 @@ enum TranslationWalks {
         compare += [.tap(Self.compare), .pause(seconds: 2)]
         var turn: [Step] = [.turn(.landscapeLeft), .pause(seconds: 2)]
         turn += look("landscape")
-        var toLeading: [Step] = [.drag(handle, dx: -600, dy: 0)]
+        // A drag moves the handle only so far in landscape: several reach the end.
+        var toLeading: [Step] = Array(repeating: Step.drag(handle, dx: -400, dy: 0), count: 3)
         toLeading += [.pause(seconds: 1), .screenshot("landscape-leading-end"), .dump("landscape-leading-end")]
-        var toTrailing: [Step] = [.drag(handle, dx: 1000, dy: 0)]
+        var toTrailing: [Step] = Array(repeating: Step.drag(handle, dx: 400, dy: 0), count: 6)
         toTrailing += [.pause(seconds: 1), .screenshot("landscape-trailing-end"), .dump("landscape-trailing-end")]
         return Walk(
             id: id, title: "Compare in landscape, the handle at either end",
