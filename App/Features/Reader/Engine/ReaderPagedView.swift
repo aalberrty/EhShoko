@@ -217,6 +217,7 @@ final class ReaderPagedView: UIScrollView, UIScrollViewDelegate, ReaderContentVi
         }
         view.setPageViews(pageViews, spreadIndex: index)
         layoutPages(in: view)
+        view.onMove = { [weak self] in self?.host?.contentDidMove() }
         view.onZoomChange = { [weak self, weak view] zoomed in
             guard let self, let view else { return }
             let request = decodeRequest(columns: columns(inSpread: view.spreadIndex), zoomed: zoomed)
@@ -322,6 +323,7 @@ final class ReaderPagedView: UIScrollView, UIScrollViewDelegate, ReaderContentVi
     }
 
     func scrollViewDidScroll(_ scrollView: UIScrollView) {
+        host?.contentDidMove()
         guard !isAdjusting, viewportSize.width > 0, spreads.slotCount > 0 else { return }
         let slot = ReaderGeometry.nearestSlot(
             offsetX: contentOffset.x, pageWidth: viewportSize.width, slotCount: spreads.slotCount

@@ -11,6 +11,17 @@ struct ReaderPageTranslation {
     var isDisplayed = false
     /// Made when the first patches arrive. A page view that waits in a pool keeps it, empty.
     var view: ReaderTranslationOverlayView?
+    /// The compare wipe's line while the reader compares, `nil` otherwise.
+    var wipe: ReaderTranslationWipeLine?
+}
+
+/// Where the compare wipe's line is: a vertical line fixed on the screen, at `fraction` of the
+/// width of `space` (the engine's view), with the translation on its right. The pages move
+/// under it, so each page view converts it into its own overlay's pixels whenever it or the
+/// page moves (`ReaderPageView.placeTranslationWipe()`).
+struct ReaderTranslationWipeLine {
+    var fraction: CGFloat
+    weak var space: UIView?
 }
 
 // The page's translation: an overlay above its image. The page view loads the overlay's patch
@@ -73,8 +84,30 @@ extension ReaderPageView {
         translationLoad = nil
         translation.overlay = nil
         translation.isDisplayed = false
+        translation.wipe = nil
         translation.view?.clear()
         updateTranslationVisibility(animated: false)
+    }
+
+    /// The compare wipe's line, or `nil` when the reader does not compare: the overlay then
+    /// shows all of its patches again.
+    func setTranslationWipe(_ wipe: ReaderTranslationWipeLine?) {
+        translation.wipe = wipe
+        placeTranslationWipe()
+    }
+
+    /// Lets the overlay show only the translation's side of the wipe's line, where the line
+    /// falls on this page now. Called when the line moves, when the page moves under it
+    /// (scrolling, zoom, a turn: `ReaderContentHost.contentDidMove()`) and when the overlay is
+    /// laid out. One conversion and, when the place changed, a view's bounds and centre.
+    func placeTranslationWipe() {
+        guard let view = translation.view, view.hasPatches else { return }
+        guard let wipe = translation.wipe, let space = wipe.space, let window, space.window === window else {
+            view.showOnly(fromX: nil)
+            return
+        }
+        let line = CGPoint(x: space.bounds.minX + space.bounds.width * wipe.fraction, y: space.bounds.midY)
+        view.showOnly(fromX: view.convert(line, from: space).x)
     }
 
     /// Lays the overlay over the rectangle the image is drawn in.
@@ -89,6 +122,7 @@ extension ReaderPageView {
             width: fitted.width, height: fitted.height
         )
         view.place(over: imageRect, displayScale: traitCollection.displayScale)
+        placeTranslationWipe()
     }
 
     private func show(_ patches: PageTranslationPatches) {

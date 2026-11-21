@@ -209,6 +209,7 @@ final class ReaderStripView: UIScrollView, UIScrollViewDelegate, ReaderContentVi
         guard !isAdjusting, viewportSize.width > 0 else { return }
         tile()
         reportCurrentPage()
+        host?.contentDidMove()
     }
 
     private func tile() {
@@ -382,6 +383,7 @@ final class ReaderStripView: UIScrollView, UIScrollViewDelegate, ReaderContentVi
 
     func scrollViewDidZoom(_ scrollView: UIScrollView) {
         centerContainer()
+        host?.contentDidMove()
     }
 
     func scrollViewDidEndZooming(_ scrollView: UIScrollView, with view: UIView?, atScale scale: CGFloat) {

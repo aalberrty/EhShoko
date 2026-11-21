@@ -30,13 +30,18 @@ extension ReaderEngineViewController {
     func setTranslationDisplay(_ display: ReaderTranslationDisplay) {
         guard display != translation.display else { return }
         translation.display = display
-        // The wipe of `.compare` is not built yet: until then it shows the translation.
+        // `.compare` shows the translation right of the wipe's line, which every page view
+        // is given: a new place of the line is one conversion for each page view.
         let isDisplayed = display != .original
         if isDisplayed, !translation.asksForOverlays {
             translation.asksForOverlays = true
             content?.forEachPageView(configureTranslation(of:))
         } else {
-            content?.forEachPageView { $0.setTranslationDisplayed(isDisplayed) }
+            let wipe = translationWipe
+            content?.forEachPageView {
+                $0.setTranslationDisplayed(isDisplayed)
+                $0.setTranslationWipe(wipe)
+            }
         }
     }
 
@@ -59,6 +64,20 @@ extension ReaderEngineViewController {
         pageView.setTranslation(
             dataSource?.translationOverlay(at: pageView.page), isDisplayed: translation.display != .original
         )
+        pageView.setTranslationWipe(translationWipe)
+    }
+
+    /// The pages moved on screen: the wipe's line, fixed on the screen, falls elsewhere on
+    /// them. Nothing to do unless the reader compares.
+    func contentDidMove() {
+        guard case .compare = translation.display else { return }
+        content?.forEachPageView { $0.placeTranslationWipe() }
+    }
+
+    /// The wipe's line while the reader compares, in the engine's view.
+    private var translationWipe: ReaderTranslationWipeLine? {
+        guard case .compare(let fraction) = translation.display else { return nil }
+        return ReaderTranslationWipeLine(fraction: fraction, space: view)
     }
 
     /// Tells the host which pages the reader is on, when they changed. On the trailer alone
