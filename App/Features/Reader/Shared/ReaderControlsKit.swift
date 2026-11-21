@@ -90,7 +90,8 @@ struct ReaderCloseControl: View {
 }
 
 extension View {
-    /// The reading settings and the share sheet of `model.destination`. A design attaches them
+    /// The reading settings, the share sheet and the translation download of
+    /// `model.destination`. A design attaches them
     /// where it can present them: Shelf and Wall on their controls, Ledger inside its control
     /// sheet, because a second sheet attached to the reader's screen waits until the control
     /// sheet goes away (spike S4).
@@ -116,9 +117,27 @@ private struct ReaderDestinationSheets: ViewModifier {
                     ActivityView(items: [file])
                         .presentationDetents([.medium, .large])
                 case .translationDownload:
-                    // A placeholder until the download sheet is built.
-                    EmptyView()
+                    ReaderTranslationDownloadSheet(translation: model.translation) { model.destination = nil }
+                        .lookEnvironment(look, accent: settings.accentColor)
                 }
             }
+            #if DEBUG
+            .onAppear(perform: openSampleDownloadSheet)
+            #endif
     }
+
+    #if DEBUG
+    /// `-ReaderTranslationDownloadSheet YES` presses Translate as the reader's controls appear,
+    /// for screenshots of the download sheet's states with `-PageTranslationSample`: no design
+    /// draws Translate yet. Without models the press opens the sheet as a tap would; for a
+    /// gallery that offers no Translate the sheet is opened directly.
+    private func openSampleDownloadSheet() {
+        guard UserDefaults.standard.bool(forKey: "ReaderTranslationDownloadSheet"), model.destination == nil else { return }
+        if model.translationAvailability == .unavailable {
+            model.destination = .translationDownload
+        } else if !model.translation.isOn {
+            model.toggleTranslation()
+        }
+    }
+    #endif
 }
