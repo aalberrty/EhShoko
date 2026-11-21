@@ -16,6 +16,8 @@ import os
 /// | `GalleryOpen` | the gallery page's first load | its fetched page is applied (event `Stored` when the database's copy is) |
 /// | `ReaderOpen` | the reader starts | its first page is shown |
 /// | `ListPage` | a list page is requested | its galleries are applied |
+/// | `PageTranslate` | a page's translation is begun | its patch file is written, or found (events `Found`, `Read`, `Translated`, `Text`, `Drawn`) |
+/// | `PageTranslateLoad` | the translation models start loading | they are loaded |
 ///
 /// `ListPage` and `GalleryOpen` also carry the event `Response` when the site's answer arrives
 /// (`PerformanceInterval.markingResponses`), so the time from the answer to the applied rows,
@@ -32,6 +34,8 @@ public enum PerformanceSignposts {
         case galleryOpen = "GalleryOpen"
         case readerOpen = "ReaderOpen"
         case listPage = "ListPage"
+        case pageTranslate = "PageTranslate"
+        case pageTranslateLoad = "PageTranslateLoad"
 
         /// `OSSignposter` takes names as static strings only.
         var staticName: StaticString {
@@ -41,6 +45,8 @@ public enum PerformanceSignposts {
             case .galleryOpen: "GalleryOpen"
             case .readerOpen: "ReaderOpen"
             case .listPage: "ListPage"
+            case .pageTranslate: "PageTranslate"
+            case .pageTranslateLoad: "PageTranslateLoad"
             }
         }
     }
