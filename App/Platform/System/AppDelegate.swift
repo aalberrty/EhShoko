@@ -39,6 +39,12 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
         }
     }
 
+    /// Page translation lets its repaint model go first and keeps to the pages on screen.
+    /// Before Translate was ever pressed this reaches nothing.
+    func applicationDidReceiveMemoryWarning(_ application: UIApplication) {
+        PageTranslationService.memoryWarningReceived()
+    }
+
     static func setOrientationLock(_ lock: OrientationLock) {
         orientationMask = switch lock {
         case .portrait: [.portrait, .portraitUpsideDown]

@@ -47,7 +47,7 @@ final class JMTCoreMLNetworks: JMTNetworks {
         let encoders = JMTEncoderLoader(url: files.encoder, release: release, computeUnits: computeUnits)
         let shortest = release.inputLengths[0]
         async let first = encoders.encoder(length: shortest)
-        let decoder = try await JMTCoreMLModel.load(
+        let decoder = try await CoreMLModel.load(
             contentsOf: files.decoder, computeUnits: computeUnits, expected: release.decoderSignature
         )
         _ = try await first
@@ -67,7 +67,7 @@ actor JMTEncoderLoader {
     private let url: URL
     private let release: JMTRelease
     private let computeUnits: MLComputeUnits
-    private var loads: [Int: Task<JMTCoreMLModel, any Error>] = [:]
+    private var loads: [Int: Task<CoreMLModel, any Error>] = [:]
 
     init(url: URL, release: JMTRelease, computeUnits: MLComputeUnits) {
         self.url = url
@@ -75,7 +75,7 @@ actor JMTEncoderLoader {
         self.computeUnits = computeUnits
     }
 
-    func encoder(length: Int) async throws -> JMTCoreMLModel {
+    func encoder(length: Int) async throws -> CoreMLModel {
         try await load(length, priority: nil).value
     }
 
@@ -88,11 +88,11 @@ actor JMTEncoderLoader {
         for load in loads.values { load.cancel() }
     }
 
-    private func load(_ length: Int, priority: TaskPriority?) -> Task<JMTCoreMLModel, any Error> {
+    private func load(_ length: Int, priority: TaskPriority?) -> Task<CoreMLModel, any Error> {
         if let load = loads[length] { return load }
         let (url, units, signature) = (url, computeUnits, release.encoderSignature(length: length))
         let load = Task(priority: priority) {
-            try await JMTCoreMLModel.load(
+            try await CoreMLModel.load(
                 contentsOf: url, computeUnits: units, functionName: "L\(length)", expected: signature
             )
         }
