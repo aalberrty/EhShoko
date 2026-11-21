@@ -14,6 +14,8 @@ struct ReaderTranslationDownloadPanel: View {
 
     @Environment(StackRouter.self) private var router
     @Environment(\.look) private var look
+    /// The title colour on the tint: black on Wall's white tint in dark mode.
+    @Environment(\.onTint) private var onTint
     @State private var pace = ReaderTranslationDownloadPace()
 
     var body: some View {
@@ -130,6 +132,7 @@ struct ReaderTranslationDownloadPanel: View {
     private func prominentButton(_ action: ReaderTranslationDownloadContent.Action) -> some View {
         Button { perform(action) } label: { buttonLabel(action) }
             .buttonStyle(.borderedProminent)
+            .foregroundStyle(onTint)
     }
 
     private func buttonLabel(_ action: ReaderTranslationDownloadContent.Action) -> some View {
