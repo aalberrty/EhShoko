@@ -18,9 +18,6 @@ struct WallReaderControls: View {
     @Environment(SettingsStore.self) private var settings
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var frame = WallReaderFrame()
-    #if DEBUG
-    @State private var translationPose = WallReaderTranslationPose.atLaunch()
-    #endif
 
     var body: some View {
         let isShown = model.showsPanel
@@ -38,7 +35,7 @@ struct WallReaderControls: View {
                 Spacer(minLength: 0)
 
                 WallReaderBottom(
-                    model: model, translation: translationSource, isReversed: direction == .rightToLeft,
+                    model: model, isReversed: direction == .rightToLeft,
                     offersDualPage: frame.isLandscape && direction != .vertical
                 )
                 .padding(.bottom, frame.clusterBottom)
@@ -53,30 +50,15 @@ struct WallReaderControls: View {
         // Before the first scrub, which loads thumbnails for as many pages as this says.
         .onAppear { model.previewStripLength = WallReaderMetrics.filmLength }
         .readerDestinationSheets(model)
-        #if DEBUG
-        .onAppear {
-            if WallReaderTranslationPose.showsControls { model.showsPanel = true }
-            if WallReaderTranslationPose.raisesFilmstrip { model.sliderEditingChanged(true) }
-        }
-        .task { await translationPose?.run() }
-        #endif
-    }
-
-    private var translationSource: WallReaderTranslationSource {
-        #if DEBUG
-        WallReaderTranslationSource(model: model, pose: translationPose)
-        #else
-        WallReaderTranslationSource(model: model)
-        #endif
     }
 }
 
 /// The bottom of the controls: the filmstrip's place, the translation row while Translate is
 /// on, and the cluster with Translate leading it. The translation views read their own
-/// values (`WallReaderTranslationSource`); this view reads none of them.
+/// values of the model; this view reads none of them, so a download's progress or a page's
+/// status re-renders only the control that shows it.
 private struct WallReaderBottom: View {
     let model: ReaderModel
-    let translation: WallReaderTranslationSource
     let isReversed: Bool
     let offersDualPage: Bool
 
@@ -85,9 +67,9 @@ private struct WallReaderBottom: View {
             WallReaderFilmstrip(model: model, isReversed: isReversed)
             // The row stands 12 pt above the cluster, further than the container blends.
             VStack(spacing: Tokens.Spacing.medium) {
-                WallReaderTranslationRow(source: translation)
+                WallReaderTranslationRow(model: model)
                 HStack(spacing: WallReaderMetrics.clusterSpacing) {
-                    WallReaderTranslateCircle(source: translation)
+                    WallReaderTranslateCircle(model: model)
                     WallReaderScrubCapsule(model: model, isReversed: isReversed)
                     WallReaderMoreMenu(model: model, offersDualPage: offersDualPage)
                         .glassSurface(in: .circle, isInteractive: true)

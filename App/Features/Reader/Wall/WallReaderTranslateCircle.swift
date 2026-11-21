@@ -6,25 +6,25 @@ import SwiftUI
 /// While the models download a ring round its edge follows the download; the dot in the tint
 /// says pages of this gallery were translated before.
 ///
-/// It is the only view that reads the availability, so the download's progress re-renders
-/// this circle and nothing around it. It is not in the hierarchy for a gallery in another
+/// It reads the availability itself (the row above reads it only while Translate is on), so
+/// a download's progress re-renders this circle and nothing around it. It is not in the hierarchy for a gallery in another
 /// language (`ReaderTranslationSlot`).
 struct WallReaderTranslateCircle: View {
-    let source: WallReaderTranslationSource
+    let model: ReaderModel
 
     var body: some View {
-        let availability = source.availability
+        let availability = model.translationAvailability
         ReaderTranslationSlot(availability: availability) {
             WallReaderTranslateButton(
-                source: source, availability: availability,
-                isOn: source.isOn, pagesTranslatedBefore: source.pagesTranslatedBefore
+                model: model, availability: availability,
+                isOn: model.translation.isOn, pagesTranslatedBefore: model.translation.pagesTranslatedBefore
             )
         }
     }
 }
 
 private struct WallReaderTranslateButton: View {
-    let source: WallReaderTranslationSource
+    let model: ReaderModel
     let availability: ReaderTranslationAvailability
     let isOn: Bool
     let pagesTranslatedBefore: Int
@@ -34,7 +34,7 @@ private struct WallReaderTranslateButton: View {
     @Environment(\.onTint) private var onTint
 
     var body: some View {
-        Button(action: source.toggle) {
+        Button(action: model.toggleTranslation) {
             Image(systemName: "translate")
                 .font(.body.weight(.semibold))
                 .foregroundStyle(isOn ? onTint : look.label)

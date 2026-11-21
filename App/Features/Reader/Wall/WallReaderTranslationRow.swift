@@ -9,10 +9,10 @@ import SwiftUI
 /// shows, the filmstrip's place stands above it: the thumbnails rise over the row as they do
 /// over the cluster.
 struct WallReaderTranslationRow: View {
-    let source: WallReaderTranslationSource
+    let model: ReaderModel
 
     var body: some View {
-        let isOn = source.isOn
+        let isOn = model.translation.isOn
         Group {
             if isOn {
                 row
@@ -22,18 +22,18 @@ struct WallReaderTranslationRow: View {
     }
 
     private var row: some View {
-        ReaderTranslationSlot(availability: source.availability) {
+        ReaderTranslationSlot(availability: model.translationAvailability) {
             // Side by side where both fit; on a narrow screen, a long status or a large
             // text size, the toast stands over the pill, still at its side.
             ViewThatFits(in: .horizontal) {
                 HStack(spacing: WallReaderMetrics.clusterSpacing) {
-                    WallReaderTranslationPill(source: source)
+                    WallReaderTranslationPill(model: model)
                     Spacer(minLength: 0)
-                    WallReaderTranslationToast(source: source)
+                    WallReaderTranslationToast(model: model)
                 }
                 VStack(alignment: .trailing, spacing: Tokens.Spacing.medium) {
-                    WallReaderTranslationToast(source: source)
-                    WallReaderTranslationPill(source: source)
+                    WallReaderTranslationToast(model: model)
+                    WallReaderTranslationPill(model: model)
                         .frame(maxWidth: .infinity, alignment: .leading)
                 }
             }
@@ -46,7 +46,7 @@ struct WallReaderTranslationRow: View {
 /// the wipe's 原文 and 译文, as drawn (they name the two sides of the page in every
 /// language); VoiceOver reads the full words. Compare, the third state, is MT17's.
 private struct WallReaderTranslationPill: View {
-    let source: WallReaderTranslationSource
+    let model: ReaderModel
 
     @Namespace private var selection
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -54,11 +54,11 @@ private struct WallReaderTranslationPill: View {
     private static let modes: [ReaderTranslationDisplayMode] = [.original, .translated]
 
     var body: some View {
-        let chosen = source.displayMode
+        let chosen = model.translation.displayMode
         HStack(spacing: 0) {
             ForEach(Self.modes, id: \.self) { mode in
                 WallReaderPillSegment(mode: mode, isChosen: mode == chosen, selection: selection) {
-                    source.setDisplayMode(mode)
+                    model.translation.setDisplayMode(mode)
                 }
             }
         }
@@ -129,7 +129,7 @@ private struct WallReaderPillSegment: View {
 /// none: the pill is how to see the original. Not in the hierarchy while there is nothing to
 /// say.
 private struct WallReaderTranslationToast: View {
-    let source: WallReaderTranslationSource
+    let model: ReaderModel
 
     @Environment(\.look) private var look
     @Environment(\.lookTint) private var tint
@@ -137,7 +137,7 @@ private struct WallReaderTranslationToast: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
-        let status = source.status
+        let status = model.translation.status
         Group {
             if let status, let text = status.text(showsDone: false) {
                 HStack(spacing: Tokens.Spacing.small) {
@@ -174,7 +174,7 @@ private struct WallReaderTranslationToast: View {
 
     /// Retry, a small capsule in the tint on the toast's glass.
     private var retry: some View {
-        Button(action: source.retry) {
+        Button(action: model.retryTranslation) {
             Text(ReaderTranslationStatus.retryTitle)
                 .font(.subheadline.weight(.semibold))
                 .lineLimit(1)
