@@ -12,6 +12,7 @@ extension ReaderHarnessSession {
         case "firstpage": await checkFirstPage()
         case "rotation": await checkRotation()
         case "walk": await checkWalk()
+        case "translation": await checkTranslation()
         default: ReaderHarnessFiles.log("! unknown check \(check)")
         }
         // The harness's pages are of no use to the next launch.
@@ -299,6 +300,11 @@ final class ReaderHarnessExpectations {
 
     func section(_ title: String) {
         ReaderHarnessFiles.append(["", "##### \(title)"], to: name)
+    }
+
+    /// A line that is no expectation: a measurement.
+    func note(_ line: String) {
+        ReaderHarnessFiles.append([line], to: name)
     }
 
     func expect(_ what: String, _ isMet: Bool, _ detail: String) {

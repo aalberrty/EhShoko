@@ -1,3 +1,4 @@
+import EhCore
 import EhFeatures
 import EhModels
 import UIKit
@@ -26,8 +27,13 @@ final class ReaderEngineBridge: ReaderEngineDataSource, ReaderEngineDelegate {
             reloadPage: { proxy.reloadPage($0) },
             reloadData: { proxy.reloadData() },
             scrollToPage: { proxy.scrollToPage($0) },
-            advance: { proxy.advance() }
+            advance: { proxy.advance() },
+            reloadTranslation: { proxy.reloadTranslation($0) },
+            setTranslationDisplay: { proxy.setTranslationDisplay($0) }
         )
+        // The model sends a display only when it changes, so one it already has is read here.
+        // The proxy keeps it for the engine, which attaches later.
+        proxy.setTranslationDisplay(model.translationDisplay)
     }
 
     // MARK: ReaderEngineDataSource
@@ -54,6 +60,10 @@ final class ReaderEngineBridge: ReaderEngineDataSource, ReaderEngineDelegate {
     /// presented, its detail model and request.
     func makeTrailerViewController() -> UIViewController? {
         ReaderClosingPage.makeController(gallery: model.gallery, pageCount: model.pageCount, viewport: viewport)
+    }
+
+    func translationOverlay(at page: Int) -> PageTranslationOverlay? {
+        model.translationOverlay(at: page)
     }
 
     // MARK: ReaderEngineDelegate
@@ -92,6 +102,14 @@ final class ReaderEngineBridge: ReaderEngineDataSource, ReaderEngineDelegate {
 
     func readerDidChangeTrailerVisibility(_ isCurrent: Bool) {
         model.trailerVisibilityDidChange(isCurrent)
+    }
+
+    func readerDidChangePagesOnScreen(_ pages: [Int]) {
+        model.pagesOnScreenDidChange(pages)
+    }
+
+    func readerDidFailToShowTranslation(page: Int) {
+        model.translationOverlayDidFail(page: page)
     }
 
     func readerContextMenu(for page: Int) -> UIMenu? {

@@ -48,6 +48,14 @@ final class ReaderHarnessModel: ReaderEngineDataSource, ReaderEngineDelegate {
     private(set) var standInTaps: [String: Int] = [:]
     /// The look of the page status views and the closing page; `nil`: the app's.
     var look: Look?
+    /// What the gallery shows of its made-up translation (`ReaderHarnessTranslation.swift`).
+    var translationMode = ReaderHarnessTranslationMode.off {
+        didSet {
+            if translationMode != oldValue {
+                translationModeDidChange()
+            }
+        }
+    }
     /// Seconds between automatic page turns; 0 is off.
     var autoAdvanceInterval = 0.0 {
         didSet { restartAutoAdvance() }
@@ -57,6 +65,10 @@ final class ReaderHarnessModel: ReaderEngineDataSource, ReaderEngineDelegate {
     @ObservationIgnored let setup: ReaderHarnessSetup
     @ObservationIgnored let proxy = ReaderEngineProxy()
     @ObservationIgnored var recorder: ReaderHarnessRecorder?
+    /// The made-up translation; `nil` until Translate is "pressed".
+    @ObservationIgnored var translation: ReaderHarnessTranslation?
+    /// The pages the engine last said the reader is on.
+    @ObservationIgnored var pagesOnScreen: [Int] = []
     /// Seconds from this model's creation to the first image the engine reported.
     @ObservationIgnored private(set) var firstPageDelay: Double?
     /// Seconds it took to make the slot's controller, once the engine has asked for it.
@@ -74,7 +86,9 @@ final class ReaderHarnessModel: ReaderEngineDataSource, ReaderEngineDelegate {
     /// from the disk cache.
     @ObservationIgnored private let session = UUID().uuidString.prefix(8).lowercased()
 
-    init(setup: ReaderHarnessSetup = ReaderHarnessSetup()) {
+    /// `translation`: a translation made ahead. The reader then opens with Translate on, so
+    /// the engine is told what to show before it exists.
+    init(setup: ReaderHarnessSetup = ReaderHarnessSetup(), translation: ReaderHarnessTranslation? = nil) {
         self.setup = setup
         configuration = setup.configuration
         galleryPageCount = setup.pageCount
@@ -85,6 +99,11 @@ final class ReaderHarnessModel: ReaderEngineDataSource, ReaderEngineDelegate {
         showsClosingSlot = setup.hasTrailer
         look = setup.look
         ReaderHarnessURLProtocol.install()
+        if let translation {
+            self.translation = translation
+            translationMode = .translated
+            proxy.setTranslationDisplay(.translated)
+        }
     }
 
     // MARK: Controls
@@ -112,6 +131,7 @@ final class ReaderHarnessModel: ReaderEngineDataSource, ReaderEngineDelegate {
     }
 
     func stop() {
+        translation?.stop()
         autoAdvance?.cancel()
         resolving.values.forEach { $0.cancel() }
     }

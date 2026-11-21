@@ -46,6 +46,9 @@ final class ReaderEngineViewController: UIViewController {
     /// Whether the reader's first page has been shown, or has failed. The trailer's content
     /// is not made before that by a layout alone, so it cannot hold the first page back.
     var hasSettledFirstPage = false
+    /// Page translation: what shows over the pages, and the pages the reader is on. Its
+    /// code is in `ReaderEngineViewController+Translation.swift`.
+    var translation = ReaderEngineTranslation()
 
     #if DEBUG || HARNESS
     /// The reader harness's record of what the engine decides by itself, which no
@@ -313,9 +316,12 @@ extension ReaderEngineViewController: ReaderContentHost {
         pageView.configure(
             page: page, content: shown, request: request, isLiveTextEnabled: configuration.isLiveTextEnabled
         )
+        configureTranslation(of: pageView)
     }
 
     func contentDidChangeCurrentPage(_ page: Int) {
+        // First, so that a host that follows both hears of a turned spread as one change.
+        reportPagesOnScreen()
         guard page != currentPage else { return }
         currentPage = page
         delegate?.readerDidChangeCurrentPage(page)
@@ -323,6 +329,7 @@ extension ReaderEngineViewController: ReaderContentHost {
 
     func contentDidChangeVisiblePages() {
         updatePrefetch()
+        reportPagesOnScreen()
     }
 }
 

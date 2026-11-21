@@ -1,3 +1,4 @@
+import EhCore
 import EhFeatures
 import EhModels
 import Kingfisher
@@ -34,6 +35,8 @@ protocol ReaderPageViewDelegate: AnyObject {
     /// "Reload all N failed pages" on the page's failure card.
     func pageViewDidRequestRetryAllFailed(_ pageView: ReaderPageView)
     func contextMenu(for pageView: ReaderPageView) -> UIMenu?
+    /// The patch file of the page's translation is missing or cannot be read.
+    func pageView(_ pageView: ReaderPageView, didFailToShowTranslation overlay: PageTranslationOverlay)
 }
 
 /// One page: its image, or a placeholder that says what the page is waiting for.
@@ -54,7 +57,8 @@ final class ReaderPageView: UIView, UIContextMenuInteractionDelegate {
     weak var delegate: ReaderPageViewDelegate?
     private(set) var page = 0
 
-    private let imageView = AnimatedImageView()
+    // Not private: the translation overlay lies over it (`ReaderPageView+Translation.swift`).
+    let imageView = AnimatedImageView()
     private let statusView = ReaderPageStatusView()
     private var content: ReaderPageContent = .pending
     private var request: ReaderDecodeRequest?
@@ -68,6 +72,11 @@ final class ReaderPageView: UIView, UIContextMenuInteractionDelegate {
     private var progressGate = ImageLoadProgressGate()
     private var liveText: ReaderLiveText?
     private var isLiveTextEnabled = false
+    private var isLiveTextSuspended = false
+    /// The page's translation: the overlay above the image (`ReaderPageView+Translation.swift`).
+    var translation = ReaderPageTranslation()
+    /// The read of the overlay's patch file. Apart from `translation`, so `deinit` can cancel it.
+    var translationLoad: Task<Void, Never>?
 
     override init(frame: CGRect) {
         super.init(frame: frame)
@@ -101,6 +110,12 @@ final class ReaderPageView: UIView, UIContextMenuInteractionDelegate {
 
     deinit {
         loadTask?.cancel()
+        translationLoad?.cancel()
+    }
+
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        placeTranslation()
     }
 
     // MARK: Configuration
@@ -166,10 +181,21 @@ final class ReaderPageView: UIView, UIContextMenuInteractionDelegate {
         }
     }
 
+    /// Text selection is off while the page shows its translation: it would select the
+    /// original under it. The analysis is kept, so selection is back the moment the original is.
+    func setLiveTextSuspended(_ isSuspended: Bool) {
+        isLiveTextSuspended = isSuspended
+        liveText?.isSuspended = isSuspended
+    }
+
+    /// Whether the page's image is on screen.
+    var showsImage: Bool { shown != nil }
+
     /// Drops everything page specific. The view can then wait in a pool without holding a bitmap.
     func prepareForReuse() {
         cancelLoad()
         clearImage()
+        dropTranslation()
         statusView.pause()
         progressGate = ImageLoadProgressGate()
         page = 0
@@ -310,6 +336,7 @@ final class ReaderPageView: UIView, UIContextMenuInteractionDelegate {
         if !isUpgrade {
             analyzeShownImage()
         }
+        translationImageDidChange(animated: animated)
     }
 
     private func showImage() {
@@ -335,6 +362,7 @@ final class ReaderPageView: UIView, UIContextMenuInteractionDelegate {
         imageView.image = nil
         imageView.isHidden = true
         liveText?.clear()
+        translationImageDidChange(animated: false)
     }
 
     private func analyzeShownImage() {
@@ -344,6 +372,7 @@ final class ReaderPageView: UIView, UIContextMenuInteractionDelegate {
         }
         if liveText == nil {
             liveText = ReaderLiveText(imageView: imageView)
+            liveText?.isSuspended = isLiveTextSuspended
         }
         liveText?.analyze(image)
     }

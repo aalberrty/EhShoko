@@ -53,12 +53,14 @@ struct ReaderEngineView: UIViewControllerRepresentable {
 }
 
 /// Sends commands to a `ReaderEngineView`. Create one, keep it in `@State`, and pass it to the
-/// view. Commands sent before the view exists are not lost: a page to go to is remembered and
-/// applied when the engine attaches, and reloads are unnecessary then because a new engine
-/// reads everything anyway.
+/// view. Commands sent before the view exists are not lost: a page to go to and what shows
+/// over the pages are remembered and applied when the engine attaches, and reloads are
+/// unnecessary then because a new engine reads everything anyway.
 final class ReaderEngineProxy {
     private weak var engine: ReaderEngineViewController?
     private var pendingPage: Int?
+    /// What was last sent with `setTranslationDisplay(_:)`, for an engine that attaches later.
+    private var translationDisplay = ReaderTranslationDisplay.original
 
     init() {}
 
@@ -98,6 +100,17 @@ final class ReaderEngineProxy {
         engine?.reloadData()
     }
 
+    /// Tells the engine that a page's translation changed: it asks for the page's overlay again.
+    func reloadTranslation(_ page: Int) {
+        engine?.reloadTranslation(page)
+    }
+
+    /// What shows over the pages: the original, or their translations.
+    func setTranslationDisplay(_ display: ReaderTranslationDisplay) {
+        translationDisplay = display
+        engine?.setTranslationDisplay(display)
+    }
+
     #if DEBUG || HARNESS
     /// The engine itself, for the reader harness's scripts and checks.
     var inspectedEngine: ReaderEngineViewController? { engine }
@@ -106,6 +119,7 @@ final class ReaderEngineProxy {
     fileprivate func attach(to controller: ReaderEngineViewController) {
         guard engine !== controller else { return }
         engine = controller
+        controller.setTranslationDisplay(translationDisplay)
         if let pendingPage {
             self.pendingPage = nil
             controller.scrollToPage(pendingPage, animated: false)
