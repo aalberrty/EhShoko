@@ -2,8 +2,9 @@ import EhLlama
 import EhPageTranslation
 import Foundation
 
-/// A notice that a licence asks to go with every copy of the app: llama.cpp's, and those of
-/// the fonts translated pages are lettered in. Names and legal texts are their own English
+/// A notice that a licence asks to go with every copy of the app: llama.cpp's, those of the
+/// code its library contains (`llamaParts`), and those of the fonts translated pages are
+/// lettered in. Names and legal texts are their own English
 /// and are not translated.
 nonisolated public struct PageTranslationNotice: Identifiable, Equatable, Sendable {
     public var id: String { name }
@@ -32,7 +33,7 @@ extension PageTranslationSettingsModel {
     /// Models and licences screen's `task`.
     public func loadNotices() async {
         guard notices.isEmpty else { return }
-        notices = [.llama] + (await Self.readFontNotices())
+        notices = [.llama] + PageTranslationNotice.llamaParts + (await Self.readFontNotices())
     }
 
     @concurrent
