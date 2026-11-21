@@ -65,6 +65,15 @@ final class TranslationWorld: Sendable {
         var unreadablePages: Set<Int> = []
         var pagesWithoutText: Set<Int> = []
         var failsToLoadModels = false
+        /// What loading the models throws, when set.
+        var modelLoadError: (any Error)?
+        /// When set, a language-model choice is translated by a stub language model that
+        /// writes what it did here; the Core ML choice never is.
+        var languageModels: LanguageModelLedger?
+        /// When set, a language-model choice is loaded from this file by the app's own loader.
+        var languageModelFile: URL?
+        /// What the stub reader reads in every block.
+        var readerText = "こんにちは"
         var drawingAsksForTheRepaintModel = false
         /// A drawing stage that does not notice it was cancelled and hands patches back.
         var drawingIgnoresCancellation = false
@@ -238,14 +247,21 @@ final class TranslationWorld: Sendable {
                 }
             },
             loadPipeline: { [self] configuration in
-                let fails = state.withLock { state -> Bool in
+                let choice = configuration.modelSet.translator
+                let (fails, error, languageModels, file) = state.withLock { state -> (Bool, (any Error)?, LanguageModelLedger?, URL?) in
                     state.pipelineLoads.append(configuration)
-                    return state.failsToLoadModels
+                    return (state.failsToLoadModels, state.modelLoadError, state.languageModels, state.languageModelFile)
                 }
+                if let error { throw error }
                 if fails { throw ModelSignatureError.noImageInput }
+                var translator: any PageTranslator = WorldTranslator(world: self)
+                if let languageModels, let profile = LanguageModelProfile(choice) {
+                    translator = LanguageModelTranslator(profile: profile, engine: StubLanguageModel(languageModels))
+                } else if let file, let load = PageTranslationService.languageModelLoader, choice.engine == .languageModel {
+                    translator = try await load(choice, file)
+                }
                 return PagePipeline(
-                    detector: WorldDetector(world: self), reader: WorldReader(world: self),
-                    translator: WorldTranslator(world: self)
+                    detector: WorldDetector(world: self), reader: WorldReader(world: self), translator: translator
                 )
             },
             loadInpainter: { [self] _, _ in
@@ -331,7 +347,7 @@ private struct WorldReader: TextReader {
     func read(_ crop: CGImage) async throws -> String {
         world.enterText()
         defer { world.leaveText() }
-        return "こんにちは"
+        return world.value(\.readerText)
     }
 }
 

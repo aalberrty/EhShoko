@@ -38,6 +38,13 @@ extension ReaderModel: ReaderTranslationHost {
         translation.overlayDidFail(page: page)
     }
 
+    /// The pages the engine shows, nearest first (`ReaderEngineDelegate`): both pages of a
+    /// spread, or every page of the strip that is partly on screen. They are the first the
+    /// service works on, and the only ones while the phone is hot.
+    public func pagesOnScreenDidChange(_ pages: [Int]) {
+        translation.pagesOnScreenDidChange(pages)
+    }
+
     /// The site's language and the titles' language groups. The detail's language is the
     /// site's own field; a list's gallery has only its tags.
     var isMarkedOtherLanguage: Bool {

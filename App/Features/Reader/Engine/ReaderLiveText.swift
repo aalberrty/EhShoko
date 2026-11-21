@@ -14,6 +14,18 @@ final class ReaderLiveText {
     private weak var imageView: UIImageView?
     private var task: Task<Void, Never>?
 
+    /// Keeps the analysis and takes no touches: the page shows something else over its
+    /// image (its translation), and the text under it must not be selected through it.
+    var isSuspended = false {
+        didSet {
+            guard isSuspended != oldValue, interaction.analysis != nil else { return }
+            if isSuspended {
+                interaction.resetTextSelection()
+            }
+            applyInteraction()
+        }
+    }
+
     init(imageView: UIImageView) {
         self.imageView = imageView
         interaction.preferredInteractionTypes = []
@@ -30,9 +42,13 @@ final class ReaderLiveText {
             let analysis = try? await Self.analyzer.analyze(image, configuration: configuration)
             guard !Task.isCancelled, let self, let analysis else { return }
             interaction.analysis = analysis
-            interaction.preferredInteractionTypes = .textSelection
-            interaction.selectableItemsHighlighted = true
+            applyInteraction()
         }
+    }
+
+    private func applyInteraction() {
+        interaction.preferredInteractionTypes = isSuspended ? [] : .textSelection
+        interaction.selectableItemsHighlighted = !isSuspended
     }
 
     func clear() {
@@ -53,7 +69,7 @@ final class ReaderLiveText {
     /// Whether a touch at `point` (in the image view's coordinates) belongs to Live Text: it is
     /// on recognised text, or there is a selection that a tap elsewhere should dismiss.
     func wantsTouch(at point: CGPoint) -> Bool {
-        guard interaction.analysis != nil else { return false }
+        guard !isSuspended, interaction.analysis != nil else { return false }
         return interaction.hasInteractiveItem(at: point) || interaction.hasActiveTextSelection
     }
 }

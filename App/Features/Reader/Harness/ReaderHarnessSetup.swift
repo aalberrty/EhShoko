@@ -80,10 +80,12 @@ struct ReaderHarnessFailingPages: Equatable {
 /// | `-ReaderHarnessCheck firstpage` | Times the first page with the slot off and on, in turn. |
 /// | `-ReaderHarnessCheck rotation` | Turns the screen and changes the direction at the end of the gallery. |
 /// | `-ReaderHarnessCheck walk` | Walks the slot's behaviour: jumps, reloads, the slot switched off, a height change. |
-/// | `-ReaderHarnessModes a,b` | Only these modes of `calls`. |
+/// | `-ReaderHarnessCheck translation` | The made-up translation: the overlays' place in every reading mode, zoomed and after a turn of the screen; switching; a damaged file; what is released; page turns with and without it (`ReaderHarnessChecks+Translation.swift`). With `-ReaderHarnessTranslationArm original\|translated` the page turns run one way only. |
+/// | `-ReaderHarnessModes a,b` | Only these modes of `calls`, or only these parts of `translation`. |
 /// | `-ReaderHarnessRepeat <n>` | Openings per case of `firstpage` (default 6). |
 /// | `-ReaderHarnessPose alone\|beside\|vertical` | Opens a short gallery on the closing page's slot: alone in the pager, beside the last page (landscape), or as the strip's block. |
 /// | `-ReaderHarnessPose status\|status-image` | Opens two pages side by side (landscape): a page that failed to resolve, or whose image failed, beside a page that downloads for two minutes, with a second failed page nearby: the page status views' reason, bytes and "Reload all". |
+/// | `-ReaderHarnessPose translated-ltr\|translated-rtl\|translated-vertical\|translated-dual\|translated-dual-rtl\|translated-zoom\|translated-turned` | Opens the translated gallery on page 2 and leaves it there: in a reading direction, two pages side by side, zoomed in on a patch's corner, or after a turn of the screen. With `-ReaderHarnessTranslation original` it shows the original. |
 /// | `-ReaderHarnessLook shelf\|wall\|ledger` | The look of the page status views and the closing page (the app's by default). |
 ///
 /// Reports and records go to `Library/Caches/ReaderHarness/` in the app's container; a report

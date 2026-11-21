@@ -30,11 +30,24 @@ final class ReaderHarnessSession {
         hasStarted = true
         // The harness turns with the screen, as the reader does where landscape is allowed.
         AppDelegate.setOrientationLock(.unlocked)
+        // Patch files of an earlier launch.
+        ReaderHarnessTranslation.removeAll()
         if let check = options.check {
             await run(check)
         } else if let setup = options.poseSetup() {
             await pose(setup)
+        } else if let pose = options.pose, pose.hasPrefix("translated") {
+            await poseTranslated(pose)
         }
+    }
+
+    /// Takes the reader on screen down, so that everything it held can go.
+    func closeReader() async {
+        model?.stop()
+        model = nil
+        readerID += 1
+        ImagePipeline.cache.clearMemoryCache()
+        try? await Task.sleep(for: .milliseconds(500))
     }
 
     func stop() {
@@ -45,14 +58,15 @@ final class ReaderHarnessSession {
     }
 
     /// Takes the reader on screen down and opens one for `setup`, with its calls recorded.
-    func open(_ setup: ReaderHarnessSetup) async -> ReaderHarnessRun {
+    /// With a `translation` the reader opens with Translate on.
+    func open(_ setup: ReaderHarnessSetup, translation: ReaderHarnessTranslation? = nil) async -> ReaderHarnessRun {
         model?.stop()
         model = nil
         await turn(toLandscape: setup.isLandscape)
         // The last engine and the pages it decoded are gone before this one starts.
         ImagePipeline.cache.clearMemoryCache()
         try? await Task.sleep(for: .milliseconds(300))
-        let model = ReaderHarnessModel(setup: setup.with { $0.look = $0.look ?? options.look })
+        let model = ReaderHarnessModel(setup: setup.with { $0.look = $0.look ?? options.look }, translation: translation)
         let run = ReaderHarnessRun(model: model)
         self.model = model
         readerID += 1

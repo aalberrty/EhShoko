@@ -28,6 +28,44 @@ import Testing
         #expect(ReaderTranslationWindow(currentPage: 1, pageCount: 0).pages.isEmpty)
     }
 
+    @Test func bothPagesOfASpreadAreOnScreen() {
+        let window = ReaderTranslationWindow(currentPage: 6, pageCount: 20, shown: [6, 7])
+        #expect(window.onScreen == [6, 7])
+        #expect(window.ahead == [8, 9, 10])
+        #expect(window.behind == [5])
+        #expect(window.pages == [6, 7, 8, 9, 10, 5])
+
+        // The last spread reports its second page as current: reading order all the same.
+        let last = ReaderTranslationWindow(currentPage: 20, pageCount: 20, shown: [19, 20])
+        #expect(last.onScreen == [19, 20])
+        #expect(last.ahead.isEmpty)
+        #expect(last.behind == [18])
+    }
+
+    @Test func theStripsPagesAreOnScreenNearestFirst() {
+        let window = ReaderTranslationWindow(currentPage: 6, pageCount: 20, shown: [6, 7, 5])
+        #expect(window.onScreen == [6, 7, 5])
+        #expect(window.ahead == [8, 9, 10])
+        #expect(window.behind == [4])
+
+        // A strip of short pages: only the nearest count as on screen, the rest are ahead.
+        let short = ReaderTranslationWindow(currentPage: 3, pageCount: 20, shown: [3, 4, 5, 6, 7, 8, 2])
+        #expect(short.onScreen == [3, 4, 5, 6])
+        #expect(short.ahead == [7, 8, 9])
+        #expect(short.behind == [2])
+    }
+
+    @Test func shownPagesWithoutTheCurrentPageDoNotCount() {
+        // The reader turned the page and the engine has not said yet what it shows, or it has
+        // not said anything at all.
+        #expect(ReaderTranslationWindow(currentPage: 8, pageCount: 20, shown: [6, 7])
+            == ReaderTranslationWindow(currentPage: 8, pageCount: 20))
+        #expect(ReaderTranslationWindow(currentPage: 20, pageCount: 20, shown: [])
+            == ReaderTranslationWindow(currentPage: 20, pageCount: 20))
+        // Pages that do not exist and pages named twice are dropped.
+        #expect(ReaderTranslationWindow(currentPage: 20, pageCount: 20, shown: [20, 21, 20, 0]).onScreen == [20])
+    }
+
     @Test func aPageWithoutItsImageAddressIsLeftOut() {
         let url = { (page: Int) in URL(string: "https://img.example/\(page).jpg")! }
         let window = ReaderTranslationWindow(currentPage: 5, pageCount: 20)

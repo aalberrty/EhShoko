@@ -133,4 +133,14 @@ import Testing
         #expect(ReaderGeometry.slots(fromX: 2_100, toX: 2_500, pageWidth: 400, slotCount: 6, margin: 1) == 4...5)
         #expect(ReaderGeometry.slots(fromX: 0, toX: 400, pageWidth: 400, slotCount: 0, margin: 1) == nil)
     }
+
+    @Test func pagesOnScreenStartWithTheCurrentPageThenThoseAfterIt() {
+        #expect(ReaderGeometry.pagesNearestFirst(visible: 5...5, current: 5) == [5])
+        #expect(ReaderGeometry.pagesNearestFirst(visible: 4...7, current: 5) == [5, 6, 7, 4])
+        #expect(ReaderGeometry.pagesNearestFirst(visible: 3...6, current: 6) == [6, 5, 4, 3])
+        #expect(ReaderGeometry.pagesNearestFirst(visible: 3...6, current: 3) == [3, 4, 5, 6])
+        // The strip reports its pages before its current page: reading order until then.
+        #expect(ReaderGeometry.pagesNearestFirst(visible: 6...7, current: 5) == [6, 7])
+        #expect(ReaderGeometry.pagesNearestFirst(visible: nil, current: 5).isEmpty)
+    }
 }

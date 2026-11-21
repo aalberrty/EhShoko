@@ -37,6 +37,53 @@ import Testing
         #expect(harness.service.windows.count == count)
     }
 
+    @Test func theOtherPageOfASpreadIsOnScreen() async throws {
+        let harness = try ReaderTranslationHarness()
+        let model = try await translatingModel(harness, page: 4)
+        #expect(harness.service.lastWindow?.onScreen.map(\.index) == [4])
+
+        // The engine shows pages 4 and 5 side by side.
+        model.pagesOnScreenDidChange([4, 5])
+        var window = try #require(harness.service.lastWindow)
+        #expect(window.onScreen.map(\.index) == [4, 5])
+        #expect(window.ahead.map(\.index) == [6, 7, 8])
+        #expect(window.behind.map(\.index) == [3])
+
+        // A turn of the spread, as the engine reports it: the pages first, then the current
+        // page. One new window, with both pages on screen.
+        let count = harness.service.windows.count
+        model.pagesOnScreenDidChange([6, 7])
+        #expect(harness.service.windows.count == count)
+        model.currentPageDidChange(6)
+        #expect(harness.service.windows.count == count + 1)
+        window = try #require(harness.service.lastWindow)
+        #expect(window.onScreen.map(\.index) == [6, 7])
+        #expect(window.ahead.map(\.index) == [8, 9, 10])
+        #expect(window.behind.map(\.index) == [5])
+
+        // The same pages again send nothing.
+        model.pagesOnScreenDidChange([6, 7])
+        #expect(harness.service.windows.count == count + 1)
+    }
+
+    @Test func thePagesOnScreenAreKeptFromBeforeThePress() async throws {
+        let harness = try ReaderTranslationHarness()
+        try await harness.models.installDefaultSet()
+        try await harness.storeImageURLs()
+        let model = await harness.openedModel(initialPage: 2)
+        // Off: the engine says what it shows, and nothing is asked of anyone.
+        model.pagesOnScreenDidChange([2, 3])
+        await readerSettle()
+        #expect(harness.service.opened.isEmpty)
+        #expect(harness.service.windows.isEmpty)
+        #expect(harness.log.isEmpty)
+
+        model.toggleTranslation()
+        await readerEventually { model.translation.isOn }
+        #expect(harness.service.lastWindow?.onScreen.map(\.index) == [2, 3])
+        #expect(harness.service.lastWindow?.ahead.map(\.index) == [4, 5, 6])
+    }
+
     @Test func aPageIsSentOnceItsImageAddressIsKnown() async throws {
         let harness = try ReaderTranslationHarness()
         try await harness.database.upsertPages([
