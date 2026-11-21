@@ -74,8 +74,8 @@ public struct LanguageModelProfile: Sendable, Equatable {
     // MARK: What one request can hold
 
     /// The tokens kept free for the answer to lines of `sourceTokens` tokens. In the compared
-    /// run an answer had up to 1.2 times the tokens of its numbered lines, most of all on
-    /// pages of one or two short lines, so a third is added and a little more for those.
+    /// run an answer had at most 1.16 times the tokens of its numbered lines (counted by each
+    /// model itself), so a third is added, and a little more for pages of one short line.
     public static func answerReserve(sourceTokens: Int) -> Int {
         sourceTokens + sourceTokens / 3 + 16
     }
