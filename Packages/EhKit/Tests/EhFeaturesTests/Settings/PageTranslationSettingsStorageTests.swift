@@ -144,14 +144,16 @@ import Testing
         #expect(model.licence == nil)
     }
 
-    @Test func theNoticesAreLlamaCppsAndTheFonts() async {
+    @Test func theNoticesAreLlamaCppsItsPartsAndTheFonts() async {
         let model = TranslationStoreHarness().makeModel()
         #expect(model.notices.isEmpty)
 
         await model.loadNotices()
 
         #expect(model.notices.first == .llama)
-        let fonts = model.notices.dropFirst()
+        let parts = Array(model.notices.dropFirst().prefix(PageTranslationNotice.llamaParts.count))
+        #expect(parts == PageTranslationNotice.llamaParts)
+        let fonts = model.notices.dropFirst(1 + parts.count)
         #expect(fonts.map(\.name) == ["Noto Sans SC", "Noto Serif SC", "EhShoko Kai"])
         for font in fonts {
             #expect(font.copyright?.hasPrefix("Copyright") == true)

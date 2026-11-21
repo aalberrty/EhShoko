@@ -5,9 +5,10 @@ import SwiftUI
 
 /// Settings › Translation › Models and licences (`README.md` section 15.4): for every model of
 /// the catalog its name, author, source, licence (opening its full text), what this project
-/// changed and whether it is for non-commercial use only; then the notices of llama.cpp and of
-/// the three fonts translated pages are lettered in, which their licences ask to go with every
-/// copy. Names, authors and legal texts are data and are not translated; the labels are.
+/// changed and whether it is for non-commercial use only; then the notices that licences ask
+/// to go with every copy: llama.cpp's, followed by those of its parts (the code and data its
+/// library contains), then those of the three fonts translated pages are lettered in. Names,
+/// authors and legal texts are data and are not translated; the labels are.
 struct PageTranslationLicencesScreen: View {
     @Bindable var model: PageTranslationSettingsModel
 
