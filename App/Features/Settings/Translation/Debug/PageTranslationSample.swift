@@ -27,7 +27,7 @@ import Foundation
 /// | `offline` | The same with no network: the download waits for a connection |
 /// | `noSpace` | The same on a full disk: the download stops at once for want of room |
 /// | `failed` | The same with sources that answer 404: the download stops at once |
-/// | `noSource` | Nothing, and no private source whatever the settings say: no detector can be had |
+/// | `noSource` | Nothing, and no private source whatever the settings say: no detector can be had. The store and the Translation screen read settings of the sample's own, a copy of the app's with the address blank, so both show no source and an address typed there is the sample's |
 ///
 /// The states that download need a private source for the detector, which is private-only:
 /// launch them with `-settings.pageTranslationSourceAddress https://models.example` unless
@@ -45,9 +45,7 @@ enum PageTranslationSample: String {
     static var sampleStore: PageTranslationModelStore? { store }
 
     private static let store: PageTranslationModelStore? = atLaunch.map { state in
-        @Dependency(\.settings) var settings
-        var choices = ModelStoreChoices.settings(settings)
-        if state == .noSource { choices.sourceAddress = { "" } }
+        let choices = ModelStoreChoices.settings(settings)
         let isOffline = state == .offline
         let environment = ModelStoreEnvironment(
             catalog: catalog,
@@ -69,10 +67,28 @@ enum PageTranslationSample: String {
     /// The Translation screen's model over the sample store, or `nil` without the argument.
     static func makeModel() -> PageTranslationSettingsModel? {
         guard let store else { return nil }
-        return withDependencies { $0.pageTranslationModelStore = store } operation: {
+        return withDependencies {
+            $0.pageTranslationModelStore = store
+            $0.settings = settings
+        } operation: {
             PageTranslationSettingsModel()
         }
     }
+
+    /// The settings the sample's store and Translation screen read: the app's, or for
+    /// `noSource` a copy of them with the address blank, kept apart from the app's so the
+    /// sample does not wipe an address the app holds.
+    private static let settings: SettingsStore = {
+        @Dependency(\.settings) var appSettings
+        let suite = "PageTranslationSample"
+        guard atLaunch == .noSource, let defaults = UserDefaults(suiteName: suite) else { return appSettings }
+        defaults.removePersistentDomain(forName: suite)
+        var setting = appSettings.setting
+        setting.pageTranslationSourceAddress = ""
+        let settings = SettingsStore(defaults: defaults)
+        settings.apply(setting)
+        return settings
+    }()
 
     /// Writes the sample's folder, once per launch, before the store first reads it.
     static func prepare() async {
