@@ -40,6 +40,7 @@ struct LedgerReaderControls: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .animation(.smooth(duration: 0.3), value: isShown)
         .background { LedgerPageInsetDriver(model: model, viewport: viewport, sheet: sheet) }
+        .background { LedgerTranslationPresence(model: model, sheet: sheet) }
         .background { LedgerScreenDestinations(model: model) }
         // Closing needs nothing taken down first: the sheet leaves with the reader (spike S4).
         .sheet(isPresented: $model.showsPanel) {
@@ -57,7 +58,7 @@ final class LedgerSheetState {
     var isOpen = false
     /// The open height, above the safe area: what the open rows need. It starts at what they
     /// need at the default text size and follows them once they are laid out (a larger text
-    /// size, the two-page rows in landscape), up to the height that was drawn.
+    /// size, the two-page rows in landscape), up to `LedgerSheetHeights.maximumOpen`.
     private(set) var openHeight: CGFloat
     /// Whether the reader's screen is wider than tall. The sheet cannot see that itself.
     private(set) var isLandscape = false
@@ -68,13 +69,21 @@ final class LedgerSheetState {
     /// edge, where its own heights do not say what it covers.
     var top: CGFloat?
 
-    private let defaultOpenHeight: CGFloat
+    /// Whether the open rows hold the translation group: where the gallery offers Translate,
+    /// which most do (and every gallery until its language is known).
+    private(set) var showsTranslation = true
+
+    private let hasPages: Bool
+    @ObservationIgnored private var defaultOpenHeight: CGFloat
+    @ObservationIgnored private var maximumOpenHeight: CGFloat
     private let minimumOpenHeight: CGFloat
 
     init(hasPages: Bool) {
-        let heights = LedgerSheetHeights(hasPages: hasPages)
+        self.hasPages = hasPages
+        let heights = LedgerSheetHeights(hasPages: hasPages, showsTranslation: true)
         openHeight = heights.open
         defaultOpenHeight = heights.open
+        maximumOpenHeight = LedgerSheetHeights.maximumOpen(hasPages: hasPages, showsTranslation: true)
         // Always a pull above the resting height, so the two never meet.
         minimumOpenHeight = heights.rest + LedgerReaderMetrics.minimumPull
     }
@@ -88,9 +97,19 @@ final class LedgerSheetState {
         openHeight = defaultOpenHeight
     }
 
+    /// The translation group came or went (a gallery's language became known, `README` 8).
+    /// The open height starts over from what the rows need with or without it.
+    func translationDidChange(isShown: Bool) {
+        guard isShown != showsTranslation else { return }
+        showsTranslation = isShown
+        defaultOpenHeight = LedgerSheetHeights(hasPages: hasPages, showsTranslation: isShown).open
+        maximumOpenHeight = LedgerSheetHeights.maximumOpen(hasPages: hasPages, showsTranslation: isShown)
+        openHeight = defaultOpenHeight
+    }
+
     /// The open rows were laid out `height` tall.
     func openRowsDidLayOut(height: CGFloat) {
-        let fitted = min(max(height.rounded(.up), minimumOpenHeight), LedgerReaderMetrics.maximumOpenHeight)
+        let fitted = min(max(height.rounded(.up), minimumOpenHeight), maximumOpenHeight)
         if abs(fitted - openHeight) >= 1 {
             openHeight = fitted
         }

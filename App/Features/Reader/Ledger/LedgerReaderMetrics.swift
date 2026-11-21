@@ -5,8 +5,9 @@ nonisolated enum LedgerReaderMetrics {
     /// The resting height, above the safe area. With the safe area under it the sheet covers
     /// the bottom 184 to 185 pt of an iPhone's screen (spike S4).
     static let restHeight: CGFloat = 150
-    /// The open height that was drawn (with the translation group, which is not shown). The
-    /// open sheet is as tall as its rows and never taller than this.
+    /// The open height that was drawn. The open sheet is as tall as its rows and never taller
+    /// than this, or than its rows at the default text size where the translation group shows
+    /// (`LedgerSheetHeights.maximumOpen`): the drawing had the group but not the Live Text row.
     static let maximumOpenHeight: CGFloat = 456
     /// The least the open height stands above the resting one.
     static let minimumPull: CGFloat = 60
@@ -37,6 +38,12 @@ nonisolated enum LedgerReaderMetrics {
     static let sideInset: CGFloat = 16
     /// From the sheet's sides to the header and the slider.
     static let textInset: CGFloat = 20
+    /// The line above the translation group: its name, or the current page's status.
+    static let translationLineHeight: CGFloat = 26
+    /// From the group's edge to that line's text.
+    static let translationLineInset: CGFloat = 16
+    /// The translation group with its line: the line, the switch and the segmented control.
+    static let translationGroupHeight: CGFloat = translationLineHeight + rowHeight + directionRowHeight
 
     /// The one animation the page's inset changes in (spike S4: the engine follows it frame by
     /// frame, 21 to 24 layout passes over about 0.4 s).
@@ -63,9 +70,12 @@ nonisolated struct LedgerSheetHeights: Equatable, Sendable {
     let rest: CGFloat
     let open: CGFloat
 
-    /// - Parameter open: the open height once the open rows have been laid out; `nil` gives
-    ///   what they need at the default text size in portrait.
-    init(hasPages: Bool, open: CGFloat? = nil) {
+    /// - Parameters:
+    ///   - showsTranslation: whether the open rows hold the translation group, which the
+    ///     gallery has where it offers Translate.
+    ///   - open: the open height once the open rows have been laid out; `nil` gives what they
+    ///     need at the default text size in portrait.
+    init(hasPages: Bool, showsTranslation: Bool = false, open: CGFloat? = nil) {
         typealias Metrics = LedgerReaderMetrics
         // A gallery of one page has no slider and no strip.
         let slider = hasPages ? Metrics.sliderHeight : 0
@@ -73,9 +83,18 @@ nonisolated struct LedgerSheetHeights: Equatable, Sendable {
             ? Metrics.restHeight
             : Metrics.restHeight - Metrics.sliderHeight - Metrics.restRowGap
         let rows = Metrics.topInset + Metrics.headerHeight + slider + (hasPages ? Metrics.stripHeight : 0)
+            + (showsTranslation ? Metrics.translationGroupHeight : 0)
             + Metrics.groupGap + Metrics.directionRowHeight + 2 * Metrics.rowHeight
             + Metrics.groupGap + Metrics.pillHeight + Metrics.bottomInset
         self.open = open ?? rows
+    }
+
+    /// The tallest the open sheet grows when its rows are taller (a larger text size, the
+    /// two-page rows in landscape); beyond it they scroll. It is the height that was drawn,
+    /// or, where the translation group shows, what the rows need with it at the default text
+    /// size, so that they never scroll there in portrait.
+    static func maximumOpen(hasPages: Bool, showsTranslation: Bool) -> CGFloat {
+        max(LedgerReaderMetrics.maximumOpenHeight, Self(hasPages: hasPages, showsTranslation: showsTranslation).open)
     }
 
     var restDetent: PresentationDetent { .height(rest) }
