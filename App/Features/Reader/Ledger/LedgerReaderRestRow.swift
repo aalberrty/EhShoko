@@ -1,9 +1,9 @@
 import EhFeatures
 import SwiftUI
 
-/// Under the slider at rest: "23 / 48" leading and the round buttons trailing, Auto-play and
-/// the reading settings, joined by "Retry failed pages" while pages have failed. A gallery of
-/// one page has this row alone.
+/// Under the slider at rest: "23 / 48" leading and the round buttons trailing: Translate where
+/// the gallery offers it, "Retry failed pages" while pages have failed, Auto-play and the
+/// reading settings. A gallery of one page has this row alone.
 struct LedgerRestRow: View {
     let model: ReaderModel
     let sheet: LedgerSheetState
@@ -12,9 +12,9 @@ struct LedgerRestRow: View {
         HStack(spacing: Tokens.Spacing.small) {
             LedgerPageNumber(model: model)
             Spacer(minLength: Tokens.Spacing.small)
-            // Translate and Compare lead the buttons once translation exists. Not in the
-            // hierarchy until then.
-            ReaderTranslationSlot(availability: model.translationAvailability) { EmptyView() }
+            // Translate leads the buttons (and later Compare). Not in the hierarchy for a
+            // gallery in another language.
+            LedgerTranslateSlot(model: model)
             LedgerRetryFailedButton(model: model)
             LedgerAutoPlayButton(model: model, sheet: sheet)
             Button {
@@ -115,6 +115,12 @@ private struct LedgerAutoPlayButton: View {
 struct LedgerRoundLabel: View {
     let symbol: String
     var isOn = false
+    /// The mark for pages translated before, at the symbol's corner (Translate). On the lit
+    /// fill it takes the colour drawn on the tint, as the symbol does.
+    var hasMark = false
+    /// Whether VoiceOver hears "selected" while on. Translate says on or off in its value
+    /// instead, and would say it twice.
+    var readsSelection = true
 
     @Environment(\.look) private var look
     @Environment(\.lookTint) private var tint
@@ -123,11 +129,13 @@ struct LedgerRoundLabel: View {
     var body: some View {
         Image(systemName: symbol)
             .font(.title3)
+            .readerTranslationMark(hasMark)
+            .environment(\.lookTint, isOn ? onTint : tint)
             .foregroundStyle(isOn ? onTint : look.label)
             .frame(width: LedgerReaderMetrics.roundButton, height: LedgerReaderMetrics.roundButton)
             .background { Circle().fill(isOn ? tint : look.fill3) }
             .contentShape(.circle)
-            .accessibilityAddTraits(isOn ? .isSelected : [])
+            .accessibilityAddTraits(isOn && readsSelection ? .isSelected : [])
     }
 }
 

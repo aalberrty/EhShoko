@@ -26,10 +26,10 @@ struct LedgerOpenRows: View {
                     .frame(height: LedgerReaderMetrics.stripHeight)
                     .clipped()
             }
-            // "TRANSLATION · ON THIS IPHONE", its switch and Original, Translated, Side by
-            // side: a group above this one once translation exists. Not in the hierarchy
-            // until then.
-            ReaderTranslationSlot(availability: model.translationAvailability) { EmptyView() }
+            // "TRANSLATION · ON THIS IPHONE", its switch and Original, Translated (and later
+            // Compare; there is no side by side): a group above this one where the gallery
+            // offers Translate. Not in the hierarchy otherwise.
+            LedgerTranslationSection(model: model)
             LedgerReadingGroup(model: model, sheet: sheet)
                 .padding(.top, LedgerReaderMetrics.groupGap)
             LedgerPagePills(model: model)
@@ -130,10 +130,12 @@ private struct LedgerReadingGroup: View {
     }
 }
 
-/// A row of the group: a symbol, a name and what stands at its end, under a hairline.
-private struct LedgerGroupRow<Trailing: View>: View {
+/// A row of a group: a symbol, a name and what stands at its end, under a hairline unless it
+/// is the group's first row.
+struct LedgerGroupRow<Trailing: View>: View {
     let title: String
     let symbol: String
+    var hasHairline = true
     @ViewBuilder let trailing: Trailing
 
     @Environment(\.look) private var look
@@ -156,12 +158,20 @@ private struct LedgerGroupRow<Trailing: View>: View {
         .foregroundStyle(isEnabled ? look.label : look.tertiaryLabel)
         .padding(.horizontal, 14)
         .frame(minHeight: LedgerReaderMetrics.rowHeight)
-        // The hairline between rows takes no height, so a row is as tall as it says.
         .overlay(alignment: .top) {
-            look.separator
-                .frame(height: 0.5)
-                .padding(.leading, 14)
+            if hasHairline { LedgerGroupHairline() }
         }
+    }
+}
+
+/// The line between two rows of a group. It takes no height, so a row is as tall as it says.
+struct LedgerGroupHairline: View {
+    @Environment(\.look) private var look
+
+    var body: some View {
+        look.separator
+            .frame(height: 0.5)
+            .padding(.leading, 14)
     }
 }
 
