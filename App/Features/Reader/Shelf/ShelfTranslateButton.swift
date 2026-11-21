@@ -70,7 +70,8 @@ private struct ShelfTranslateButtonStyle: ButtonStyle {
 /// button reaches it through the button's action as well, in either order. A press shorter
 /// than `holdDuration` that ends on the button is a tap and turns Translate on or off; a
 /// longer one while Translate is on only lets the original go, and so does a press whose
-/// finger slid off the button.
+/// finger slid off the button. An activation with no finger down (VoiceOver's double tap,
+/// Switch Control, a keyboard) reaches only the action, and is a tap.
 final class ShelfTranslatePress {
     /// From this long on, a press while Translate is on is a hold, not a tap.
     static let holdDuration: Duration = .milliseconds(350)
@@ -80,20 +81,24 @@ final class ShelfTranslatePress {
     private var holdsOriginal = false
     /// Counts presses, so a late check of one press leaves the next alone.
     private var number = 0
-    private var wasLifted = false
+    /// The press whose lift was handled. Equal to `number` when no finger went down since.
+    private var liftedNumber = 0
 
     func began(on model: ReaderModel) {
         number += 1
         start = .now
-        wasLifted = false
         holdsOriginal = model.translation.isOn
         if holdsOriginal { model.translation.holdOriginal(true) }
     }
 
     /// The finger lifted on the button.
     func lifted(on model: ReaderModel) {
-        guard !wasLifted else { return }
-        wasLifted = true
+        guard liftedNumber != number else {
+            // No finger went down since the last lift: an assistive activation, a tap.
+            model.toggleTranslation()
+            return
+        }
+        liftedNumber = number
         if isHold {
             model.translation.holdOriginal(false)
         } else {
@@ -114,7 +119,7 @@ final class ShelfTranslatePress {
         // in the same touch. Without it the finger slid off, and the original goes.
         let number = number
         Task { @MainActor [weak self] in
-            guard let self, self.number == number, !wasLifted else { return }
+            guard let self, self.number == number, liftedNumber != number else { return }
             model.translation.holdOriginal(false)
         }
     }

@@ -38,11 +38,16 @@ struct ReaderScreen: View {
                 ReaderEngineHost(model: model, bridge: session.bridge)
             }
             // Between the engine and the controls, so it stays while they hide. Only in the
-            // hierarchy while the reader compares.
+            // hierarchy while the reader compares. VoiceOver reaches its handle after the
+            // controls, next to the Compare that put it there, not before Close.
             ReaderTranslationWipe(model: model, viewport: session.viewport)
+                .accessibilityElement(children: .contain)
+                .accessibilitySortPriority(-1)
             ReaderControls(model: model, viewport: session.viewport)
         }
+        .accessibilityElement(children: .contain)
         .modifier(ReaderChrome(model: model))
+        .background { ReaderTranslationAnnouncements(translation: model.translation) }
         // VoiceOver's escape gesture leaves as Close does, also while the controls are hidden
         // (and with them Close). A full-screen cover has no escape of its own.
         .accessibilityAction(.escape) { dismiss() }

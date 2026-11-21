@@ -156,18 +156,23 @@ private struct WallReaderTranslationToast: View {
                     Text(text)
                         .font(.subheadline.weight(.medium))
                         .foregroundStyle(look.label)
-                        .lineLimit(1)
+                        // A second line rather than a cut, where the toast stands over the
+                        // pill and is still too narrow (a large text size).
+                        .lineLimit(2)
                         .minimumScaleFactor(0.85)
+                        .fixedSize(horizontal: false, vertical: true)
                     if status.offersRetry {
                         retry
                     }
                 }
                 .padding(.leading, Tokens.Spacing.medium)
                 .padding(.trailing, status.offersRetry ? Tokens.Spacing.xSmall + 2 : Tokens.Spacing.large)
-                .frame(height: WallReaderMetrics.rowHeight)
+                .frame(minHeight: WallReaderMetrics.rowHeight)
                 .dynamicTypeSize(...DynamicTypeSize.accessibility1)
                 .glassSurface(in: .capsule)
-                .accessibilityElement(children: .combine)
+                // One element, except that Try again stays a button of its own: combined, the
+                // toast itself became the button.
+                .accessibilityElement(children: status.offersRetry ? .contain : .combine)
                 .transition(reduceMotion ? AnyTransition.opacity : .opacity.combined(with: .scale(scale: 0.9, anchor: .trailing)))
             }
         }

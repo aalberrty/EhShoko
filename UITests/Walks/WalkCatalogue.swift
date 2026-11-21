@@ -9,6 +9,7 @@
 /// | `a11y` | The accessibility audit of each screen group under each preset: `a11y-shelf`, `a11y-wall`, `a11y-ledger` (`AccessibilityWalks`). Not part of `all`. |
 /// | `pushes` | Shelf's list pushed over each gallery design under each bar and in a link's gallery sheet (`PushWalks`); not in `all`. |
 /// | `looks` | Shelf's Home and the gallery sheet in each look (`LookWalks`; run with the `offline` fixture); not in `all`. |
+/// | `translation` | Page translation's controls in each reader, its download sheet and its Settings screens, audited, also at the largest text size (`TranslationWalks`); not in `all`. |
 /// | `all` | All of them. |
 ///
 /// `WALKS` takes set names and walk ids, comma-separated: `presets,mix-3,device-offer`.
@@ -32,6 +33,7 @@ enum WalkCatalogue {
         case "a11y": AccessibilityWalks.ids
         case "pushes": PushWalks.ids
         case "looks": LookWalks.ids
+        case "translation": TranslationWalks.ids
         case "all": ["presets", "swaps", "mixes", "device"].flatMap { set(named: $0) ?? [] }
         default: nil
         }
@@ -53,6 +55,9 @@ enum WalkCatalogue {
         }
         if id.hasPrefix("home-") || id.hasPrefix("sheet-") {
             return LookWalks.walk(id: id, in: environment)
+        }
+        if id.hasPrefix("translation-") {
+            return TranslationWalks.walk(id: id, in: environment)
         }
         return DeviceWalks.walk(id: id, in: environment) ?? AccessibilityWalks.walk(id: id, in: environment)
     }

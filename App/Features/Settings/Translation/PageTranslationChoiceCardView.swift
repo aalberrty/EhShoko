@@ -68,6 +68,7 @@ struct PageTranslationChoiceCardView: View {
                         .foregroundStyle(look.secondaryLabel)
                 }
             }
+            .fixedSize(horizontal: false, vertical: true)
             .frame(maxWidth: .infinity, alignment: .leading)
         }
         .accessibilityElement(children: .combine)
@@ -107,6 +108,9 @@ private struct FigureGroupView: View {
                 .font(.caption.weight(.semibold))
                 .textCase(.uppercase)
                 .foregroundStyle(look.secondaryLabel)
+                // A list row may otherwise give a line of a card one line's height and cut it
+                // ("ON IPHONE 14…") at the large text sizes.
+                .fixedSize(horizontal: false, vertical: true)
                 // Each figure says what it was measured on.
                 .accessibilityHidden(true)
             ForEach(Array(group.figures.enumerated()), id: \.offset) { _, figure in
@@ -133,17 +137,22 @@ private struct FigureRow: View {
             layout {
                 Text(figure.kind.label)
                     .foregroundStyle(look.label)
+                    .fixedSize(horizontal: false, vertical: true)
                     .frame(maxWidth: stacked ? nil : .infinity, alignment: .leading)
                 Text(figure.value.text)
                     .monospacedDigit()
-                    .foregroundStyle(figure.value == .notMeasured ? look.tertiaryLabel : look.label)
+                    // "Not measured" is quieter than a figure, but still readable: the tertiary
+                    // colour fails the contrast audit on the card.
+                    .foregroundStyle(figure.value == .notMeasured ? look.secondaryLabel : look.label)
                     .multilineTextAlignment(stacked ? .leading : .trailing)
+                    .fixedSize(horizontal: false, vertical: true)
             }
             .font(.subheadline)
             if let note = figure.note {
                 Text(note.text)
                     .font(.footnote)
                     .foregroundStyle(look.secondaryLabel)
+                    .fixedSize(horizontal: false, vertical: true)
             }
         }
         .accessibilityElement(children: .ignore)

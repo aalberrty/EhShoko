@@ -192,6 +192,8 @@ private struct LedgerTranslationLine: View {
                     .tracking(0.9)
                     .lineLimit(1)
                     .minimumScaleFactor(0.8)
+                    // Read in its own case: VoiceOver spells some words in capitals out.
+                    .accessibilityLabel(Strings.group(PageTranslationDevice.name))
                     .accessibilityAddTraits(.isHeader)
                 Spacer(minLength: 0)
             }

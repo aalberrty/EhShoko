@@ -14,12 +14,15 @@ private typealias Strings = L10n.Localizable.Reader.Translate
 struct ShelfTranslationCapsule: View {
     let model: ReaderModel
 
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
     var body: some View {
         let content = ShelfTranslationCapsuleContent(model: model)
         ZStack {
             if let content {
                 ShelfTranslationCapsuleRow(content: content) { model.retryTranslation() }
-                    .transition(.opacity.combined(with: .scale(scale: 0.9, anchor: .bottom)))
+                    // With Reduce Motion it only fades, as Wall's toast does.
+                    .transition(reduceMotion ? .opacity : .opacity.combined(with: .scale(scale: 0.9, anchor: .bottom)))
             }
         }
         .animation(.smooth(duration: 0.25), value: content?.kind)
@@ -83,6 +86,10 @@ private struct ShelfTranslationCapsuleRow: View {
     @Environment(\.lookTint) private var tint
     @Environment(\.onTint) private var onTint
 
+    private static let height: CGFloat = 38
+    /// Around Try again's title, inside the capsule's end.
+    private static let retryInset: CGFloat = 8
+
     var body: some View {
         HStack(spacing: 8) {
             badge
@@ -94,10 +101,17 @@ private struct ShelfTranslationCapsuleRow: View {
                     .frame(width: 1, height: 16)
                     .accessibilityHidden(true)
                 if content.kind == .failed {
-                    Button(detail, action: retry)
-                        .buttonStyle(.plain)
-                        .fontWeight(.semibold)
-                        .foregroundStyle(tint)
+                    Button(action: retry) {
+                        Text(detail)
+                            .fontWeight(.semibold)
+                            .foregroundStyle(tint)
+                            // The whole height of the capsule and its end take the touch, not
+                            // only the word.
+                            .padding(.horizontal, Self.retryInset)
+                            .frame(minHeight: Self.height)
+                            .contentShape(.rect)
+                    }
+                    .buttonStyle(.plain)
                 } else {
                     Text(detail)
                         .foregroundStyle(look.secondaryLabel)
@@ -108,8 +122,8 @@ private struct ShelfTranslationCapsuleRow: View {
         .lineLimit(1)
         .minimumScaleFactor(0.8)
         .padding(.leading, 8)
-        .padding(.trailing, 14)
-        .frame(minHeight: 38)
+        .padding(.trailing, content.kind == .failed ? 14 - Self.retryInset : 14)
+        .frame(minHeight: Self.height)
         .glassSurface(in: Capsule(), isInteractive: content.kind == .failed)
         .accessibilityElement(children: content.kind == .failed ? .contain : .combine)
     }

@@ -155,6 +155,9 @@ final class WalkRunner {
             app.coordinate(withNormalizedOffset: CGVector(dx: x, dy: y)).tap()
         case .longPress(let target, let seconds):
             try find(target).press(forDuration: seconds)
+        case .drag(let target, let dx, let dy):
+            let start = try find(target).coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
+            start.press(forDuration: 0.1, thenDragTo: start.withOffset(CGVector(dx: dx, dy: dy)), withVelocity: 600, thenHoldForDuration: 0.2)
         case .swipe(let direction, let target):
             let element = try target.map { try find($0) } ?? app
             switch direction {
@@ -198,6 +201,9 @@ final class WalkRunner {
                 // The rotation animates; what follows should see the new layout.
                 Thread.sleep(forTimeInterval: 1.5)
             }
+        case .turn(let orientation):
+            XCUIDevice.shared.orientation = orientation
+            Thread.sleep(forTimeInterval: 1.5)
         case .back:
             try goBack()
         case .backSwipe(let swipe):
