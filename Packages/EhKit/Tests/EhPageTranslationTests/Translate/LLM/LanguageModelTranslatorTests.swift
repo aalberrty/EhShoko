@@ -14,15 +14,15 @@ import Testing
 
     @Test(arguments: [TranslatorChoice.galTransl4B, .sakura1_5B, .hyMT2, .qwen35_4B])
     func theWholePageGoesToTheModelInOneRequestWithItsPromptAndSampling(choice: TranslatorChoice) async throws {
-        let engine = StubGenerationEngine(answer: "1: 你好\n2: 老师")
+        let engine = StubGenerationEngine(answer: "1: 你好\n2: 谢谢")
         let profile = try #require(LanguageModelProfile(choice))
-        let results = try await translator(choice, engine: engine).translate(["こんにちは", "先生"])
-        #expect(results == ["你好", "老师"])
-        // The stub counts a character as a token: the two numbered lines are 14.
+        let results = try await translator(choice, engine: engine).translate(["こんにちは", "ありがとう"])
+        #expect(results == ["你好", "谢谢"])
+        // The stub counts a character as a token: the two numbered lines are 17.
         #expect(engine.calls == [
             .init(
-                prompt: profile.prompt.text(for: ["こんにちは", "先生"]),
-                options: TextGenerationOptions(maxTokens: 2 * 14 + 32, sampling: profile.sampling)
+                prompt: profile.prompt.text(for: ["こんにちは", "ありがとう"]),
+                options: TextGenerationOptions(maxTokens: 2 * 17 + 32, sampling: profile.sampling)
             )
         ])
     }
@@ -35,9 +35,9 @@ import Testing
     }
 
     @Test func aLineMissingFromTheAnswerIsNilAndTheOthersKeepTheirPlaces() async throws {
-        let engine = StubGenerationEngine(answer: "3: 哎呀\n1: 你好\n7: 多余")
-        let results = try await translator(engine: engine).translate(["こんにちは", "先生", "ひぇ", "あれ"])
-        #expect(results == ["你好", nil, "哎呀", nil])
+        let engine = StubGenerationEngine(answer: "3: 咦\n1: 你好\n7: 多余")
+        let results = try await translator(engine: engine).translate(["こんにちは", "ありがとう", "えっ", "あれ"])
+        #expect(results == ["你好", nil, "咦", nil])
     }
 
     @Test func blankLinesAreNotSentAndTheNumbersSkipThem() async throws {
@@ -60,9 +60,9 @@ import Testing
     /// not.
     @Test(arguments: [TextGeneration.Finish.tokenLimit, .contextFull])
     func anAnswerThatRanIntoALimitLosesItsLastLine(finish: TextGeneration.Finish) async throws {
-        let engine = StubGenerationEngine(.answer { _, _ in ("1: 你好\n2: 老师\n3: 是啊，管", finish) })
-        let results = try await translator(engine: engine).translate(["こんにちは", "先生", "そうだな執事"])
-        #expect(results == ["你好", "老师", nil])
+        let engine = StubGenerationEngine(.answer { _, _ in ("1: 你好\n2: 谢谢\n3: 是这", finish) })
+        let results = try await translator(engine: engine).translate(["こんにちは", "ありがとう", "そうですね"])
+        #expect(results == ["你好", "谢谢", nil])
     }
 
     @Test func anErrorOfTheEngineIsThrownOn() async throws {
@@ -172,7 +172,7 @@ import Testing
     @Test func cancellingTheTaskWhileTheModelGeneratesThrowsAndReturnsNoPartOfThePage() async throws {
         let engine = StubGenerationEngine(.untilStopped(partial: "1: 你好\n2: 老"))
         let translator = try translator(engine: engine)
-        let task = Task { try await translator.translate(["こんにちは", "先生"]) }
+        let task = Task { try await translator.translate(["こんにちは", "ありがとう"]) }
         await engine.waitForCalls()
         task.cancel()
         await #expect(throws: CancellationError.self) { try await task.value }
@@ -182,7 +182,7 @@ import Testing
     @Test func stopEndsThePageInWorkWithoutItsTaskBeingCancelled() async throws {
         let engine = StubGenerationEngine(.untilStopped(partial: "1: 你好\n2: 老"))
         let translator = try translator(engine: engine)
-        let task = Task { try await translator.translate(["こんにちは", "先生"]) }
+        let task = Task { try await translator.translate(["こんにちは", "ありがとう"]) }
         await engine.waitForCalls()
         translator.stop()
         await #expect(throws: CancellationError.self) { try await task.value }

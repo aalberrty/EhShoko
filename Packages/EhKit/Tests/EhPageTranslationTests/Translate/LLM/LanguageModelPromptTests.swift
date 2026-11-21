@@ -6,8 +6,8 @@ import Testing
 /// template and all, so a change to a word or a line break in the source fails here: the
 /// models were compared with exactly these.
 @Suite struct LanguageModelPromptTests {
-    static let lines = ["みなさん今日から一緒にがんばりましょう", "先生", "ひぇ"]
-    static let numbered = "1: みなさん今日から一緒にがんばりましょう\n2: 先生\n3: ひぇ"
+    static let lines = ["今日は図書館で本を借りました", "ありがとう", "えっ"]
+    static let numbered = "1: 今日は図書館で本を借りました\n2: ありがとう\n3: えっ"
 
     @Test func galTranslGetsItsGlossaryPromptWithAnEmptyGlossary() {
         let expected = "<|im_start|>system\n"
