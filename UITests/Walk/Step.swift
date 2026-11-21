@@ -15,6 +15,8 @@ indirect enum Step: Sendable {
     /// middle): the reader's zones, which have no element.
     case tapPoint(x: Double, y: Double)
     case longPress(Target, seconds: Double)
+    /// A finger down on the target that moves by this many points and lifts (a handle dragged).
+    case drag(Target, dx: Double, dy: Double)
     case swipe(Direction, on: Target?)
     /// Drags the content by `screens` window heights (or widths), slowly enough that it does
     /// not fling, so a scroll goes as far as asked.
@@ -41,6 +43,8 @@ indirect enum Step: Sendable {
     case expect(Target)
     /// Turns the device; on an iPad only, and skipped elsewhere.
     case rotate(UIDeviceOrientation)
+    /// Turns the device, a phone too (a walk that looks at landscape on purpose).
+    case turn(UIDeviceOrientation)
     /// Goes back one screen: the navigation bar's first button, or the edge swipe.
     case back
     /// The interactive back swipe: drags slowly from the leading edge of the top screen's
@@ -94,6 +98,7 @@ indirect enum Step: Sendable {
         case .tapIfPresent(let target, _): "tap \(target) if present"
         case .tapPoint(let x, let y): "tap at \(x), \(y)"
         case .longPress(let target, let seconds): "long-press \(target) for \(seconds) s"
+        case .drag(let target, let dx, let dy): "drag \(target) by \(Int(dx)), \(Int(dy))"
         case .swipe(let direction, let target): "swipe \(direction.rawValue)" + (target.map { " on \($0)" } ?? "")
         case .scroll(let direction, let screens, let target):
             "scroll \(direction.rawValue) \(screens) screens" + (target.map { " on \($0)" } ?? "")
@@ -106,6 +111,7 @@ indirect enum Step: Sendable {
         case .waitGone(let target, _): "wait until \(target) is gone"
         case .expect(let target): "expect \(target)"
         case .rotate(let orientation): "rotate to \(orientation.walkName)"
+        case .turn(let orientation): "turn to \(orientation.walkName)"
         case .back: "back"
         case .backSwipe(let swipe): swipe == .whole ? "back swipe" : "back swipe, let go early"
         case .pause(let seconds): "pause \(seconds) s"

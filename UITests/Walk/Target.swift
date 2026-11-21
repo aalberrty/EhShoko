@@ -18,6 +18,8 @@ struct Target: CustomStringConvertible, Sendable {
         case field(String)
         /// The accessibility value is exactly this (a collapsed tab bar's "Collapsed").
         case value(String)
+        /// The accessibility value starts with this ("Translation off, 12 pages …").
+        case valuePrefix(String)
     }
 
     /// Where to look: the whole app, or only inside one kind of bar.
@@ -83,6 +85,7 @@ struct Target: CustomStringConvertible, Sendable {
             case .labelPrefix(let text): "\(text)…"
             case .field(let text): "field \(text)…"
             case .value(let value): "value “\(value)”"
+            case .valuePrefix(let value): "value “\(value)…”"
             }
         }
         return names.joined(separator: " or ")
@@ -130,6 +133,7 @@ struct Target: CustomStringConvertible, Sendable {
                     XCUIElement.ElementType.textField.rawValue, XCUIElement.ElementType.searchField.rawValue, text, text
                 )
             case .value(let value): NSPredicate(format: "value == %@", value)
+            case .valuePrefix(let value): NSPredicate(format: "value BEGINSWITH %@", value)
             }
         })
     }
