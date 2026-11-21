@@ -16,15 +16,23 @@ public struct ReaderEngineCommands {
     public var scrollToPage: (Int) -> Void
     /// Goes to the next page or spread; `false` at the end of the gallery.
     public var advance: () -> Bool
+    /// A page's translation overlay changed: the engine asks `translationOverlay(at:)` again.
+    public var reloadTranslation: (Int) -> Void
+    /// What shows over the pages: applied to the page views that exist and to new ones.
+    public var setTranslationDisplay: (ReaderTranslationDisplay) -> Void
 
     public init(
         reloadPage: @escaping (Int) -> Void, reloadData: @escaping () -> Void,
-        scrollToPage: @escaping (Int) -> Void, advance: @escaping () -> Bool
+        scrollToPage: @escaping (Int) -> Void, advance: @escaping () -> Bool,
+        reloadTranslation: @escaping (Int) -> Void = { _ in },
+        setTranslationDisplay: @escaping (ReaderTranslationDisplay) -> Void = { _ in }
     ) {
         self.reloadPage = reloadPage
         self.reloadData = reloadData
         self.scrollToPage = scrollToPage
         self.advance = advance
+        self.reloadTranslation = reloadTranslation
+        self.setTranslationDisplay = setTranslationDisplay
     }
 }
 
@@ -45,6 +53,8 @@ public final class ReaderModel {
         case settings
         /// The share sheet for a page's image, which was written to this file.
         case share(URL)
+        /// The page translation models' download, after Translate was pressed without them.
+        case translationDownload
 
         public var id: Self { self }
     }
@@ -108,6 +118,8 @@ public final class ReaderModel {
     /// The gallery's detail page, for its titles: the opener's, else what is stored. A list's
     /// gallery carries neither the detail's title nor its Japanese title.
     var detail: GalleryDetail?
+    /// Page translation in this reader (`ReaderModel+Translation.swift`).
+    public let translation: ReaderTranslationModel
 
     // MARK: Engine
 
@@ -175,8 +187,10 @@ public final class ReaderModel {
             try await previews.page(number)
         }
         writer = ReaderPageWriter(gid: gallery.gid, database: database, clock: clock, logger: logger)
+        translation = ReaderTranslationModel(gid: gallery.gid, pageCount: pageCount)
         resolver.onEvent = { [weak self] in self?.handle($0) }
         previews.onLoad = { [weak self] in self?.previewPageDidLoad($0, previewPage: $1) }
+        translation.host = self
     }
 
     // MARK: Lifecycle
@@ -216,6 +230,7 @@ public final class ReaderModel {
         previewDebounce?.cancel()
         resolver.stop()
         previews.stop()
+        translation.close()
         for task in actionTasks.values {
             task.cancel()
         }
@@ -295,6 +310,7 @@ public final class ReaderModel {
         resolver.setFocus(page)
         writer.setProgress(page)
         refreshCurrentPageHasImage()
+        translation.currentPageDidChange()
         // Legacy kept turning at the end; there is nowhere to go from the last page. With a
         // closing page, auto-play stops there instead (`trailerVisibilityDidChange`).
         if autoPlay != .off, page >= pageCount, !hasTrailer {
@@ -375,6 +391,7 @@ public final class ReaderModel {
             }
             pageDidChange(image.index)
             engine?.reloadPage(image.index)
+            translation.pageDidResolve(image.index)
         case .failed(let page, _), .updated(let page):
             refreshFailedPageCount()
             pageDidChange(page)
@@ -387,6 +404,7 @@ public final class ReaderModel {
         let elapsed = ContinuousClock.now - openedAt
         timeToFirstPage = elapsed
         openSignpost?.end()
+        translationFirstPageDidShow()
         let milliseconds = Int(elapsed / .milliseconds(1))
         // The timing only. The log files are in Documents, which the Files app shows: a line
         // that named the gallery would be a dated list of everything read.
