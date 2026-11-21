@@ -58,23 +58,40 @@ nonisolated enum StagePieces {
         canvas.box(86, y + 14, 10, 1.8, SchematicPalette.white)
     }
 
-    /// Ledger's reader sheet pulled up: the page number, the slider, a strip, two groups and
-    /// four pills.
+    /// Ledger's reader sheet pulled up: the page number, the slider, a strip, the translation
+    /// group under its line, two groups and four pills. Its top edge is where the open sheet
+    /// stands with the translation group (`LedgerSheetHeights`), and the page above it is
+    /// `ReaderSchematic.background(shrunk:)`.
     private static func openSheet(_ canvas: SchematicCanvas) {
         let palette = canvas.palette
-        canvas.drop(0, 78, 100, 82, 9, dy: -1.5, strength: 1.2)
-        canvas.box(0, 78, 100, 82, palette.surface, 9)
-        canvas.box(44, 80.5, 12, 1.6, palette.tertiary)
-        canvas.box(8, 86, 26, 5.5, palette.label)
-        canvas.box(70, 87.5, 22, 2.4, palette.tertiary)
-        ReaderSchematic.slider(canvas, x: 12, y: 97, width: 76)
-        ReaderSchematic.strip(canvas, top: 104, count: 9, width: 6)
-        canvas.box(6, 119, 88, 12, palette.raised, 4)
-        canvas.box(8, 121, 28, 8, palette.fill, 3)
-        canvas.box(6, 134, 88, 10, palette.raised, 4)
+        canvas.drop(0, 64, 100, 96, 9, dy: -1.5, strength: 1.2)
+        canvas.box(0, 64, 100, 96, palette.surface, 9)
+        canvas.box(44, 66.5, 12, 1.6, palette.tertiary)
+        canvas.box(8, 72, 26, 5.5, palette.label)
+        canvas.box(70, 73.5, 22, 2.4, palette.tertiary)
+        ReaderSchematic.slider(canvas, x: 12, y: 83, width: 76)
+        ReaderSchematic.strip(canvas, top: 90, count: 9, width: 6)
+        translationGroup(canvas, top: 105)
+        canvas.box(6, 127, 88, 11, palette.raised, 4)
+        canvas.box(8, 128.5, 28, 8, palette.fill, 3)
+        canvas.box(6, 141, 88, 9, palette.raised, 4)
         for pill in 0..<4 {
-            canvas.box(6 + CGFloat(pill) * 22.7, 148, 20, 8, palette.fill, 4)
+            canvas.box(6 + CGFloat(pill) * 22.7, 153, 20, 7, palette.fill, 3.5)
         }
+    }
+
+    /// The open sheet's translation group with Translate on: the group's name as a short line,
+    /// then one group holding the switch row and the segmented control, Translated chosen.
+    private static func translationGroup(_ canvas: SchematicCanvas, top: CGFloat) {
+        let palette = canvas.palette
+        canvas.box(8, top + 0.5, 30, 1.6, palette.tertiary)
+        canvas.box(6, top + 4, 88, 15, palette.raised, 4)
+        canvas.box(9, top + 7.5, 32, 2.4, palette.label)
+        canvas.box(81, top + 5.9, 10, 5.6, palette.accent, 2.8)
+        canvas.circle(85.6, top + 6.3, 4.8, SchematicPalette.white)
+        canvas.box(9, top + 12.6, 82, 0.4, palette.separator, 0)
+        canvas.box(8, top + 13.6, 84, 4.4, palette.fill, 2.2)
+        canvas.box(50.3, top + 14, 41.3, 3.6, palette.surface, 1.8)
     }
 
     /// The fingertip at its pose: a grey disc with a white edge, at the pose's strength. The
