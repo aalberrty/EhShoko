@@ -198,6 +198,14 @@ private struct ReaderHarnessPanel: View {
             Toggle(isOn: $model.configuration.isLiveTextEnabled) {
                 Text(verbatim: ReaderLiveText.isSupported ? "Live Text" : "Live Text (not supported here)")
             }
+            // "Off" is a reader in which Translate was never pressed. The first other choice
+            // is the press: the pages then get their made-up translation one after another.
+            Picker("Translation", selection: $model.translationMode) {
+                Text(verbatim: "Translate off").tag(ReaderHarnessTranslationMode.off)
+                Text(verbatim: "Original").tag(ReaderHarnessTranslationMode.original)
+                Text(verbatim: "Translated").tag(ReaderHarnessTranslationMode.translated)
+            }
+            .pickerStyle(.segmented)
         }
     }
 
