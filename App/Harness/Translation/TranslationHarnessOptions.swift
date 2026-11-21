@@ -24,7 +24,7 @@ import Foundation
 /// | `-TranslationHarness{Detector,Reader,Translator,Repaint}Units <units>` | the catalog's | `cpuOnly`, `cpuAndGPU`, `cpuAndNeuralEngine` or `all`. |
 /// | `-TranslationHarnessBallast <MB>` | 0 | Memory held, written to, for the whole run: a full image cache is 512. |
 /// | `-TranslationHarnessStartWhenWarm YES` | NO | Start although the thermal state is above nominal. Otherwise the run refuses and says so. |
-/// | `-TranslationHarnessStopAt <fair\|serious\|critical>` | `critical` | Stop when the thermal state reaches this. |
+/// | `-TranslationHarnessStopAt <fair\|serious\|critical>` | `serious` | Stop when the thermal state reaches this. Serious is where the system starts to throttle, so a run that goes past it measures a phone in distress. |
 /// | `-TranslationHarnessStopOnFailure YES` | NO | Stop at the first page that fails. |
 /// | `-TranslationHarnessMaxMinutes <m>` | 14 | Stop after this long, whatever is left. |
 /// | `-TranslationHarnessRecordText YES` | NO | Keep each page's blocks, readings and translations in the result. |
@@ -62,7 +62,7 @@ nonisolated struct TranslationHarnessOptions: Sendable, Equatable {
     var repaintUnits: MLComputeUnits?
     var ballastMB = 0
     var startsWhenWarm = false
-    var stopAt = ProcessInfo.ThermalState.critical
+    var stopAt = ProcessInfo.ThermalState.serious
     var stopsOnFailure = false
     var maxMinutes: Double = 14
     var recordsText = false
@@ -103,7 +103,7 @@ nonisolated struct TranslationHarnessOptions: Sendable, Equatable {
         repaintUnits = string("RepaintUnits").flatMap(Self.units)
         ballastMB = min(max(0, Int(number("Ballast") ?? 0)), 4_096)
         startsWhenWarm = flag("StartWhenWarm")
-        stopAt = string("StopAt").flatMap(Self.thermalState) ?? .critical
+        stopAt = string("StopAt").flatMap(Self.thermalState) ?? .serious
         stopsOnFailure = flag("StopOnFailure")
         maxMinutes = max(0.5, number("MaxMinutes") ?? 14)
         recordsText = flag("RecordText")
