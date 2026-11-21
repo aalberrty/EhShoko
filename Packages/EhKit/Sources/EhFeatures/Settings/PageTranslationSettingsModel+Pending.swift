@@ -45,18 +45,17 @@ extension PageTranslationSettingsModel {
     func restorePendingChoices() {
         for role in ModelRole.allCases where pending[role] == nil {
             guard let choice = persistedPending(role) else { continue }
-            guard choice != current(role), let id = choice.artifact else {
-                persist(nil, for: role)
-                continue
-            }
-            switch store.state(of: id) {
-            case .installed:
+            // The rule is the store's, which the translation service asks too.
+            let state = choice.artifact.map { store.state(of: $0) }
+            switch PendingModelChoice.verdict(isCurrent: choice == current(role), state: state) {
+            case .apply:
                 persist(nil, for: role)
                 apply(choice)
-            case .waiting, .downloading, .paused, .installing, .preparing:
+            case .wait:
                 pending[role] = choice
-            case .missing, .failed:
-                // The download ended without an install; choosing it again tries again.
+            case .forget:
+                // Current already, or the download ended without an install; choosing it
+                // again tries again.
                 persist(nil, for: role)
             }
         }
