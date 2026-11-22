@@ -28,13 +28,15 @@ import Foundation
 /// | `noSpace` | The same on a full disk: the download stops at once for want of room |
 /// | `failed` | The same with sources that answer 404: the download stops at once |
 /// | `noSource` | Nothing, and no private source whatever the settings say: no detector can be had. The store and the Translation screen read settings of the sample's own, a copy of the app's with the address blank, so both show no source and an address typed there is the sample's |
+/// | `publicStore` | Nothing, no private source as in `noSource`, and the public store: what someone who builds the app sees first |
 ///
-/// The states that download need a private source for the detector, which is private-only:
-/// launch them with `-settings.pageTranslationSourceAddress https://models.example` unless
-/// the settings hold one.
+/// Only `publicStore` has the public store; the other states have none, so each shows what it
+/// did before the store existed. The states that download need a private source for the
+/// detector, which is private-only: launch them with
+/// `-settings.pageTranslationSourceAddress https://models.example` unless the settings hold one.
 enum PageTranslationSample: String {
     case ready, partial, empty, preparing, paused
-    case downloading, offline, noSpace, failed, noSource
+    case downloading, offline, noSpace, failed, noSource, publicStore
 
     static let atLaunch = UserDefaults.standard.string(forKey: "PageTranslationSample").flatMap(Self.init)
 
@@ -57,6 +59,7 @@ enum PageTranslationSample: String {
             ),
             // `-PageTranslationSampleToken <text>` starts with a token kept.
             tokens: .inMemory(UserDefaults.standard.string(forKey: "PageTranslationSampleToken")),
+            publicStore: state == .publicStore ? ModelCatalog.publicStoreAddress : nil,
             // Less than any download needs (`spaceNeeded` adds 200 MB to what is left).
             freeSpace: { _ in state == .noSpace ? 150_000_000 : 64_000_000_000 },
             connectivity: { AsyncStream { $0.yield(!isOffline) } }
@@ -76,12 +79,12 @@ enum PageTranslationSample: String {
     }
 
     /// The settings the sample's store and Translation screen read: the app's, or for
-    /// `noSource` a copy of them with the address blank, kept apart from the app's so the
-    /// sample does not wipe an address the app holds.
+    /// `noSource` and `publicStore` a copy of them with the address blank, kept apart from the
+    /// app's so the sample does not wipe an address the app holds.
     private static let settings: SettingsStore = {
         @Dependency(\.settings) var appSettings
         let suite = "PageTranslationSample"
-        guard atLaunch == .noSource, let defaults = UserDefaults(suiteName: suite) else { return appSettings }
+        guard atLaunch == .noSource || atLaunch == .publicStore, let defaults = UserDefaults(suiteName: suite) else { return appSettings }
         defaults.removePersistentDomain(forName: suite)
         var setting = appSettings.setting
         setting.pageTranslationSourceAddress = ""
@@ -105,13 +108,13 @@ enum PageTranslationSample: String {
         let installed: [ModelArtifactID] = switch state {
         case .ready: defaultSet + [.v4s, .hyMT2]
         case .partial, .paused, .downloading, .offline, .noSpace, .failed: [.cpt2, .jmtFast1, .lamaManga]
-        case .empty, .noSource: []
+        case .empty, .noSource, .publicStore: []
         case .preparing: defaultSet
         }
         switch state {
         case .paused: writeDownload(of: .k2xl, isPaused: true, catalog: catalog, root: root)
         case .downloading, .offline, .noSpace, .failed: writeDownload(of: .k2xl, isPaused: false, catalog: catalog, root: root)
-        case .ready, .partial, .empty, .preparing, .noSource: break
+        case .ready, .partial, .empty, .preparing, .noSource, .publicStore: break
         }
         for id in installed {
             guard let artifact = catalog.artifact(id) else { continue }
@@ -165,7 +168,7 @@ enum PageTranslationSample: String {
     private static let languageModels: [ModelArtifact] = [
         languageModel(.galTransl4B, .publicStore, "GalTransl-v4-4B-2601", "SakuraLLM", "CC BY-NC-SA 4.0", 2_497_276_512, true),
         languageModel(
-            .sakura1_5B, .privateOnly, "Sakura-1.5B-Qwen2.5-v1.0 (Q5_K_S quantization)",
+            .sakura1_5B, .fromPublisher, "Sakura-1.5B-Qwen2.5-v1.0 (Q5_K_S quantization)",
             "SakuraLLM (model); shing3232 (this quantized file)", "CC BY-NC-SA 4.0", 1_259_173_504, true
         ),
         languageModel(.hyMT2, .fromPublisher, "Hy-MT2 1.8B (GGUF)", "Tencent", "Apache-2.0", 1_133_080_448, false),
