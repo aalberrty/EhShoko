@@ -44,6 +44,10 @@ public final class ReaderTranslationModel {
     public private(set) var isHoldingOriginal = false
     /// The current page's status, for the design's capsule, toast or line.
     public private(set) var status: ReaderTranslationStatus?
+    /// The nearest page on screen whose translation failed while Translate is on (either page
+    /// of a spread, any page of the strip that shows), or `nil`: Ledger's warning mark on its
+    /// resting Translate button, whose sheet shows the status only when pulled up.
+    public private(set) var failedPageOnScreen: Int?
     /// How many pages of the gallery have a stored translation for the current models, read
     /// once after the first page: the mark on the Translate button.
     public private(set) var pagesTranslatedBefore = 0
@@ -204,6 +208,7 @@ public final class ReaderTranslationModel {
     func pagesOnScreenDidChange(_ pages: [Int]) {
         guard pages != pagesOnScreen else { return }
         pagesOnScreen = pages
+        defer { refreshStatus() }
         // Pages without the current page are those of a turn, and the engine names the new
         // current page next: the window is sent then, once, not twice.
         guard let host, pages.contains(host.currentPage) else { return }
@@ -347,20 +352,27 @@ public final class ReaderTranslationModel {
         statuses[page] = event.status
         // Retry was asked for elsewhere, or the page is drawn again: the service has the say.
         unshownPages.remove(page)
-        if page == host?.currentPage { refreshStatus() }
+        if page == host?.currentPage || pagesOnScreen.contains(page) { refreshStatus() }
     }
 
     private func refreshStatus() {
         var new: ReaderTranslationStatus?
+        var failed: Int?
         if isOn, let host, !host.isAtEnd {
             let page = host.currentPage
-            if unshownPages.contains(page) {
-                new = .failed(page: page)
-            } else if let pageStatus = statuses[page] {
-                new = ReaderTranslationStatus(pageStatus, page: page)
-            }
+            new = pageStatus(of: page)
+            // Mid-turn the engine names its new pages before the new current page: until it
+            // does, only the current page counts.
+            let shown = pagesOnScreen.contains(page) ? pagesOnScreen : [page]
+            failed = shown.first { pageStatus(of: $0) == .failed(page: $0) }
         }
         if status != new { status = new }
+        if failedPageOnScreen != failed { failedPageOnScreen = failed }
+    }
+
+    private func pageStatus(of page: Int) -> ReaderTranslationStatus? {
+        if unshownPages.contains(page) { return .failed(page: page) }
+        return statuses[page].flatMap { ReaderTranslationStatus($0, page: page) }
     }
 
     private func sendDisplay() {

@@ -83,29 +83,66 @@ struct LedgerTranslationSection: View {
 /// Translate at rest: lit while on, the mark while pages were translated before, and a ring
 /// of the download's progress while the models download. A press without models opens the
 /// download sheet (`ReaderModel.toggleTranslation()`).
+///
+/// While a page on screen failed to translate, a warning mark takes the mark's place, so the
+/// failure shows without the sheet pulled up, as Shelf's capsule and Wall's toast show it;
+/// VoiceOver hears "Couldn't translate page 23" after the button's value.
 private struct LedgerTranslateButton: View {
     let model: ReaderModel
 
     var body: some View {
         let isOn = model.translation.isOn
         let count = model.translation.pagesTranslatedBefore
+        let failedPage = model.translation.failedPageOnScreen
         let availability = model.translationAvailability
+        let accessibility = ReaderTranslateAccessibility(isOn: isOn, pagesTranslatedBefore: count, availability: availability)
         Button {
             model.toggleTranslation()
         } label: {
-            LedgerRoundLabel(symbol: "translate", isOn: isOn, hasMark: count > 0, readsSelection: false)
+            LedgerRoundLabel(
+                symbol: "translate", isOn: isOn, hasMark: count > 0, hasWarning: failedPage != nil, readsSelection: false
+            )
             .overlay {
                 if let fraction = availability.downloadFraction {
                     LedgerDownloadRing(fraction: fraction)
                 }
             }
         }
-        .readerTranslateAccessibility(
-            ReaderTranslateAccessibility(isOn: isOn, pagesTranslatedBefore: count, availability: availability)
-        )
+        .accessibilityLabel(accessibility.label)
+        .accessibilityValue(Self.value(accessibility, failedPage: failedPage))
         .accessibilityShowsLargeContentViewer {
             Label(L10n.Localizable.Reader.translate, systemImage: "translate")
         }
+    }
+}
+
+extension LedgerTranslateButton {
+    /// The shared value ("Translation on, 12 pages already translated"), then the failure.
+    fileprivate static func value(_ accessibility: ReaderTranslateAccessibility, failedPage: Int?) -> String {
+        guard let failedPage else { return accessibility.value }
+        return [accessibility.value, Strings.Status.failed(failedPage)].joined(separator: ", ")
+    }
+}
+
+/// The warning on the resting Translate button: a small disc with an exclamation mark, in the
+/// tint, or in the colour drawn on the tint while the button is lit. A fill on the button,
+/// not glass. Drawn only: the button's value says it.
+struct LedgerTranslationWarningMark: View {
+    let disc: Color
+    let glyph: Color
+
+    static let size: CGFloat = 13
+    /// How far its centre sits beyond the symbol's corner: a little less than the round
+    /// mark's half, so the disc stays inside the button.
+    static let offset: CGFloat = 4.5
+
+    var body: some View {
+        Image(systemName: "exclamationmark")
+            .font(.system(size: 8, weight: .heavy))
+            .foregroundStyle(glyph)
+            .frame(width: Self.size, height: Self.size)
+            .background(disc, in: .circle)
+            .accessibilityHidden(true)
     }
 }
 
