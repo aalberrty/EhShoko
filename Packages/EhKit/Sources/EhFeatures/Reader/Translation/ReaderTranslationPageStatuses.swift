@@ -57,11 +57,24 @@ nonisolated struct ReaderTranslationPageStatuses: Equatable {
         status(of: page) == .failed(page: page)
     }
 
-    /// The controls' status and the nearest failed page on screen, for `current` and the
-    /// pages on screen nearest first. Mid-turn the engine names its new pages before the new
-    /// current page: until it does (`onScreen` without `current`), only the current page counts.
-    func summary(current: Int, onScreen: [Int]) -> (status: ReaderTranslationStatus?, failedOnScreen: Int?) {
+    /// The controls' status and the failed pages on screen, nearest first, for `current` and
+    /// the pages on screen nearest first. Mid-turn the engine names its new pages before the
+    /// new current page: until it does (`onScreen` without `current`), only the current page
+    /// counts.
+    ///
+    /// The status is the current page's while it has something to say: getting ready, in
+    /// work, or its own failure. When it is done, has nothing to draw or has said nothing,
+    /// the nearest failure of another page on screen takes its place, so every design shows
+    /// it with Try again.
+    func summary(current: Int, onScreen: [Int]) -> (status: ReaderTranslationStatus?, failedOnScreen: [Int]) {
         let shown = onScreen.contains(current) ? onScreen : [current]
-        return (status(of: current), shown.first(where: hasFailed))
+        let failed = shown.filter(hasFailed)
+        let own = status(of: current)
+        switch own {
+        case .gettingReady, .translating, .failed:
+            return (own, failed)
+        case .translated, .nothingToDraw, nil:
+            return (failed.first.map { .failed(page: $0) } ?? own, failed)
+        }
     }
 }

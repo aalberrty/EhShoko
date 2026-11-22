@@ -42,12 +42,14 @@ public final class ReaderTranslationModel {
     public private(set) var displayMode = ReaderTranslationDisplayMode.translated
     /// Whether the original is shown while a finger holds it (Shelf's Translate button).
     public private(set) var isHoldingOriginal = false
-    /// The current page's status, for the design's capsule, toast or line.
+    /// The status for the design's capsule, toast or line: the current page's, or the
+    /// failure of another page on screen while the current page has nothing to say
+    /// (`ReaderTranslationPageStatuses.summary`).
     public private(set) var status: ReaderTranslationStatus?
-    /// The nearest page on screen whose translation failed while Translate is on (either page
-    /// of a spread, any page of the strip that shows), or `nil`: Ledger's warning mark on its
-    /// resting Translate button, whose sheet shows the status only when pulled up.
-    public private(set) var failedPageOnScreen: Int?
+    /// The pages on screen whose translation failed while Translate is on (both pages of a
+    /// spread, any page of the strip that shows), nearest first: what Try again asks for, and
+    /// what VoiceOver is told of once per failure.
+    public private(set) var failedPagesOnScreen: [Int] = []
     /// How many pages of the gallery have a stored translation for the current models, read
     /// once after the first page: the mark on the Translate button.
     public private(set) var pagesTranslatedBefore = 0
@@ -158,11 +160,19 @@ public final class ReaderTranslationModel {
         sendDisplay()
     }
 
-    /// Retry of the current page's failure.
-    func retryCurrentPage() {
-        guard isOn, let page = host?.currentPage, status == .failed(page: page) else { return }
-        pageStatuses.askAgain(page)
-        session?.retry(page)
+    /// The nearest failed page on screen, or `nil`: Ledger's warning mark on its resting
+    /// Translate button, whose sheet shows the status only when pulled up.
+    public var failedPageOnScreen: Int? {
+        failedPagesOnScreen.first
+    }
+
+    /// Try again: every failed page on screen is asked for again.
+    func retryFailedPagesOnScreen() {
+        guard isOn, !failedPagesOnScreen.isEmpty else { return }
+        for page in failedPagesOnScreen {
+            pageStatuses.askAgain(page)
+            session?.retry(page)
+        }
         refreshStatus()
     }
 
@@ -345,12 +355,12 @@ public final class ReaderTranslationModel {
 
     private func refreshStatus() {
         var new: ReaderTranslationStatus?
-        var failed: Int?
+        var failed: [Int] = []
         if isOn, let host, !host.isAtEnd {
             (new, failed) = pageStatuses.summary(current: host.currentPage, onScreen: pagesOnScreen)
         }
         if status != new { status = new }
-        if failedPageOnScreen != failed { failedPageOnScreen = failed }
+        if failedPagesOnScreen != failed { failedPagesOnScreen = failed }
     }
 
     private func sendDisplay() {

@@ -24,8 +24,9 @@ import Synchronization
 /// | `working` | In work, for good |
 /// | `preparing` | Waiting for the models, for good |
 /// | `fails` | In work, then failed; Retry fails again a second later |
+/// | `failsEven` | An even page as `fails`, an odd page as `translates`. The reader is left on page 103, so in a spread or the strip the other page fails |
 enum PartHarnessPageTranslation: String {
-    case translates, working, preparing, fails
+    case translates, working, preparing, fails, failsEven
 
     static let atLaunch = UserDefaults.standard.string(forKey: "HarnessTranslation").flatMap(Self.init)
 
@@ -110,14 +111,16 @@ nonisolated private final class PartHarnessTranslationService: Sendable {
     }
 
     private func work(on page: Int, in session: Session, isRetry: Bool) {
-        let script = script
+        let step = script == .failsEven ? (page.isMultiple(of: 2) ? .fails : .translates) : script
         let folder = folder
         let task = Task {
             func yield(_ status: PageTranslationStatus) {
                 session.events.yield(PageTranslationEvent(pageIndex: page, status: status))
             }
             let isStored = PartHarnessPageTranslation.storedPages.contains(page) && !isRetry
-            switch script {
+            switch step {
+            case .failsEven:
+                return
             case .preparing:
                 yield(.loadingModels)
                 return
