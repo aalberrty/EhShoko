@@ -17,9 +17,9 @@ extension ReaderModel: ReaderTranslationHost {
         translation.press()
     }
 
-    /// The Retry of "Couldn't translate page 23".
+    /// The Retry of "Couldn't translate page 23": every failed page on screen.
     public func retryTranslation() {
-        translation.retryCurrentPage()
+        translation.retryFailedPagesOnScreen()
     }
 
     /// What the engine shows over its pages: it reads this when it attaches, and is told
