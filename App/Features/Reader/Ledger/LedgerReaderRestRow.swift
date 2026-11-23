@@ -120,6 +120,10 @@ struct LedgerRoundLabel: View {
     /// The mark for pages translated before, at the symbol's corner (Translate). On the lit
     /// fill it takes the colour drawn on the tint, as the symbol does.
     var hasMark = false
+    /// The warning mark while a page on screen failed to translate (Translate). It takes the
+    /// mark's place: a failure is what needs the reader now, and the count is still read in
+    /// the button's value.
+    var hasWarning = false
     /// Whether VoiceOver hears "selected" while on. Translate says on or off in its value
     /// instead, and would say it twice.
     var readsSelection = true
@@ -127,11 +131,20 @@ struct LedgerRoundLabel: View {
     @Environment(\.look) private var look
     @Environment(\.lookTint) private var tint
     @Environment(\.onTint) private var onTint
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         Image(systemName: symbol)
             .font(.title3)
-            .readerTranslationMark(hasMark)
+            .readerTranslationMark(hasMark && !hasWarning)
+            .overlay(alignment: .topTrailing) {
+                if hasWarning {
+                    LedgerTranslationWarningMark(disc: isOn ? onTint : tint, glyph: isOn ? tint : onTint)
+                        .offset(x: LedgerTranslationWarningMark.offset, y: -LedgerTranslationWarningMark.offset)
+                        .transition(.scale.combined(with: .opacity))
+                }
+            }
+            .animation(reduceMotion ? nil : .snappy(duration: 0.2), value: hasWarning)
             .environment(\.lookTint, isOn ? onTint : tint)
             .foregroundStyle(isOn ? onTint : look.label)
             .frame(width: LedgerReaderMetrics.roundButton, height: LedgerReaderMetrics.roundButton)
