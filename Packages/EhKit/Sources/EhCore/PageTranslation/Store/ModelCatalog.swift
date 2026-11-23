@@ -19,9 +19,11 @@ public struct ModelCatalog: Sendable, Hashable, Codable {
         self.artifacts = artifacts
     }
 
-    /// The address of the store anyone can read, or `nil` while there is none. A public
-    /// address is not a secret, so it may be written here once the store exists.
-    public static let publicStoreAddress: URL? = nil
+    /// The address of the store anyone can read: the artifacts marked `.publicStore`, laid out
+    /// as a private store is. A public address is not a secret.
+    public static let publicStoreAddress: URL? = URL(
+        string: "https://huggingface.co/aalberrty/ehshoko-models-public/resolve/main"
+    )
 
     public func artifact(_ id: ModelArtifactID) -> ModelArtifact? {
         artifacts.first { $0.id == id }
