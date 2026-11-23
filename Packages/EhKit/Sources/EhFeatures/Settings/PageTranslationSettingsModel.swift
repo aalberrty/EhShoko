@@ -80,9 +80,12 @@ public final class PageTranslationSettingsModel {
     /// Whether there is a network; a download waits for one by itself.
     public var isConnected: Bool { store.isConnected }
 
-    /// What was measured for the current detector and reader together.
+    /// What was measured for the current detector and reader together, as the switch for
+    /// sound effects has them read.
     public var pair: MeasuredFigure {
-        PageTranslationMeasurements.linesReadExactly(detector: detector, reader: reader)
+        PageTranslationMeasurements.linesReadExactly(
+            detector: detector, reader: reader, withSoundEffects: translatesSoundEffects && soundEffectsCanBeTranslated
+        )
     }
 
     public var topAction: TopAction? {
@@ -103,6 +106,20 @@ public final class PageTranslationSettingsModel {
         case nil: break
         }
     }
+
+    // MARK: Drawn sound effects
+
+    /// The switch "Translate drawn sound effects". On, every box the detector finds is read,
+    /// translated, erased and lettered; pages translated before under the other rule are
+    /// translated again when they are next read with Translate on.
+    public var translatesSoundEffects: Bool {
+        get { settings.pageTranslationTranslatesSoundEffects }
+        set { settings.pageTranslationTranslatesSoundEffects = newValue }
+    }
+
+    /// Whether the switch changes anything: the detector pages are translated with tells
+    /// sound effects from other text. ogkalu v4-s does not, and the row is disabled with it.
+    public var soundEffectsCanBeTranslated: Bool { detector.labelsSoundEffects }
 
     // MARK: The current choices
 

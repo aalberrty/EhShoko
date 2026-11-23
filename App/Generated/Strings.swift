@@ -2812,6 +2812,8 @@ internal enum L10n {
         internal static let reader = L10n.tr("Localizable", "settings.translation.reader", fallback: "Read text")
         /// Repaint artwork
         internal static let repaint = L10n.tr("Localizable", "settings.translation.repaint", fallback: "Repaint artwork")
+        /// Translate drawn sound effects
+        internal static let soundEffects = L10n.tr("Localizable", "settings.translation.sound_effects", fallback: "Translate drawn sound effects")
         /// Private model source
         internal static let source = L10n.tr("Localizable", "settings.translation.source", fallback: "Private model source")
         /// Storage
@@ -2912,6 +2914,14 @@ internal enum L10n {
           /// Off while %@ is the translator: both do not fit in memory
           internal static func offForTranslator(_ p1: Any) -> String {
             return L10n.tr("Localizable", "settings.translation.repaint.off_for_translator", String(describing: p1), fallback: "Off while %@ is the translator: both do not fit in memory")
+          }
+        }
+        internal enum SoundEffects {
+          /// When on, sound effects drawn on the artwork are also erased and translated, so pages change more. Pages already translated are translated again when you read them.
+          internal static let footer = L10n.tr("Localizable", "settings.translation.sound_effects.footer", fallback: "When on, sound effects drawn on the artwork are also erased and translated, so pages change more. Pages already translated are translated again when you read them.")
+          /// %@ does not tell sound effects from other text, so this changes nothing.
+          internal static func unavailable(_ p1: Any) -> String {
+            return L10n.tr("Localizable", "settings.translation.sound_effects.unavailable", String(describing: p1), fallback: "%@ does not tell sound effects from other text, so this changes nothing.")
           }
         }
         internal enum Source {

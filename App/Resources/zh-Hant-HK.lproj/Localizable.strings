@@ -1242,6 +1242,9 @@
 "settings.translation.desc.repaint.lama_manga" = "重繪文字底下的畫面";
 "settings.translation.desc.repaint.big_lama" = "效果相同，使用通用模型，體積更大";
 "settings.translation.repaint.off_for_translator" = "以 %@ 翻譯時關閉：兩者無法同時放入記憶體";
+"settings.translation.sound_effects" = "翻譯畫中的擬聲詞";
+"settings.translation.sound_effects.footer" = "開啟後，畫面上繪製的擬聲詞也會被擦除並翻譯，因此每頁的改動更大。已翻譯的頁面會在閱讀時重新翻譯。";
+"settings.translation.sound_effects.unavailable" = "%@ 不區分擬聲詞與其他文字，因此此設定不起作用。";
 "settings.translation.figure.found_balloon" = "找到的對白框文字";
 "settings.translation.figure.found_notes" = "找到的手寫文字";
 "settings.translation.figure.read_exact" = "準確識別的行";

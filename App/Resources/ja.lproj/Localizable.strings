@@ -1243,6 +1243,9 @@
 "settings.translation.desc.repaint.lama_manga" = "文字の下の絵を描き直します";
 "settings.translation.desc.repaint.big_lama" = "同じことを汎用モデルで行います。サイズは大きめです";
 "settings.translation.repaint.off_for_translator" = "%@ で翻訳する間はオフ：両方はメモリに収まりません";
+"settings.translation.sound_effects" = "描き文字の効果音を翻訳";
+"settings.translation.sound_effects.footer" = "オンにすると、絵に描かれた効果音も消して翻訳するため、ページの変化が大きくなります。翻訳済みのページは、次に読むときにもう一度翻訳されます。";
+"settings.translation.sound_effects.unavailable" = "%@ は効果音をほかの文字と区別しないため、この設定は何も変えません。";
 "settings.translation.figure.found_balloon" = "見つかった吹き出しの文字";
 "settings.translation.figure.found_notes" = "見つかった手書き文字";
 "settings.translation.figure.read_exact" = "正確に読み取った行";

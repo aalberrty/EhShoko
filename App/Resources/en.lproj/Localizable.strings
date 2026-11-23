@@ -1243,6 +1243,9 @@
 "settings.translation.desc.repaint.lama_manga" = "Redraws the artwork behind the text";
 "settings.translation.desc.repaint.big_lama" = "The same with a general model, larger";
 "settings.translation.repaint.off_for_translator" = "Off while %@ is the translator: both do not fit in memory";
+"settings.translation.sound_effects" = "Translate drawn sound effects";
+"settings.translation.sound_effects.footer" = "When on, sound effects drawn on the artwork are also erased and translated, so pages change more. Pages already translated are translated again when you read them.";
+"settings.translation.sound_effects.unavailable" = "%@ does not tell sound effects from other text, so this changes nothing.";
 "settings.translation.figure.found_balloon" = "Balloon text found";
 "settings.translation.figure.found_notes" = "Handwritten notes found";
 "settings.translation.figure.read_exact" = "Lines read exactly";

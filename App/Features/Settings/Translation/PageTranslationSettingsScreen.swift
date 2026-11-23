@@ -4,8 +4,9 @@ import EhModels
 import SwiftUI
 
 /// Settings › Translation (`README.md` section 9.1): where the models of the current choices
-/// stand and their one button, the four choices, storage, the private model source, and the
-/// credits. There is no switch for translation here: it is pressed in the reader.
+/// stand and their one button, the four choices, the switch for drawn sound effects, storage,
+/// the private model source, and the credits. There is no switch for translation itself here:
+/// it is pressed in the reader.
 ///
 /// Opening it reads nothing from disk on the main actor: the model asks the store to look at
 /// its folder, which it does elsewhere, and the figures are a static table.
@@ -19,6 +20,7 @@ struct PageTranslationSettingsScreen: View {
         List {
             PageTranslationTopCard(model: model)
             modelsSection
+            PageTranslationSoundEffectsSection(model: model)
             PageTranslationStorageSection(model: model)
             PageTranslationSourceSection(model: model)
             licencesSection
@@ -80,7 +82,8 @@ extension PageTranslationSettingsModel {
 
 /// The first card: "Japanese → 简体中文, on this iPhone", where the current models stand, the one
 /// button (Download with the size, Pause, Resume or Try again), and under it what the current
-/// detector and reader read together on the test pages.
+/// detector and reader read together on the test pages, as the switch for sound effects has
+/// them read.
 private struct PageTranslationTopCard: View {
     let model: PageTranslationSettingsModel
 
