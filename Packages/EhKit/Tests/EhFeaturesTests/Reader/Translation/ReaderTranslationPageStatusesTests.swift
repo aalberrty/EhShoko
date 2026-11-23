@@ -62,9 +62,11 @@ import Testing
 
     @Test func anOverlayIsDrawnAgainOnceThenThePageFails() {
         var all = statuses([5: .translated(PageTranslationOverlay(patchFile: URL(fileURLWithPath: "/p/5"), variant: "v1"))])
-        #expect(all.overlayDidFail(page: 5))
+        let drawsAgain = all.overlayDidFail(page: 5)
+        #expect(drawsAgain)
         #expect(!all.hasFailed(5))
-        #expect(!all.overlayDidFail(page: 5))
+        let drawsAgainTwice = all.overlayDidFail(page: 5)
+        #expect(!drawsAgainTwice)
         #expect(all.hasFailed(5))
         // The service's word ends the reader's own failure.
         all.record(.translating, of: 5)
