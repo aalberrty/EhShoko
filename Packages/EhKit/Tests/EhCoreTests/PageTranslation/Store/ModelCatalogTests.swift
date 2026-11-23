@@ -105,9 +105,32 @@ import Testing
         #expect(catalog.artifact(.v4s)?.credit.licence == "Apache-2.0")
     }
 
-    @Test func thePublicStoreHasNoAddressYet() {
-        #expect(ModelCatalog.publicStoreAddress == nil)
-        #expect(ModelSourceConfiguration().publicStore == nil)
+    @Test func thePublicStoreHasItsAddress() throws {
+        let address = try #require(ModelCatalog.publicStoreAddress)
+        #expect(address.absoluteString == "https://huggingface.co/aalberrty/ehshoko-models-public/resolve/main")
+        #expect(ModelSourceConfiguration().publicStore == address)
+    }
+
+    /// Someone who builds the app and sets up nothing gets every model we may pass on from
+    /// the public store, with no token, and none of those we may not.
+    @Test func withoutAPrivateStoreThePublicSetIsOffered() throws {
+        let configuration = ModelSourceConfiguration()
+        for artifact in catalog.artifacts {
+            #expect(configuration.offers(artifact) == (artifact.sharing != .privateOnly), "\(artifact.id)")
+        }
+        let detector = try #require(catalog.artifact(.v4s))
+        let file = try #require(detector.files.first { $0.path.hasSuffix("weight.bin") })
+        let sources = configuration.sources(for: file, of: detector)
+        #expect(sources.map(\.kind) == [.publicStore])
+        let address = "https://huggingface.co/aalberrty/ehshoko-models-public/resolve/main"
+        let path = "/det-v4s/1/V4S-fp16.mlpackage/Data/com.apple.CoreML/weights/weight.bin"
+        #expect(sources.first?.url.absoluteString == address + path)
+        #expect(sources.allSatisfy { $0.token == nil })
+    }
+
+    /// The test store reaches nothing real, a public store included.
+    @Test func theOfflineEnvironmentHasNoPublicStore() {
+        #expect(ModelStoreEnvironment.offline().publicStore == nil)
     }
 
     // MARK: The types

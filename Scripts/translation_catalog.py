@@ -168,9 +168,13 @@ ARTIFACTS = [
     },
     {
         # The judged file is a third party's quantization whose repository states no
-        # licence, so it comes from a private store until its source is decided.
-        "id": "mt-sakura-1.5b", "version": "1", "role": "translator", "sharing": "privateOnly",
+        # licence. We pass nothing on: the app downloads it where the third party offers it,
+        # which serves the same bytes (size and SHA-256 compared on 2026-11-22).
+        "id": "mt-sakura-1.5b", "version": "1", "role": "translator", "sharing": "fromPublisher",
         "loading": {"languageModel": "sakura"}, "listed": False,
+        "publisher": [
+            hugging_face("shing3232/Sakura-1.5B-Qwen2.5-v1.0-GGUF-IMX", "6b704808673c735e326dfa25fe6fe62ac6ebc401"),
+        ],
         "credit": {
             "name": "Sakura-1.5B-Qwen2.5-v1.0 (Q5_K_S quantization)",
             "author": "SakuraLLM (model); shing3232 (this quantized file)",
@@ -277,8 +281,12 @@ def cells(line):
 
 
 def read_manifest(path):
-    """The two kinds of table described at the top → {artifact: (version or None, files)}."""
+    """The two kinds of table described at the top → {artifact: (version or None, files)}.
+
+    A model its author hosts takes its files from the table under its heading alone: a
+    store may still hold a copy, with a LICENSE and a CREDITS.md the author does not have."""
     found = {}
+    hosted = {artifact["id"] for artifact in ARTIFACTS if artifact["sharing"] == "fromPublisher"}
     heading = None
     for line in path.read_text(encoding="utf-8").splitlines():
         if line.startswith("#"):
@@ -289,6 +297,8 @@ def read_manifest(path):
             continue
         row = cells(line)
         if len(row) >= 5 and row[0] in KNOWN and SHA.match(row[4]):
+            if row[0] in hosted:
+                continue
             artifact, version, full = row[0], row[1], row[2]
             prefix = f"{artifact}/{version}/"
             if not full.startswith(prefix):

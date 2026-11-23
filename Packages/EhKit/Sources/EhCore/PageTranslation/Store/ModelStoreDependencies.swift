@@ -59,7 +59,8 @@ extension ModelStoreChoices {
 }
 
 extension ModelStoreEnvironment {
-    /// Nothing real: an empty temporary folder, no network, no Core ML, a token in memory.
+    /// Nothing real: an empty temporary folder, no network, no public store, no Core ML, a
+    /// token in memory.
     public static func offline(
         catalog: ModelCatalog = .generated,
         root: URL = URL.temporaryDirectory.appending(path: "PageTranslationModels-\(UUID().uuidString)")
@@ -73,6 +74,7 @@ extension ModelStoreEnvironment {
                 prepare: unimplemented("ModelCompiler.prepare")
             ),
             tokens: .inMemory(),
+            publicStore: nil,
             freeSpace: { _ in .max }
         )
     }
