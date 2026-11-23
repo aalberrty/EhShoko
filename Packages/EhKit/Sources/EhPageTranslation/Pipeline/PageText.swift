@@ -8,9 +8,9 @@ public struct PageText: Sendable, Equatable {
     public var imageWidth: Int
     public var imageHeight: Int
     /// In reading order: every block that was read and translated, with its Japanese and its
-    /// Chinese, and every block that is kept unread (sound effects), with neither. A block
-    /// that read as nothing, or that the translator gave nothing for, is not among them:
-    /// nothing is erased for it and the page keeps its lettering there.
+    /// Chinese, and every block that is kept unread (sound effects, unless the switch for them
+    /// is on), with neither. A block that read as nothing, or that the translator gave nothing
+    /// for, is not among them: nothing is erased for it and the page keeps its lettering there.
     public var blocks: [TextBlock]
     public var timings: PageTextTimings
 
@@ -44,6 +44,8 @@ public struct PageTextTimings: Sendable, Equatable {
     public var blocksRead = 0
     /// Blocks whose reading was empty.
     public var emptyReadings = 0
+    /// Sound effects that were read and dropped because they lie mostly on another block.
+    public var overlappingSoundEffects = 0
     /// Lines the translator gave nothing for.
     public var untranslatedLines = 0
 

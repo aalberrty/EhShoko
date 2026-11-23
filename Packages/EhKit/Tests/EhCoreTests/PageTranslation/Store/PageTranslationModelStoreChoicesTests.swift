@@ -105,6 +105,25 @@ import Testing
         #expect(store.requiredArtifacts == [.v4s, .cpt2, .galTransl4B])
     }
 
+    /// The switch for sound effects is part of the resolved set, so the reader's count of
+    /// pages translated before and the service's setup both follow it. With a detector that
+    /// has no sound-effect class it names nothing.
+    @Test func theResolvedSetCarriesTheSwitchForSoundEffects() async {
+        let harness = StoreHarness()
+        harness.settings.modelSet = PageTranslationModelSet(translatesSoundEffects: true)
+        let store = harness.store
+        await store.refresh()
+        #expect(store.resolvedModelSet == PageTranslationModelSet(translatesSoundEffects: true))
+        #expect(store.resolvedModelSet?.key == "k2xl768.cpt2.jmt1.t1.sfx")
+        #expect(store.requiredArtifacts == [.k2xl, .cpt2, .jmtFast1, .lamaManga])
+
+        let everyone = StoreHarness(privateStore: false, publicStore: StoreSamples.publicStore)
+        everyone.settings.modelSet = PageTranslationModelSet(translatesSoundEffects: true)
+        await everyone.store.refresh()
+        #expect(everyone.store.resolvedModelSet?.detector == .v4s)
+        #expect(everyone.store.resolvedModelSet?.key == PageTranslationModelSet(detector: .v4s).key)
+    }
+
     /// A translator is offered once it has an entry in the catalog. Until then a choice
     /// of it falls back to the first translator that has one.
     @Test func aChoiceWithoutACatalogEntryFallsBack() async {

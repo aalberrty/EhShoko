@@ -97,6 +97,85 @@ import Testing
         #expect(off.blocks.allSatisfy { $0.source.isEmpty && $0.translation.isEmpty })
     }
 
+    /// The switch for sound effects on: the sound effect drawn on the artwork is read and
+    /// translated like the rest, and keeps its kind.
+    @Test func withTheSwitchOnEverySoundEffectIsReadAndTranslated() async throws {
+        let log = StageLog()
+        var texts = Self.texts, translations = Self.translations
+        texts[StubReader.size(50, 70)] = "効果音"
+        translations["効果音"] = "音效"
+        let page = try PageBitmap.blank(width: 400, height: 300)
+        let on = PageTranslationModelSet(translatesSoundEffects: true)
+
+        let text = try await Self.pipeline(texts: texts, translations: translations, log: log, rules: PipelineRules(on))
+            .text(of: page)
+        #expect(log.all == ["detect 0", "read 38x108", "read 28x68", "read 58x78", "translate こんにちは|えっ|効果音"])
+        #expect(text.blocks.map(\.kind) == [.dialogue, .aside, .soundEffect])
+        #expect(text.blocks.map(\.translation) == ["你好", "诶", "音效"])
+        let stored = text.translation(gid: "1", pageIndex: 1, modelSetKey: on.key, createdAt: .now)
+        #expect(stored.regions.map(\.isTranslated) == [true, true, true])
+
+        // Off, today's rule: the same page keeps its sound effect unread.
+        let off = try await Self.pipeline(texts: texts, translations: translations, rules: PipelineRules(.default))
+            .text(of: page)
+        #expect(off.blocks.map(\.translation) == ["你好", "诶", ""])
+    }
+
+    /// Two boxes for one drawn effect, and an effect across a line: with sound effects read,
+    /// only one of each is read and lettered. The text stays, and of the two effects the one
+    /// the detector is surer of.
+    @Test func aSoundEffectLyingOnAnotherBlockIsDroppedWhenSoundEffectsAreRead() async throws {
+        let whole = TextBlock.stub(.soundEffect, x: 60, y: 60, width: 50, height: 70, score: 0.9)
+        let part = TextBlock.stub(.soundEffect, x: 70, y: 70, width: 30, height: 40, score: 0.5)
+        let across = TextBlock.stub(.soundEffect, x: 290, y: 60, width: 30, height: 60, score: 0.95)
+        var texts = Self.texts, translations = Self.translations
+        for (block, text) in [(whole, "効果音"), (part, "効果"), (across, "音")] {
+            texts[StubReader.size(Int(block.box.width), Int(block.box.height))] = text
+            translations[text] = "音效"
+        }
+        let blocks = [Self.dialogue, Self.note, whole, part, across]
+        let rules = PipelineRules(PageTranslationModelSet(translatesSoundEffects: true))
+        #expect(rules.soundEffectsOnOtherBlocks(in: blocks) == [3, 4])
+
+        let text = try await Self.pipeline(blocks, texts: texts, translations: translations, rules: rules)
+            .text(of: PageBitmap.blank(width: 400, height: 300))
+        #expect(text.blocks.map(\.box) == [Self.dialogue.box, Self.note.box, whole.box])
+        #expect(text.timings.overlappingSoundEffects == 2)
+
+        // With the switch off nothing is dropped: the sound effects are kept, unread.
+        #expect(PipelineRules().soundEffectsOnOtherBlocks(in: blocks).isEmpty)
+        let off = try await Self.pipeline(blocks, texts: texts, translations: translations).text(of: PageBitmap.blank(width: 400, height: 300))
+        #expect(off.blocks.count == 5 && off.timings.overlappingSoundEffects == 0)
+    }
+
+    @Test func boxesThatShareLittleAreBothKept() {
+        let left = TextBlock.stub(.soundEffect, x: 0, y: 0, width: 100, height: 100)
+        let right = TextBlock.stub(.soundEffect, x: 60, y: 0, width: 100, height: 100)
+        let rules = PipelineRules(PageTranslationModelSet(translatesSoundEffects: true))
+        // 40% of either lies in the other.
+        #expect(rules.soundEffectsOnOtherBlocks(in: [left, right]).isEmpty)
+        #expect(PipelineRules.share(of: left.box, and: right.box) == 0.4)
+        var keepsBoth = rules
+        keepsBoth.dropsOverlappingSoundEffects = false
+        #expect(keepsBoth.soundEffectsOnOtherBlocks(in: [left, left]).isEmpty)
+        #expect(rules.soundEffectsOnOtherBlocks(in: [left, left]) == [1])
+    }
+
+    @Test func theRulesFollowTheModelSet() {
+        #expect(PipelineRules(.default) == PipelineRules())
+        #expect(PipelineRules(.default).kindsRead == PipelineRules.textKinds)
+        let on = PipelineRules(PageTranslationModelSet(translatesSoundEffects: true))
+        #expect(on.kindsRead == Set(RegionKind.allCases))
+        #expect(on.readsSoundEffectsInBalloons == PipelineRules.readsSoundEffectsInBalloonsByDefault)
+        // A detector without a sound-effect class reads text only, switch or not.
+        #expect(PipelineRules(PageTranslationModelSet(detector: .v4s, translatesSoundEffects: true)) == PipelineRules())
+        // Which blocks the rules read, as the pipeline decides it.
+        let inBalloon = TextBlock.stub(.soundEffect, x: 100, y: 100, width: 24, height: 44, inBalloon: true)
+        #expect(PipelineRules().kind(of: inBalloon) == .dialogue && PipelineRules().reads(inBalloon))
+        #expect(!PipelineRules().reads(Self.effect) && on.reads(Self.effect))
+        #expect(on.kind(of: Self.effect) == .soundEffect)
+    }
+
     @Test func onlyTheKindsOfTheRulesAreRead() async throws {
         let log = StageLog()
         let rules = PipelineRules(kindsRead: [.dialogue])

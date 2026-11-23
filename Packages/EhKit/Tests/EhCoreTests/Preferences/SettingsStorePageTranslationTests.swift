@@ -9,8 +9,20 @@ import Testing
         let store = SettingsStore(storage: storage)
         #expect(store.pageTranslationModelSet == .default)
         #expect(store.pageTranslationRepaint == .lamaManga)
+        #expect(!store.pageTranslationTranslatesSoundEffects)
         #expect(store.pageTranslationSourceAddress.isEmpty)
         #expect(storage.storedSettingKeys.isEmpty)
+    }
+
+    @Test func theSwitchForSoundEffectsIsStoredAndJoinsTheModelSet() {
+        let storage = PreferenceStorage.ephemeral()
+        let store = SettingsStore(storage: storage)
+        store.pageTranslationTranslatesSoundEffects = true
+        #expect(storage.defaults.object(forKey: "settings.pageTranslationTranslatesSoundEffects") as? Bool == true)
+        #expect(store.pageTranslationModelSet == PageTranslationModelSet(translatesSoundEffects: true))
+        let reloaded = SettingsStore(storage: storage)
+        #expect(reloaded.pageTranslationTranslatesSoundEffects)
+        #expect(reloaded.pageTranslationModelSet.key == "k2xl768.cpt2.jmt1.t1.sfx")
     }
 
     @Test func storedRepresentations() {
@@ -75,6 +87,7 @@ import Testing
         #expect(changeIsObserved(reading: read, after: { store.pageTranslationDetector = .rtmdet2 }))
         #expect(changeIsObserved(reading: read, after: { store.pageTranslationReader = .narSmall }))
         #expect(changeIsObserved(reading: read, after: { store.pageTranslationTranslator = .hyMT2 }))
+        #expect(changeIsObserved(reading: read, after: { store.pageTranslationTranslatesSoundEffects = true }))
         #expect(!changeIsObserved(reading: read, after: { store.pageTranslationRepaint = .bigLama }))
         #expect(!changeIsObserved(reading: read, after: { store.pageTranslationSourceAddress = "x" }))
     }

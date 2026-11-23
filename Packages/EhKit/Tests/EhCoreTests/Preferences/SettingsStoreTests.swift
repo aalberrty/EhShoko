@@ -84,6 +84,9 @@ import Testing
         .pageTranslationReader: { $0.pageTranslationReader = $1.pageTranslationReader },
         .pageTranslationTranslator: { $0.pageTranslationTranslator = $1.pageTranslationTranslator },
         .pageTranslationRepaint: { $0.pageTranslationRepaint = $1.pageTranslationRepaint },
+        .pageTranslationTranslatesSoundEffects: {
+            $0.pageTranslationTranslatesSoundEffects = $1.pageTranslationTranslatesSoundEffects
+        },
         .pageTranslationSourceAddress: { $0.pageTranslationSourceAddress = $1.pageTranslationSourceAddress },
         .pageTranslationPendingDetector: { $0.pageTranslationPendingDetector = $1.pageTranslationPendingDetector },
         .pageTranslationPendingReader: { $0.pageTranslationPendingReader = $1.pageTranslationPendingReader },

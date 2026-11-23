@@ -6,15 +6,20 @@ import Foundation
 public struct MeasuredFigure: Sendable, Equatable {
     /// What was measured. A selection screen shows a choice's figures in the table's order.
     public enum Kind: String, Sendable, CaseIterable {
-        /// Balloon texts whose ink the detector's boxes cover by at least half (of 93).
+        /// Balloon texts whose ink the detector's boxes cover by at least half (of 77).
         case balloonTextFound
-        /// Handwritten notes found the same way (of 58).
+        /// Handwritten notes found the same way (of 55).
         case notesFound
-        /// Lines of dialogue whose reading equals the truth (of 149).
+        /// Lines of dialogue whose reading equals the truth (of 130). For a reader, read from
+        /// clean crops; for a detector and a reader together, from the detector's boxes as the
+        /// app reads them with the switch for sound effects off.
         case linesReadExactly
-        /// Lines a blind judge marked fully right (of 101).
+        /// The same for a detector and a reader together with the switch for sound effects on:
+        /// every box is read, sound effects drawn on the artwork too (of 130).
+        case linesReadExactlyWithSoundEffects
+        /// Lines a blind judge marked fully right (of 88).
         case linesFullyRight
-        /// Lines a blind judge marked wrong, censored or dropped (of 101).
+        /// Lines a blind judge marked wrong, censored or dropped (of 88).
         case linesWithSeriousError
         case timePerPage
         /// Reading one block of text.
@@ -79,8 +84,9 @@ public struct MeasuredFigure: Sendable, Equatable {
 /// selection screens. A static table: nothing is read or computed until it is first asked for.
 /// The rows are in `PageTranslationMeasurements+Table.swift`.
 public enum PageTranslationMeasurements {
-    /// The research's test pages, which every accuracy figure is counted on.
-    public static let testPageCount = 18
+    /// The test pages every accuracy figure is counted on: the research's 18 but the one
+    /// that is lost (p2, whose lines no figure counts any more).
+    public static let testPageCount = 17
     /// The phone that every `.phone` figure was measured on. A model name, not localized text.
     public static let phoneName = "iPhone 14 Pro Max"
 
@@ -100,13 +106,15 @@ public enum PageTranslationMeasurements {
         figures(of: .repaint(choice))
     }
 
-    /// Lines read exactly when the reader reads the detector's own boxes: the real pipeline.
+    /// Lines read exactly when the reader reads the detector's own boxes as the app does,
+    /// with the switch for sound effects off or on.
     public static func linesReadExactly(
-        detector: TextDetectorChoice, reader: TextReaderChoice
+        detector: TextDetectorChoice, reader: TextReaderChoice, withSoundEffects: Bool = false
     ) -> MeasuredFigure {
-        // The tests require a row for every pair; the fallback only keeps this total.
-        figures(of: .pair(detector, reader)).first { $0.kind == .linesReadExactly }
-            ?? MeasuredFigure(kind: .linesReadExactly, value: .notMeasured, basis: .pagesMac)
+        let kind: MeasuredFigure.Kind = withSoundEffects ? .linesReadExactlyWithSoundEffects : .linesReadExactly
+        // The tests require both rows for every pair; the fallback only keeps this total.
+        return figures(of: .pair(detector, reader)).first { $0.kind == kind }
+            ?? MeasuredFigure(kind: kind, value: .notMeasured, basis: .pagesMac)
     }
 
     static func figures(of subject: Subject) -> [MeasuredFigure] {

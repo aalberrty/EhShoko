@@ -272,11 +272,58 @@ import Testing
         try await harness.installDefaultSet()
         let model = harness.makeModel()
         await model.load()
-        #expect(model.pair.value == .tally(115, of: 149))
+        #expect(model.pair == PageTranslationMeasurements.linesReadExactly(detector: .k2xl, reader: .cpt2))
+        #expect(model.pair.value == .tally(83, of: 130))
 
         await model.choose(.detector(.v4s))
 
-        #expect(model.pair.value == .notMeasured)
+        #expect(model.pair == PageTranslationMeasurements.linesReadExactly(detector: .v4s, reader: .cpt2))
+    }
+
+    // MARK: Drawn sound effects
+
+    @Test func theSwitchForSoundEffectsIsTheSettingAndThePairLineFollowsIt() async throws {
+        let harness = TranslationStoreHarness()
+        try await harness.installDefaultSet()
+        let model = harness.makeModel()
+        await model.load()
+        #expect(!model.translatesSoundEffects && model.soundEffectsCanBeTranslated)
+        let before = harness.transport.requests.count
+
+        model.translatesSoundEffects = true
+
+        #expect(harness.settings.pageTranslationTranslatesSoundEffects)
+        #expect(harness.store.resolvedModelSet?.key == "k2xl768.cpt2.jmt1.t1.sfx")
+        #expect(model.pair == PageTranslationMeasurements.linesReadExactly(detector: .k2xl, reader: .cpt2, withSoundEffects: true))
+        #expect(model.pair != PageTranslationMeasurements.linesReadExactly(detector: .k2xl, reader: .cpt2))
+        // Nothing to download, nothing pending: it is no model.
+        #expect(harness.transport.requests.count == before && model.pending.isEmpty && model.setState == .ready)
+
+        model.translatesSoundEffects = false
+        #expect(!harness.settings.pageTranslationTranslatesSoundEffects)
+        #expect(model.pair == PageTranslationMeasurements.linesReadExactly(detector: .k2xl, reader: .cpt2))
+    }
+
+    /// ogkalu v4-s has no sound-effect class: the switch changes nothing, and the screen
+    /// disables it. What it was set to is kept for another detector.
+    @Test func withADetectorWithoutSoundEffectsTheSwitchChangesNothing() async throws {
+        let harness = TranslationStoreHarness()
+        try harness.copyIn([.v4s])
+        try await harness.installDefaultSet()
+        let model = harness.makeModel()
+        await model.load()
+        model.translatesSoundEffects = true
+
+        await model.choose(.detector(.v4s))
+
+        #expect(!model.soundEffectsCanBeTranslated)
+        #expect(model.translatesSoundEffects)
+        #expect(model.pair == PageTranslationMeasurements.linesReadExactly(detector: .v4s, reader: .cpt2))
+        #expect(harness.store.resolvedModelSet?.key == PageTranslationModelSet(detector: .v4s).key)
+
+        await model.choose(.detector(.k2xl))
+        #expect(model.soundEffectsCanBeTranslated)
+        #expect(harness.store.resolvedModelSet?.readsSoundEffects == true)
     }
 
     @Test func theTopCardDownloadsPausesAndResumesTheSet() async {

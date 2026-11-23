@@ -73,6 +73,9 @@ public struct Setting: Sendable, Equatable {
     public var pageTranslationReader: TextReaderChoice = .default
     public var pageTranslationTranslator: TranslatorChoice = .default
     public var pageTranslationRepaint: RepaintChoice = .default
+    /// "Translate drawn sound effects": off, a box the detector calls a sound effect is read
+    /// only when it stands in a balloon; on, every box is read, translated, erased and lettered.
+    public var pageTranslationTranslatesSoundEffects = false
     /// The address of the private store the app's own model files come from; empty until
     /// the user enters one. Its access token is kept in the Keychain, not here.
     public var pageTranslationSourceAddress = ""
@@ -86,10 +89,12 @@ public struct Setting: Sendable, Equatable {
 
     public init() {}
 
-    /// The detector, reader and translator the page translation settings choose.
+    /// The detector, reader and translator the page translation settings choose, and whether
+    /// drawn sound effects are translated with them.
     public var pageTranslationModelSet: PageTranslationModelSet {
         PageTranslationModelSet(
-            detector: pageTranslationDetector, reader: pageTranslationReader, translator: pageTranslationTranslator
+            detector: pageTranslationDetector, reader: pageTranslationReader, translator: pageTranslationTranslator,
+            translatesSoundEffects: pageTranslationTranslatesSoundEffects
         )
     }
 }

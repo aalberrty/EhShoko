@@ -34,6 +34,12 @@ public enum TextDetectorChoice: String, Codable, Sendable, Hashable, CaseIterabl
         case .rtmdet2: "rtmdet2"
         }
     }
+
+    /// Whether the detector tells drawn sound effects from other text. ogkalu v4-s has no
+    /// such class: what it boxes is read whatever the switch for sound effects says.
+    public var labelsSoundEffects: Bool {
+        self != .v4s
+    }
 }
 
 /// The model that reads the Japanese in a block.
@@ -131,21 +137,28 @@ public enum RepaintChoice: String, Codable, Sendable, Hashable, CaseIterable {
     }
 }
 
-/// The detector, reader and translator a page's text was made with. The repaint choice is not
-/// part of it: it only changes how the text is drawn.
+/// The detector, reader and translator a page's text was made with, and whether the drawn
+/// sound effects were read with it. The repaint choice is not part of it: it only changes how
+/// the text is drawn.
 public struct PageTranslationModelSet: Sendable, Hashable {
     public var detector: TextDetectorChoice
     public var reader: TextReaderChoice
     public var translator: TranslatorChoice
+    /// The switch "Translate drawn sound effects": every box the detector finds is read,
+    /// translated, erased and lettered, sound effects drawn on the artwork too. Off, a box
+    /// the detector calls a sound effect is read only when it stands in a balloon.
+    public var translatesSoundEffects: Bool
 
     public init(
         detector: TextDetectorChoice = .default,
         reader: TextReaderChoice = .default,
-        translator: TranslatorChoice = .default
+        translator: TranslatorChoice = .default,
+        translatesSoundEffects: Bool = false
     ) {
         self.detector = detector
         self.reader = reader
         self.translator = translator
+        self.translatesSoundEffects = translatesSoundEffects
     }
 
     public static let `default` = PageTranslationModelSet()
@@ -154,10 +167,20 @@ public struct PageTranslationModelSet: Sendable, Hashable {
     /// they change, so results made under the old rules are not found again.
     public static let groupingVersion = 1
 
+    /// Whether sound effects are read: the switch is on and the detector tells them apart.
+    /// With a detector that does not, the switch changes nothing, so it names nothing.
+    public var readsSoundEffects: Bool {
+        translatesSoundEffects && detector.labelsSoundEffects
+    }
+
     /// Names a page's stored text: detector, reader, translator and grouping rules, such as
-    /// `k2xl768.cpt2.jmt1.t1`. Only letters, digits and dots, so it is also a file name.
+    /// `k2xl768.cpt2.jmt1.t1`, and `.sfx` after them when sound effects are read. Only letters,
+    /// digits and dots, so it is also a file name. A page stored under one rule is never found
+    /// under the other, and the key without sound effects is the one kept from before the
+    /// switch existed, so nothing stored then is lost.
     public var key: String {
-        "\(detector.key).\(reader.key).\(translator.key).t\(Self.groupingVersion)"
+        let models = "\(detector.key).\(reader.key).\(translator.key).t\(Self.groupingVersion)"
+        return readsSoundEffects ? models + ".sfx" : models
     }
 
     /// The artifacts the set needs: detector, reader and translator.

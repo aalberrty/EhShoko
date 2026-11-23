@@ -79,7 +79,7 @@ extension MeasuredFigure.Kind {
         return switch self {
         case .balloonTextFound: Figure.foundBalloon
         case .notesFound: Figure.foundNotes
-        case .linesReadExactly: Figure.readExact
+        case .linesReadExactly, .linesReadExactlyWithSoundEffects: Figure.readExact
         case .linesFullyRight: Figure.right
         case .linesWithSeriousError: Figure.serious
         case .timePerPage: Figure.timePage

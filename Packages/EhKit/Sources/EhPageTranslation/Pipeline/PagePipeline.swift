@@ -52,10 +52,8 @@ public struct PagePipeline: Sendable {
             found.append(detected.blocks)
         }
         var blocks = tiles.count == 1 ? found[0] : PageTiling.merge(found, tiles: tiles)
-        if rules.readsSoundEffectsInBalloons {
-            for index in blocks.indices where blocks[index].kind == .soundEffect && blocks[index].balloon != nil {
-                blocks[index].kind = .dialogue
-            }
+        for index in blocks.indices {
+            blocks[index].kind = rules.kind(of: blocks[index])
         }
         timings.blocksFound = blocks.count
         onStage?(.found(blocks: blocks.count))
@@ -79,8 +77,15 @@ public struct PagePipeline: Sendable {
             block.source = source
             kept.append(block)
         }
+        // Two readings of one drawn effect, or an effect across a line, would be lettered
+        // over each other.
+        let overlapping = rules.soundEffectsOnOtherBlocks(in: kept)
+        if !overlapping.isEmpty {
+            kept = kept.indices.filter { !overlapping.contains($0) }.map { kept[$0] }
+            timings.overlappingSoundEffects = overlapping.count
+        }
         timings.reading = clock.now - start
-        onStage?(.read(blocks: timings.blocksRead - timings.emptyReadings))
+        onStage?(.read(blocks: timings.blocksRead - timings.emptyReadings - timings.overlappingSoundEffects))
 
         // Stage 4: the page's lines in one call. A line the translator gives nothing for
         // loses its block.
@@ -111,24 +116,52 @@ public struct PagePipeline: Sendable {
 
 /// The pipeline's own rules: which blocks are read, and how a tall page is cut.
 public struct PipelineRules: Sendable, Equatable {
-    /// The kinds of block that are read and translated. Every other block (today: sound
-    /// effects) is kept with the page's result, unread, so a later layer can use its box.
+    /// The kinds of block that are read and translated. Every other block (sound effects,
+    /// unless the switch for them is on) is kept with the page's result, unread, so a later
+    /// layer can use its box.
     public var kindsRead: Set<RegionKind>
     /// Reads a box the detector calls a sound effect as dialogue when its centre lies in a
     /// balloon. The default detector labels about a fifth of the dialogue it finds a sound
     /// effect; the few of those that stand in a balloon are read this way, the notes outside
     /// balloons are not.
     public var readsSoundEffectsInBalloons: Bool
+    /// While sound effects are read, drops one that lies mostly on another block that is
+    /// read (`soundEffectsOnOtherBlocks(in:)`).
+    public var dropsOverlappingSoundEffects: Bool
     public var tiling: PageTiling
 
     public init(
         kindsRead: Set<RegionKind> = [.dialogue, .aside, .caption],
         readsSoundEffectsInBalloons: Bool = PipelineRules.readsSoundEffectsInBalloonsByDefault,
+        dropsOverlappingSoundEffects: Bool = true,
         tiling: PageTiling = PageTiling()
     ) {
         self.kindsRead = kindsRead
         self.readsSoundEffectsInBalloons = readsSoundEffectsInBalloons
+        self.dropsOverlappingSoundEffects = dropsOverlappingSoundEffects
         self.tiling = tiling
+    }
+
+    /// The rules pages are translated by with `modelSet`: text is read, and drawn sound
+    /// effects too when its switch for them is on and its detector tells them apart.
+    public init(_ modelSet: PageTranslationModelSet, tiling: PageTiling = PageTiling()) {
+        self.init(kindsRead: modelSet.readsSoundEffects ? Self.everyKind : Self.textKinds, tiling: tiling)
+    }
+
+    /// Text in balloons, outside them and in caption boxes: what is read with the switch off.
+    public static let textKinds: Set<RegionKind> = [.dialogue, .aside, .caption]
+    /// Every box the detector finds, sound effects too.
+    public static let everyKind = Set(RegionKind.allCases)
+
+    /// The kind a block the detector found is read and drawn as: a sound effect whose centre
+    /// lies in a balloon is dialogue under the balloon rule, every other block keeps its own.
+    public func kind(of block: TextBlock) -> RegionKind {
+        readsSoundEffectsInBalloons && block.kind == .soundEffect && block.balloon != nil ? .dialogue : block.kind
+    }
+
+    /// Whether a block the detector found is read and translated.
+    public func reads(_ block: TextBlock) -> Bool {
+        kindsRead.contains(kind(of: block))
     }
 
     /// Whether the balloon rule is on. It is kept because it gains lines and loses none:

@@ -34,8 +34,8 @@ public struct PageTranslation: Codable, Sendable, Hashable {
         self.createdAt = createdAt
     }
 
-    /// Whether anything on the page is drawn in Chinese. A page with only sound effects, or
-    /// none at all, is done with nothing to draw.
+    /// Whether anything on the page is drawn in Chinese. A page with only sound effects that
+    /// were not read, or with no text at all, is done with nothing to draw.
     public var hasTranslatedText: Bool {
         regions.contains(where: \.isTranslated)
     }
@@ -51,9 +51,9 @@ public struct TranslatedRegion: Codable, Sendable, Hashable {
     public var isVertical: Bool
     /// The detector's confidence, 0 to 1.
     public var score: Double
-    /// The Japanese as read; empty for a sound effect, which is stored but not read.
+    /// The Japanese as read; empty for a sound effect that was stored but not read.
     public var source: String
-    /// The Chinese; empty for a sound effect.
+    /// The Chinese; empty for a sound effect that was not read.
     public var translation: String
 
     public init(
@@ -74,9 +74,10 @@ public struct TranslatedRegion: Codable, Sendable, Hashable {
         self.translation = translation
     }
 
-    /// Whether this region is drawn in Chinese.
+    /// Whether this region is drawn in Chinese: whatever has a translation is, a sound
+    /// effect too when the switch for sound effects had it read.
     public var isTranslated: Bool {
-        kind != .soundEffect && !translation.isEmpty
+        !translation.isEmpty
     }
 }
 
@@ -88,7 +89,9 @@ public enum RegionKind: String, Codable, Sendable, Hashable, CaseIterable {
     case aside
     /// Inside a rectangular caption box.
     case caption
-    /// Drawn lettering that is part of the artwork. Stored with its box, never read.
+    /// Drawn lettering that is part of the artwork. Stored with its box, and read only when
+    /// the switch for sound effects is on (or, by the balloon rule, when it stands in a
+    /// balloon, as dialogue).
     case soundEffect
 }
 

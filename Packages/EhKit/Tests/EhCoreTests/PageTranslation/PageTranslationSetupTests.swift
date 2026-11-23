@@ -46,6 +46,23 @@ import Testing
         #expect(setup.variant.folderName == "k2xl768.cpt2.jmt1.t1.lamamanga.r\(PageRenderer.renderVersion)")
     }
 
+    /// The switch for sound effects travels with the model set: into the pipeline's
+    /// configuration, where `PagePipeline.load` takes its rules from it, and into the names
+    /// of the stored text and of the patch files.
+    @Test func theSwitchForSoundEffectsReachesThePipelineAndTheNames() throws {
+        let on = PageTranslationModelSet(translatesSoundEffects: true)
+        let setup = PageTranslationSetup.resolve(modelSet: on, repaint: .lamaManga, files: Self.files(Self.all))
+        let pipeline = try #require(setup.pipeline)
+        #expect(pipeline.modelSet == on)
+        #expect(PipelineRules(pipeline.modelSet).kindsRead.contains(.soundEffect))
+        #expect(setup.variant.folderName == "k2xl768.cpt2.jmt1.t1.sfx.lamamanga.r\(PageRenderer.renderVersion)")
+        #expect(setup.filledVariant.folderName == "k2xl768.cpt2.jmt1.t1.sfx.fill.r\(PageRenderer.renderVersion)")
+        // The same files: the switch downloads nothing.
+        let off = PageTranslationSetup.resolve(modelSet: .default, repaint: .lamaManga, files: Self.files(Self.all))
+        #expect(setup.artifacts == off.artifacts && setup.pipeline?.detector == off.pipeline?.detector)
+        #expect(setup != off)
+    }
+
     @Test func theOtherChoicesFiles() throws {
         let set = PageTranslationModelSet(detector: .v4s, reader: .narSmall)
         let setup = PageTranslationSetup.resolve(modelSet: set, repaint: .bigLama, files: Self.files(Self.all))

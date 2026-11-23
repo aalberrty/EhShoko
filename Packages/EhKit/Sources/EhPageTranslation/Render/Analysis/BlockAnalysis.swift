@@ -206,8 +206,8 @@ struct PageAnalysis: Sendable {
 struct PageAnalyzer: Sendable {
     var blockAnalyzer = BlockAnalyzer()
 
-    /// Analyses the blocks that have a translation; sound effects and blocks without one are
-    /// left as they are. Checks for cancellation between blocks.
+    /// Analyses the blocks that have a translation; blocks without one (sound effects that
+    /// were not read among them) are left as they are. Checks for cancellation between blocks.
     func analyze(page: PageBitmap, blocks: [TextBlock]) throws -> PageAnalysis {
         var analyses: [BlockAnalysis] = []
         for (index, block) in blocks.enumerated() where Self.isDrawn(block) {
@@ -220,8 +220,10 @@ struct PageAnalyzer: Sendable {
         return PageAnalysis(width: page.width, height: page.height, blocks: analyses)
     }
 
+    /// A sound effect is drawn like any other block once it has a translation: it has one
+    /// only when the switch for sound effects had it read.
     static func isDrawn(_ block: TextBlock) -> Bool {
-        block.kind != .soundEffect && !block.translation.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        !block.translation.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
     /// One dialogue face for a page, as letterers use, and bold for shouting. Below a shout,

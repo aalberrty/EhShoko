@@ -71,11 +71,15 @@ extension PagePipeline {
     /// Core ML translator comes back once its shortest input length and its decoder are loaded
     /// and loads the longer lengths behind. A language model is loaded through
     /// `languageModel`; without one such a choice throws `PageTranslatorError.unavailable`.
+    ///
+    /// - Parameter rules: which blocks are read; by default the model set's own, so the
+    ///   switch for sound effects reaches the pipeline with the models.
     public static func load(
         _ configuration: PipelineConfiguration, languageModel: PageTranslatorLoader.LanguageModelLoader? = nil,
-        rules: PipelineRules = PipelineRules()
+        rules: PipelineRules? = nil
     ) async throws -> PagePipeline {
         let set = configuration.modelSet
+        let rules = rules ?? PipelineRules(set)
         guard configuration.reader.choice == set.reader else {
             throw PipelineConfigurationError.readerMismatch(expected: set.reader, files: configuration.reader.choice)
         }

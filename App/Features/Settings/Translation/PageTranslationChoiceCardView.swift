@@ -42,7 +42,7 @@ struct PageTranslationChoiceCardView: View {
 
     private var head: some View {
         HStack(alignment: .top, spacing: Tokens.Spacing.medium) {
-            RadioMark(isSelected: card.isSelected)
+            ChoiceMark(isSelected: card.isSelected)
                 .opacity(card.canBeChosen ? 1 : 0.4)
             VStack(alignment: .leading, spacing: Tokens.Spacing.xxSmall) {
                 Text(verbatim: card.choice.displayName)
@@ -93,6 +93,36 @@ struct PageTranslationChoiceCardView: View {
         } else if card.isPending {
             shape.strokeBorder(.tint, style: StrokeStyle(lineWidth: 2, dash: [6, 4]))
         }
+    }
+}
+
+/// The card's radio mark: an empty ring, or the tint's check on the choice in use. Unlike the
+/// Experience cards' `RadioMark`, which keeps its check at zero opacity, the check exists only
+/// on the selected card: a check symbol is an image VoiceOver calls "Selected", with the
+/// selected trait, and on a card that is not selected (or cannot be chosen) it said what the
+/// screen does not show. The head of the card carries the selected trait itself.
+private struct ChoiceMark: View {
+    let isSelected: Bool
+
+    @Environment(\.look) private var look
+    @Environment(\.onTint) private var onTint
+
+    var body: some View {
+        ZStack {
+            if isSelected {
+                Image(systemName: "checkmark.circle.fill")
+                    .resizable()
+                    .symbolRenderingMode(.palette)
+                    .foregroundStyle(onTint, .tint)
+                    .transition(.opacity)
+            } else {
+                Circle()
+                    .strokeBorder(look.tertiaryLabel, lineWidth: 1.5)
+                    .transition(.opacity)
+            }
+        }
+        .frame(width: 24, height: 24)
+        .accessibilityHidden(true)
     }
 }
 

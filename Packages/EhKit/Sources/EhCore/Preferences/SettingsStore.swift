@@ -147,6 +147,11 @@ public final class SettingsStore {
     public var pageTranslationRepaint: RepaintChoice {
         didSet { persist(.pageTranslationRepaint, pageTranslationRepaint, oldValue) }
     }
+    public var pageTranslationTranslatesSoundEffects: Bool {
+        didSet {
+            persist(.pageTranslationTranslatesSoundEffects, pageTranslationTranslatesSoundEffects, oldValue)
+        }
+    }
     public var pageTranslationSourceAddress: String {
         didSet { persist(.pageTranslationSourceAddress, pageTranslationSourceAddress, oldValue) }
     }
@@ -163,10 +168,12 @@ public final class SettingsStore {
     public var pageTranslationPendingRepaint: RepaintChoice? {
         didSet { persistOptional(.pageTranslationPendingRepaint, pageTranslationPendingRepaint, oldValue) }
     }
-    /// The detector, reader and translator the settings choose. Reading it observes those three.
+    /// The detector, reader and translator the settings choose, and the switch for sound
+    /// effects. Reading it observes those four.
     public var pageTranslationModelSet: PageTranslationModelSet {
         PageTranslationModelSet(
-            detector: pageTranslationDetector, reader: pageTranslationReader, translator: pageTranslationTranslator
+            detector: pageTranslationDetector, reader: pageTranslationReader, translator: pageTranslationTranslator,
+            translatesSoundEffects: pageTranslationTranslatesSoundEffects
         )
     }
 
@@ -227,6 +234,7 @@ public final class SettingsStore {
         _pageTranslationReader = setting.pageTranslationReader
         _pageTranslationTranslator = setting.pageTranslationTranslator
         _pageTranslationRepaint = setting.pageTranslationRepaint
+        _pageTranslationTranslatesSoundEffects = setting.pageTranslationTranslatesSoundEffects
         _pageTranslationSourceAddress = setting.pageTranslationSourceAddress
         _pageTranslationPendingDetector = setting.pageTranslationPendingDetector
         _pageTranslationPendingReader = setting.pageTranslationPendingReader
@@ -309,6 +317,9 @@ extension Setting {
             .pageTranslationTranslator, fallback: defaults.pageTranslationTranslator
         )
         pageTranslationRepaint = storage.value(.pageTranslationRepaint, fallback: defaults.pageTranslationRepaint)
+        pageTranslationTranslatesSoundEffects = storage.value(
+            .pageTranslationTranslatesSoundEffects, fallback: defaults.pageTranslationTranslatesSoundEffects
+        )
         pageTranslationSourceAddress = storage.value(
             .pageTranslationSourceAddress, fallback: defaults.pageTranslationSourceAddress
         )

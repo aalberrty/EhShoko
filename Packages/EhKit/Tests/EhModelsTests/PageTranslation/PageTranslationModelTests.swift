@@ -27,6 +27,32 @@ import Testing
         #expect(Set(RepaintChoice.allCases.map(\.key)).count == RepaintChoice.allCases.count)
     }
 
+    /// The switch for drawn sound effects is part of a stored page's name, so a page stored
+    /// under one rule is never found under the other; off, the name is the one kept before the
+    /// switch existed.
+    @Test func theSwitchForSoundEffectsJoinsTheKey() {
+        let off = PageTranslationModelSet.default
+        let on = PageTranslationModelSet(translatesSoundEffects: true)
+        #expect(!off.translatesSoundEffects && !off.readsSoundEffects)
+        #expect(on.readsSoundEffects)
+        #expect(on.key == "k2xl768.cpt2.jmt1.t1.sfx")
+        #expect(on.key != off.key && on != off)
+        #expect(on.artifacts == off.artifacts)
+        for detector in TextDetectorChoice.allCases where detector.labelsSoundEffects {
+            let keys = [false, true].map { PageTranslationModelSet(detector: detector, translatesSoundEffects: $0).key }
+            #expect(keys[0] != keys[1], "\(detector)")
+        }
+    }
+
+    /// ogkalu v4-s has no sound-effect class: the switch changes nothing it reads, so it
+    /// changes no key and no page is translated again for it.
+    @Test func aDetectorWithoutSoundEffectsKeepsItsKeyWithTheSwitchOn() {
+        #expect(TextDetectorChoice.allCases.filter { !$0.labelsSoundEffects } == [.v4s])
+        let on = PageTranslationModelSet(detector: .v4s, translatesSoundEffects: true)
+        #expect(!on.readsSoundEffects)
+        #expect(on.key == PageTranslationModelSet(detector: .v4s).key)
+    }
+
     @Test func everyChoiceNamesADistinctArtifact() {
         let artifacts = TextDetectorChoice.allCases.map(\.artifact) + TextReaderChoice.allCases.map(\.artifact)
             + TranslatorChoice.allCases.map(\.artifact) + RepaintChoice.allCases.compactMap(\.artifact)
@@ -100,13 +126,25 @@ import Testing
             createdAt: Date()
         )
         #expect(!page.hasTranslatedText)
-        page.regions = [TranslatedRegion(box: Self.region.box, kind: .soundEffect, isVertical: true, score: 1,
-                                         translation: "砰")]
+        // A sound effect stored unread, as it is with the switch for sound effects off.
+        page.regions = [TranslatedRegion(box: Self.region.box, kind: .soundEffect, isVertical: true, score: 1)]
         #expect(!page.hasTranslatedText)
         page.regions.append(TranslatedRegion(box: Self.region.box, kind: .aside, isVertical: true, score: 1,
                                              source: "…", translation: ""))
         #expect(!page.hasTranslatedText)
         page.regions.append(Self.region)
+        #expect(page.hasTranslatedText)
+    }
+
+    /// With the switch on a sound effect is read and translated, and then drawn like any text.
+    @Test func aTranslatedSoundEffectIsDrawn() {
+        let effect = TranslatedRegion(box: Self.region.box, kind: .soundEffect, isVertical: true, score: 1,
+                                      source: "効果音", translation: "砰")
+        #expect(effect.isTranslated)
+        let page = PageTranslation(
+            gid: "1", pageIndex: 1, modelSetKey: "k", imageWidth: 10, imageHeight: 10, regions: [effect],
+            createdAt: Date()
+        )
         #expect(page.hasTranslatedText)
     }
 
