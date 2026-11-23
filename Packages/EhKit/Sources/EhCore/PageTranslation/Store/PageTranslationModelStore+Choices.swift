@@ -35,12 +35,15 @@ extension PageTranslationModelStore {
         return resolve(chosen, among: models) { $0.artifact ?? artifact } ?? .off
     }
 
-    /// The models a page is translated with, or `nil` while one of the three kinds has
-    /// no model this user can have.
+    /// The models a page is translated with, and the switch for sound effects, or `nil`
+    /// while one of the three kinds has no model this user can have.
     public var resolvedModelSet: PageTranslationModelSet? {
         guard let detector = resolvedDetector, let reader = resolvedReader, let translator = resolvedTranslator
         else { return nil }
-        return PageTranslationModelSet(detector: detector, reader: reader, translator: translator)
+        return PageTranslationModelSet(
+            detector: detector, reader: reader, translator: translator,
+            translatesSoundEffects: choices.modelSet().translatesSoundEffects
+        )
     }
 
     /// What the current choices need on the device: the set's three models and the

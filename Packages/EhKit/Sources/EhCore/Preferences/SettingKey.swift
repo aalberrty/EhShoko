@@ -25,6 +25,7 @@ enum SettingKey: String, CaseIterable, Sendable {
     case wallDensity, ledgerShowsCovers, lastFavoriteFolder, lastPlace, experienceOfferShown
     // Page translation
     case pageTranslationDetector, pageTranslationReader, pageTranslationTranslator, pageTranslationRepaint
+    case pageTranslationTranslatesSoundEffects
     case pageTranslationSourceAddress
     case pageTranslationPendingDetector, pageTranslationPendingReader, pageTranslationPendingTranslator
     case pageTranslationPendingRepaint

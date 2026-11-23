@@ -9,8 +9,16 @@ import Testing
         #expect(setting.pageTranslationReader == .cpt2)
         #expect(setting.pageTranslationTranslator == .jmtFast1)
         #expect(setting.pageTranslationRepaint == .lamaManga)
+        #expect(!setting.pageTranslationTranslatesSoundEffects)
         #expect(setting.pageTranslationSourceAddress.isEmpty)
         #expect(setting.pageTranslationModelSet == .default)
+    }
+
+    @Test func theModelSetCarriesTheSwitchForSoundEffects() {
+        var setting = Setting()
+        setting.pageTranslationTranslatesSoundEffects = true
+        #expect(setting.pageTranslationModelSet == PageTranslationModelSet(translatesSoundEffects: true))
+        #expect(setting.pageTranslationModelSet.key != PageTranslationModelSet.default.key)
     }
 
     @Test func theModelSetFollowsTheThreeChoices() {

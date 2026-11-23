@@ -85,6 +85,7 @@ extension Setting {
         setting.pageTranslationReader = .narSmall
         setting.pageTranslationTranslator = .hyMT2
         setting.pageTranslationRepaint = .off
+        setting.pageTranslationTranslatesSoundEffects = true
         setting.pageTranslationSourceAddress = "https://models.example/store"
         setting.pageTranslationPendingDetector = .v4s
         setting.pageTranslationPendingReader = .cpt2

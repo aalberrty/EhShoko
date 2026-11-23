@@ -49,6 +49,7 @@ extension SettingsStore {
         setting.pageTranslationReader = pageTranslationReader
         setting.pageTranslationTranslator = pageTranslationTranslator
         setting.pageTranslationRepaint = pageTranslationRepaint
+        setting.pageTranslationTranslatesSoundEffects = pageTranslationTranslatesSoundEffects
         setting.pageTranslationSourceAddress = pageTranslationSourceAddress
         setting.pageTranslationPendingDetector = pageTranslationPendingDetector
         setting.pageTranslationPendingReader = pageTranslationPendingReader
@@ -108,6 +109,7 @@ extension SettingsStore {
         pageTranslationReader = setting.pageTranslationReader
         pageTranslationTranslator = setting.pageTranslationTranslator
         pageTranslationRepaint = setting.pageTranslationRepaint
+        pageTranslationTranslatesSoundEffects = setting.pageTranslationTranslatesSoundEffects
         pageTranslationSourceAddress = setting.pageTranslationSourceAddress
         pageTranslationPendingDetector = setting.pageTranslationPendingDetector
         pageTranslationPendingReader = setting.pageTranslationPendingReader
