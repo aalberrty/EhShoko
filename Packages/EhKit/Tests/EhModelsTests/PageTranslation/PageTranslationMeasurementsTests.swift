@@ -17,13 +17,15 @@ import Testing
     private static let repaintModelRows: [Kind] = [.pictureMatches, .timePerTile, .memory, .firstLoad]
     /// "Off" runs no model: all it has is the time for a page.
     private static let repaintOffRows: [Kind] = [.timePerPage]
-    private static let pairRows: [Kind] = [.linesReadExactly]
+    /// With the switch for sound effects off, then on.
+    private static let pairRows: [Kind] = [.linesReadExactly, .linesReadExactlyWithSoundEffects]
 
-    /// What the research counted on: 93 balloon texts and 58 notes on the 18 pages, 149 lines
-    /// of dialogue, 101 judged lines, 10 tiles of artwork.
+    /// What the figures are counted on: on the 17 test pages that exist (the research's 18
+    /// without p2), 77 balloon texts and 55 notes, 130 lines of dialogue and 88 judged lines;
+    /// 10 tiles of artwork on the phone.
     private static let totals: [Kind: Int] = [
-        .balloonTextFound: 93, .notesFound: 58, .linesReadExactly: 149,
-        .linesFullyRight: 101, .linesWithSeriousError: 101, .pictureMatches: 10,
+        .balloonTextFound: 77, .notesFound: 55, .linesReadExactly: 130, .linesReadExactlyWithSoundEffects: 130,
+        .linesFullyRight: 88, .linesWithSeriousError: 88, .pictureMatches: 10,
     ]
 
     private static let pairs = TextDetectorChoice.allCases.flatMap { detector in
@@ -67,8 +69,9 @@ import Testing
             #expect(PageTranslationMeasurements.figures(for: choice) == PageTranslationMeasurements.figures(of: .repaint(choice)))
         }
         for case let .pair(detector, reader) in Self.pairs {
-            let figure = PageTranslationMeasurements.linesReadExactly(detector: detector, reader: reader)
-            #expect(PageTranslationMeasurements.figures(of: .pair(detector, reader)) == [figure])
+            let off = PageTranslationMeasurements.linesReadExactly(detector: detector, reader: reader)
+            let on = PageTranslationMeasurements.linesReadExactly(detector: detector, reader: reader, withSoundEffects: true)
+            #expect(PageTranslationMeasurements.figures(of: .pair(detector, reader)) == [off, on])
         }
     }
 
@@ -122,10 +125,23 @@ import Testing
         }
     }
 
-    @Test func theDefaultPairReadsWhatTheResearchFound() {
+    /// What the app reads with the default pair on the 17 pages, as the opt-in tier scored it:
+    /// more with the switch for sound effects on.
+    @Test func theDefaultPairReadsWhatThePipelineReads() {
         let set = PageTranslationModelSet.default
-        let figure = PageTranslationMeasurements.linesReadExactly(detector: set.detector, reader: set.reader)
-        #expect(figure == MeasuredFigure(kind: .linesReadExactly, value: .tally(115, of: 149), basis: .pagesMac))
-        #expect(PageTranslationMeasurements.testPageCount == 18)
+        let off = PageTranslationMeasurements.linesReadExactly(detector: set.detector, reader: set.reader)
+        let on = PageTranslationMeasurements.linesReadExactly(detector: set.detector, reader: set.reader, withSoundEffects: true)
+        #expect(off == MeasuredFigure(kind: .linesReadExactly, value: .tally(83, of: 130), basis: .pagesMac))
+        #expect(on == MeasuredFigure(kind: .linesReadExactlyWithSoundEffects, value: .tally(97, of: 130), basis: .pagesMac))
+        #expect(PageTranslationMeasurements.testPageCount == 17)
+    }
+
+    /// ogkalu v4-s has no sound-effect class: the switch changes nothing it reads.
+    @Test func theSwitchChangesNothingForADetectorWithoutSoundEffects() {
+        for reader in TextReaderChoice.allCases {
+            let off = PageTranslationMeasurements.linesReadExactly(detector: .v4s, reader: reader)
+            let on = PageTranslationMeasurements.linesReadExactly(detector: .v4s, reader: reader, withSoundEffects: true)
+            #expect(off.value == on.value, "\(reader)")
+        }
     }
 }

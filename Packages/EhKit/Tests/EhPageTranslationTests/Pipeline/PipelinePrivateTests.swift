@@ -9,9 +9,11 @@ import Testing
 /// are on disk, scored as the research scored its end-to-end run, on this Mac's CPU.
 ///
 /// What it settles: the lines read exactly against the research's; whether the rule that
-/// reads a "sound effect" box in a balloon as dialogue gains lines and loses none; the two
-/// pairs with ogkalu v4-s; what the 4-megapixel cap costs the page it reduces; and that the
-/// real stages join into one pipeline whose page is drawn the same from its stored text.
+/// reads a "sound effect" box in a balloon as dialogue gains lines and loses none; every
+/// detector and reader pair with the switch for sound effects off and on (the figures the
+/// selection screens show); what the 4-megapixel cap costs the page it reduces; that the
+/// real stages join into one pipeline whose page is drawn the same from its stored text; and
+/// how drawn sound effects come out when the switch is on.
 ///
 /// Nothing of a page is printed: counts and the truth's item ids only.
 @Suite(.privateFolder, .serialized) struct PipelinePrivateTests {
@@ -65,7 +67,10 @@ import Testing
 
     // MARK: Detecting and reading once
 
-    /// The detector's blocks of every page on disk, each read by every reader.
+    /// The detector's blocks of every page on disk, each read by every reader through
+    /// `PagePipeline.text(of:)` itself with every box read and no block relabelled, so the
+    /// app's rules can be applied afterwards (`PipelineScoring.score(_:rules:…)`): what the
+    /// pipeline drops (an empty reading) is dropped here too.
     struct Readings: Sendable {
         /// By page, then by reader.
         var blocks: [String: [TextReaderChoice: [Scoring.ReadBlock]]] = [:]
@@ -86,6 +91,12 @@ import Testing
         }
     }
 
+    /// Every box read, none relabelled and none dropped: the rules the readings are made
+    /// under, before the app's own are applied.
+    static let everyBoxAsFound = PipelineRules(
+        kindsRead: PipelineRules.everyKind, readsSoundEffectsInBalloons: false, dropsOverlappingSoundEffects: false
+    )
+
     /// - Parameter reducedTo: the share of its pixels each page is brought down to; `nil`
     ///   reads the pages as the app does.
     static func readings(
@@ -93,8 +104,12 @@ import Testing
     ) async throws -> Readings {
         let folder = try PrivateFolder.required()
         let detector = try await detector(detectorChoice)
-        var readers: [TextReaderChoice: any TextReader] = [:]
-        for choice in choices { readers[choice] = try await reader(choice) }
+        var pipelines: [TextReaderChoice: PagePipeline] = [:]
+        for choice in choices {
+            pipelines[choice] = PagePipeline(
+                detector: detector, reader: try await reader(choice), translator: EchoTranslator(), rules: everyBoxAsFound
+            )
+        }
         var readings = Readings()
         for page in try pages() {
             let data = try Data(contentsOf: folder.url("\(ResearchReferences.pages)/\(page).png"))
@@ -102,20 +117,16 @@ import Testing
             if let share {
                 bitmap = try PageBitmap(data: data, maximumPixelCount: Int(Double(bitmap.width * bitmap.height) * share))
             }
-            let detected = try await detector.detect(bitmap).blocks
             readings.bitmaps[page] = bitmap
-            readings.detectedBlocks += detected.count
-            readings.soundEffects += detected.filter { $0.kind == .soundEffect }.count
-            readings.soundEffectsInBalloons += detected.filter { $0.kind == .soundEffect && $0.balloon != nil }.count
-            for (choice, reader) in readers {
-                var read: [Scoring.ReadBlock] = []
-                for block in detected {
-                    read.append(Scoring.ReadBlock(
-                        box: block.box, isSoundEffect: block.kind == .soundEffect, isInBalloon: block.balloon != nil,
-                        text: try await reader.read(block, on: bitmap)
-                    ))
+            for choice in choices {
+                guard let pipeline = pipelines[choice] else { continue }
+                let text = try await pipeline.text(of: bitmap)
+                if choice == choices.first {
+                    readings.detectedBlocks += text.timings.blocksFound
+                    readings.soundEffects += text.blocks.filter { $0.kind == .soundEffect }.count
+                    readings.soundEffectsInBalloons += text.blocks.filter { $0.kind == .soundEffect && $0.balloon != nil }.count
                 }
-                readings.blocks[page, default: [:]][choice] = read
+                readings.blocks[page, default: [:]][choice] = text.blocks.map { Scoring.ReadBlock(block: $0, text: $0.source) }
             }
         }
         return readings
@@ -123,12 +134,24 @@ import Testing
 
     /// The lines read exactly over the pages on disk, with the lines there are.
     static func score(_ readings: Readings, reader: TextReaderChoice, rule: Scoring.Rule) throws -> Scoring.PageScore {
+        try score(readings, reader: reader) { Scoring.score($0, rule: rule, truth: $1, bitmap: $2) }
+    }
+
+    /// The same, with the app's own rules deciding which blocks are read.
+    static func score(_ readings: Readings, reader: TextReaderChoice, rules: PipelineRules) throws -> Scoring.PageScore {
+        try score(readings, reader: reader) { Scoring.score($0, rules: rules, truth: $1, bitmap: $2) }
+    }
+
+    private static func score(
+        _ readings: Readings, reader: TextReaderChoice,
+        page scorer: ([Scoring.ReadBlock], Scoring.Truth, PageBitmap) -> Scoring.PageScore
+    ) throws -> Scoring.PageScore {
         let folder = try PrivateFolder.required()
         var total = Scoring.PageScore()
         for (page, byReader) in readings.blocks {
             guard let blocks = byReader[reader], let bitmap = readings.bitmaps[page] else { continue }
             let truth = try Scoring.truth(of: page, in: folder)
-            let score = Scoring.score(blocks, rule: rule, truth: truth, bitmap: bitmap)
+            let score = scorer(blocks, truth, bitmap)
             total.exact.formUnion(score.exact)
             total.found.formUnion(score.found)
             total.lines.formUnion(score.lines)
@@ -200,22 +223,6 @@ import Testing
             "k2xl, the \(readings.soundEffectsInBalloons) boxes the balloon rule adds: \(onLines) lie on dialogue or notes, "
                 + "\(onSoundEffects) on drawn sound effects, \(onNothing) on nothing in the truth"
         )
-    }
-
-    // MARK: ogkalu v4-s
-
-    /// The two pairs with the detector everyone can have, scored for the first time. It has
-    /// no sound-effect class, so there is nothing for the balloon rule to add.
-    @Test func ogkaluV4SWithBothReaders() async throws {
-        let readings = try await Self.readings(.v4s, readers: [.cpt2, .narSmall])
-        Self.report("v4s on \(readings.bitmaps.count) pages: \(readings.detectedBlocks) blocks, \(readings.soundEffects) labelled sound effects")
-        #expect(readings.soundEffects == 0)
-        for (reader, floor) in [(TextReaderChoice.cpt2, Self.floors.v4sCPT), (.narSmall, Self.floors.v4sNAR)] {
-            let score = try Self.score(readings, reader: reader, rule: .textOnly)
-            Self.report("v4s+\(reader.rawValue): \(score.exact.count)/\(score.lines.count) lines exact, \(score.found.count) found")
-            #expect(score.lines.count == 130)
-            #expect(score.exact.count >= floor)
-        }
     }
 
     // MARK: The cap
@@ -295,17 +302,7 @@ import Testing
     /// app loads them, then drawn, written and read back: the first time the halves meet.
     @Test func theRealStagesJoinIntoOnePipelineAndAPageIsDrawnTheSameFromItsStoredText() async throws {
         let folder = try PrivateFolder.required()
-        let configuration = PipelineConfiguration(
-            modelSet: .default,
-            detector: try await ReferenceSupport.compiledModel("models/det-phone/k2xl/K2XL-r768-fp16.mlpackage"),
-            reader: .cpt2(
-                encoder: try await ReferenceSupport.compiledModel("\(ReadersPrivateTests.cpt)/CPTEncoder-fp16.mlpackage"),
-                decoder: try await ReferenceSupport.compiledModel("\(ReadersPrivateTests.cpt)/CPTDecoder-fp16.mlpackage"),
-                vocabulary: try folder.url("\(ReadersPrivateTests.cpt)/vocab.txt")
-            ),
-            translator: try await Self.installedTranslator(folder),
-            detectorUnits: .cpuOnly, readerUnits: .cpuOnly, translatorUnits: .cpuOnly
-        )
+        let configuration = try await Self.defaultConfiguration(.default, in: folder)
         let clock = ContinuousClock()
         let loadStart = clock.now
         let pipeline = try await PagePipeline.load(configuration)
@@ -355,6 +352,22 @@ import Testing
         }
     }
 
+    /// The default models as the app loads them, on this Mac's CPU, for `modelSet` (which
+    /// must name the default detector, reader and translator).
+    static func defaultConfiguration(_ modelSet: PageTranslationModelSet, in folder: PrivateFolder) async throws -> PipelineConfiguration {
+        PipelineConfiguration(
+            modelSet: modelSet,
+            detector: try await ReferenceSupport.compiledModel("models/det-phone/k2xl/K2XL-r768-fp16.mlpackage"),
+            reader: .cpt2(
+                encoder: try await ReferenceSupport.compiledModel("\(ReadersPrivateTests.cpt)/CPTEncoder-fp16.mlpackage"),
+                decoder: try await ReferenceSupport.compiledModel("\(ReadersPrivateTests.cpt)/CPTDecoder-fp16.mlpackage"),
+                vocabulary: try folder.url("\(ReadersPrivateTests.cpt)/vocab.txt")
+            ),
+            translator: try await Self.installedTranslator(folder),
+            detectorUnits: .cpuOnly, readerUnits: .cpuOnly, translatorUnits: .cpuOnly
+        )
+    }
+
     /// The translator's release as the model store installs it: the author's layout with each
     /// package compiled in its place. Made of links, so nothing is copied.
     static func installedTranslator(_ folder: PrivateFolder) async throws -> URL {
@@ -380,12 +393,18 @@ import Testing
     /// - KoharuLayout 2XL with CPT v2: 98 with every box read, where the research's run
     ///   (PyTorch, every box) read 102 of the same lines; 79 with text boxes only and 83 with
     ///   the balloon rule, which is what the app does. With nar-small: 91, 73 and 78.
-    /// - ogkalu v4-s: 93 with CPT v2 and 86 with nar-small. Its floors leave three lines of
-    ///   room: it runs on this Mac's GPU here, whose half-precision results differ a little
-    ///   from one loading to the next.
+    ///
+    /// Every pair's figure with the switch off and on is in `PageTranslationMeasurements`, which
+    /// `everyPairWithTheSwitchOffAndOn` holds to what this tier scores.
     static let floors = (
-        k2xlCPT: (everyBox: 98, textOnly: 79), k2xlNAR: (everyBox: 91, textOnly: 73), v4sCPT: 90, v4sNAR: 83
+        k2xlCPT: (everyBox: 98, textOnly: 79), k2xlNAR: (everyBox: 91, textOnly: 73)
     )
+}
+
+/// Hands every line back as it came: the readings are what is scored, and a translator that
+/// drops no line keeps every block the reader read.
+struct EchoTranslator: PageTranslator {
+    func translate(_ lines: [String]) async throws -> [String?] { lines }
 }
 
 private extension CGRect {

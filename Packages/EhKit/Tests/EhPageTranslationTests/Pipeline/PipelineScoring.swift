@@ -47,12 +47,17 @@ enum PipelineScoring {
         try JSONDecoder().decode(Truth.self, from: Data(contentsOf: folder.url("research/mt-det/truth/\(page).json")))
     }
 
-    /// A detector's block with what the reader made of it.
+    /// A detector's block, with the kind the detector gave it, and what the reader made of it.
     struct ReadBlock: Sendable {
-        var box: CGRect
-        var isSoundEffect: Bool
-        var isInBalloon: Bool
+        var block: TextBlock
         var text: String
+
+        var box: CGRect {
+            get { block.box }
+            set { block.box = newValue }
+        }
+        var isSoundEffect: Bool { block.kind == .soundEffect }
+        var isInBalloon: Bool { block.balloon != nil }
     }
 
     /// Which of the detector's blocks are read.
@@ -82,7 +87,25 @@ enum PipelineScoring {
     }
 
     static func score(_ blocks: [ReadBlock], rule: Rule, truth: Truth, bitmap: PageBitmap) -> PageScore {
-        let read = blocks.filter(rule.reads)
+        score(blocks.filter(rule.reads), truth: truth, bitmap: bitmap)
+    }
+
+    /// The lines read exactly when the app's own rules decide which blocks are read: the
+    /// balloon rule, the switch for sound effects, and a read sound effect that lies on
+    /// another block dropped, in the pipeline's order.
+    static func score(_ blocks: [ReadBlock], rules: PipelineRules, truth: Truth, bitmap: PageBitmap) -> PageScore {
+        var read = blocks.map { block in
+            var block = block
+            block.block.kind = rules.kind(of: block.block)
+            return block
+        }
+        read = read.filter { rules.kindsRead.contains($0.block.kind) }
+        let overlapping = rules.soundEffectsOnOtherBlocks(in: read.map(\.block))
+        read = read.indices.filter { !overlapping.contains($0) }.map { read[$0] }
+        return score(read, truth: truth, bitmap: bitmap)
+    }
+
+    private static func score(_ read: [ReadBlock], truth: Truth, bitmap: PageBitmap) -> PageScore {
         var score = PageScore()
         for item in truth.items where item.isScoredLine {
             score.lines.insert(item.id)
