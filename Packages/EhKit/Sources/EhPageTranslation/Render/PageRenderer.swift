@@ -25,8 +25,8 @@ public struct PageRenderer: Sendable {
     /// again and their text is kept.
     public static let renderVersion = 1
 
-    /// Draws the blocks of `blocks` that have a translation. Sound effects and blocks without
-    /// one are left as they are.
+    /// Draws the blocks of `blocks` that have a translation. Blocks without one, sound
+    /// effects that were not read among them, are left as they are.
     ///
     /// Text on artwork is repainted by `inpainter` when one is given and filled smoothly
     /// otherwise; text in balloons is always filled. Runs on the global executor, checks for

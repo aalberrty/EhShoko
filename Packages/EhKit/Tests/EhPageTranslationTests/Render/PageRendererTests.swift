@@ -149,7 +149,14 @@ actor DrawnPage {
     @Test func soundEffectsAndBlocksWithoutATranslationAreLeftAlone() async throws {
         var page = try DrawnPage.page()
         for index in page.blocks.indices where index != DrawnPage.note {
-            if index % 2 == 0 { page.blocks[index].kind = .soundEffect } else { page.blocks[index].translation = " \n" }
+            // A sound effect stored unread, as the switch for sound effects off leaves it.
+            if index % 2 == 0 {
+                page.blocks[index].kind = .soundEffect
+                page.blocks[index].source = ""
+                page.blocks[index].translation = ""
+            } else {
+                page.blocks[index].translation = " \n"
+            }
         }
         let render = try await PageRenderer().render(page: page.bitmap, blocks: page.blocks)
         #expect(render.blocks.map(\.index) == [DrawnPage.note])
@@ -159,6 +166,17 @@ actor DrawnPage {
         // The page with its one patch over it, as the reader shows it.
         let image = try #require(render.composited(over: page.bitmap))
         #expect(image.width == page.bitmap.width && image.height == page.bitmap.height)
+    }
+
+    /// With the switch for sound effects on, a sound effect has a translation and is erased
+    /// and lettered like the rest.
+    @Test func aSoundEffectWithATranslationIsDrawn() async throws {
+        var page = try DrawnPage.page()
+        let index = try #require(page.blocks.indices.first { $0 != DrawnPage.note })
+        page.blocks[index].kind = .soundEffect
+        let render = try await PageRenderer().render(page: page.bitmap, blocks: page.blocks)
+        #expect(render.blocks.contains { $0.index == index })
+        #expect(PageAnalyzer.isDrawn(page.blocks[index]))
     }
 
     @Test func drawingAgainOffTheCallersActorGivesTheSamePatches() async throws {
